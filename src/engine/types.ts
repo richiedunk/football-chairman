@@ -1024,7 +1024,52 @@ export interface DirectorProfile {
   careerHistory: DirectorCareerEntry[]
   /** Job offers currently on the table, refreshed at season end. */
   jobOffers: JobOffer[]
+  /**
+   * Your own contract. You are an employee, negotiated on arrival, and the
+   * club pays you out of the same wage bill you are trying to control — so
+   * asking for more is a real trade-off, not free money.
+   */
+  contract: DirectorContract | null
+  /** Everything you have ever been paid, across every club. */
+  careerEarnings: number
+  earningsThisSeason: number
+  /** Itemised, newest first, for the career screen. */
+  earnings: EarningEntry[]
 }
+
+export interface DirectorContract {
+  /** Per week, paid from the club's wage bill. */
+  salary: number
+  expiresSeason: number
+  signingBonus: number
+  /** Paid once if the club goes up. */
+  promotionBonus: number
+  /** Paid once per trophy won. */
+  trophyBonus: number
+  /** Paid if the club finishes at or above the board's target. */
+  targetBonus: number
+  /** Weeks of salary paid if the club dismisses you. */
+  severanceWeeks: number
+  clubId: ID
+  signedSeason: number
+}
+
+export interface EarningEntry {
+  season: number
+  week: number
+  amount: number
+  source: EarningSource
+  description: string
+  clubName: string
+}
+
+export type EarningSource =
+  | 'salary'
+  | 'signingBonus'
+  | 'promotionBonus'
+  | 'trophyBonus'
+  | 'targetBonus'
+  | 'severance'
 
 export interface DirectorCareerEntry {
   clubId: ID

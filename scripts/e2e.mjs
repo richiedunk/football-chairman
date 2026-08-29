@@ -36,17 +36,46 @@ await step('open new career', async () => {
 
 await step('generate world', async () => {
   await page.click('text=Create world')
-  await page.waitForSelector('text=Take a job', { timeout: 60000 })
-  await page.screenshot({ path: `${SHOT}/03-clubs.png`, fullPage: false })
+  await page.waitForSelector('text=Jobs board', { timeout: 60000 })
+  await page.screenshot({ path: `${SHOT}/03-jobs.png`, fullPage: false })
+})
+
+await step('locked jobs are shown as targets', async () => {
+  const locked = await page.locator('.list__row:has-text("XP away")').count()
+  if (locked === 0) throw new Error('no locked jobs shown on the board')
+  console.log(`   ${locked} jobs locked behind career level`)
 })
 
 await step('take a job', async () => {
-  await page.click('.btn:has-text("More detail") >> nth=0')
-  await page.waitForSelector('.btn:has-text("Take the job at")')
-  await page.click('.btn:has-text("Take the job at")')
+  // Open jobs carry a wage-budget line; locked ones carry an XP requirement.
+  await page.click('.list__row:has-text("/wk wages") >> nth=0')
+  await page.waitForSelector('.btn:has-text("Open contract talks")')
+  await page.screenshot({ path: `${SHOT}/04-club-detail.png` })
+  await page.click('.btn:has-text("Open contract talks")')
+  await page.waitForSelector('text=Performance bonuses')
+  await page.screenshot({ path: `${SHOT}/05-contract.png`, fullPage: true })
+
+  // Push every dial to its maximum and expect to be knocked back — the club
+  // has one overall limit, not six independent ones — then accept the counter.
+  const sliders = page.locator('.sheet input[type="range"]')
+  const sliderCount = await sliders.count()
+  for (let i = 0; i < sliderCount; i++) {
+    const max = await sliders.nth(i).getAttribute('max')
+    if (max) await sliders.nth(i).fill(max)
+  }
+  await page.click('.btn--primary:has-text("Put it to them")')
+  await page.waitForTimeout(500)
+
+  const refusal = await page.locator('.sheet').count()
+  if (refusal === 0) throw new Error('maxed-out demands were accepted without argument')
+  const message = await page.textContent('.sheet div[style*="--warn"]')
+  console.log(`   pushed too far: ${message?.trim()}`)
+
+  // The counter is now pre-filled, so submitting again should land.
+  await page.click('.btn--primary:has-text("Try again")')
   await page.waitForSelector('.tabbar', { timeout: 30000 })
   await page.waitForSelector('text=Next fixture')
-  await page.screenshot({ path: `${SHOT}/04-home.png` })
+  await page.screenshot({ path: `${SHOT}/06-home.png` })
 })
 
 const clubName = await page.textContent('.topbar__club')
@@ -85,26 +114,26 @@ async function advanceOneWeek() {
 
 await step('advance 10 weeks', async () => {
   for (let i = 0; i < 10; i++) await advanceOneWeek()
-  await page.screenshot({ path: `${SHOT}/05-home-after.png` })
+  await page.screenshot({ path: `${SHOT}/07-home-after.png` })
   console.log(`   decisions answered: ${decisionsAnswered}`)
 })
 
 await step('squad screen', async () => {
   await page.click('.tabbar__item:has-text("Squad")')
   await page.waitForSelector('text=Sort by')
-  await page.screenshot({ path: `${SHOT}/06-squad.png` })
+  await page.screenshot({ path: `${SHOT}/08-squad.png` })
 })
 
 await step('player profile', async () => {
   await page.click('.list__row >> nth=0')
   await page.waitForSelector('text=Attributes', { timeout: 10000 })
-  await page.screenshot({ path: `${SHOT}/07-player.png`, fullPage: true })
+  await page.screenshot({ path: `${SHOT}/09-player.png`, fullPage: true })
 })
 
 await step('league table', async () => {
   await page.goto('http://127.0.0.1:4173/#/league')
   await page.waitForSelector('.table')
-  await page.screenshot({ path: `${SHOT}/08-league.png` })
+  await page.screenshot({ path: `${SHOT}/10-league.png` })
 })
 
 await step('inbox', async () => {
@@ -174,9 +203,15 @@ await step('facilities', async () => {
   await page.screenshot({ path: `${SHOT}/14-facilities.png` })
 })
 
-await step('career', async () => {
+await step('career and earnings', async () => {
   await page.goto('http://127.0.0.1:4173/#/career')
   await page.waitForSelector('text=The ladder')
+  await page.waitForSelector('text=Career total')
+  const earnings = await page.textContent('.stat:has-text("Career total") .stat__value')
+  if (!earnings || earnings.trim() === '£0') {
+    throw new Error(`career earnings did not accumulate: ${earnings}`)
+  }
+  console.log(`   career earnings: ${earnings.trim()}`)
   await page.screenshot({ path: `${SHOT}/15-career.png`, fullPage: true })
 })
 

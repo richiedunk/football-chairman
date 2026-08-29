@@ -2,6 +2,7 @@ import { shallowRef } from 'vue'
 import { defineStore } from 'pinia'
 import { prepareNewGame, startCareerAt, type NewGameOptions, type NewGameSetup } from '../engine/newGame'
 import type { Club, GameState, ID } from '../engine/types'
+import type { ContractOffer } from '../engine/systems/directorContract'
 
 /**
  * New-game staging.
@@ -25,10 +26,13 @@ export const useSetupStore = defineStore('setup', () => {
     return pending.value?.candidates ?? []
   }
 
-  function commit(clubId: ID): { state: GameState; setup: NewGameSetup } {
+  function commit(
+    clubId: ID,
+    contract?: ContractOffer,
+  ): { state: GameState; setup: NewGameSetup } {
     const setup = pending.value
     if (!setup) throw new Error('No world has been generated.')
-    const state = startCareerAt(setup, clubId)
+    const state = startCareerAt(setup, clubId, contract)
     return { state, setup }
   }
 

@@ -16,6 +16,7 @@ import { checkForExposure, generateOrganicStories } from './systems/media'
 import { processBoard, processCoachRelations, sortTable, updateFanMood } from './systems/board'
 import { addInboxItem, addNews, expireItems } from './systems/inbox'
 import { computeValue } from './systems/valuation'
+import { payDirectorSalary, paySeverance } from './systems/directorContract'
 import { runSeasonRollover } from './season'
 import { produceIntake, INTAKE_WEEK } from './systems/academy'
 import { drawNextRoundIfDue, settleRound } from './sim/cups'
@@ -177,6 +178,9 @@ export function advanceWeek(state: GameState, deps: TickDeps): TickResult {
     const clubRng = rng.fork(club.id)
 
     updateFanMood(state, club)
+    // The director is on the payroll like everyone else, so his salary leaves
+    // the same balance he is judged on.
+    if (club.id === state.playerClubId) payDirectorSalary(state, club)
     const { newInjuries } = processInjuries(state, club, clubRng, played)
     processFinances(state, club, clubRng, homeClubs.has(club.id)
       ? { attendance: homeClubs.get(club.id) ?? 0 }
@@ -333,6 +337,16 @@ export function advanceWeek(state: GameState, deps: TickDeps): TickResult {
     if (boardResult.sacked) {
       result.sacked = true
       result.sackMessage = boardResult.messages[boardResult.messages.length - 1]
+      const severance = paySeverance(state, playerClub)
+      if (severance > 0) {
+        addInboxItem(state, ids, {
+          category: 'finance',
+          subject: 'Severance settled',
+          from: 'Your representative',
+          body: `Your contract has been paid up. ${severance.toLocaleString()} has been settled in full.`,
+          link: { view: 'career' },
+        })
+      }
     }
 
     const coachResult = processCoachRelations(state, playerClub, ids, rng.fork('coach'))

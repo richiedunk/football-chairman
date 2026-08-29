@@ -11,6 +11,9 @@ import { computeValue, computeWageDemand } from './systems/valuation'
 import { addInboxItem, addNews } from './systems/inbox'
 import { emptyStats } from './world/playerGen'
 import { cupResultFor, resetCup } from './sim/cups'
+import {
+  contractTermsFor, paySeasonBonuses, signContract, type ContractOffer,
+} from './systems/directorContract'
 import type { Club, GameState, ID, JobOffer, League, Player, SeasonHistory } from './types'
 
 /**
@@ -93,14 +96,30 @@ export function runSeasonRollover(state: GameState, deps: RolloverDeps): void {
     if (entry) {
       entry.bestFinish = Math.min(entry.bestFinish, position)
       entry.xpEarned += state.director.xpThisSeason
+      const trophiesWon: string[] = []
       for (const cup of Object.values(state.cups)) {
         if (cup.winnerId === playerClub.id) {
+          trophiesWon.push(cup.name)
           entry.trophies.push(`${cup.name} ${season}`)
           awardXp(
             state.director, Math.round(500 * (0.5 + (league?.reputation ?? 40) / 100 * 1.5)),
             `Won the ${cup.name}`, 'trophies', season, state.date.week,
           )
         }
+      }
+
+      // Contract bonuses are paid before promotion is applied, so "promoted"
+      // means promoted this season rather than "is now in a higher division".
+      const promoted = league ? position <= league.promotionPlaces && league.promotionPlaces > 0 : false
+      const bonuses = paySeasonBonuses(state, playerClub, position, promoted, trophiesWon)
+      if (bonuses > 0) {
+        addInboxItem(state, ids, {
+          category: 'finance',
+          subject: `Contract bonuses: ${bonuses.toLocaleString()}`,
+          from: 'Your representative',
+          body: 'Your performance bonuses for the season have been settled.',
+          link: { view: 'career' },
+        })
       }
     }
     playerClub.board.tenureSeasons += 1
@@ -196,6 +215,7 @@ export function runSeasonRollover(state: GameState, deps: RolloverDeps): void {
 
   state.director.xpThisSeason = 0
   state.director.xpLog = []
+  state.director.earningsThisSeason = 0
 }
 
 // ---------------------------------------------------------------------------
@@ -493,7 +513,11 @@ function writePitch(club: Club, levelTitle: string, overperformance: number): st
 }
 
 /** Accept a job offer: leave the current club and take over the new one. */
-export function acceptJobOffer(state: GameState, offerId: ID): { ok: boolean; message: string } {
+export function acceptJobOffer(
+  state: GameState,
+  offerId: ID,
+  contract?: ContractOffer,
+): { ok: boolean; message: string } {
   const offer = state.director.jobOffers.find((o) => o.id === offerId)
   if (!offer) return { ok: false, message: 'That offer is no longer available.' }
   const newClub = state.clubs[offer.clubId]
@@ -527,6 +551,8 @@ export function acceptJobOffer(state: GameState, offerId: ID): { ok: boolean; me
   state.scoutReports = {}
   state.shortlist = []
   state.negotiations = []
+
+  signContract(state, newClub, contract ?? contractTermsFor(state, newClub, state.director).opening)
 
   return { ok: true, message: `You are now director of football at ${newClub.name}.` }
 }

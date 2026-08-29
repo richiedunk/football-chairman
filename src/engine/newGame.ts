@@ -3,11 +3,12 @@ import { IdFactory } from './ids'
 import { NameGenerator } from './names/generator'
 import { generateWorld, type WorldSize } from './world/worldGen'
 import { recalculateBudgets } from './systems/finance'
-import { openCareerEntry, startingClubCandidates } from './systems/career'
+import { openCareerEntry } from './systems/career'
 import { assignScout } from './systems/scouting'
 import { addInboxItem } from './systems/inbox'
 import { refreshSquadStatuses } from './systems/morale'
 import { setSeasonExpectation, setSeasonMandates } from './systems/board'
+import { contractTermsFor, signContract, type ContractOffer } from './systems/directorContract'
 import type { Club, DirectorBackground, GameState, ID, Staff } from './types'
 
 /**
@@ -103,16 +104,28 @@ export function prepareNewGame(options: NewGameOptions): NewGameSetup {
     Object.values(state.players).map((p) => `${p.firstName} ${p.lastName}`),
   )
 
-  // Only clubs in the home nation are offered — a first job is local.
-  const candidates = startingClubCandidates(state, 24)
+  // The jobs board lists every club in the home nation, open and closed alike,
+  // so a new director can see the whole ladder rather than five options with
+  // no context for where they sit.
+  const candidates = Object.values(state.clubs)
     .filter((club) => club.nationId === options.homeNationId)
-    .slice(0, 5)
+    .sort((a, b) => b.reputation - a.reputation)
 
-  return { state, candidates: candidates.length > 0 ? candidates : startingClubCandidates(state, 5), ids, names }
+  return { state, candidates, ids, names }
 }
 
-/** Commit to a club and finish setting up the save. */
-export function startCareerAt(setup: NewGameSetup, clubId: ID): GameState {
+/**
+ * Commit to a club and finish setting up the save.
+ *
+ * `contract` is the deal negotiated on the jobs board. It is optional so that
+ * headless tests and tooling can start a career without going through the
+ * negotiation; in that case the club's opening terms are signed as-is.
+ */
+export function startCareerAt(
+  setup: NewGameSetup,
+  clubId: ID,
+  contract?: ContractOffer,
+): GameState {
   const { state, ids } = setup
   const club = state.clubs[clubId]
   if (!club) throw new Error(`Unknown club ${clubId}`)
@@ -131,6 +144,7 @@ export function startCareerAt(setup: NewGameSetup, clubId: ID): GameState {
   refreshSquadStatuses(state, club)
 
   openCareerEntry(state.director, club, state.date.season)
+  signContract(state, club, contract ?? contractTermsFor(state, club, state.director).opening)
 
   // Give the scouts something to do rather than starting them idle, since a
   // new director inheriting an idle scouting department is a fair description

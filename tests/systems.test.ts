@@ -6,7 +6,13 @@ import { executeTransfer, moveAppeal } from '../src/engine/systems/transfers'
 import { buildReport, starsForLeague } from '../src/engine/systems/scouting'
 import { evaluateRenewal, suggestRenewal } from '../src/engine/systems/contracts'
 import { awardXp, CAREER_LEVELS, canTakeJobAt, levelFor, levelProgress } from '../src/engine/systems/career'
-import { availableStaff, dismissStaff, hireStaff } from '../src/engine/systems/board'
+import {
+  assessFanMood, availableStaff, dismissStaff, hireStaff, updateFanMood,
+} from '../src/engine/systems/board'
+import {
+  contractTermsFor, negotiateContract, payDirectorSalary, signContract,
+} from '../src/engine/systems/directorContract'
+import { costOfLivingIndex, operatingCosts, weeklyRevenue } from '../src/engine/systems/finance'
 import { expectedWage } from '../src/engine/world/staffGen'
 import { issueBriefing, checkForExposure } from '../src/engine/systems/media'
 import { computeValue, formatMoney, totalWageBill } from '../src/engine/systems/valuation'
@@ -425,5 +431,191 @@ describe('staff hiring', () => {
     const coach = state.staff[club.headCoachId!]
     const result = dismissStaff(state, club, coach)
     expect(result.ok).toBe(false)
+  })
+})
+
+describe('director contract and earnings', () => {
+  it('scales what a club will pay by its size and your record', () => {
+    const state = freshWorld('SALARY')
+    const clubs = Object.values(state.clubs).sort((a, b) => b.reputation - a.reputation)
+    const big = clubs[0]
+    const small = clubs[clubs.length - 1]
+
+    const bigTerms = contractTermsFor(state, big, state.director)
+    const smallTerms = contractTermsFor(state, small, state.director)
+    expect(bigTerms.ceiling.salary).toBeGreaterThan(smallTerms.ceiling.salary * 5)
+
+    // A better record commands more at the same club.
+    const unproven = contractTermsFor(state, big, state.director).ceiling.salary
+    state.director.xp = CAREER_LEVELS[CAREER_LEVELS.length - 1].xpRequired
+    const proven = contractTermsFor(state, big, state.director).ceiling.salary
+    expect(proven).toBeGreaterThan(unproven)
+  })
+
+  it('refuses a package with every term at the ceiling', () => {
+    const state = freshWorld('GREEDY')
+    const club = state.clubs[state.playerClubId]
+    const { ceiling } = contractTermsFor(state, club, state.director)
+    const result = negotiateContract(state, club, state.director, {
+      ...ceiling, seasons: 5,
+    }, new Rng('greedy'))
+    expect(result.accepted).toBe(false)
+    expect(result.counter).toBeDefined()
+  })
+
+  it('always makes a counter it will actually accept', () => {
+    // A counter that would itself be refused traps the player in a loop with
+    // no route to agreement. Checked across clubs, levels and rolls because
+    // the tolerance carries noise.
+    const state = freshWorld('COUNTER')
+    let tested = 0
+
+    for (const club of Object.values(state.clubs).slice(0, 25)) {
+      for (const level of [1, 5, 10]) {
+        state.director.xp = CAREER_LEVELS[level - 1].xpRequired
+        const { ceiling } = contractTermsFor(state, club, state.director)
+        const greedy = {
+          salary: ceiling.salary * 2,
+          seasons: 5,
+          signingBonus: ceiling.signingBonus * 2,
+          promotionBonus: ceiling.promotionBonus * 2,
+          trophyBonus: ceiling.trophyBonus * 2,
+          targetBonus: ceiling.targetBonus * 2,
+          severanceWeeks: 52,
+        }
+        const refused = negotiateContract(state, club, state.director, greedy, new Rng('g'))
+        expect(refused.accepted).toBe(false)
+
+        for (let roll = 0; roll < 5; roll++) {
+          tested++
+          const outcome = negotiateContract(
+            state, club, state.director, refused.counter!, new Rng(`c${club.id}${level}${roll}`),
+          )
+          expect(outcome.accepted, `counter refused at ${club.name}, level ${level}`).toBe(true)
+        }
+      }
+    }
+    expect(tested).toBeGreaterThan(300)
+  })
+
+  it('pays salary from the club and adds it to career earnings', () => {
+    const state = freshWorld('PAY')
+    const club = state.clubs[state.playerClubId]
+    signContract(state, club, contractTermsFor(state, club, state.director).opening)
+
+    const clubBefore = club.finances.balance
+    const earningsBefore = state.director.careerEarnings
+    payDirectorSalary(state, club)
+
+    const salary = state.director.contract!.salary
+    expect(club.finances.balance).toBe(clubBefore - salary)
+    expect(state.director.careerEarnings).toBe(earningsBefore + salary)
+    // The director is part of the wage bill he is asked to control.
+    expect(club.finances.season.staffWages).toBeGreaterThanOrEqual(salary)
+  })
+})
+
+describe('fan mood', () => {
+  it('settles rather than decaying when nothing changes', () => {
+    // The previous model nudged mood on every result with nothing anchoring
+    // it, so every club in the world sank over a season.
+    const state = freshWorld('MOOD')
+    const club = state.clubs[state.playerClubId]
+    const { target } = assessFanMood(state, club)
+
+    club.fanMood = target
+    for (let week = 0; week < 60; week++) updateFanMood(state, club)
+    expect(Math.abs(club.fanMood - target)).toBeLessThan(1)
+  })
+
+  it('converges on the assessed target from either direction', () => {
+    const state = freshWorld('CONVERGE')
+    const club = state.clubs[state.playerClubId]
+    const { target } = assessFanMood(state, club)
+
+    for (const start of [1, 100]) {
+      club.fanMood = start
+      for (let week = 0; week < 80; week++) updateFanMood(state, club)
+      expect(Math.abs(club.fanMood - target)).toBeLessThan(1.5)
+    }
+  })
+
+  it('explains itself', () => {
+    const state = freshWorld('EXPLAIN')
+    const club = state.clubs[state.playerClubId]
+    club.finances.inCrisis = true
+    const { factors } = assessFanMood(state, club)
+    expect(factors.some((f) => f.label.includes('crisis'))).toBe(true)
+    club.finances.inCrisis = false
+  })
+})
+
+describe('operating costs', () => {
+  it('itemises every cost and the parts sum to the total', () => {
+    const state = freshWorld('COSTS')
+    const club = state.clubs[state.playerClubId]
+    const costs = operatingCosts(state, club)
+
+    const parts =
+      costs.stadiumMaintenance + costs.groundRent + costs.trainingGround
+      + costs.youthSetup + costs.medical + costs.dataDepartment
+      + costs.scoutingNetwork + costs.supportStaff
+    // Rounding of each line can differ from rounding the sum by a pound or two.
+    expect(Math.abs(parts - costs.total)).toBeLessThanOrEqual(8)
+    expect(costs.supportHeadcount).toBeGreaterThanOrEqual(2)
+  })
+
+  it('charges training and medical per player', () => {
+    const state = freshWorld('PERPLAYER')
+    const club = state.clubs[state.playerClubId]
+    const before = operatingCosts(state, club)
+
+    // Remove five players and the per-head costs must fall.
+    const removed = club.squad.slice(0, 5)
+    club.squad = club.squad.filter((id) => !removed.includes(id))
+    const after = operatingCosts(state, club)
+
+    expect(after.trainingGround + after.medical)
+      .toBeLessThan(before.trainingGround + before.medical)
+  })
+
+  it('charges more where the cost of living is higher', () => {
+    const state = freshWorld('COL')
+    const clubs = Object.values(state.clubs)
+    const indices = clubs.map((c) => costOfLivingIndex(state, c))
+    expect(Math.max(...indices)).toBeGreaterThan(Math.min(...indices) * 1.2)
+
+    // Same club, relocated to a bigger city, costs more to run.
+    const club = clubs[0]
+    const nation = state.nations[club.nationId]
+    const smallCity = nation.cities.slice().sort((a, b) => a.size - b.size)[0]
+    const bigCity = nation.cities.slice().sort((a, b) => b.size - a.size)[0]
+
+    const original = club.city
+    club.city = smallCity.name
+    const cheap = operatingCosts(state, club).groundRent
+    club.city = bigCity.name
+    const dear = operatingCosts(state, club).groundRent
+    club.city = original
+
+    expect(dear).toBeGreaterThan(cheap)
+  })
+
+  it('keeps the cost ratio worse for small clubs and larger in absolute terms for big ones', () => {
+    const state = freshWorld('RATIO')
+    const clubs = Object.values(state.clubs).sort((a, b) => b.reputation - a.reputation)
+    const big = clubs[0]
+    const small = clubs[clubs.length - 1]
+
+    const bigCosts = operatingCosts(state, big).total
+    const smallCosts = operatingCosts(state, small).total
+    expect(bigCosts).toBeGreaterThan(smallCosts)
+
+    const bigRatio = bigCosts / weeklyRevenue(state, big)
+    const smallRatio = smallCosts / weeklyRevenue(state, small)
+    expect(smallRatio).toBeGreaterThan(bigRatio)
+    // And neither end is absurd.
+    expect(bigRatio).toBeLessThan(0.35)
+    expect(smallRatio).toBeLessThan(0.65)
   })
 })

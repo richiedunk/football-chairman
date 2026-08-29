@@ -248,6 +248,26 @@ export function canTakeJobAt(director: DirectorProfile, club: Club): boolean {
 }
 
 /**
+ * The career level at which a club of this standing becomes reachable.
+ *
+ * Used by the jobs board to show *why* a job is closed to you and what it
+ * would take — a locked entry that says nothing is just a wall, whereas one
+ * that names the level and the XP gap is a target.
+ */
+export function levelRequiredFor(clubReputation: number): CareerLevel {
+  for (const level of CAREER_LEVELS) {
+    if (clubReputation <= level.maxClubReputation) return level
+  }
+  return CAREER_LEVELS[CAREER_LEVELS.length - 1]
+}
+
+/** XP still needed before a club of this standing will consider you. */
+export function xpNeededFor(director: DirectorProfile, clubReputation: number): number {
+  const required = levelRequiredFor(clubReputation)
+  return Math.max(0, required.xpRequired - director.xp)
+}
+
+/**
  * Clubs offered at the start of a brand-new career. Deliberately a short list
  * of genuinely struggling clubs — the opening position is meant to be a mess
  * you have to fix, not a choice between good options.
