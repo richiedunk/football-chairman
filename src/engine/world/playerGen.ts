@@ -186,9 +186,12 @@ export function generateSquad(
   foreignChance: number,
 ): Player[] {
   const { rng } = ctx
-  // Map 0-100 club reputation onto the ability of the club's best player.
-  // A 95-reputation club tops out near 185; a non-league club near 70.
-  const bestAbility = clamp(58 + clubStrength * 1.32, 45, 190)
+  // Map club reputation onto the ability of the club's best player. The
+  // mapping is deliberately convex: a linear one hands 180-rated players to
+  // every mid-table top-flight club, and the world ends up with hundreds of
+  // elite players instead of the couple of dozen that make the top of the
+  // market feel scarce.
+  const bestAbility = clamp(45 + Math.pow(clubStrength / 100, 1.55) * 148, 42, 194)
 
   const slots: Position[] = []
   for (const { position, count } of SQUAD_SHAPE) {
@@ -216,7 +219,10 @@ export function generateSquad(
         foreignChance,
         clubId,
         squadStatus,
-        age: i >= 22 ? rng.int(17, 20) : undefined,
+        // The tail of the squad is deliberately young — these are the fringe
+        // players and academy graduates a director of football is meant to
+        // either develop, loan out, or move on.
+        age: i >= 22 ? rng.int(Math.max(17, minAgeForAbility(Math.round(ability))), 21) : undefined,
       }),
     )
   }
@@ -251,12 +257,18 @@ export function generateYouthIntake(
       ['MC', 16], ['ML', 8], ['MR', 8], ['AM', 10], ['ST', 12],
     ])
     const age = rng.int(15, 18)
-    const currentAbility = Math.round(clamp(rng.normal(floor + 12, 10), 20, 95))
-
     // The wonderkid roll. Rare enough that finding one is an event, common
     // enough that a well-funded academy pays for itself over a decade.
     const wonderkidChance = 0.012 + youthFacilityLevel * 0.0035 + academyDirectorSkill * 0.0004
     const isWonderkid = rng.chance(wonderkidChance)
+
+    // A genuine prospect is already noticeably better than his intake, not a
+    // hopeless teenager with a hidden number attached. That matters because the
+    // coach decides who plays: a 50-rated wonderkid would never get on the pitch
+    // to develop, and the talent would rot in the reserves.
+    const currentAbility = isWonderkid
+      ? Math.round(clamp(rng.normal(floor + 46, 12), 55, 130))
+      : Math.round(clamp(rng.normal(floor + 12, 10), 20, 95))
 
     const potentialCeiling = isWonderkid
       ? clamp(rng.normal(168, 12), 140, 198)
@@ -301,12 +313,33 @@ function rollSecondNationality(ctx: PlayerGenContext, primary: Nation): ID | nul
   return ctx.rng.pick(candidates).id
 }
 
+/**
+ * The highest ability a player of a given age can plausibly have reached.
+ *
+ * Without this, squad generation happily produces a 16-year-old rated among
+ * the best players in the world — which breaks the entire youth-development
+ * premise, since there is then nothing left for him to develop into.
+ * The curve allows a 22-year-old to be world class and a 19-year-old to be
+ * very good, which is where the real ceiling sits.
+ */
+export function maxAbilityForAge(age: number): number {
+  if (age >= 23) return 200
+  return 70 + (age - 15) * 17
+}
+
+/** Youngest age at which `ability` is credible. Inverse of maxAbilityForAge. */
+export function minAgeForAbility(ability: number): number {
+  if (ability <= 70) return 15
+  return clamp(Math.ceil(15 + (ability - 70) / 17), 15, 23)
+}
+
 function generateAge(rng: Rng, ability: number): number {
   // Better players skew slightly older because ability takes time to accrue,
   // but the distribution stays wide enough for genuine young stars to exist.
   const base = rng.normal(25.5, 4.2)
   const abilityShift = (ability - 100) / 60
-  return clamp(Math.round(base + abilityShift), 16, 38)
+  const floor = minAgeForAbility(ability)
+  return clamp(Math.round(base + abilityShift), floor, 38)
 }
 
 function generatePotential(rng: Rng, currentAbility: number, age: number): number {

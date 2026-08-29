@@ -285,9 +285,15 @@ export function generateClubName(
   let chosen = patterns[0]
   let name = ''
 
+  // Founding years sit in football's formative decades, and never within
+  // living memory of the current season — a club "founded 2019" in a division
+  // full of Victorian clubs reads as a bug.
+  const earliestFounding = 1878
+  const latestFounding = Math.min(1932, currentSeason - 60)
+
   for (let attempt = 0; attempt < 24; attempt++) {
     const pattern = rng.weighted(patterns, patterns.map((p) => p.weight))
-    const founded = rng.int(1878, 1932)
+    const founded = rng.int(earliestFounding, Math.max(earliestFounding + 1, latestFounding))
     const candidate = pattern.template
       .replace('{city}', city)
       .replace('{n}', String(founded))
@@ -300,7 +306,7 @@ export function generateClubName(
 
   if (!name) {
     // Every pattern collided — fall back to a plainly unique construction.
-    name = `${city} ${rng.int(1890, 1925)} FC`
+    name = `${city} ${rng.int(earliestFounding + 12, Math.max(earliestFounding + 13, latestFounding))} FC`
     chosen = { template: name, weight: 1, short: city }
   }
 
@@ -317,7 +323,7 @@ export function generateClubName(
     shortName: shortName.length > 14 ? shortName.slice(0, 14) : shortName,
     nickname,
     colors: { primary, secondary },
-    founded: rng.int(1878, 1932),
+    founded: rng.int(earliestFounding, Math.max(earliestFounding + 1, latestFounding)),
   }
 }
 

@@ -43,12 +43,12 @@ export const NAME_POOLS: Record<string, NamePool> = {
       'Freddie', 'Archie', 'Theo', 'Reuben', 'Isaac', 'Noah', 'Leo', 'Jude',
     ],
     surnames: [
-      'Ashworth', 'Bartlett', 'Blackwood', 'Bramley', 'Carrick', 'Chadwick', 'Colwill', 'Cresswell',
+      'Ashworth', 'Bartlett', 'Blackwood', 'Bramley', 'Carrock', 'Chadwick', 'Colwell', 'Cresswell',
       'Doughty', 'Eastwood', 'Fairhurst', 'Fenwick', 'Gallagher', 'Gormley', 'Hadley', 'Halstead',
-      'Hindmarsh', 'Holloway', 'Kettering', 'Lockyer', 'Longstaff', 'Marchant', 'Mellor', 'Netherwood',
+      'Hindmarsh', 'Holloway', 'Kettering', 'Lockyer', 'Longstaffe', 'Marchant', 'Mellor', 'Netherwood',
       'Oakley', 'Pennington', 'Pickering', 'Quill', 'Radcliffe', 'Rowntree', 'Sanderson', 'Shackleton',
-      'Sharples', 'Southgate', 'Standing', 'Thackeray', 'Tomlinson', 'Underhill', 'Vardy', 'Waddington',
-      'Wainwright', 'Westbrook', 'Whitlow', 'Winstanley', 'Yates', 'Beardsley', 'Cadwell', 'Drinkwater',
+      'Sharples', 'Southgale', 'Standing', 'Thackeray', 'Tomlinson', 'Underhill', 'Vardley', 'Waddington',
+      'Wainwright', 'Westbrook', 'Whitlow', 'Winstanley', 'Yates', 'Beardsley', 'Cadwell', 'Drinkwell',
     ],
   },
   scottish: {
@@ -66,7 +66,7 @@ export const NAME_POOLS: Record<string, NamePool> = {
       'Elphinstone', 'Fyfe', 'Galbraith', 'Gillespie', 'Hendry', 'Inglis', 'Kerrigan', 'Lamont',
       'MacFarlane', 'MacIntyre', 'McAllister', 'McBride', 'McCulloch', 'McGarry', 'McIlroy', 'McKinnon',
       'Menzies', 'Moffat', 'Muirhead', 'Napier', 'Ogilvie', 'Paterson', 'Rennie', 'Ritchie',
-      'Robertson', 'Shankland', 'Souttar', 'Strachan', 'Tannock', 'Urquhart', 'Wallace', 'Weir',
+      'Robertson', 'Shanklan', 'Souttarn', 'Strathan', 'Tannock', 'Urquhart', 'Wallace', 'Weir',
       'Wishart', 'Yorston', 'Bannatyne', 'Crawford', 'Dewar', 'Guthrie', 'Kinnear', 'Leask',
     ],
   },
@@ -83,7 +83,7 @@ export const NAME_POOLS: Record<string, NamePool> = {
     surnames: [
       "O'Sullivan", "O'Donnell", "O'Reilly", "O'Shea", "O'Rourke", 'Kavanagh', 'Doherty', 'Gallagher',
       'Fitzgerald', 'Brennan', 'Coughlan', 'Cullen', 'Dempsey', 'Devlin', 'Donoghue', 'Dunphy',
-      'Farrelly', 'Fogarty', 'Hanrahan', 'Hegarty', 'Hourihane', 'Keogh', 'Lenihan', 'Lynch',
+      'Farrelly', 'Fogarty', 'Hanrahan', 'Hegarty', 'Hourigan', 'Keogh', 'Lenihan', 'Lynch',
       'Mangan', 'McGrath', 'Molloy', 'Moriarty', 'Mulcahy', 'Nolan', 'Prendergast', 'Quigley',
       'Rafferty', 'Scanlon', 'Sheridan', 'Slattery', 'Tierney', 'Treacy', 'Whelan', 'Cassidy',
       'Bergin', 'Corrigan', 'Duggan', 'Flanagan', 'Hackett', 'Kiernan', 'Loughlin', 'Meaney',
@@ -124,8 +124,8 @@ export const NAME_POOLS: Record<string, NamePool> = {
       'Bertrand', 'Chevalier', 'Dubois', 'Delacroix', 'Fontaine', 'Girard', 'Hebert', 'Laurent',
       'Marchand', 'Nicolas', 'Ollivier', 'Perrin', 'Rousseau', 'Sabatier', 'Thibault', 'Vasseur',
       'Aubert', 'Barbier', 'Caron', 'Dupuis', 'Estève', 'Fournier', 'Gauthier', 'Hamon',
-      'Jourdain', 'Lefebvre', 'Mercier', 'Noiret', 'Pasquier', 'Renaud', 'Salvatore', 'Tessier',
-      'Vallet', 'Bonnet', 'Chartier', 'Deschamps', 'Escoffier', 'Fabre', 'Guillory', 'Havard',
+      'Jourdain', 'Lefevre', 'Mercier', 'Noiret', 'Pasquier', 'Renaud', 'Salvatore', 'Tessier',
+      'Vallet', 'Bonnet', 'Chartier', 'Deschard', 'Escoffier', 'Fabre', 'Guillory', 'Havard',
       'Lambert', 'Moulin', 'Peyrat', 'Quentin', 'Roussel', 'Sarrazin', 'Truffaut', 'Vidal',
     ],
   },
@@ -142,10 +142,10 @@ export const NAME_POOLS: Record<string, NamePool> = {
     surnames: [
       'Alonso', 'Bermejo', 'Cabrera', 'Delgado', 'Escudero', 'Fuentes', 'Gallardo', 'Herrera',
       'Iglesias', 'Jimenez', 'Lozano', 'Montero', 'Navarro', 'Ocampos', 'Pardo', 'Quiroga',
-      'Robledo', 'Salinas', 'Tejada', 'Ubeda', 'Valverde', 'Zamora', 'Arrieta', 'Bustos',
-      'Carvajal', 'Duarte', 'Esparza', 'Ferreras', 'Guzman', 'Hidalgo', 'Isasi', 'Jaramillo',
-      'Larrea', 'Mendoza', 'Nogales', 'Olmedo', 'Peralta', 'Requena', 'Sarabia', 'Torrente',
-      'Urrutia', 'Vergara', 'Ybarra', 'Zubizarreta', 'Cazorla', 'Domenech', 'Elorza', 'Merino',
+      'Robledo', 'Salinas', 'Tejada', 'Ubeda', 'Valverdo', 'Zamora', 'Arrieta', 'Bustos',
+      'Carvajo', 'Duarte', 'Esparza', 'Ferreras', 'Guzman', 'Hidalgo', 'Isasi', 'Jaramillo',
+      'Larrea', 'Mendoza', 'Nogales', 'Olmedo', 'Peralta', 'Requena', 'Sarabio', 'Torrente',
+      'Urrutia', 'Vergara', 'Ybarra', 'Zubieta', 'Cazorlo', 'Domenech', 'Elorza', 'Merinez',
     ],
   },
   portuguese: {
@@ -184,10 +184,10 @@ export const NAME_POOLS: Record<string, NamePool> = {
     surnames: [
       'Barbieri', 'Calabrese', 'Donati', 'Esposito', 'Fiorentino', 'Gallo', 'Iannone', 'Lombardi',
       'Marchetti', 'Nardone', 'Orlandi', 'Pellegrini', 'Quaranta', 'Riva', 'Santoro', 'Tosi',
-      'Vitale', 'Zanetti', 'Amato', 'Bellini', 'Caruso', 'Ferrara', 'Grasso', 'Leone',
-      'Mancini', 'Neri', 'Palumbo', 'Rinaldi', 'Sartori', 'Trevisan', 'Valenti', 'Zola',
+      'Vitale', 'Zanetto', 'Amato', 'Bellini', 'Caruso', 'Ferrara', 'Grasso', 'Leone',
+      'Mancino', 'Neri', 'Palumbo', 'Rinaldi', 'Sartori', 'Trevisan', 'Valenti', 'Zolla',
       'Bianchi', 'Colombo', 'Damico', 'Ferretti', 'Greco', 'Longo', 'Moretti', 'Parisi',
-      'Rizzo', 'Sorrentino', 'Testa', 'Vieri', 'Bonucci', 'Cavaliere', 'Fabbri', 'Marino',
+      'Rizzo', 'Sorrentino', 'Testa', 'Vieroli', 'Bonucco', 'Cavaliere', 'Fabbri', 'Marino',
     ],
   },
   german: {
@@ -207,7 +207,7 @@ export const NAME_POOLS: Record<string, NamePool> = {
       'Iversen', 'Junker', 'Kirchner', 'Lindemann', 'Muhlbauer', 'Neuhaus', 'Ostermann', 'Puttkamer',
       'Reinhardt', 'Schafer', 'Trautmann', 'Ulmer', 'Vogel', 'Wagner', 'Zimmermann', 'Bruckner',
       'Denzel', 'Engelhardt', 'Frohlich', 'Gundlach', 'Hartwig', 'Ilgner', 'Kaltenbach', 'Lehnert',
-      'Maier', 'Nagelsmann', 'Overath', 'Papendieck', 'Rieger', 'Steinbach', 'Thalmann', 'Uhlig',
+      'Maier', 'Nagelmann', 'Oberath', 'Papendieck', 'Rieger', 'Steinbach', 'Thalmann', 'Uhlig',
       'Vollmer', 'Weidner', 'Ziegler', 'Bergmann', 'Dreher', 'Falkenberg', 'Grunwald', 'Kohler',
     ],
   },
@@ -230,12 +230,12 @@ export const NAME_POOLS: Record<string, NamePool> = {
       'Jeroen', 'Marten', 'Rick', 'Tijmen',
     ],
     surnames: [
-      'Aardenburg', 'Beek', 'Cruyff', 'Dijkstra', 'Elzinga', 'Fransen', 'Groot', 'Heerdink',
+      'Aardenburg', 'Beek', 'Crevel', 'Dijkstra', 'Elzinga', 'Fransen', 'Groot', 'Heerdink',
       'Ijsselstein', 'Jansen', 'Koster', 'Leeuwen', 'Meijer', 'Nieuwkoop', 'Oosterhuis', 'Prins',
-      'Rijkaard', 'Smulders', 'Terpstra', 'Uijtdehaage', 'Verhoeven', 'Wijnaldum', 'Zoetermeer', 'Bakker',
-      'Cornelisse', 'Doorn', 'Enthoven', 'Fokkema', 'Gerritsen', 'Hoedt', 'Jonker', 'Kuijpers',
-      'Loos', 'Mulder', 'Nijland', 'Osinga', 'Postma', 'Reijnders', 'Schouten', 'Tuinstra',
-      'Veerman', 'Wijndal', 'Bosman', 'Dekker', 'Hendriks', 'Kuiper', 'Molenaar', 'Visser',
+      'Rijkhout', 'Smulders', 'Terpstra', 'Uijtdehaage', 'Verhoeven', 'Wijnhout', 'Zoetermeer', 'Bakker',
+      'Cornelisse', 'Doorn', 'Enthoven', 'Fokkema', 'Gerritsen', 'Hoedeman', 'Jonker', 'Kuijpers',
+      'Loos', 'Mulder', 'Nijland', 'Osinga', 'Postma', 'Reijndert', 'Schouten', 'Tuinstra',
+      'Veerman', 'Wijnstra', 'Bosman', 'Dekker', 'Hendriks', 'Kuiper', 'Molenaar', 'Visser',
     ],
   },
   belgian: {
@@ -251,12 +251,12 @@ export const NAME_POOLS: Record<string, NamePool> = {
       'Aster', 'Bilal', 'Cyriel', 'Dante',
     ],
     surnames: [
-      'Aerts', 'Buysse', 'Coucke', 'Debast', 'Engels', 'Faes', 'Goossens', 'Hazard',
-      'Impens', 'Janssens', 'Kums', 'Lukaku', 'Mechele', 'Nainggolan', 'Openda', 'Praet',
-      'Raskin', 'Sels', 'Theate', 'Vanaken', 'Wilmots', 'Bornauw', 'Casteels', 'Doku',
-      'Everaert', 'Frankeur', 'Geens', 'Heynen', 'Ilombe', 'Jutgla', 'Kayembe', 'Lavia',
-      'Maertens', 'Nielsen', 'Onana', 'Peeters', 'Roef', 'Smets', 'Trossard', 'Vermeulen',
-      'Willems', 'Bakayoko', 'Claes', 'Delcroix', 'Hendrickx', 'Maes', 'Sierens', 'Vercauteren',
+      'Aerts', 'Buysse', 'Coucke', 'Debast', 'Engels', 'Faes', 'Goossens', 'Hazeling',
+      'Impens', 'Janssens', 'Kums', 'Lubaku', 'Mechelen', 'Nangalen', 'Opendo', 'Praet',
+      'Raskin', 'Selst', 'Theate', 'Vanakker', 'Wilmets', 'Bornauwe', 'Casteel', 'Dokun',
+      'Everaert', 'Frankeur', 'Geens', 'Heynen', 'Ilombe', 'Jutgla', 'Kayembe', 'Laviet',
+      'Maertens', 'Nielsen', 'Onana', 'Peeters', 'Roef', 'Smets', 'Trossaert', 'Vermeule',
+      'Willems', 'Bakayo', 'Claes', 'Delcroix', 'Hendrickx', 'Maes', 'Sierens', 'Vercauter',
     ],
   },
   brazilian: {
@@ -264,12 +264,12 @@ export const NAME_POOLS: Record<string, NamePool> = {
     conventions: ['mononym', 'nickname', 'particle', 'doubleSurname'],
     particles: [{ text: 'da', chance: 0.1 }, { text: 'dos', chance: 0.07 }, { text: 'de', chance: 0.05 }],
     forenames: [
-      'Adriano', 'Bruno', 'Caio', 'Danilo', 'Eder', 'Fabinho', 'Gabriel', 'Heitor', 'Igor', 'Joao',
-      'Kaio', 'Lucas', 'Matheus', 'Neto', 'Otavio', 'Paulinho', 'Rafael', 'Samuel', 'Thiago', 'Vinicius',
-      'Wesley', 'Yuri', 'Alisson', 'Bernardo', 'Cauã', 'Douglas', 'Emerson', 'Felipe',
-      'Guilherme', 'Hugo', 'Italo', 'Juninho', 'Kleber', 'Leandro', 'Murilo', 'Nathan',
+      'Adriano', 'Bruno', 'Caio', 'Danilo', 'Eder', 'Fabrinho', 'Gabriel', 'Heitor', 'Igor', 'Joao',
+      'Kaio', 'Lucas', 'Matheus', 'Neto', 'Otavio', 'Paulino', 'Rafael', 'Samuel', 'Thiago', 'Vinicius',
+      'Wesley', 'Yuri', 'Alisom', 'Bernardo', 'Cauã', 'Douglas', 'Emerson', 'Felipe',
+      'Guilherme', 'Hugo', 'Italo', 'Junilho', 'Kleber', 'Leandro', 'Murilo', 'Nathan',
       'Pedro', 'Renan', 'Sandro', 'Tiago', 'Vitor', 'Wanderson', 'Andre', 'Diego',
-      'Everton', 'Gustavo', 'Luan', 'Richarlison',
+      'Everton', 'Gustavo', 'Luan', 'Ricarlon',
     ],
     surnames: [
       'Alves', 'Barbosa', 'Cavalcanti', 'Duarte', 'Esteves', 'Ferreira', 'Gomes', 'Henrique',
@@ -294,10 +294,10 @@ export const NAME_POOLS: Record<string, NamePool> = {
     surnames: [
       'Aguirre', 'Benitez', 'Cardozo', 'Dominguez', 'Escobar', 'Fernandez', 'Gimenez', 'Herrera',
       'Ibarra', 'Juarez', 'Lopez', 'Molina', 'Nunez', 'Ortega', 'Paredes', 'Quintero',
-      'Romero', 'Sosa', 'Torres', 'Urbina', 'Vazquez', 'Zarate', 'Acosta', 'Bustos',
-      'Caceres', 'Duarte', 'Estigarribia', 'Franco', 'Gallardo', 'Heredia', 'Insua', 'Ledesma',
-      'Maidana', 'Nardo', 'Olivera', 'Pizarro', 'Rojas', 'Salvatierra', 'Toledo', 'Villalba',
-      'Zabaleta', 'Almiron', 'Cabrera', 'Ferreyra', 'Godoy', 'Luna', 'Peralta', 'Silvestre',
+      'Romero', 'Sosinic', 'Torres', 'Urbina', 'Vazquez', 'Zarate', 'Acosta', 'Bustos',
+      'Caceres', 'Duarte', 'Estigarribia', 'Franco', 'Gallardo', 'Heredia', 'Insuar', 'Ledesmo',
+      'Maidano', 'Nardo', 'Olivera', 'Pizarro', 'Rojas', 'Salvatierra', 'Toledo', 'Villalba',
+      'Zabalete', 'Almirez', 'Cabrera', 'Ferreyro', 'Godoy', 'Luna', 'Peralta', 'Silvestre',
     ],
   },
   nordic: {
@@ -312,12 +312,12 @@ export const NAME_POOLS: Record<string, NamePool> = {
       'Sebastian', 'Torbjorn', 'Vidar', 'Alfons',
     ],
     surnames: [
-      'Andersson', 'Berg', 'Christensen', 'Dahl', 'Eriksen', 'Fagerli', 'Gundersen', 'Haaland',
+      'Andersson', 'Berg', 'Christensen', 'Dahl', 'Eriksen', 'Fagerli', 'Gundersen', 'Haalund',
       'Isaksen', 'Jorgensen', 'Karlsson', 'Lindqvist', 'Mikkelsen', 'Nyland', 'Olsen', 'Pedersen',
-      'Rasmussen', 'Sorensen', 'Thorsen', 'Ulvestad', 'Vestergaard', 'Wahlberg', 'Aasen', 'Bakken',
-      'Cederberg', 'Dyngeland', 'Ekdal', 'Forsberg', 'Gislason', 'Hagen', 'Ingebrigtsen', 'Johansson',
-      'Kvist', 'Lofgren', 'Moberg', 'Nordtveit', 'Ostberg', 'Palsson', 'Ryerson', 'Strand',
-      'Tveita', 'Vinter', 'Ahlberg', 'Bergstrom', 'Elvedi', 'Hjulmand', 'Nilsson', 'Sandberg',
+      'Rasmussen', 'Sorensen', 'Thorsen', 'Ulvestad', 'Vestergren', 'Wahlberg', 'Aasen', 'Bakken',
+      'Cederberg', 'Dyngeland', 'Ekdahl', 'Forsbergh', 'Gislason', 'Hagen', 'Ingebrigtsen', 'Johansson',
+      'Kvist', 'Lofgren', 'Moberg', 'Nordtvedt', 'Ostberg', 'Palsson', 'Ryertun', 'Strand',
+      'Tveita', 'Vinter', 'Ahlberg', 'Bergstrom', 'Elvedal', 'Hjulman', 'Nilsson', 'Sandberg',
     ],
   },
   polish: {
@@ -333,11 +333,11 @@ export const NAME_POOLS: Record<string, NamePool> = {
     ],
     surnames: [
       'Adamczyk', 'Blaszczyk', 'Cieslak', 'Dabrowski', 'Frankowski', 'Grabowski', 'Jankowski', 'Kaczmarek',
-      'Lewandowski', 'Michalski', 'Nowak', 'Olszewski', 'Pawlak', 'Rutkowski', 'Sikora', 'Szymanski',
+      'Lewandek', 'Michalski', 'Nowak', 'Olszewski', 'Pawlak', 'Rutkowski', 'Sikora', 'Szymanski',
       'Tomaszewski', 'Walczak', 'Zielinski', 'Baranowski', 'Chojnacki', 'Duda', 'Gajewski', 'Jozwiak',
       'Kowalczyk', 'Lis', 'Maslanka', 'Nowicki', 'Ostrowski', 'Piatek', 'Sadowski', 'Sobczak',
-      'Urbanski', 'Wieczorek', 'Zalewski', 'Bednarek', 'Czerwinski', 'Glik', 'Jagiello', 'Krychowiak',
-      'Milik', 'Piszczek', 'Rybus', 'Stepinski', 'Wojciechowski', 'Zurawski', 'Kedziora', 'Moder',
+      'Urbanski', 'Wieczorek', 'Zalewski', 'Bednarek', 'Czerwinski', 'Glinka', 'Jagiello', 'Krychowski',
+      'Milicz', 'Piszczyk', 'Rybak', 'Stepinski', 'Wojciechowski', 'Zurawski', 'Kedzior', 'Modrak',
     ],
   },
   balkan: {
@@ -352,12 +352,12 @@ export const NAME_POOLS: Record<string, NamePool> = {
       'Toma', 'Vlado', 'Zeljko', 'Dario',
     ],
     surnames: [
-      'Andric', 'Babic', 'Cvitanovic', 'Dragovic', 'Erceg', 'Filipovic', 'Gvardiol', 'Horvat',
-      'Ivanovic', 'Jovanovic', 'Kovacic', 'Lukic', 'Markovic', 'Novakovic', 'Obradovic', 'Perisic',
-      'Radulovic', 'Simic', 'Todorovic', 'Vlasic', 'Zivkovic', 'Brekalo', 'Cirkovic', 'Dukic',
-      'Grujic', 'Halilovic', 'Jurcevic', 'Kramaric', 'Lazovic', 'Mitrovic', 'Nikolic', 'Pavlovic',
-      'Rakitic', 'Stankovic', 'Tadic', 'Vukovic', 'Barisic', 'Djordjevic', 'Gajic', 'Ilic',
-      'Katic', 'Milinkovic', 'Petkovic', 'Sosa', 'Vranjes', 'Zlatkovic', 'Modric', 'Susic',
+      'Andric', 'Babic', 'Cvitanovic', 'Dragovic', 'Erceg', 'Filipovic', 'Gvardic', 'Horvat',
+      'Ivanovic', 'Jovanovic', 'Kovanic', 'Lukic', 'Markovic', 'Novakovic', 'Obradovic', 'Perinic',
+      'Radulovic', 'Simic', 'Todorovic', 'Vlasenic', 'Zivkovic', 'Brekanic', 'Cirkovic', 'Dukic',
+      'Grujic', 'Halinovic', 'Jurcevic', 'Kramanic', 'Lazovic', 'Mitranic', 'Nikolic', 'Pavlovic',
+      'Rakinic', 'Stankovic', 'Tadinic', 'Vukovic', 'Barisic', 'Djordjevic', 'Gajic', 'Ilic',
+      'Katic', 'Milanovic', 'Petkovic', 'Sosinic', 'Vranjes', 'Zlatkovic', 'Modranic', 'Susanic',
     ],
   },
   turkish: {
@@ -377,7 +377,7 @@ export const NAME_POOLS: Record<string, NamePool> = {
       'Tekin', 'Ustundag', 'Yildiz', 'Zorlu', 'Arslan', 'Bulut', 'Ciftci', 'Dogan',
       'Ercan', 'Guler', 'Kilic', 'Korkmaz', 'Kurtulus', 'Ozdemir', 'Sari', 'Toprak',
       'Turan', 'Yalcin', 'Yilmaz', 'Aydin', 'Celik', 'Duman', 'Erdem', 'Gencer',
-      'Karaca', 'Kocak', 'Ozkan', 'Sonmez', 'Tosun', 'Uzun', 'Yaman', 'Calhanoglu',
+      'Karaca', 'Kocak', 'Ozkan', 'Sonmez', 'Tosunlu', 'Uzun', 'Yaman', 'Calhanoz',
     ],
   },
   greek: {
@@ -392,11 +392,11 @@ export const NAME_POOLS: Record<string, NamePool> = {
       'Lazaros', 'Nasos', 'Stergios', 'Vlasis',
     ],
     surnames: [
-      'Antoniou', 'Bakasetas', 'Christodoulou', 'Dimitriou', 'Eleftheriou', 'Fortounis', 'Giannoulis', 'Hatzidiakos',
-      'Iordanou', 'Karagiannis', 'Lambropoulos', 'Mavropanos', 'Nikolaou', 'Oikonomou', 'Papadopoulos', 'Retsos',
+      'Antoniou', 'Bakasetos', 'Christodoulou', 'Dimitriou', 'Eleftheriou', 'Fortounas', 'Giannoulis', 'Hatzidiakos',
+      'Iordanou', 'Karagiannis', 'Lambropoulos', 'Mavrogianis', 'Nikolaou', 'Oikonomou', 'Papadopoulos', 'Retsos',
       'Samaris', 'Tzavellas', 'Vlachodimos', 'Zafeiris', 'Andreadis', 'Bouchalakis', 'Chatzigiovanis', 'Douvikas',
-      'Galanopoulos', 'Ioannidis', 'Konstantelias', 'Limnios', 'Masouras', 'Ntoi', 'Pelkas', 'Rota',
-      'Siopis', 'Tsimikas', 'Vagiannidis', 'Zeca', 'Athanasiadis', 'Chalkiadakis', 'Kourbelis', 'Manolas',
+      'Galanopoulos', 'Ioannidis', 'Konstantelias', 'Limnios', 'Masouris', 'Ntoi', 'Pelkos', 'Rota',
+      'Siopis', 'Tsimikos', 'Vagiannidis', 'Zeca', 'Athanasiadis', 'Chalkiadakis', 'Kourbelis', 'Manolis',
       'Pavlidis', 'Sotiriou', 'Tsoukalas', 'Vrousai', 'Kyriakopoulos', 'Ntinas', 'Stafylidis', 'Zagaritis',
     ],
   },
@@ -412,12 +412,12 @@ export const NAME_POOLS: Record<string, NamePool> = {
       'Odion', 'Samuel', 'Victor', 'Wilfred',
     ],
     surnames: [
-      'Adebayo', 'Bamba', 'Camara', 'Diallo', 'Diouf', 'Faye', 'Gueye', 'Haidara',
-      'Iwobi', 'Jallow', 'Keita', 'Kone', 'Mendy', 'Ndoye', 'Okafor', 'Ouattara',
-      'Sarr', 'Sylla', 'Toure', 'Traore', 'Yeboah', 'Zoungrana', 'Aboubakar', 'Baldé',
-      'Cisse', 'Dabo', 'Ekong', 'Fofana', 'Gomis', 'Hadjam', 'Jatta', 'Konate',
-      'Mbaye', 'Ndidi', 'Obi', 'Partey', 'Sanogo', 'Sow', 'Tchouameni', 'Ugochukwu',
-      'Anyanwu', 'Bissouma', 'Dembele', 'Enahoro', 'Kamara', 'Nwaneri', 'Osimhen', 'Sangare',
+      'Adebayi', 'Bamba', 'Camara', 'Diallo', 'Diouf', 'Faye', 'Gueye', 'Haidara',
+      'Iwoba', 'Jallow', 'Keita', 'Kone', 'Mendy', 'Ndoye', 'Okafor', 'Ouattara',
+      'Sarr', 'Sylla', 'Toure', 'Traore', 'Yeboa', 'Zoungrana', 'Aboubakar', 'Baldé',
+      'Cisse', 'Dabo', 'Ekongo', 'Fofana', 'Gomis', 'Hadjam', 'Jatta', 'Konateh',
+      'Mbaye', 'Ndike', 'Obi', 'Parteh', 'Sanogo', 'Sow', 'Tchoumeni', 'Ugochuku',
+      'Anyanwu', 'Bissouma', 'Dembele', 'Enahoro', 'Kamara', 'Nwanezi', 'Osimeni', 'Sangareh',
     ],
   },
   maghrebi: {
@@ -432,12 +432,12 @@ export const NAME_POOLS: Record<string, NamePool> = {
       'Bilel', 'Ferhat', 'Islam', 'Ryad',
     ],
     surnames: [
-      'Amrabat', 'Benatia', 'Chergui', 'Dahmane', 'El Kaabi', 'Feghouli', 'Ghezzal', 'Hakimi',
-      'Ihattaren', 'Jebali', 'Khedira', 'Laidouni', 'Mahrez', 'Nasri', 'Ounahi', 'Rahmani',
-      'Saiss', 'Taider', 'Ziyech', 'Attal', 'Bennacer', 'Chaibi', 'Delort', 'El Yamiq',
-      'Ferhat', 'Guedioura', 'Harit', 'Ismaili', 'Kadri', 'Larbi', 'Mandi', 'Nadir',
-      'Ouahabi', 'Rekik', 'Slimani', 'Tannane', 'Zerrouki', 'Aouar', 'Belaili', 'Chetti',
-      'Dari', 'Ezzalzouli', 'Guendouzi', 'Hadid', 'Kechrida', 'Msakni', 'Skhiri', 'Zalzouli',
+      'Amrabet', 'Benatik', 'Chergui', 'Dahmane', 'El Kaabi', 'Feghoul', 'Ghezzal', 'Hakimou',
+      'Ihattaren', 'Jebali', 'Khedari', 'Laidouni', 'Mahrezi', 'Nasiri', 'Ounahi', 'Rahmani',
+      'Saiss', 'Taider', 'Ziyachi', 'Attal', 'Bennaceur', 'Chaibi', 'Delort', 'El Yamiq',
+      'Ferhat', 'Guedioura', 'Harit', 'Ismaili', 'Kadri', 'Larbi', 'Mandili', 'Nadir',
+      'Ouahabi', 'Rekik', 'Slimane', 'Tannane', 'Zerrouki', 'Aouari', 'Belaili', 'Chetti',
+      'Dari', 'Ezzalzouli', 'Guendaoui', 'Hadid', 'Kechrida', 'Msakna', 'Skhira', 'Zalzouli',
     ],
   },
   japanese: {
@@ -452,12 +452,12 @@ export const NAME_POOLS: Record<string, NamePool> = {
       'Hayato', 'Keito', 'Rin', 'Souta',
     ],
     surnames: [
-      'Abe', 'Doan', 'Endo', 'Furuhashi', 'Hashioka', 'Ito', 'Kamada', 'Kubo',
-      'Maeda', 'Mitoma', 'Morita', 'Nakamura', 'Ogawa', 'Sakai', 'Suzuki', 'Tanaka',
-      'Tomiyasu', 'Ueda', 'Watanabe', 'Yamada', 'Asano', 'Chiba', 'Fujita', 'Hasegawa',
-      'Inoue', 'Kimura', 'Kobayashi', 'Matsuoka', 'Nagatomo', 'Okazaki', 'Saito', 'Shibasaki',
+      'Abe', 'Doanaka', 'Endo', 'Furuhara', 'Hashioka', 'Ito', 'Kamata', 'Kubota',
+      'Maeda', 'Mitona', 'Morita', 'Nakamura', 'Ogawa', 'Sakai', 'Suzuki', 'Tanaka',
+      'Tomiyama', 'Ueda', 'Watanabe', 'Yamada', 'Asano', 'Chiba', 'Fujita', 'Hasegawa',
+      'Inoue', 'Kimura', 'Kobayashi', 'Matsuoka', 'Nagatani', 'Okazaki', 'Saito', 'Shibasaki',
       'Takahashi', 'Uchida', 'Yamamoto', 'Yoshida', 'Hara', 'Kato', 'Machida', 'Nishimura',
-      'Ozaki', 'Sano', 'Sugawara', 'Taniguchi', 'Wakizaka', 'Yano', 'Hatate', 'Iwata',
+      'Ozaki', 'Sano', 'Sugawara', 'Taniguchi', 'Wakisaka', 'Yano', 'Hatani', 'Iwata',
     ],
   },
   korean: {
@@ -493,11 +493,11 @@ export const NAME_POOLS: Record<string, NamePool> = {
     ],
     surnames: [
       'Abbott', 'Bradley', 'Caldwell', 'Delgado', 'Ellsworth', 'Ferguson', 'Grant', 'Holbrook',
-      'Ives', 'Jennings', 'Kessler', 'Lockhart', 'Mendez', 'Novak', 'Osborne', 'Pomykal',
-      'Ramirez', 'Sargent', 'Turner', 'Vines', 'Whitcomb', 'Yarbrough', 'Blackmon', 'Corbett',
+      'Ives', 'Jennings', 'Kessler', 'Lockhart', 'Mendez', 'Novak', 'Osborne', 'Pomeroy',
+      'Ramirez', 'Sargeant', 'Turner', 'Vines', 'Whitcomb', 'Yarbrough', 'Blackmon', 'Corbett',
       'Dunlap', 'Everson', 'Fletcher', 'Gaines', 'Hollis', 'Ingram', 'Kirkland', 'Lassiter',
-      'Marsh', 'Norwood', 'Prescott', 'Reyna', 'Sheppard', 'Tillman', 'Vaughn', 'Winslow',
-      'Aaronson', 'Balogun', 'Cardoso', 'Dest', 'Musah', 'Pepi', 'Richards', 'Weah',
+      'Marsh', 'Norwood', 'Prescott', 'Reynas', 'Sheppard', 'Tillman', 'Vaughn', 'Winslow',
+      'Aarenson', 'Balogan', 'Cardoso', 'Destin', 'Musaki', 'Pepin', 'Richards', 'Weare',
     ],
   },
   mexican: {
@@ -513,10 +513,10 @@ export const NAME_POOLS: Record<string, NamePool> = {
     ],
     surnames: [
       'Alvarado', 'Beltran', 'Cordova', 'Dominguez', 'Espinoza', 'Fuentes', 'Guzman', 'Huerta',
-      'Ibarra', 'Jimenez', 'Lainez', 'Montes', 'Nava', 'Ochoa', 'Pineda', 'Quinones',
+      'Ibarra', 'Jimenez', 'Lainos', 'Montes', 'Nava', 'Ochoas', 'Pineda', 'Quinones',
       'Rodriguez', 'Sepulveda', 'Trejo', 'Uribe', 'Vega', 'Zavala', 'Angulo', 'Bermudez',
       'Cabrera', 'Delgadillo', 'Escobar', 'Flores', 'Gallardo', 'Hernandez', 'Lozano', 'Mendoza',
-      'Nunez', 'Orozco', 'Peralta', 'Ramos', 'Salcedo', 'Tapia', 'Villalobos', 'Zamora',
+      'Nunez', 'Orozco', 'Peralta', 'Ramos', 'Salcida', 'Tapia', 'Villalobos', 'Zamora',
       'Aguirre', 'Cisneros', 'Esquivel', 'Gutierrez', 'Marquez', 'Osuna', 'Sanchez', 'Vasquez',
     ],
   },
@@ -532,12 +532,12 @@ export const NAME_POOLS: Record<string, NamePool> = {
       'Marino', 'Radamel', 'Steven', 'Yairo',
     ],
     surnames: [
-      'Arias', 'Borja', 'Cuadrado', 'Diaz', 'Estupinan', 'Fuentes', 'Gonzalez', 'Hurtado',
-      'Izquierdo', 'Jaramillo', 'Lerma', 'Mina', 'Nunez', 'Ospina', 'Preciado', 'Quintero',
-      'Rodallega', 'Sanchez', 'Tesillo', 'Uribe', 'Valencia', 'Zapata', 'Angulo', 'Barrios',
-      'Castillo', 'Duran', 'Escobar', 'Flores', 'Guarin', 'Hernandez', 'Jimenez', 'Lucumi',
-      'Moreno', 'Ortiz', 'Perea', 'Restrepo', 'Suarez', 'Torres', 'Velasquez', 'Yepes',
-      'Arboleda', 'Cardona', 'Diaz-Munoz', 'Gomez', 'Mosquera', 'Palacios', 'Renteria', 'Sinisterra',
+      'Arias', 'Borja', 'Cuadrada', 'Diaz', 'Estupinar', 'Fuentes', 'Gonzalez', 'Hurtado',
+      'Izquierdo', 'Jaramillo', 'Lermas', 'Mina', 'Nunez', 'Ospino', 'Preciado', 'Quintero',
+      'Rodallego', 'Sanchez', 'Tesilla', 'Uribe', 'Valencia', 'Zapata', 'Angulo', 'Barrios',
+      'Castillo', 'Duran', 'Escobar', 'Flores', 'Guarino', 'Hernandez', 'Jimenez', 'Lucuma',
+      'Moreno', 'Ortiz', 'Perea', 'Restrepo', 'Suarez', 'Torres', 'Velasquez', 'Yepez',
+      'Arboleda', 'Cardona', 'Diaz-Munoz', 'Gomez', 'Mosquera', 'Palacios', 'Renteria', 'Sinistero',
     ],
   },
   slavic: {
@@ -552,12 +552,12 @@ export const NAME_POOLS: Record<string, NamePool> = {
       'Oleh', 'Rostyslav', 'Valeriy', 'Yehor',
     ],
     surnames: [
-      'Andriyenko', 'Bondarenko', 'Chernov', 'Dovbyk', 'Fedorov', 'Grishchenko', 'Hlushchenko', 'Ivanenko',
-      'Kovalenko', 'Lunin', 'Malinovskyi', 'Nesterov', 'Ovcharenko', 'Petrov', 'Romanchuk', 'Shevchenko',
-      'Tymoshchuk', 'Vasylenko', 'Yarmolenko', 'Zinchenko', 'Boyko', 'Danylov', 'Filatov', 'Grytsenko',
-      'Kharatin', 'Konoplya', 'Lysenko', 'Mudryk', 'Novikov', 'Pavlenko', 'Rebrov', 'Sydorchuk',
-      'Tsygankov', 'Volkov', 'Zubkov', 'Bilyi', 'Dubinchak', 'Hutsuliak', 'Kalyuzhnyi', 'Matviyenko',
-      'Ponomarenko', 'Sikan', 'Trubin', 'Yaremchuk', 'Zabarnyi', 'Krasnopir', 'Ocheretko', 'Sudakov',
+      'Andriyenko', 'Bondarenko', 'Chernov', 'Dovbysh', 'Fedorov', 'Grishchenko', 'Hlushchenko', 'Ivanenko',
+      'Kovalenko', 'Lunyk', 'Malinovyi', 'Nesterov', 'Ovcharenko', 'Petrov', 'Romanchuk', 'Shevchuk',
+      'Tymoshko', 'Vasylenko', 'Yarmolyuk', 'Zinchuk', 'Boyko', 'Danylov', 'Filatov', 'Grytsenko',
+      'Kharatin', 'Konopko', 'Lysenko', 'Mudryn', 'Novikov', 'Pavlenko', 'Rebrovych', 'Sydorko',
+      'Tsyganko', 'Volkov', 'Zubkov', 'Bilyi', 'Dubinchak', 'Hutsuliak', 'Kalyuzhnyi', 'Matviyets',
+      'Ponomarenko', 'Sikan', 'Trubyn', 'Yaremko', 'Zabarny', 'Krasnopir', 'Ocheretko', 'Sudak',
     ],
   },
   swiss: {
@@ -572,12 +572,12 @@ export const NAME_POOLS: Record<string, NamePool> = {
       'Steven', 'Ardon', 'Bastien', 'Kastriot',
     ],
     surnames: [
-      'Akanji', 'Burkart', 'Comert', 'Duah', 'Elvedi', 'Frei', 'Garcia', 'Hefti',
-      'Itten', 'Jashari', 'Kobel', 'Lotomba', 'Mvogo', 'Ndoye', 'Omeragic', 'Rieder',
+      'Akanjo', 'Burkart', 'Comert', 'Duah', 'Elvedal', 'Frei', 'Garcia', 'Hefti',
+      'Itten', 'Jashari', 'Kobelt', 'Lotomba', 'Mvoga', 'Ndoye', 'Omeragic', 'Rieder',
       'Schmid', 'Sow', 'Steffen', 'Vargas', 'Widmer', 'Zesiger', 'Amdouni', 'Bernasconi',
       'Cabral', 'Dahler', 'Fassnacht', 'Gerber', 'Huber', 'Kaufmann', 'Lang', 'Meyer',
-      'Nsame', 'Pfeiffer', 'Rohner', 'Stergiou', 'Ugrinic', 'Von Ballmoos', 'Weiler', 'Zeqiri',
-      'Aebischer', 'Chiasso', 'Fernandes', 'Kreuzer', 'Lauper', 'Muheim', 'Ruegg', 'Sierro',
+      'Nsame', 'Pfeiffer', 'Rohner', 'Stergiou', 'Ugrinic', 'Von Ballmoos', 'Weiler', 'Zeqira',
+      'Aebisch', 'Chiasso', 'Fernandes', 'Kreuzer', 'Lauper', 'Muheim', 'Ruegg', 'Sierro',
     ],
   },
   czech: {
@@ -592,11 +592,11 @@ export const NAME_POOLS: Record<string, NamePool> = {
       'Richard', 'Samuel', 'Vitek', 'Bruno', 'Josef', 'Rudolf',
     ],
     surnames: [
-      'Barak', 'Coufal', 'Dolezal', 'Fiala', 'Hlozek', 'Jankto', 'Kalvach', 'Krejci',
-      'Masopust', 'Novotny', 'Pesek', 'Provod', 'Rehak', 'Soucek', 'Sevcik', 'Trpisovsky',
+      'Barak', 'Coufalek', 'Dolezal', 'Fiala', 'Hlozak', 'Jankto', 'Kalvach', 'Krejci',
+      'Masopust', 'Novotny', 'Pesek', 'Provod', 'Rehak', 'Soucak', 'Sevcik', 'Trpisovsky',
       'Vlcek', 'Zima', 'Bednarek', 'Cerny', 'Dvorak', 'Havel', 'Jurasek', 'Kopecky',
-      'Lingr', 'Mateju', 'Nedved', 'Ostrak', 'Pokorny', 'Rosicky', 'Sadilek', 'Sulc',
-      'Vydra', 'Zeleny', 'Blazek', 'Chory', 'Hranac', 'Kuchta', 'Michal', 'Prekop',
+      'Lingr', 'Mateju', 'Nedvedek', 'Ostrak', 'Pokorny', 'Rosinsky', 'Sadilek', 'Sulc',
+      'Vydra', 'Zeleny', 'Blazek', 'Chory', 'Hranac', 'Kuchna', 'Michal', 'Prekop',
       'Sima', 'Tijani', 'Vesely', 'Zafeiris', 'Holes', 'Jemelka', 'Lischka', 'Stanek',
     ],
   },
@@ -604,8 +604,23 @@ export const NAME_POOLS: Record<string, NamePool> = {
 
 export const POOL_IDS = Object.keys(NAME_POOLS)
 
-/** Brazilian-style diminutives and nickname suffixes. */
-export const NICKNAME_SUFFIXES = ['inho', 'ito', 'ao', 'zinho']
+/**
+ * Diminutive suffixes, per pool. These are language-specific: "-inho" is
+ * Portuguese, so grafting it onto a Basque forename produces "Asierzinho",
+ * which is nonsense in a way players notice immediately.
+ */
+export const NICKNAME_SUFFIXES_BY_POOL: Record<string, string[]> = {
+  brazilian: ['inho', 'zinho', 'ao', 'ito'],
+  portuguese: ['inho', 'zinho'],
+  spanish: ['ito', 'illo'],
+  argentine: ['ito'],
+  colombian: ['ito'],
+  mexican: ['ito'],
+  italian: ['ino', 'etto'],
+}
+
+/** Fallback for pools with no diminutive tradition: no suffix at all. */
+export const DEFAULT_NICKNAME_SUFFIXES: string[] = []
 
 /** Short-form nicknames applied to long forenames in Anglo pools. */
 export const SHORT_FORMS: Record<string, string> = {

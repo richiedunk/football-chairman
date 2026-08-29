@@ -1,6 +1,8 @@
 import { Rng } from '../rng'
 import type { Nation } from '../types'
-import { NAME_POOLS, NICKNAME_SUFFIXES, SHORT_FORMS, type NamePool } from './pools'
+import {
+  DEFAULT_NICKNAME_SUFFIXES, NAME_POOLS, NICKNAME_SUFFIXES_BY_POOL, SHORT_FORMS, type NamePool,
+} from './pools'
 
 /**
  * Person-name generation.
@@ -110,9 +112,9 @@ export class NameGenerator {
     // by a single name or a diminutive rather than forename plus surname.
     if (pool.conventions.includes('mononym') && this.rng.chance(0.34)) {
       const base = this.rng.chance(0.55) ? firstName : lastName.split(' ').pop() ?? lastName
-      if (this.rng.chance(0.35)) {
-        const suffix = this.rng.pick(NICKNAME_SUFFIXES)
-        return applySuffix(base, suffix)
+      const suffixes = NICKNAME_SUFFIXES_BY_POOL[pool.id] ?? DEFAULT_NICKNAME_SUFFIXES
+      if (suffixes.length > 0 && this.rng.chance(0.35)) {
+        return applySuffix(base, this.rng.pick(suffixes))
       }
       return base
     }

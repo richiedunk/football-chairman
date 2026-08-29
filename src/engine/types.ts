@@ -995,13 +995,77 @@ export interface DirectorProfile {
   reputation: number
   /** Traits the player picked at the start, shaping their strengths. */
   background: DirectorBackground
-  careerHistory: {
-    clubId: ID
-    clubName: string
-    fromSeason: number
-    toSeason: number | null
-    outcome: string
-  }[]
+  /**
+   * Career experience. You start unproven and can only take jobs at clubs
+   * within your level band, so climbing the pyramid is the meta-progression
+   * that spans saves at one club — the reason to accept a job at a club you
+   * have outgrown rather than restarting.
+   */
+  xp: number
+  level: number
+  /** XP banked this season, shown on the season-review screen. */
+  xpThisSeason: number
+  /** Itemised XP awards this season, so the review can show the breakdown. */
+  xpLog: XpAward[]
+  /**
+   * Multiplier applied to all XP awards. Defaults to 1. Exists as the hook for
+   * an optional purchasable boost without threading a store through the
+   * simulation — nothing in the engine reads it except awardXp.
+   */
+  xpMultiplier: number
+  careerHistory: DirectorCareerEntry[]
+  /** Job offers currently on the table, refreshed at season end. */
+  jobOffers: JobOffer[]
+}
+
+export interface DirectorCareerEntry {
+  clubId: ID
+  clubName: string
+  fromSeason: number
+  toSeason: number | null
+  /** How it ended: "Resigned", "Sacked", "Contract expired", or in post. */
+  outcome: string
+  /** Best league finish achieved there. */
+  bestFinish: number
+  trophies: string[]
+  netSpend: number
+  xpEarned: number
+}
+
+export interface XpAward {
+  season: number
+  week: number
+  reason: string
+  amount: number
+  category: XpCategory
+}
+
+export type XpCategory =
+  | 'results'
+  | 'trophies'
+  | 'promotion'
+  | 'transfers'
+  | 'youth'
+  | 'finance'
+  | 'squad'
+  | 'media'
+  | 'survival'
+
+export interface JobOffer {
+  id: ID
+  clubId: ID
+  clubName: string
+  leagueName: string
+  clubReputation: number
+  /** What they expect if you take it. */
+  expectation: BoardExpectation
+  wageOffer: number
+  transferBudgetOffer: number
+  /** Week the offer lapses. */
+  expiresWeek: number
+  expiresSeason: number
+  /** Why they are interested — shown in the offer letter. */
+  pitch: string
 }
 
 export type DirectorBackground =
