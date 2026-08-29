@@ -4,7 +4,7 @@ import { useRoute } from 'vue-router'
 import { useGameStore } from '../../stores/game'
 import FormRun from '../components/FormRun.vue'
 import { sortTable } from '../../engine/systems/board'
-import { survivorsOf } from '../../engine/sim/cups'
+import { survivorsOf, tieAggregate } from '../../engine/sim/cups'
 
 const store = useGameStore()
 const route = useRoute()
@@ -65,15 +65,27 @@ const cup = computed(() => {
 
   const currentRound = competition.rounds[competition.rounds.length - 1] ?? null
   const stillIn = survivorsOf(s, competition).includes(store.club?.id ?? '')
-  const tie = currentRound
-    ? s.fixtures.find(
+  // A two-legged round has two fixtures for the club, so the card shows the
+  // tie rather than a single match.
+  const legs = currentRound
+    ? s.fixtures.filter(
         (f) =>
           currentRound.fixtureIds.includes(f.id)
           && (f.homeClubId === store.club?.id || f.awayClubId === store.club?.id),
       )
+    : []
+
+  const aggregate = currentRound?.twoLegged && legs.length > 0
+    ? tieAggregate(
+        s.fixtures.filter(
+          (f) =>
+            currentRound.fixtureIds.includes(f.id)
+            && f.legOf?.tieId === legs[0].legOf?.tieId,
+        ),
+      )
     : null
 
-  return { competition, currentRound, stillIn, tie }
+  return { competition, currentRound, stillIn, tie: legs[0] ?? null, legs, aggregate }
 })
 
 const otherLeagues = computed(() => {
@@ -186,7 +198,23 @@ function short(clubId: string) {
               :class="cup.stillIn ? 'chip--accent' : 'chip--danger'"
             >{{ cup.stillIn ? 'Still in' : 'Out' }}</span>
           </div>
-          <div v-if="cup.tie" class="small">
+          <template v-if="cup.aggregate">
+            <div class="small bold">
+              {{ short(cup.aggregate.clubA) }} {{ cup.aggregate.goalsA }}–{{ cup.aggregate.goalsB }}
+              {{ short(cup.aggregate.clubB) }}
+              <span class="tiny faint">on aggregate</span>
+            </div>
+            <div v-for="leg in cup.legs" :key="leg.id" class="tiny muted">
+              Leg {{ leg.legOf?.leg }} (wk {{ leg.week }}):
+              {{ short(leg.homeClubId) }}
+              <template v-if="leg.result">
+                {{ leg.result.homeGoals }}–{{ leg.result.awayGoals }}
+              </template>
+              <template v-else> v </template>
+              {{ short(leg.awayClubId) }}
+            </div>
+          </template>
+          <div v-else-if="cup.tie" class="small">
             {{ short(cup.tie.homeClubId) }}
             <template v-if="cup.tie.result">
               {{ cup.tie.result.homeGoals }}–{{ cup.tie.result.awayGoals }}

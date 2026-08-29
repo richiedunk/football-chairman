@@ -186,6 +186,62 @@ function withdraw(negotiation: TransferNegotiation) {
       </div>
     </template>
 
+    <template v-if="store.loansOut.length || store.loansIn.length">
+      <div class="section-title">Loans</div>
+      <div class="card">
+        <div v-if="store.loansOut.length" class="card__head">
+          <span class="card__title">Out on loan</span>
+          <span class="chip">{{ store.loansOut.length }}</span>
+        </div>
+        <div v-if="store.loansOut.length" class="list">
+          <button
+            v-for="p in store.loansOut"
+            :key="p.id"
+            class="list__row"
+            @click="router.push(`/player/${p.id}`)"
+          >
+            <div class="list__main">
+              <div class="list__primary">{{ p.knownAs }}</div>
+              <div class="list__secondary">
+                At {{ store.clubById(p.loanClubId ?? '')?.name }} ·
+                {{ p.stats.appearances }} apps ·
+                you pay {{ Math.round(p.loanWageShare * 100) }}%
+              </div>
+            </div>
+            <div class="list__trail">
+              <div class="list__value">{{ Math.round(p.currentAbility) }}</div>
+              <div class="list__sub">CA</div>
+            </div>
+          </button>
+        </div>
+
+        <div v-if="store.loansIn.length" class="card__head">
+          <span class="card__title">Borrowed</span>
+          <span class="chip">{{ store.loansIn.length }} of 5</span>
+        </div>
+        <div v-if="store.loansIn.length" class="list">
+          <button
+            v-for="p in store.loansIn"
+            :key="p.id"
+            class="list__row"
+            @click="router.push(`/player/${p.id}`)"
+          >
+            <div class="list__main">
+              <div class="list__primary">{{ p.knownAs }}</div>
+              <div class="list__secondary">
+                From {{ store.clubById(p.clubId ?? '')?.name }} ·
+                you pay {{ formatWage(Math.round((p.contract?.wage ?? 0) * (1 - p.loanWageShare)), store.currency) }}/wk
+              </div>
+            </div>
+            <div class="list__trail">
+              <div class="list__value">{{ Math.round(p.currentAbility) }}</div>
+              <div class="list__sub">CA</div>
+            </div>
+          </button>
+        </div>
+      </div>
+    </template>
+
     <template v-if="listed.length">
       <div class="section-title">Available for transfer</div>
       <div class="card">

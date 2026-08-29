@@ -184,8 +184,15 @@ export interface Club {
   continentalReputation: number
   finances: ClubFinances
   facilities: Facilities
-  /** Player ids currently contracted, including those out on loan. */
+  /** Player ids the club owns, including those it has loaned out. */
   squad: ID[]
+  /**
+   * Players borrowed from other clubs. Kept separate from `squad` because the
+   * club may select them but does not own them — merging the two would make a
+   * loanee sellable, and splitting ownership from availability is the only
+   * honest way to model it.
+   */
+  loanedIn: ID[]
   /** Staff ids, including the head coach. */
   staff: ID[]
   headCoachId: ID | null
@@ -319,6 +326,10 @@ export interface BoardState {
   tenureSeasons: number
   /** Ticks up when confidence is critical; at 3 you are sacked. */
   warnings: number
+  /** Week of the last formal request, to stop the board being badgered. */
+  lastRequestWeek: number
+  /** Requests made this season. Boards tire of being asked. */
+  requestsThisSeason: number
 }
 
 export interface BoardExpectation {
@@ -425,6 +436,8 @@ export interface Player {
   /** Set when out on loan; clubId remains the parent club. */
   loanClubId: ID | null
   loanUntilSeason: number | null
+  /** Share of a loanee's wage still paid by the parent club, 0-1. */
+  loanWageShare: number
   contract: Contract | null
   agentId: ID | null
   /** 0-100. Drives performance, transfer requests and press leaks. */

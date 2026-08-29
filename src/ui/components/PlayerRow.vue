@@ -23,7 +23,10 @@ const status = computed(() => {
   const p = props.player
   if (p.injury) return { label: `${p.injury.weeksRemaining}w`, cls: 'chip--danger', title: p.injury.type }
   if (p.suspendedWeeks > 0) return { label: 'Susp', cls: 'chip--danger', title: 'Suspended' }
-  if (p.loanClubId) return { label: 'Loan', cls: 'chip--info', title: 'Out on loan' }
+  if (p.loanClubId && p.clubId === store.club?.id) {
+    return { label: 'Out on loan', cls: 'chip--info', title: 'Loaned to another club' }
+  }
+  if (p.loanClubId) return { label: 'On loan', cls: 'chip--info', title: 'Borrowed from another club' }
   if (p.transferRequested) return { label: 'Wants out', cls: 'chip--warn', title: 'Transfer requested' }
   if (p.listedForTransfer) return { label: 'Listed', cls: 'chip--warn', title: 'Listed for transfer' }
   return null

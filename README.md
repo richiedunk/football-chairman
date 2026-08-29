@@ -66,12 +66,19 @@ Then results resolve, and the board forms a view.
 | **Contracts** | The quiet system that ruins careless directors. Players run deals down and leave for nothing; the value collapse starts six months out. |
 | **The head coach** | An AI actor with a formation, a style, opinions about youth, and a relationship with you. He picks the team. Sign a player who doesn't fit what he wants and you've bought an expensive bench-warmer whose value is falling. |
 | **Media** | The offensive system. Leak genuine interest in a rival's unsettled striker to depress his price — or fabricate it more cheaply and risk exposure. Two resources: **credibility**, which determines whether journalists run your briefings at all, and **goodwill**, which is how kindly they cover you when things go wrong. |
+| **Loans** | The lever that makes a youth policy work. A prospect who doesn't play doesn't develop, and the coach decides who plays — so the only way to grow a player he won't pick is to send him where he'll start. Covering more of the wage is what persuades a smaller club to take him: you're paying for his development. |
 | **Morale** | Traceable to decisions you made: minutes against promised status, being signed over, contract neglect, ambition outgrowing the club. |
-| **Finance** | Money arrives lumpily (matchday on the day, TV in instalments, prize money once a year) and wages leave every single week. A club can be profitable across a season and still run out of cash in February. |
+| **Finance** | Money arrives lumpily (matchday on the day, TV in instalments, prize money once a year) and wages leave every single week. A club can be profitable across a season and still run out of cash in February. Operating costs are itemised and driven by real things — stadium maintenance and rent per seat, training and medical per player, support staff whose headcount follows the size of the operation, all scaled by local cost of living. |
 | **Facilities & academy** | The long game. None of it helps this season. |
-| **Board** | Judges you on results against *their* expectation, on the books, and on whether you did what they asked. Three formal warnings and you're gone. |
+| **Board** | Judges you on results against *their* expectation, on the books, and on whether you did what they asked. Three formal warnings and you're gone. You can also **ask them for things** — funds, a higher wage ceiling, a stadium, a lower target, more time, the coach's head — and every request spends some of their confidence in you whether or not it lands. |
+| **Supporters** | Mood is computed from its causes every week — position against expectation, form, ticket prices against the division average, whether you sold more than you replaced, a cup run — and the board screen shows you the breakdown. It doesn't drift. |
 
 ### Career progression
+
+The opening screen is a **jobs board** listing every club in the country by division, with
+the ones your record doesn't yet justify greyed out and labelled with the level and XP gap
+they need. At level 1 that's about 22 open jobs out of 114 — you can see the whole ladder
+before you start climbing it.
 
 You have a level, and it gates which clubs will consider you. XP comes from
 **over-performing the board's expectation** (more than from finishing high), from trading
@@ -81,6 +88,17 @@ expected.
 
 All XP routes through one function with a multiplier hook, so a purchasable boost would be
 a single field rather than a change to any game system.
+
+### Your own contract
+
+You're an employee. On taking a job you negotiate salary, length, signing-on fee,
+promotion, trophy and target bonuses, and severance — and the club has *one* overall limit,
+not six independent ones, so a big signing-on fee has to be paid for somewhere else. Your
+salary comes out of the same wage bill you spend the season trying to control, so asking
+for more is a genuine trade-off.
+
+Career earnings accumulate across every club, itemised by source. The reachable arc runs
+from about £26k a year in non-league to £2-3m at the very top.
 
 ---
 
@@ -93,7 +111,7 @@ src/
     types.ts           Domain model — flat, id-keyed, JSON-serialisable
     names/             Nationality-aware name generation
     world/             World, club, player, staff generation
-    sim/               Scheduling, team selection, match engine
+    sim/               Scheduling, team selection, match engine, cups
     systems/           Scouting, transfers, contracts, media, finance, board…
     tick.ts            One week, orchestrated in an explicit order
     season.ts          Promotion, prize money, ageing, XP, job offers
@@ -172,7 +190,9 @@ node scripts/e2e.mjs        # drives the built app in a real browser
 The engine tests assert invariants rather than snapshots: attributes always agree with the
 ability they encode, a season leaves no orphaned players or resized divisions, every goal
 scored is a goal conceded, transfers balance both clubs' books, scout ranges narrow with
-knowledge and never collapse to certainty.
+knowledge and never collapse to certainty, a loan's wage is split between two clubs and
+paid by neither twice, a two-legged tie resolves on aggregate and resolves the same way
+every time it's asked, and the board's counter-offer is always one it would accept.
 
 The end-to-end test drives the real built bundle in an iPhone-sized viewport: create a
 career, generate a world, take a job, advance ten weeks answering blocking decisions, visit

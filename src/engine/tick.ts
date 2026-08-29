@@ -115,11 +115,13 @@ export function advanceWeek(state: GameState, deps: TickDeps): TickResult {
       || involvesTrackedPlayer(state, home, away)
 
     const matchRng = rng.fork(fixture.id)
-    // A knockout tie has to produce a winner, or nobody is eliminated and the
-    // competition never reaches a final.
+    // A single-leg knockout tie has to produce a winner on the night, or
+    // nobody is eliminated and the competition never reaches a final. A leg of
+    // a two-legged tie must NOT: it is allowed to be drawn, because the tie is
+    // settled on aggregate afterwards.
     const matchCtx = {
       suspendedIds,
-      mustHaveWinner: fixture.competitionType !== 'league',
+      mustHaveWinner: fixture.competitionType !== 'league' && !fixture.legOf,
     }
     const matchResult = detailed
       ? simulateMatch(state, home, away, matchRng, matchCtx, true)

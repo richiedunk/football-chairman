@@ -13,6 +13,9 @@ import {
   contractTermsFor, negotiateContract, payDirectorSalary, signContract,
 } from '../src/engine/systems/directorContract'
 import { costOfLivingIndex, operatingCosts, weeklyRevenue } from '../src/engine/systems/finance'
+import {
+  availableRequests, makeRequest, weeksUntilNextRequest,
+} from '../src/engine/systems/boardRequests'
 import { expectedWage } from '../src/engine/world/staffGen'
 import { issueBriefing, checkForExposure } from '../src/engine/systems/media'
 import { computeValue, formatMoney, totalWageBill } from '../src/engine/systems/valuation'
@@ -617,5 +620,111 @@ describe('operating costs', () => {
     // And neither end is absurd.
     expect(bigRatio).toBeLessThan(0.35)
     expect(smallRatio).toBeLessThan(0.65)
+  })
+})
+
+describe('board requests', () => {
+  it('offers every request with a reason when it is unavailable', () => {
+    const state = freshWorld('REQUESTS')
+    const club = state.clubs[state.playerClubId]
+    const options = availableRequests(state, club)
+
+    expect(options.length).toBeGreaterThan(5)
+    for (const option of options) {
+      // An unavailable option must say why. Hiding it would make the board
+      // screen look like it changes at random.
+      if (!option.available) expect(option.unavailableReason).toBeTruthy()
+    }
+  })
+
+  it('rate-limits requests so asking is a decision', () => {
+    const state = freshWorld('COOLDOWN')
+    const club = state.clubs[state.playerClubId]
+    state.date.week = 20
+    club.board.confidence = 95
+
+    makeRequest(state, club, 'transferFunds', new Rng('a'), 1000)
+    expect(weeksUntilNextRequest(state, club)).toBeGreaterThan(0)
+
+    const second = makeRequest(state, club, 'transferFunds', new Rng('b'), 1000)
+    expect(second.outcome).toBe('refused')
+    expect(second.message).toContain('not entertain')
+  })
+
+  it('grants more readily to a board that trusts you', () => {
+    const trusting = freshWorld('TRUST')
+    const wary = freshWorld('TRUST')
+
+    let granted = 0
+    let refused = 0
+    for (let i = 0; i < 60; i++) {
+      const club = trusting.clubs[trusting.playerClubId]
+      club.board.confidence = 95
+      club.board.lastRequestWeek = -99
+      club.board.requestsThisSeason = 0
+      club.finances.balance = 5_000_000
+      if (makeRequest(trusting, club, 'transferFunds', new Rng(`t${i}`), 100_000).outcome !== 'refused') {
+        granted++
+      }
+
+      const cold = wary.clubs[wary.playerClubId]
+      cold.board.confidence = 12
+      cold.board.lastRequestWeek = -99
+      cold.board.requestsThisSeason = 0
+      cold.finances.balance = 5_000_000
+      if (makeRequest(wary, cold, 'transferFunds', new Rng(`w${i}`), 100_000).outcome === 'refused') {
+        refused++
+      }
+    }
+    expect(granted).toBeGreaterThan(30)
+    expect(refused).toBeGreaterThan(30)
+  })
+
+  it('costs confidence when refused', () => {
+    const state = freshWorld('COST')
+    const club = state.clubs[state.playerClubId]
+    club.board.confidence = 5
+    club.board.lastRequestWeek = -99
+    const before = club.board.confidence
+
+    const response = makeRequest(state, club, 'lowerExpectation', new Rng('refuse'))
+    if (response.outcome === 'refused') {
+      expect(club.board.confidence).toBeLessThan(before)
+      expect(response.confidenceChange).toBeLessThan(0)
+    }
+  })
+
+  it('actually moves the thing it granted', () => {
+    const state = freshWorld('GRANT')
+    const club = state.clubs[state.playerClubId]
+    club.board.confidence = 100
+    club.finances.balance = 10_000_000
+    club.finances.inCrisis = false
+
+    // Try until one lands; each attempt resets the cooldown.
+    let granted = false
+    const budgetBefore = club.finances.transferBudget
+    for (let i = 0; i < 40 && !granted; i++) {
+      club.board.lastRequestWeek = -99
+      club.board.requestsThisSeason = 0
+      const response = makeRequest(state, club, 'transferFunds', new Rng(`g${i}`), 200_000)
+      if (response.outcome !== 'refused') {
+        granted = true
+        expect(response.amount).toBeGreaterThan(0)
+        expect(club.finances.transferBudget).toBeGreaterThan(budgetBefore)
+      }
+    }
+    expect(granted, 'a board on full confidence never granted anything').toBe(true)
+  })
+
+  it('will not lower an expectation that is already survival', () => {
+    const state = freshWorld('SURVIVAL')
+    const club = state.clubs[state.playerClubId]
+    const clubCount = state.leagues[club.leagueId].clubIds.length
+    club.board.expectation.leaguePosition = clubCount
+    club.board.lastRequestWeek = -99
+
+    const option = availableRequests(state, club).find((o) => o.kind === 'lowerExpectation')!
+    expect(option.available).toBe(false)
   })
 })

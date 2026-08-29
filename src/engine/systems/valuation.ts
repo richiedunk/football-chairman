@@ -198,10 +198,15 @@ export function totalWageBill(state: GameState, club: Club): number {
   let total = 0
   for (const id of club.squad) {
     const p = state.players[id]
-    if (!p || !p.contract) continue
-    // A player out on loan may have his wages partly paid by the loan club;
-    // that reduction is applied when the loan is agreed, not here.
-    total += p.contract.wage
+    if (!p?.contract) continue
+    // Out on loan: the parent pays only the share it agreed to keep.
+    total += p.loanClubId ? p.contract.wage * p.loanWageShare : p.contract.wage
+  }
+  // Borrowed players: this club pays whatever the parent did not.
+  for (const id of club.loanedIn) {
+    const p = state.players[id]
+    if (!p?.contract) continue
+    total += p.contract.wage * (1 - p.loanWageShare)
   }
   for (const id of club.staff) {
     const s = state.staff[id]

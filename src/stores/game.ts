@@ -16,6 +16,7 @@ import {
 } from '../engine/systems/contracts'
 import { promoteToSenior } from '../engine/systems/academy'
 import { openNegotiation } from '../engine/systems/transfers'
+import { loanedIn, loanedOut, proposeLoanIn, proposeLoanOut, recallLoan } from '../engine/systems/loans'
 import { AUTOSAVE_SLOT, loadGame, saveGame } from '../storage/saves'
 import { haptic } from '../platform/native'
 import type {
@@ -133,12 +134,17 @@ export const useGameStore = defineStore('game', () => {
   })
 
   /** Senior squad, ordered by ability. Academy players are listed separately. */
+  /**
+   * The senior squad, including players out on loan and those borrowed. Both
+   * belong on the squad screen: one is an asset you still own and pay for, the
+   * other is someone the coach can pick this Saturday.
+   */
   const squad = computed<Player[]>(() => {
     void revision.value
     const s = state.value
     const c = club.value
     if (!s || !c) return []
-    return c.squad
+    return [...c.squad, ...c.loanedIn]
       .map((id) => s.players[id])
       .filter((p): p is Player => Boolean(p) && !p.isAcademy)
       .sort((a, b) => b.currentAbility - a.currentAbility)
@@ -499,6 +505,57 @@ export const useGameStore = defineStore('game', () => {
     return { ok: true, message: `Enquiry made for ${p?.knownAs ?? 'the player'}.` }
   }
 
+  // --- Loans ----------------------------------------------------------------
+
+  function loanOut(
+    playerId: ID,
+    toClubId: ID,
+    wageShare: number,
+    seasons = 1,
+  ): { ok: boolean; message: string } {
+    const s = state.value
+    if (!s) return { ok: false, message: 'No game loaded.' }
+    const result = proposeLoanOut(
+      s, { rng: new Rng(`${s.seed}:loanout:${playerId}:${s.date.week}`), ids },
+      playerId, toClubId, wageShare, seasons,
+    )
+    commit()
+    return result
+  }
+
+  function loanIn(playerId: ID, wageShare: number): { ok: boolean; message: string } {
+    const s = state.value
+    if (!s) return { ok: false, message: 'No game loaded.' }
+    const result = proposeLoanIn(
+      s, { rng: new Rng(`${s.seed}:loanin:${playerId}:${s.date.week}`), ids },
+      playerId, wageShare,
+    )
+    commit()
+    return result
+  }
+
+  function recall(playerId: ID): { ok: boolean; message: string } {
+    const s = state.value
+    if (!s) return { ok: false, message: 'No game loaded.' }
+    const result = recallLoan(s, playerId)
+    commit()
+    return result
+  }
+
+  const loansOut = computed(() => {
+    void revision.value
+    const s = state.value
+    const c = club.value
+    return s && c ? loanedOut(s, c) : []
+  })
+
+  const loansIn = computed(() => {
+    void revision.value
+    const s = state.value
+    const c = club.value
+    return s && c ? loanedIn(s, c) : []
+  })
+
   function idFactory(): IdFactory {
     return ids
   }
@@ -529,6 +586,7 @@ export const useGameStore = defineStore('game', () => {
     save, load, autosave, markRead, markAllRead, decide,
     toggleShortlist, isShortlisted, setTransferListed, setLoanListed, setSquadStatus,
     renew, release, promote, bid,
+    loanOut, loanIn, recall, loansOut, loansIn,
     idFactory, nameGenerator, reset,
   }
 })

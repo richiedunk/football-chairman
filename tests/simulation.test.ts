@@ -1,12 +1,29 @@
 import { describe, expect, it, beforeAll } from 'vitest'
 import { generateWorld } from '../src/engine/world/worldGen'
 import { simulateMatch } from '../src/engine/sim/match'
-import { selectTeam } from '../src/engine/sim/selection'
+import { isAvailable, selectableSquad, selectTeam } from '../src/engine/sim/selection'
 import { Rng } from '../src/engine/rng'
 import { prepareNewGame, startCareerAt } from '../src/engine/newGame'
 import { advanceWeek } from '../src/engine/tick'
 import { sortTable } from '../src/engine/systems/board'
 import { totalWageBill } from '../src/engine/systems/valuation'
+import { loserOfTie, tieAggregate } from '../src/engine/sim/cups'
+import { loanSuitorsFor, proposeLoanOut } from '../src/engine/systems/loans'
+import { canTakeJobAt } from '../src/engine/systems/career'
+import type { NewGameSetup } from '../src/engine/newGame'
+
+/**
+ * The first club an unproven director could actually be hired by.
+ *
+ * `prepareNewGame` now returns the whole jobs board, most of which is locked,
+ * so taking `candidates[0]` would start every test at the biggest club in the
+ * country — which is not what any of them mean to test.
+ */
+function firstEligible(setup: NewGameSetup): string {
+  const club = setup.candidates.find((c) => canTakeJobAt(setup.state.director, c))
+  if (!club) throw new Error('no club would hire an unproven director')
+  return club.id
+}
 import type { GameState } from '../src/engine/types'
 
 describe('match engine', () => {
@@ -169,7 +186,7 @@ describe('season simulation', () => {
       seed: 'SEASONTEST', directorName: 'T', background: 'scout',
       worldSize: 'compact', homeNationId: 'eng', startingSeason: 2025,
     })
-    const state = startCareerAt(setup, setup.candidates[0].id)
+    const state = startCareerAt(setup, firstEligible(setup))
     const deps = { ids: setup.ids, names: setup.names }
 
     const startingClubs = Object.keys(state.clubs).length
@@ -223,7 +240,7 @@ describe('season simulation', () => {
       seed: 'TABLETEST', directorName: 'T', background: 'analyst',
       worldSize: 'compact', homeNationId: 'eng',
     })
-    const state = startCareerAt(setup, setup.candidates[0].id)
+    const state = startCareerAt(setup, firstEligible(setup))
     const deps = { ids: setup.ids, names: setup.names }
     for (let week = 0; week < 30; week++) advanceWeek(state, deps)
 
@@ -248,7 +265,7 @@ describe('season simulation', () => {
       seed: 'SOLVENCY', directorName: 'T', background: 'financier',
       worldSize: 'compact', homeNationId: 'eng',
     })
-    const state = startCareerAt(setup, setup.candidates[0].id)
+    const state = startCareerAt(setup, firstEligible(setup))
     const deps = { ids: setup.ids, names: setup.names }
     for (let week = 0; week < 40; week++) advanceWeek(state, deps)
 
@@ -279,7 +296,7 @@ describe('cup competitions', () => {
       seed: 'CUPTEST', directorName: 'T', background: 'scout',
       worldSize: 'compact', homeNationId: 'eng', startingSeason: 2025,
     })
-    const state = startCareerAt(setup, setup.candidates[0].id)
+    const state = startCareerAt(setup, firstEligible(setup))
     const deps = { ids: setup.ids, names: setup.names }
     const cup = Object.values(state.cups).find((c) => c.nationId === 'eng')!
     const entrants = cup.entrantIds.length
@@ -294,12 +311,16 @@ describe('cup competitions', () => {
     expect(cup.winnerId, 'the cup produced no winner').toBeTruthy()
     expect(state.clubs[cup.winnerId!]).toBeDefined()
 
-    // Each round must exactly halve the field.
-    const sizes = cup.rounds.map((r) => r.fixtureIds.length)
-    for (let i = 1; i < sizes.length; i++) {
-      expect(sizes[i], `round ${i} did not halve the field`).toBe(sizes[i - 1] === 50 ? 32 : sizes[i - 1] / 2)
+    // Each round must halve the field. Counted in *ties*, not fixtures — a
+    // two-legged round has two fixtures per tie.
+    const ties = cup.rounds.map((r) => (r.twoLegged ? r.fixtureIds.length / 2 : r.fixtureIds.length))
+    for (let i = 1; i < ties.length; i++) {
+      // The first round is the one that squares the field off, so it is the
+      // only one whose successor is not simply half of it.
+      const expected = i === 1 ? 32 : ties[i - 1] / 2
+      expect(ties[i], `round ${i} did not halve the field`).toBe(expected)
     }
-    expect(sizes[sizes.length - 1], 'the final was not a single tie').toBe(1)
+    expect(ties[ties.length - 1], 'the final was not a single tie').toBe(1)
   })
 
   it('never leaves a knockout tie drawn', () => {
@@ -307,18 +328,209 @@ describe('cup competitions', () => {
       seed: 'KNOCKOUT', directorName: 'T', background: 'scout',
       worldSize: 'compact', homeNationId: 'eng', startingSeason: 2025,
     })
-    const state = startCareerAt(setup, setup.candidates[0].id)
+    const state = startCareerAt(setup, firstEligible(setup))
     const deps = { ids: setup.ids, names: setup.names }
     for (let week = 0; week < 46; week++) advanceWeek(state, deps)
 
-    const cupFixtures = state.fixtures.filter(
-      (f) => f.competitionType === 'cup' && f.result,
+    // Single-leg ties only: a leg of a two-legged tie is allowed to finish
+    // level, because the tie is settled on aggregate afterwards.
+    const singleLegTies = state.fixtures.filter(
+      (f) => f.competitionType === 'cup' && f.result && !f.legOf,
     )
-    expect(cupFixtures.length).toBeGreaterThan(0)
-    for (const fixture of cupFixtures) {
+    expect(singleLegTies.length).toBeGreaterThan(0)
+    for (const fixture of singleLegTies) {
       const r = fixture.result!
       const decided = r.homeGoals !== r.awayGoals || Boolean(r.penalties)
-      expect(decided, `a cup tie finished level with no shootout`).toBe(true)
+      expect(decided, 'a single-leg cup tie finished level with no shootout').toBe(true)
     }
+  })
+})
+
+describe('two-legged ties', () => {
+  it('resolves semi-finals on aggregate, not per leg', () => {
+    const setup = prepareNewGame({
+      seed: 'TWOLEG', directorName: 'T', background: 'scout',
+      worldSize: 'compact', homeNationId: 'eng', startingSeason: 2025,
+    })
+    const state = startCareerAt(setup, firstEligible(setup))
+    const deps = { ids: setup.ids, names: setup.names }
+    const cup = Object.values(state.cups).find((c) => c.nationId === 'eng')!
+
+    for (let week = 0; week < 48; week++) advanceWeek(state, deps)
+
+    const semi = cup.rounds.find((r) => r.twoLegged)
+    expect(semi, 'no two-legged round was scheduled').toBeDefined()
+    // Two ties, two legs each.
+    expect(semi!.fixtureIds.length).toBe(4)
+
+    const legs = semi!.fixtureIds
+      .map((id) => state.fixtures.find((f) => f.id === id)!)
+      .filter(Boolean)
+
+    // Every leg carries a tie id and a leg number, and each tie has both.
+    const ties = new Map<string, typeof legs>()
+    for (const leg of legs) {
+      expect(leg.legOf, 'a leg of a two-legged tie has no tie id').toBeDefined()
+      const list = ties.get(leg.legOf!.tieId) ?? []
+      list.push(leg)
+      ties.set(leg.legOf!.tieId, list)
+    }
+    for (const [, tieLegs] of ties) {
+      expect(tieLegs.length).toBe(2)
+      const first = tieLegs.find((l) => l.legOf!.leg === 1)!
+      const second = tieLegs.find((l) => l.legOf!.leg === 2)!
+      // The venue must reverse, or the tie is not fair.
+      expect(second.homeClubId).toBe(first.awayClubId)
+      expect(second.awayClubId).toBe(first.homeClubId)
+      // Individual legs are allowed to be drawn.
+      expect(first.result).toBeDefined()
+      expect(second.result).toBeDefined()
+    }
+
+    // Exactly one club per tie goes through, and the aggregate decides it.
+    for (const [tieId, tieLegs] of ties) {
+      const loser = loserOfTie(tieId, tieLegs)
+      const agg = tieAggregate(tieLegs)!
+      expect(loser).toBeTruthy()
+      if (agg.goalsA > agg.goalsB) expect(loser).toBe(agg.clubB)
+      else if (agg.goalsB > agg.goalsA) expect(loser).toBe(agg.clubA)
+      else expect([agg.clubA, agg.clubB]).toContain(loser)
+    }
+
+    expect(cup.winnerId, 'the cup still produced a winner').toBeTruthy()
+  })
+
+  it('settles a tie the same way every time it is asked', () => {
+    // A level aggregate is decided by a shootout seeded from the tie id. If it
+    // rolled fresh each call, two screens could disagree about who went
+    // through.
+    const setup = prepareNewGame({
+      seed: 'STABLE', directorName: 'T', background: 'scout',
+      worldSize: 'compact', homeNationId: 'eng', startingSeason: 2025,
+    })
+    const state = startCareerAt(setup, firstEligible(setup))
+    const deps = { ids: setup.ids, names: setup.names }
+    const cup = Object.values(state.cups).find((c) => c.nationId === 'eng')!
+    for (let week = 0; week < 48; week++) advanceWeek(state, deps)
+
+    const semi = cup.rounds.find((r) => r.twoLegged)!
+    const legs = semi.fixtureIds.map((id) => state.fixtures.find((f) => f.id === id)!)
+    const tieId = legs[0].legOf!.tieId
+    const tieLegs = legs.filter((l) => l.legOf!.tieId === tieId)
+
+    const first = loserOfTie(tieId, tieLegs)
+    for (let i = 0; i < 20; i++) {
+      expect(loserOfTie(tieId, tieLegs)).toBe(first)
+    }
+  })
+})
+
+describe('loans', () => {
+  it('lets the borrowing club field a loanee and stops the parent doing so', () => {
+    const setup = prepareNewGame({
+      seed: 'LOANSIM', directorName: 'T', background: 'scout',
+      worldSize: 'compact', homeNationId: 'eng', startingSeason: 2025,
+    })
+    const state = startCareerAt(setup, firstEligible(setup))
+    const parent = state.clubs[state.playerClubId]
+    const player = parent.squad
+      .map((id) => state.players[id])
+      .filter((p): p is NonNullable<typeof p> => Boolean(p) && !p.isAcademy && !p.injury)
+      .sort((a, b) => a.currentAbility - b.currentAbility)[0]
+
+    const suitors = loanSuitorsFor(state, player)
+    expect(suitors.length, 'nobody would take a loanee').toBeGreaterThan(0)
+
+    // Cover the whole wage so the loan is as attractive as it can be.
+    const result = proposeLoanOut(
+      state, { rng: new Rng('loan'), ids: setup.ids },
+      player.id, suitors[0].club.id, 1, 1,
+    )
+    expect(result.ok, result.message).toBe(true)
+
+    const borrower = suitors[0].club
+    expect(player.loanClubId).toBe(borrower.id)
+    // Ownership does not move.
+    expect(player.clubId).toBe(parent.id)
+    expect(parent.squad).toContain(player.id)
+    expect(borrower.loanedIn).toContain(player.id)
+
+    // Availability does move.
+    expect(isAvailable(player, borrower.id)).toBe(true)
+    expect(isAvailable(player, parent.id)).toBe(false)
+    expect(selectableSquad(state, borrower).map((p) => p.id)).toContain(player.id)
+  })
+
+  it('splits the wage between the two clubs', () => {
+    const setup = prepareNewGame({
+      seed: 'LOANWAGE', directorName: 'T', background: 'scout',
+      worldSize: 'compact', homeNationId: 'eng', startingSeason: 2025,
+    })
+    const state = startCareerAt(setup, firstEligible(setup))
+    const parent = state.clubs[state.playerClubId]
+    // A fringe player: the sort a club actually loans out, and one who will
+    // not refuse the move.
+    const player = parent.squad
+      .map((id) => state.players[id])
+      .filter((p): p is NonNullable<typeof p> => Boolean(p) && !p.isAcademy && !p.injury)
+      .sort((a, b) => a.currentAbility - b.currentAbility)[0]
+    const wage = player.contract!.wage
+
+    const parentBillBefore = totalWageBill(state, parent)
+    const suitors = loanSuitorsFor(state, player)
+    expect(suitors.length).toBeGreaterThan(0)
+    const borrower = suitors[0].club
+    const borrowerBillBefore = totalWageBill(state, borrower)
+
+    // Cover most of the wage so the club says yes; the split is what is under
+    // test, not the persuasion.
+    const outcome = proposeLoanOut(
+      state, { rng: new Rng('w'), ids: setup.ids }, player.id, borrower.id, 0.6, 1,
+    )
+    expect(outcome.ok, outcome.message).toBe(true)
+
+    // The parent keeps 60%, the borrower picks up 40%. Neither pays it twice.
+    expect(totalWageBill(state, parent)).toBeCloseTo(parentBillBefore - wage * 0.4, 0)
+    expect(totalWageBill(state, borrower)).toBeCloseTo(borrowerBillBefore + wage * 0.4, 0)
+  })
+
+  it('returns loanees at the end of the season', () => {
+    const setup = prepareNewGame({
+      seed: 'LOANEND', directorName: 'T', background: 'scout',
+      worldSize: 'compact', homeNationId: 'eng', startingSeason: 2025,
+    })
+    const state = startCareerAt(setup, firstEligible(setup))
+    const deps = { ids: setup.ids, names: setup.names }
+    for (let week = 0; week < 52; week++) advanceWeek(state, deps)
+
+    // After the roll, nobody should still be sitting in a loanedIn list on an
+    // expired loan — that is how a borrowed player ends up on a team sheet for
+    // ever.
+    for (const club of Object.values(state.clubs)) {
+      for (const id of club.loanedIn) {
+        const player = state.players[id]
+        expect(player, `${club.name} holds a missing loanee`).toBeDefined()
+        expect(player.loanClubId, `${player.knownAs} is listed as borrowed but has no loan`).toBe(club.id)
+      }
+    }
+    // And no player claims a loan the borrower does not know about.
+    for (const player of Object.values(state.players)) {
+      if (!player.loanClubId) continue
+      const borrower = state.clubs[player.loanClubId]
+      expect(borrower?.loanedIn, `${player.knownAs}'s loan is one-sided`).toContain(player.id)
+    }
+  })
+
+  it('generates loan activity across the world', () => {
+    const setup = prepareNewGame({
+      seed: 'LOANWORLD', directorName: 'T', background: 'scout',
+      worldSize: 'compact', homeNationId: 'eng', startingSeason: 2025,
+    })
+    const state = startCareerAt(setup, firstEligible(setup))
+    const deps = { ids: setup.ids, names: setup.names }
+    for (let week = 0; week < 10; week++) advanceWeek(state, deps)
+
+    const loans = state.completedTransfers.filter((t) => t.kind === 'loan')
+    expect(loans.length, 'the AI never loans anyone out').toBeGreaterThan(0)
   })
 })

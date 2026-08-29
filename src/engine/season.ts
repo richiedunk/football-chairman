@@ -154,6 +154,8 @@ export function runSeasonRollover(state: GameState, deps: RolloverDeps): void {
       negotiateSponsorship(state, club, deps.rng.fork(`sponsor:${club.id}`))
     }
 
+    // A new season, a fresh hearing: boards stop counting last year's asks.
+    club.board.requestsThisSeason = 0
     setSeasonExpectation(state, club, league)
     setSeasonMandates(state, club)
     recalculateBudgets(state, club)
@@ -303,6 +305,8 @@ function processPlayerYearEnd(state: GameState, deps: RolloverDeps): void {
     // whole reason the renewals screen exists.
     if (player.contract && player.contract.expiresSeason <= season) {
       const club = player.clubId ? state.clubs[player.clubId] : null
+      const borrower = player.loanClubId ? state.clubs[player.loanClubId] : null
+      if (borrower) borrower.loanedIn = borrower.loanedIn.filter((id) => id !== player.id)
       if (club) {
         club.squad = club.squad.filter((id) => id !== player.id)
         if (club.id === state.playerClubId) {
@@ -321,10 +325,25 @@ function processPlayerYearEnd(state: GameState, deps: RolloverDeps): void {
       player.value = 0
     }
 
-    // Loans expire.
+    // Loans expire and the player goes back. The borrowing club must be told
+    // to release him, or he stays on their team sheet for ever.
     if (player.loanUntilSeason !== null && player.loanUntilSeason <= season) {
+      const borrower = player.loanClubId ? state.clubs[player.loanClubId] : null
+      if (borrower) {
+        borrower.loanedIn = borrower.loanedIn.filter((id) => id !== player.id)
+        if (borrower.id === state.playerClubId) {
+          addInboxItem(state, ids, {
+            category: 'player',
+            subject: `${player.knownAs} returns to his parent club`,
+            from: 'Club Secretary',
+            body: `${player.knownAs}'s loan has ended and he has gone back to ${state.clubs[player.clubId ?? '']?.name ?? 'his club'}.`,
+            link: { view: 'squad' },
+          })
+        }
+      }
       player.loanClubId = null
       player.loanUntilSeason = null
+      player.loanWageShare = 0
     }
 
     ageOneYear(player)

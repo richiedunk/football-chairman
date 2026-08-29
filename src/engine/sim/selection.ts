@@ -1,7 +1,7 @@
 import { clamp, Rng } from '../rng'
 import { positionalCompetence, ratingForPositionCached } from '../world/attributes'
 import type {
-  CoachProfile, Club, Formation, GameState, Player, Position, Staff,
+  CoachProfile, Club, Formation, GameState, ID, Player, Position, Staff,
 } from '../types'
 
 /**
@@ -46,13 +46,27 @@ export interface AvailabilityContext {
   suspendedIds: Set<string>
 }
 
-/** Whether a player can be selected at all this week. */
-export function isAvailable(player: Player, ctx?: AvailabilityContext): boolean {
+/**
+ * Whether a player can be selected by a specific club this week.
+ *
+ * The club matters: a player out on loan is unavailable to his parent club and
+ * available to the one borrowing him. Checking availability without knowing
+ * which club is asking made loanees selectable by nobody.
+ */
+export function isAvailable(player: Player, clubId: ID, ctx?: AvailabilityContext): boolean {
   if (player.injury && player.injury.weeksRemaining > 0) return false
   if (player.suspendedWeeks > 0) return false
   if (ctx?.suspendedIds.has(player.id)) return false
-  if (player.loanClubId) return false
+  // Loaned out: only the borrowing club may pick him.
+  if (player.loanClubId && player.loanClubId !== clubId) return false
   return true
+}
+
+/** Everyone a club may field: its own players plus anyone it has borrowed. */
+export function selectableSquad(state: GameState, club: Club): Player[] {
+  const own = club.squad.map((id) => state.players[id])
+  const borrowed = club.loanedIn.map((id) => state.players[id])
+  return [...own, ...borrowed].filter((p): p is Player => Boolean(p))
 }
 
 /**
@@ -127,9 +141,9 @@ export function selectTeam(
   const formation = coach?.formation ?? '4-4-2'
   const shape = FORMATION_SHAPES[formation]
 
-  const available = club.squad
-    .map((id) => state.players[id])
-    .filter((p): p is Player => Boolean(p) && isAvailable(p, ctx))
+  const selectable = selectableSquad(state, club)
+  const available = selectable
+    .filter((p) => isAvailable(p, club.id, ctx))
     // Academy players are only considered once promoted, or if the squad is
     // too thin to field eleven — which is exactly the crisis that forces a
     // director of football to act.
@@ -137,9 +151,7 @@ export function selectTeam(
 
   const pool = available.length >= 11
     ? available
-    : club.squad
-        .map((id) => state.players[id])
-        .filter((p): p is Player => Boolean(p) && isAvailable(p, ctx))
+    : selectable.filter((p) => isAvailable(p, club.id, ctx))
 
   // Slots ordered spine-first, keeping duplicates (a 4-4-2 has two MC slots).
   const orderedSlots = shape
@@ -289,9 +301,7 @@ export function auditSquadDepth(
   const needed = new Map<Position, number>()
   for (const pos of shape) needed.set(pos, (needed.get(pos) ?? 0) + 1)
 
-  const squad = club.squad
-    .map((id) => state.players[id])
-    .filter((p): p is Player => Boolean(p) && !p.isAcademy)
+  const squad = selectableSquad(state, club).filter((p) => !p.isAcademy && !p.loanClubId)
 
   return Array.from(needed.entries()).map(([position, count]) => {
     const capable = squad.filter(

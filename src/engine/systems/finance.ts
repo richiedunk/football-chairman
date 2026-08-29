@@ -53,8 +53,16 @@ export function processFinances(
   for (const id of club.squad) {
     const player = state.players[id]
     if (!player?.contract) continue
-    // A player out on loan may be having part of his wage covered elsewhere.
-    playerWages += player.loanClubId ? player.contract.wage * 0.5 : player.contract.wage
+    // Out on loan: the parent pays only the share it agreed to keep.
+    playerWages += player.loanClubId
+      ? player.contract.wage * player.loanWageShare
+      : player.contract.wage
+  }
+  // Borrowed players: this club pays whatever the parent did not.
+  for (const id of club.loanedIn) {
+    const player = state.players[id]
+    if (!player?.contract) continue
+    playerWages += player.contract.wage * (1 - player.loanWageShare)
   }
   let staffWages = 0
   for (const id of club.staff) {

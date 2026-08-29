@@ -11,6 +11,7 @@ import { formatRange, knowledgeLabel, starsForLeague } from '../../engine/system
 import { SQUAD_STATUS_LABELS } from '../../engine/systems/morale'
 import { suggestRenewal, type RenewalOffer } from '../../engine/systems/contracts'
 import { injuryDescription } from '../../engine/systems/injuries'
+import { loanSuitorsFor } from '../../engine/systems/loans'
 import type { AttributeKey, SquadStatus } from '../../engine/types'
 
 const route = useRoute()
@@ -135,6 +136,59 @@ function submitRenewal() {
   }
 }
 
+// --- Loan sheets -----------------------------------------------------------
+const loanOutOpen = ref(false)
+const loanInOpen = ref(false)
+const wageShare = ref(0.5)
+const loanSeasons = ref(1)
+const chosenSuitor = ref<string | null>(null)
+
+const suitors = computed(() => {
+  const s = store.game
+  const p = player.value
+  if (!s || !p) return []
+  return loanSuitorsFor(s, p)
+})
+
+const PLAYING_TIME_LABELS: Record<string, string> = {
+  starter: 'Would start',
+  rotation: 'In and out of the side',
+  squad: 'Squad player at best',
+}
+
+function openLoanOut() {
+  chosenSuitor.value = suitors.value[0]?.club.id ?? null
+  wageShare.value = 0.5
+  loanSeasons.value = 1
+  loanOutOpen.value = true
+}
+
+function submitLoanOut() {
+  const p = player.value
+  if (!p || !chosenSuitor.value) return
+  const result = store.loanOut(p.id, chosenSuitor.value, wageShare.value, loanSeasons.value)
+  toast?.(result.message, result.ok ? 'success' : 'error')
+  if (result.ok) loanOutOpen.value = false
+}
+
+function submitLoanIn() {
+  const p = player.value
+  if (!p) return
+  const result = store.loanIn(p.id, wageShare.value)
+  toast?.(result.message, result.ok ? 'success' : 'error')
+  if (result.ok) {
+    loanInOpen.value = false
+    router.push('/squad')
+  }
+}
+
+function doRecall() {
+  const p = player.value
+  if (!p) return
+  const result = store.recall(p.id)
+  toast?.(result.message, result.ok ? 'success' : 'error')
+}
+
 // --- Bid sheet -------------------------------------------------------------
 const bidOpen = ref(false)
 const bidAmount = ref(0)
@@ -200,6 +254,12 @@ function doRelease() {
 
         <div v-if="player.injury" class="chip chip--danger mt">
           {{ injuryDescription(player.injury) }}
+        </div>
+        <div v-if="player.loanClubId" class="chip chip--info mt">
+          On loan at {{ store.clubById(player.loanClubId)?.name }}
+          <template v-if="player.loanWageShare > 0">
+            — you cover {{ Math.round(player.loanWageShare * 100) }}% of his wage
+          </template>
         </div>
         <div v-if="player.traits.length" class="chip-row mt">
           <span v-for="t in player.traits" :key="t" class="chip">{{ t.replace(/([A-Z])/g, ' $1').toLowerCase() }}</span>
@@ -355,6 +415,21 @@ function doRelease() {
             {{ player.listedForTransfer ? 'Remove from transfer list' : 'List for transfer' }}
           </button>
           <button
+            v-if="player.loanClubId"
+            class="btn btn--ghost btn--block"
+            @click="doRecall"
+          >
+            Recall from {{ store.clubById(player.loanClubId)?.name }}
+          </button>
+          <button
+            v-else
+            class="btn btn--ghost btn--block"
+            :disabled="!store.transferWindow.open"
+            @click="openLoanOut"
+          >
+            {{ store.transferWindow.open ? 'Send out on loan' : 'Loans: window closed' }}
+          </button>
+          <button
             class="btn btn--ghost btn--block"
             @click="store.setLoanListed(player.id, !player.listedForLoan)"
           >
@@ -394,6 +469,14 @@ function doRelease() {
             @click="openBid"
           >
             {{ store.transferWindow.open ? 'Make an offer' : 'Window closed' }}
+          </button>
+          <button
+            v-if="player.clubId"
+            class="btn btn--ghost btn--block"
+            :disabled="!store.transferWindow.open"
+            @click="wageShare = 0.5; loanInOpen = true"
+          >
+            Ask to take him on loan
           </button>
         </template>
       </div>
@@ -435,6 +518,97 @@ function doRelease() {
 
       <template #footer>
         <button class="btn btn--primary btn--block" @click="submitRenewal">Offer contract</button>
+      </template>
+    </AppSheet>
+
+    <!-- Loan out -->
+    <AppSheet
+      v-if="loanOutOpen"
+      :title="`Loan out ${player.knownAs}`"
+      subtitle="A player who does not play does not develop"
+      @close="loanOutOpen = false"
+    >
+      <div v-if="suitors.length === 0" class="empty">
+        Nobody wants him. Either he is not good enough for anyone, or he is too
+        good for anyone to get a game out of.
+      </div>
+
+      <template v-else>
+        <div class="field">
+          <label class="field__label">Where to</label>
+          <div class="list" style="max-height: 220px; overflow-y: auto">
+            <button
+              v-for="s in suitors"
+              :key="s.club.id"
+              class="list__row"
+              :style="chosenSuitor === s.club.id ? 'background: rgba(74,222,128,0.09)' : ''"
+              @click="chosenSuitor = s.club.id"
+            >
+              <div class="list__main">
+                <div class="list__primary">{{ s.club.name }}</div>
+                <div class="list__secondary">
+                  {{ store.leagueById(s.club.leagueId)?.name }} ·
+                  {{ PLAYING_TIME_LABELS[s.playingTime] }}
+                </div>
+              </div>
+              <span
+                class="chip"
+                :class="s.playingTime === 'starter' ? 'chip--accent' : s.playingTime === 'rotation' ? '' : 'chip--warn'"
+              >{{ Math.round(s.interest * 100) }}%</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="field__label">
+            You keep paying {{ Math.round(wageShare * 100) }}% of his wage
+            ({{ formatWage(Math.round((player.contract?.wage ?? 0) * wageShare), store.currency) }}/wk)
+          </label>
+          <input v-model.number="wageShare" class="slider" type="range" min="0" max="1" step="0.05" />
+          <div class="field__hint">
+            Covering more of the wage is what persuades a smaller club to take him.
+            You are paying for his development.
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="field__label">Length — {{ loanSeasons }} season{{ loanSeasons === 1 ? '' : 's' }}</label>
+          <input v-model.number="loanSeasons" class="slider" type="range" min="1" max="2" />
+        </div>
+      </template>
+
+      <template #footer>
+        <button
+          class="btn btn--primary btn--block"
+          :disabled="!chosenSuitor"
+          @click="submitLoanOut"
+        >Agree the loan</button>
+      </template>
+    </AppSheet>
+
+    <!-- Loan in -->
+    <AppSheet
+      v-if="loanInOpen"
+      :title="`Borrow ${player.knownAs}`"
+      :subtitle="currentClub?.name"
+      @close="loanInOpen = false"
+    >
+      <div class="field">
+        <label class="field__label">
+          His club keeps paying {{ Math.round(wageShare * 100) }}% —
+          you pay {{ formatWage(Math.round((player.contract?.wage ?? 0) * (1 - wageShare)), store.currency) }}/wk
+        </label>
+        <input v-model.number="wageShare" class="slider" type="range" min="0" max="1" step="0.05" />
+        <div class="field__hint">
+          Taking more of the wage off their hands makes them far more likely to agree.
+        </div>
+      </div>
+      <p class="tiny faint">
+        A club will not loan out a player who is central to them, however much
+        you offer to pay.
+      </p>
+      <template #footer>
+        <button class="btn btn--primary btn--block" @click="submitLoanIn">Make the approach</button>
       </template>
     </AppSheet>
 

@@ -524,12 +524,34 @@ export function executeTransfer(
   const isLoan = kind === 'loan' || kind === 'loanWithOption'
 
   if (isLoan) {
+    // Ownership does not move: the parent club keeps him in its squad and gets
+    // him back. What moves is availability, so the borrowing club can actually
+    // pick him — previously a loaned player was selectable by nobody, which
+    // made the whole mechanic inert.
     player.loanClubId = buyer.id
     player.loanUntilSeason = args.loanUntilSeason ?? state.date.season
-    buyer.finances.balance -= Math.round(contract.wage * (1 - args.wageContribution))
-    if (seller) {
-      seller.finances.season.transfersOut += 0
+    player.loanWageShare = clamp(args.wageContribution, 0, 1)
+    player.listedForLoan = false
+    if (!buyer.loanedIn.includes(player.id)) buyer.loanedIn.push(player.id)
+
+    // A loan move is usually good news for a player who was not playing.
+    player.morale = clamp(player.morale + 8, 1, 100)
+
+    const record: CompletedTransfer = {
+      id: ctx.ids.next(ID_PREFIX.transfer),
+      season: state.date.season,
+      week: state.date.week,
+      playerId: player.id,
+      playerName: player.knownAs,
+      fromClubId: seller?.id ?? null,
+      fromClubName: seller?.name ?? 'Free agent',
+      toClubId: buyer.id,
+      toClubName: buyer.name,
+      fee: 0,
+      kind,
     }
+    state.completedTransfers.unshift(record)
+    if (state.completedTransfers.length > 400) state.completedTransfers.length = 400
     return
   }
 
@@ -568,6 +590,12 @@ export function executeTransfer(
     ]
   }
 
+  // A player being sold while out on loan is recalled by the transfer.
+  if (player.loanClubId) {
+    const borrower = state.clubs[player.loanClubId]
+    if (borrower) borrower.loanedIn = borrower.loanedIn.filter((id) => id !== player.id)
+  }
+
   // Attach the player to his new club.
   player.clubId = buyer.id
   player.contract = contract
@@ -578,6 +606,7 @@ export function executeTransfer(
   player.listedForLoan = false
   player.loanClubId = null
   player.loanUntilSeason = null
+  player.loanWageShare = 0
   player.morale = clamp(player.morale + 12, 1, 100)
   buyer.squad.push(player.id)
 
@@ -645,6 +674,43 @@ export function processAiTransfers(state: GameState, ctx: TransferContext): void
         const buyer = rng.pick(buyerPool)
         if (buyer.id !== state.playerClubId) {
           aiCompleteDeal(state, ctx, player, club, buyer)
+          continue
+        }
+      }
+    }
+
+    // Loan out a young player who is not getting a game. This is the single
+    // most common piece of business in football and without it the loan market
+    // is empty except for whatever the human club does.
+    if (rng.chance(0.25)) {
+      const stuck = squad.filter(
+        (p) => p.age <= 22 && !p.loanClubId && p.stats.appearances < 3 && !p.injury,
+      )
+      if (stuck.length > 0) {
+        const player = rng.pick(stuck)
+        const takers = Object.values(state.clubs).filter(
+          (c) =>
+            c.id !== club.id
+            && c.id !== state.playerClubId
+            && !c.finances.inCrisis
+            && c.loanedIn.length < 5
+            && c.reputation < club.reputation
+            && c.reputation > club.reputation - 40,
+        )
+        if (takers.length > 0 && player.contract) {
+          const borrower = rng.pick(takers)
+          executeTransfer(state, ctx, {
+            player,
+            buyer: borrower,
+            seller: club,
+            fee: 0,
+            kind: 'loan',
+            contract: player.contract,
+            agentFee: 0,
+            sellOnPercentage: 0,
+            wageContribution: rng.float(0.3, 0.8),
+            loanUntilSeason: state.date.season,
+          })
           continue
         }
       }

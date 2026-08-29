@@ -180,6 +180,63 @@ await step('hire a scout', async () => {
   await page.screenshot({ path: `${SHOT}/19-staff-after.png` })
 })
 
+await step('ask the board for something', async () => {
+  await page.goto('http://127.0.0.1:4173/#/board')
+  await page.waitForSelector('text=Ask the board')
+  await page.screenshot({ path: `${SHOT}/20-board.png`, fullPage: true })
+
+  const request = page.locator('.list__row:has-text("Ask for transfer funds")').first()
+  await request.click()
+  await page.waitForTimeout(400)
+
+  if (await page.locator('.sheet').count()) {
+    await page.screenshot({ path: `${SHOT}/21-board-request.png` })
+    await page.click('.sheet .btn--primary:has-text("Put it to the board")')
+    await page.waitForTimeout(500)
+    const outcome = await page.textContent('.toast')
+    console.log(`   board said: ${outcome?.trim().slice(0, 90)}`)
+  } else {
+    // Refused before opening — the option was unavailable, which the screen
+    // must have explained.
+    const toastText = await page.textContent('.toast')
+    if (!toastText) throw new Error('request neither opened nor explained itself')
+    console.log(`   unavailable: ${toastText.trim().slice(0, 90)}`)
+  }
+})
+
+await step('loan a player out', async () => {
+  await page.goto('http://127.0.0.1:4173/#/squad')
+  // Wait for a marker unique to the squad screen: a hash-route change can
+  // otherwise resolve a generic selector against the previous view.
+  await page.waitForSelector('text=Sort by', { timeout: 15000 })
+  // Player rows carry a position badge; the depth-audit and sort rows do not.
+  // The weakest senior player is the one a club would realistically loan.
+  const rows = page.locator('.list__row:has(.pos)')
+  const count = await rows.count()
+  if (count === 0) throw new Error('no player rows on the squad screen')
+  await rows.nth(count - 1).click()
+  await page.waitForSelector('text=Actions', { timeout: 15000 })
+
+  const loanButton = page.locator('.btn:has-text("Send out on loan")')
+  if (await loanButton.count() === 0) {
+    console.log('   window closed — loan button correctly hidden')
+    return
+  }
+  await loanButton.click()
+  await page.waitForSelector('.sheet')
+  await page.screenshot({ path: `${SHOT}/22-loan.png`, fullPage: true })
+
+  const suitors = await page.locator('.sheet .list__row').count()
+  if (suitors === 0) {
+    console.log('   nobody wanted him, which the sheet said')
+    return
+  }
+  await page.click('.sheet .btn--primary:has-text("Agree the loan")')
+  await page.waitForTimeout(600)
+  const outcome = await page.textContent('.toast')
+  console.log(`   loan: ${outcome?.trim().slice(0, 90)}`)
+})
+
 await step('media briefing', async () => {
   await page.goto('http://127.0.0.1:4173/#/media')
   await page.waitForSelector('text=Brief a journalist')

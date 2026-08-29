@@ -138,6 +138,7 @@ export function generatePlayer(ctx: PlayerGenContext, opts: PlayerGenOptions): P
     clubId: opts.clubId,
     loanClubId: null,
     loanUntilSeason: null,
+    loanWageShare: 0,
     contract,
     agentId: null,
     morale: rng.normalInt(68, 12, 20, 95),
