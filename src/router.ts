@@ -31,6 +31,7 @@ const routes: RouteRecordRaw[] = [
   { path: '/league', name: 'league', component: () => import('./ui/views/LeagueView.vue'), meta: { tab: 'league' } },
   { path: '/league/:id', name: 'league-detail', component: () => import('./ui/views/LeagueView.vue'), meta: { tab: 'league' } },
   { path: '/career', name: 'career', component: () => import('./ui/views/CareerView.vue'), meta: { tab: 'club' } },
+  { path: '/achievements', name: 'achievements', component: () => import('./ui/views/AchievementsView.vue'), meta: { tab: 'club' } },
   { path: '/settings', name: 'settings', component: () => import('./ui/views/SettingsView.vue'), meta: { tab: 'club' } },
   { path: '/:pathMatch(.*)*', redirect: '/' },
 ]

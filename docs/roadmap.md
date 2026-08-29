@@ -49,6 +49,24 @@ Modelled on the Premier League's squad rules:
 UEFA's version adds a stricter "club-trained" tier. Worth considering only if
 continental football is ever built.
 
+### Decided: no insolvency events
+
+Financial collapse stops at the sporting sanction. No administration, no forced
+sale, no winding-up order.
+
+The reason is the role. You are the director of football, not the owner. What
+happens to a club that runs out of money is the owner's problem and the
+board's, and dramatising it would put the player in a chair they are not
+sitting in. What *should* happen is that the board runs out of patience and
+sacks you, and whoever replaces you rebuilds the club however they see fit —
+which the existing confidence-and-warnings machinery already does, since
+financial crisis drives board confidence down every week it persists.
+
+Points deductions stay in scope. They are a football-authority sanction on the
+club for breaking a squad-cost rule, and a squad-cost rule is exactly the thing
+a director of football breaks. Losing nine points because you could not stop
+signing people is the sanction landing where the decision was made.
+
 ### 2. Financial regulation
 
 Two real models, and the game should use the second:
@@ -138,6 +156,11 @@ The useful work available now is the seam: a `platform/` module the game calls
 (`achievements.unlock('first-promotion')`, `purchases.buy('xp-boost')`) that
 no-ops on the web and gets a real implementation per platform later. That is
 testable today; the store integrations are not.
+
+The split that keeps this honest: **which achievements are earned is an engine
+question**, decided from GameState by pure code with no platform imports, and
+**reporting them is a platform question**. The engine never knows whether
+anyone is listening.
 
 ## Known defects
 

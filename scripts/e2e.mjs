@@ -337,6 +337,16 @@ await step('career and earnings', async () => {
   await page.screenshot({ path: `${SHOT}/15-career.png`, fullPage: true })
 })
 
+await step('milestones', async () => {
+  await page.goto('http://127.0.0.1:4173/#/career')
+  await page.waitForSelector('text=Milestones')
+  await page.click('.btn--ghost:has-text("Milestones")')
+  await page.waitForSelector('text=Silverware')
+  const earned = await page.textContent('.stat:has-text("Earned") .stat__value')
+  console.log(`   ${earned?.trim()} earned`)
+  await page.screenshot({ path: `${SHOT}/28-milestones.png`, fullPage: true })
+})
+
 await step('save and reload', async () => {
   await page.goto('http://127.0.0.1:4173/#/settings')
   await page.waitForSelector('text=Saves')

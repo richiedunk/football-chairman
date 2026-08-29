@@ -22,7 +22,12 @@ import {
   unregisterPlayer, type RegistrationResult,
 } from '../engine/systems/registration'
 import { AUTOSAVE_SLOT, loadGame, saveGame } from '../storage/saves'
+import { addNews } from '../engine/systems/inbox'
 import { haptic } from '../platform/native'
+import { achievements } from '../platform/services'
+import {
+  achievement, ACHIEVEMENTS, earnedAchievements, type Achievement,
+} from '../engine/systems/achievements'
 import type {
   Club, Fixture, GameState, ID, InboxItem, League, MatchResult, Player, Staff,
 } from '../engine/types'
@@ -81,6 +86,10 @@ export const useGameStore = defineStore('game', () => {
 
   function attach(next: GameState): void {
     clearRatingCache()
+    // Loading a save must not announce every milestone the career ever
+    // reached. Everything already earned is treated as already seen.
+    announced.clear()
+    for (const id of earnedAchievements(next)) announced.add(id)
     state.value = next
     ids = new IdFactory(next.nextId)
     names = new NameGenerator(new Rng(`${next.seed}:names`))
@@ -96,6 +105,8 @@ export const useGameStore = defineStore('game', () => {
     generator: NameGenerator,
   ): void {
     clearRatingCache()
+    announced.clear()
+    for (const id of earnedAchievements(next)) announced.add(id)
     state.value = next
     ids = factory
     names = generator
@@ -335,6 +346,17 @@ export const useGameStore = defineStore('game', () => {
       await nextFrame()
       lastTick.value = advanceWeek(s, { ids, names })
       commit()
+
+      // Milestones are derived from the state that now exists, then handed to
+      // the platform seam, which decides whether anyone is listening. They
+      // land in the news feed rather than as a toast, because a toast would
+      // be competing with the match result for the same two seconds.
+      newAchievements.value = syncAchievements(s)
+      for (const milestone of newAchievements.value) {
+        addNews(s, ids, 'board', `Milestone reached — ${milestone.name}. ${milestone.description}`,
+          { view: 'achievements' })
+      }
+      if (newAchievements.value.length > 0) commit()
 
       if (s.settings.hapticsEnabled) {
         // Weight the feedback by what actually happened: being sacked should
@@ -583,6 +605,41 @@ export const useGameStore = defineStore('game', () => {
     return s && c ? loanedIn(s, c) : []
   })
 
+  // --- Achievements ---------------------------------------------------------
+
+  /** Earned since the last tick, for the UI to announce. */
+  const newAchievements = ref<Achievement[]>([])
+
+  /** Milestones already shown to the player, so none is announced twice. */
+  const announced = new Set<string>()
+
+  /**
+   * Report every milestone this save has reached.
+   *
+   * The seam is idempotent, so this hands over the whole set each time rather
+   * than trying to work out a delta — that bookkeeping belongs on the platform
+   * side, where it differs between Play Games and Game Center.
+   */
+  function syncAchievements(s: GameState): Achievement[] {
+    const earned = earnedAchievements(s)
+    const fresh: Achievement[] = []
+    for (const id of earned) {
+      if (announced.has(id)) continue
+      announced.add(id)
+      const found = achievement(id)
+      if (found) fresh.push(found)
+    }
+    void achievements.report([...earned])
+    return fresh
+  }
+
+  const achievementProgress = computed(() => {
+    void revision.value
+    const s = state.value
+    const earned = s ? earnedAchievements(s) : new Set<string>()
+    return ACHIEVEMENTS.map((entry) => ({ ...entry, earned: earned.has(entry.id) }))
+  })
+
   // --- Squad registration ---------------------------------------------------
 
   const registration = computed(() => {
@@ -668,6 +725,7 @@ export const useGameStore = defineStore('game', () => {
     renew, release, promote, bid,
     loanOut, loanIn, recall, loansOut, loansIn,
     registration, registrationOpen, register, unregister, autoPickSquad, isHomegrown,
+    achievementProgress, newAchievements,
     idFactory, nameGenerator, reset,
   }
 })

@@ -39,6 +39,12 @@ import {
 import { prepareNewGame, startCareerAt } from '../src/engine/newGame'
 import { advanceWeek } from '../src/engine/tick'
 import { retirementProbability } from '../src/engine/season'
+import {
+  achievement, ACHIEVEMENTS, earnedAchievements,
+} from '../src/engine/systems/achievements'
+import {
+  achievements as achievementService, capabilities, purchases, resetReportedAchievements,
+} from '../src/platform/services'
 import type { GameState } from '../src/engine/types'
 
 function freshWorld(seed = 'SYSTEMS'): GameState {
@@ -1293,4 +1299,100 @@ describe('AI squad management', () => {
     expect(average, `squads averaged ${average.toFixed(1)} after six seasons`).toBeGreaterThan(20)
     expect(Math.min(...sizes), 'a club cannot field a side').toBeGreaterThanOrEqual(14)
   }, 600_000)
+})
+
+describe('achievements', () => {
+  it('awards nothing that has not happened', () => {
+    const state = freshWorld('ACH-A')
+    state.director.careerHistory = []
+    const earned = earnedAchievements(state)
+    expect(earned.has('first-job')).toBe(false)
+    expect(earned.has('trophy')).toBe(false)
+    expect(earned.has('ten-years')).toBe(false)
+  })
+
+  it('reads milestones off the career record', () => {
+    const state = freshWorld('ACH-B')
+    const club = state.clubs[state.playerClubId]
+    state.director.careerHistory = [{
+      clubId: club.id,
+      clubName: club.name,
+      fromSeason: state.date.season - 6,
+      toSeason: null,
+      outcome: 'In post',
+      bestFinish: 1,
+      trophies: ['A Cup 2026', 'A Cup 2027'],
+      netSpend: 0,
+      xpEarned: 0,
+    }]
+
+    const earned = earnedAchievements(state)
+    expect(earned.has('first-job')).toBe(true)
+    expect(earned.has('first-season')).toBe(true)
+    expect(earned.has('trophy')).toBe(true)
+    expect(earned.has('league-title')).toBe(true)
+    expect(earned.has('five-years')).toBe(true)
+    expect(earned.has('trophy-five'), 'two trophies is not five').toBe(false)
+    expect(earned.has('ten-years'), 'six seasons is not ten').toBe(false)
+  })
+
+  it('recognises promotion from the club record, not the director record', () => {
+    const state = freshWorld('ACH-C')
+    const club = state.clubs[state.playerClubId]
+    const tiers = Object.values(state.leagues)
+      .filter((l) => l.nationId === club.nationId)
+      .sort((a, b) => b.tier - a.tier)
+    expect(tiers.length).toBeGreaterThan(2)
+
+    state.director.careerHistory = [{
+      clubId: club.id, clubName: club.name, fromSeason: state.date.season - 3,
+      toSeason: null, outcome: 'In post', bestFinish: 1, trophies: [],
+      netSpend: 0, xpEarned: 0,
+    }]
+    // Climbing two divisions in consecutive seasons.
+    club.history = [0, 1, 2].map((i) => ({
+      season: state.date.season - 3 + i,
+      leagueId: tiers[i].id,
+      leagueName: tiers[i].name,
+      position: 1, played: 46, points: 90, goalsFor: 80, goalsAgainst: 30,
+      cupResult: '—', continentalResult: '—', netSpend: 0, finalBalance: 0,
+      headCoachName: 'A Coach',
+    }))
+
+    const earned = earnedAchievements(state)
+    expect(earned.has('promotion')).toBe(true)
+    expect(earned.has('promotion-double')).toBe(true)
+  })
+
+  it('takes the whole earned set on every report', async () => {
+    // The caller hands over everything the save has earned and the seam works
+    // out what is new, because tracking deltas differs between Play Games and
+    // Game Center and does not belong in the game.
+    resetReportedAchievements()
+    await achievementService.report(['trophy', 'promotion'])
+    await achievementService.report(['trophy', 'promotion', 'league-title'])
+    expect(await achievementService.show()).toBe(false)
+  })
+
+  it('describes every milestone it can award', () => {
+    for (const id of ACHIEVEMENTS.map((a) => a.id)) {
+      const found = achievement(id)
+      expect(found, `${id} has no catalogue entry`).toBeTruthy()
+      expect(found!.description.length).toBeGreaterThan(10)
+    }
+    expect(achievement('nonsense')).toBeNull()
+  })
+
+  it('offers no platform capabilities until one is wired in', () => {
+    const caps = capabilities()
+    expect(caps.achievements).toBe(false)
+    expect(caps.purchases).toBe(false)
+    expect(caps.signIn).toBe(false)
+  })
+
+  it('refuses a purchase rather than pretending to take one', async () => {
+    expect(await purchases.products()).toEqual([])
+    expect(await purchases.buy('xp-boost-small')).toEqual({ status: 'unavailable' })
+    expect(await purchases.restore()).toEqual([])
+  })
 })

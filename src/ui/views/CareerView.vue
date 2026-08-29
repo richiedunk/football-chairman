@@ -281,5 +281,11 @@ function decline(offerId: string) {
         </div>
       </div>
     </div>
+
+    <div class="btn-row mt" style="padding-bottom: 8px">
+      <button class="btn btn--ghost" @click="router.push('/achievements')">
+        Milestones ({{ store.achievementProgress.filter((a) => a.earned).length }}/{{ store.achievementProgress.length }})
+      </button>
+    </div>
   </div>
 </template>
