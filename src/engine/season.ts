@@ -11,6 +11,7 @@ import { computeValue, computeWageDemand } from './systems/valuation'
 import { addInboxItem, addNews } from './systems/inbox'
 import { emptyStats } from './world/playerGen'
 import { cupResultFor, resetCup } from './sim/cups'
+import { accrueTrainingYear, autoRegister } from './systems/registration'
 import {
   contractTermsFor, paySeasonBonuses, signContract, type ContractOffer,
 } from './systems/directorContract'
@@ -133,6 +134,12 @@ export function runSeasonRollover(state: GameState, deps: RolloverDeps): void {
 
   // --- 4b. Academy churn ----------------------------------------------------
   releaseUnpromotedYouth(state, deps)
+
+  // --- 4c. Squad registration ----------------------------------------------
+  // Lists are rebuilt from scratch each summer. Promotion, relegation, expiry
+  // and retirement have all just torn through the squads, and last season's
+  // list would be half made of players who no longer exist.
+  for (const club of Object.values(state.clubs)) autoRegister(state, club)
 
   // --- 5. Club housekeeping -------------------------------------------------
   for (const club of Object.values(state.clubs)) {
@@ -345,6 +352,10 @@ function processPlayerYearEnd(state: GameState, deps: RolloverDeps): void {
       player.loanUntilSeason = null
       player.loanWageShare = 0
     }
+
+    // Credited before the birthday, so a season played at twenty counts as a
+    // year under 21 — which is how the association actually counts it.
+    accrueTrainingYear(state, player)
 
     ageOneYear(player)
 

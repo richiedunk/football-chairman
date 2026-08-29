@@ -169,9 +169,38 @@ export function generatePlayer(ctx: PlayerGenContext, opts: PlayerGenOptions): P
     purchaseFee: 0,
     sellOnClauseOwed: [],
     developmentRate: rng.float(0.7, 1.35),
+    trainingYears: seedTrainingYears(rng, nationality, opts, age),
   }
 
   return player
+}
+
+/**
+ * Where a generated player was trained, for homegrown status.
+ *
+ * A world that starts with everyone homegrown makes the squad-registration
+ * ceiling inert, and one that starts with nobody homegrown makes it
+ * impossible. The split below is the realistic one: the overwhelming majority
+ * of players came through the system of the country they represent, a small
+ * minority moved abroad young enough to qualify where they now play, and an
+ * academy graduate is homegrown by definition.
+ */
+function seedTrainingYears(
+  rng: Rng,
+  nationality: Nation,
+  opts: PlayerGenOptions,
+  age: number,
+): Record<ID, number> {
+  const years: Record<ID, number> = {}
+  if (opts.isAcademy) {
+    years[opts.homeNation.id] = 3 + Math.min(3, Math.max(0, age - 16))
+    return years
+  }
+
+  const trainedAtHome = rng.chance(nationality.id === opts.homeNation.id ? 0.92 : 0.08)
+  const trainedIn = trainedAtHome ? opts.homeNation.id : nationality.id
+  years[trainedIn] = 3 + rng.int(0, 3)
+  return years
 }
 
 /**

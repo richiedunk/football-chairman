@@ -20,6 +20,7 @@ import { computeValue } from './systems/valuation'
 import { payDirectorSalary, paySeverance } from './systems/directorContract'
 import { runSeasonRollover } from './season'
 import { produceIntake, INTAKE_WEEK } from './systems/academy'
+import { reconcileRegistration, squadRegistration, SQUAD_LIMIT } from './systems/registration'
 import { drawNextRoundIfDue, settleRound } from './sim/cups'
 import type {
   Club, Fixture, GameState, ID, MatchResult, Player, SeasonPhase,
@@ -294,6 +295,12 @@ export function advanceWeek(state: GameState, deps: TickDeps): TickResult {
   }
   processAiTransfers(state, transferCtx)
   reportIncomingOffers(state, ids, transferCtx)
+
+  // --- 7b. Squad registration lock -----------------------------------------
+  // The week after a window shuts, every list in the world is tidied and then
+  // frozen. Reconciling rather than rebuilding matters: the human's choices
+  // survive, and only the empty places get filled.
+  if (isRegistrationLockWeek(week)) lockSquadRegistrations(state, ids)
 
   // --- 8. Scouting ----------------------------------------------------------
   if (playerClub) {
@@ -683,6 +690,48 @@ function playerClubForPricing(state: GameState): Club | null {
 }
 
 /** Sorted league table for a competition, exported for the UI. */
+/** The week each transfer window's registration deadline falls in. */
+function isRegistrationLockWeek(week: number): boolean {
+  return week === 6 || week === 31
+}
+
+/**
+ * Freeze every squad list for the rest of the window period.
+ *
+ * Clubs that never touched their list get one filled in for them; the human's
+ * club keeps whatever it named and has its spare places filled, because
+ * throwing away a director's choices and re-picking would be worse than doing
+ * nothing at all. Anyone still without a place is barred until the window
+ * reopens, and the human is told exactly who.
+ */
+function lockSquadRegistrations(state: GameState, ids: IdFactory): void {
+  for (const club of Object.values(state.clubs)) {
+    const leftOut = reconcileRegistration(state, club)
+    if (club.id !== state.playerClubId) continue
+
+    const view = squadRegistration(state, club)
+    const barred = leftOut
+      .slice()
+      .sort((a, b) => b.currentAbility - a.currentAbility)
+
+    const body = barred.length === 0
+      ? `Your squad list is lodged: ${view.placesUsed} of ${SQUAD_LIMIT} places used, `
+        + `${view.homegrown} homegrown. Everyone who needed a place has one.`
+      : `Your squad list is lodged: ${view.placesUsed} of ${SQUAD_LIMIT} places used, `
+        + `${view.homegrown} homegrown. Left out and unavailable until the window reopens: `
+        + `${barred.map((p) => `${p.knownAs} (${p.position}, ${p.age})`).join(', ')}.`
+
+    addInboxItem(state, ids, {
+      category: 'player',
+      subject: 'Squad list lodged with the league',
+      from: 'Club Secretary',
+      body,
+      urgent: barred.length > 0,
+      link: { view: 'squad' },
+    })
+  }
+}
+
 export function getTable(state: GameState, leagueId: ID) {
   return sortTable(state.tables[leagueId] ?? [])
 }

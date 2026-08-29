@@ -1,6 +1,7 @@
 import { clamp, Rng } from '../rng'
 import { IdFactory } from '../ids'
 import { executeTransfer } from './transfers'
+import { releaseRegistration, settleArrival } from './registration'
 import { squadImportance } from './valuation'
 import { ratingForPositionCached } from '../world/attributes'
 import { isTransferWindowOpen } from '../sim/schedule'
@@ -243,12 +244,20 @@ export function recallLoan(state: GameState, playerId: ID): LoanOutcome {
   if (!player?.loanClubId) return { ok: false, message: 'He is not out on loan.' }
 
   const borrower = state.clubs[player.loanClubId]
-  if (borrower) borrower.loanedIn = borrower.loanedIn.filter((id) => id !== player.id)
+  if (borrower) {
+    borrower.loanedIn = borrower.loanedIn.filter((id) => id !== player.id)
+    releaseRegistration(borrower, player.id)
+  }
 
   player.loanClubId = null
   player.loanUntilSeason = null
   player.loanWageShare = 0
   player.morale = clamp(player.morale - 10, 1, 100)
+
+  // He needs a place at his parent club again, and there may not be one — a
+  // recall in March can leave a player registered nowhere at all.
+  const owner = player.clubId ? state.clubs[player.clubId] : null
+  if (owner) settleArrival(state, owner, player)
 
   return { ok: true, message: `${player.knownAs} has been recalled. He is not thrilled about it.` }
 }

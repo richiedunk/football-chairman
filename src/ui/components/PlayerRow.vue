@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import PosBadge from './PosBadge.vue'
 import { useGameStore } from '../../stores/game'
 import { formatMoney, formatWage } from '../../engine/systems/valuation'
+import { U21_AGE } from '../../engine/systems/registration'
 import type { Player } from '../../engine/types'
 
 const props = withDefaults(
@@ -19,6 +20,14 @@ const props = withDefaults(
 const store = useGameStore()
 const router = useRouter()
 
+/** True when this club is the one that would have to register him. */
+const isOwn = computed(() => {
+  const c = store.club
+  const p = props.player
+  if (!c) return false
+  return (p.clubId === c.id && !p.loanClubId) || c.loanedIn.includes(p.id)
+})
+
 const status = computed(() => {
   const p = props.player
   if (p.injury) return { label: `${p.injury.weeksRemaining}w`, cls: 'chip--danger', title: p.injury.type }
@@ -27,6 +36,11 @@ const status = computed(() => {
     return { label: 'Out on loan', cls: 'chip--info', title: 'Loaned to another club' }
   }
   if (p.loanClubId) return { label: 'On loan', cls: 'chip--info', title: 'Borrowed from another club' }
+  // Being left off the squad list matters more than anything else here: he is
+  // not available at all, so it outranks "wants out" and "listed".
+  if (isOwn.value && p.age >= U21_AGE && !store.club!.registeredIds.includes(p.id)) {
+    return { label: 'Unregistered', cls: 'chip--danger', title: 'Not on the squad list — cannot be selected' }
+  }
   if (p.transferRequested) return { label: 'Wants out', cls: 'chip--warn', title: 'Transfer requested' }
   if (p.listedForTransfer) return { label: 'Listed', cls: 'chip--warn', title: 'Listed for transfer' }
   return null

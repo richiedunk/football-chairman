@@ -48,6 +48,8 @@ const depth = computed(() => {
 })
 
 const shortages = computed(() => depth.value.filter((d) => d.shortage))
+
+const registration = computed(() => store.registration)
 </script>
 
 <template>
@@ -77,6 +79,37 @@ const shortages = computed(() => depth.value.filter((d) => d.shortage))
         <MeterBar :value="store.wageBill" :max="store.club?.finances.wageBudget ?? 1" invert />
       </div>
     </div>
+
+    <button
+      v-if="registration"
+      class="card"
+      :style="{
+        width: '100%', textAlign: 'left', cursor: 'pointer',
+        borderColor: registration.unregistered.length ? 'var(--danger)' : undefined,
+        background: registration.unregistered.length ? 'rgba(248,113,113,0.06)' : undefined,
+      }"
+      @click="router.push('/registration')"
+    >
+      <div class="card__body">
+        <div class="row row--between">
+          <div class="grow">
+            <div class="bold small" :style="registration.unregistered.length ? 'color: var(--danger)' : ''">
+              Squad list — {{ registration.placesUsed }}/25 named
+            </div>
+            <div class="tiny muted">
+              <template v-if="registration.unregistered.length">
+                {{ registration.unregistered.length }} senior player{{ registration.unregistered.length === 1 ? '' : 's' }}
+                left out and unavailable
+              </template>
+              <template v-else>
+                {{ registration.nonHomegrown }}/17 trained abroad · {{ registration.exempt.length }} under-21s exempt
+              </template>
+            </div>
+          </div>
+          <span class="faint">›</span>
+        </div>
+      </div>
+    </button>
 
     <button
       v-if="shortages.length"

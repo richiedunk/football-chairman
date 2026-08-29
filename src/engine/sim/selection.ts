@@ -1,5 +1,6 @@
 import { clamp, Rng } from '../rng'
 import { positionalCompetence, ratingForPositionCached } from '../world/attributes'
+import { isRegisteredFor } from '../systems/registration'
 import type {
   CoachProfile, Club, Formation, GameState, ID, Player, Position, Staff,
 } from '../types'
@@ -142,16 +143,25 @@ export function selectTeam(
   const shape = FORMATION_SHAPES[formation]
 
   const selectable = selectableSquad(state, club)
-  const available = selectable
-    .filter((p) => isAvailable(p, club.id, ctx))
+  const fit = selectable.filter((p) => isAvailable(p, club.id, ctx))
+  // A senior player left off the squad list is barred, not benched. Under-21s
+  // are outside the list, so a club that has registered badly falls back on
+  // its kids — which is the cost, and the reason the registration screen is
+  // worth opening.
+  const eligible = fit.filter((p) => isRegisteredFor(club, p))
+  const available = eligible
     // Academy players are only considered once promoted, or if the squad is
     // too thin to field eleven — which is exactly the crisis that forces a
     // director of football to act.
     .filter((p) => !p.isAcademy)
 
-  const pool = available.length >= 11
-    ? available
-    : selectable.filter((p) => isAvailable(p, club.id, ctx))
+  // Fallbacks in order of how much they cost the fiction. Fielding an
+  // unregistered player is the last of them: better than a match that cannot
+  // be played, and only reachable from a save built before registration.
+  const pool = available.length >= 11 ? available
+    : eligible.length >= 11 ? eligible
+    : fit.length >= 11 ? fit
+    : selectable
 
   // Slots ordered spine-first, keeping duplicates (a 4-4-2 has two MC slots).
   const orderedSlots = shape

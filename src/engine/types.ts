@@ -206,6 +206,15 @@ export interface Club {
   fanMood: number // 0-100
   /** True for the club the human player runs. */
   isPlayerClub: boolean
+  /**
+   * The senior players named on the squad list.
+   *
+   * Under-21s are outside it and unlimited; anyone older who is not on this
+   * list cannot be picked at all. Set during a window and locked in between,
+   * which is what turns a January signing into a decision about who gets
+   * left out rather than a free addition.
+   */
+  registeredIds: ID[]
 }
 
 export interface ClubFinances {
@@ -607,6 +616,16 @@ export interface Player {
   sellOnClauseOwed: { clubId: ID; percentage: number }[]
   /** Hidden development modifier — some players just kick on, some stall. */
   developmentRate: number
+  /**
+   * Years registered with a club in each nation before turning 21, keyed by
+   * nation id.
+   *
+   * This is what decides homegrown status, and it is deliberately about where
+   * a player was *trained* rather than what passport he holds: a Senegalese
+   * who came through an English academy is homegrown in England, and an
+   * Englishman who left for Spain at sixteen is not.
+   */
+  trainingYears: Record<ID, number>
 }
 
 export type PlayerTrait =
@@ -1307,4 +1326,4 @@ export interface GameSettings {
   hapticsEnabled: boolean
 }
 
-export const SAVE_VERSION = 1
+export const SAVE_VERSION = 2

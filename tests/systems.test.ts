@@ -23,11 +23,22 @@ import {
   awardContract, baseCost, decayStadium, inviteTenders, progressStadiumWork, revenuePerHead,
   usableCapacity,
 } from '../src/engine/systems/stadium'
+import { clearRatingCache } from '../src/engine/world/attributes'
 import { compress, decompress, MemoryAdapter } from '../src/storage/adapter'
 import { loadGame, saveGame, setStorageAdapter } from '../src/storage/saves'
+import {
+  accrueTrainingYear, autoRegister, isHomegrownFor, isRegisteredFor, NON_HOMEGROWN_LIMIT,
+  reconcileRegistration, registerOrDisplace, registerPlayer, registrablePool, squadRegistration,
+  SQUAD_LIMIT, U21_AGE, unregisterPlayer,
+} from '../src/engine/systems/registration'
+import { selectTeam } from '../src/engine/sim/selection'
 import type { GameState } from '../src/engine/types'
 
 function freshWorld(seed = 'SYSTEMS'): GameState {
+  // Ids restart at zero for every generated world, so the positional-rating
+  // memo would otherwise hand one test's ratings to the next one's players.
+  // The app clears it on every attach; the tests have to do the same.
+  clearRatingCache()
   const state = generateWorld({
     seed, season: 2025, size: 'compact', homeNationId: 'eng',
     directorName: 'Test Director', background: 'analyst',
@@ -102,13 +113,27 @@ describe('transfers', () => {
     // as fourth choice. Mutating one club's standing isolates the variable.
     const clubs = Object.values(state.clubs)
     const buyer = clubs[0]
-    const player = state.players[clubs[5].squad.find((id) => !state.players[id].isAcademy)!]
     const original = buyer.reputation
 
+    // Appeal is clamped at zero, and a player who would be sixth choice in his
+    // position is pinned to the floor whatever the club's standing. Comparing
+    // two clamped values proves nothing, so the subject is the first player
+    // for whom the unattractive case is still above the floor.
+    const subject = clubs
+      .slice(3, 12)
+      .flatMap((c) => c.squad.map((id) => state.players[id]))
+      .filter((p) => p && !p.isAcademy)
+      .find((p) => {
+        buyer.reputation = 20
+        return moveAppeal(state, p, buyer) > 0
+      })
+    buyer.reputation = original
+    expect(subject, 'no unclamped subject in this world').toBeTruthy()
+
     buyer.reputation = 20
-    const lowly = moveAppeal(state, player, buyer)
+    const lowly = moveAppeal(state, subject!, buyer)
     buyer.reputation = 90
-    const prestigious = moveAppeal(state, player, buyer)
+    const prestigious = moveAppeal(state, subject!, buyer)
     buyer.reputation = original
 
     expect(prestigious).toBeGreaterThan(lowly)
@@ -647,10 +672,17 @@ describe('board requests', () => {
     state.date.week = 20
     club.board.confidence = 95
 
-    makeRequest(state, club, 'transferFunds', new Rng('a'), 1000)
+    // Which requests a board will even hear depends on the club, so the test
+    // asks for the first thing this one is willing to discuss. Asking for
+    // something unavailable is refused without starting a cooldown, which
+    // would make this test about the wrong thing.
+    const kind = availableRequests(state, club).find((o) => o.available)?.kind
+    expect(kind, 'this board will not discuss anything at all').toBeTruthy()
+
+    makeRequest(state, club, kind!, new Rng('a'), 1000)
     expect(weeksUntilNextRequest(state, club)).toBeGreaterThan(0)
 
-    const second = makeRequest(state, club, 'transferFunds', new Rng('b'), 1000)
+    const second = makeRequest(state, club, kind!, new Rng('b'), 1000)
     expect(second.outcome).toBe('refused')
     expect(second.message).toContain('not entertain')
   })
@@ -956,5 +988,152 @@ describe('stadium', () => {
     })
     const sameFirm = otherBids.find((b) => b.architectId === bid.architectId)!
     expect(sameFirm.available).toBe(false)
+  })
+})
+
+describe('squad registration', () => {
+  it('gives every club a legal list at world creation', () => {
+    const state = freshWorld('REG-A')
+    for (const club of Object.values(state.clubs)) {
+      const view = squadRegistration(state, club)
+      expect(view.illegal, `${club.name} has an illegal squad list`).toBe(false)
+      expect(view.placesUsed).toBeLessThanOrEqual(SQUAD_LIMIT)
+      expect(view.nonHomegrown).toBeLessThanOrEqual(NON_HOMEGROWN_LIMIT)
+    }
+  })
+
+  it('leaves under-21s off the list and eligible anyway', () => {
+    const state = freshWorld('REG-B')
+    const club = state.clubs[state.playerClubId]
+    const view = squadRegistration(state, club)
+    for (const kid of view.exempt) {
+      expect(kid.age).toBeLessThan(U21_AGE)
+      expect(club.registeredIds).not.toContain(kid.id)
+      expect(isRegisteredFor(club, kid)).toBe(true)
+    }
+  })
+
+  it('refuses an eighteenth foreign-trained player but still takes a homegrown one', () => {
+    const state = freshWorld('REG-C')
+    const club = state.clubs[state.playerClubId]
+    state.date.week = 1 // window open
+
+    // Fill the list with players trained abroad, and nothing else.
+    club.registeredIds = []
+    const seniors = club.squad
+      .map((id) => state.players[id]!)
+      .filter((p) => p.age >= U21_AGE)
+    for (const p of seniors) p.trainingYears = { elsewhere: 5 }
+    for (const p of seniors.slice(0, NON_HOMEGROWN_LIMIT)) {
+      expect(registerPlayer(state, club, p).ok).toBe(true)
+    }
+
+    const nextForeign = seniors[NON_HOMEGROWN_LIMIT]
+    expect(nextForeign, 'squad too small for this test').toBeTruthy()
+    const blocked = registerPlayer(state, club, nextForeign)
+    expect(blocked.ok).toBe(false)
+    expect(blocked.error).toBe('noHomegrownPlaces')
+
+    // The same player, trained in the country, walks straight in — which is
+    // what makes the limit a limit on foreigners rather than on squad size.
+    nextForeign.trainingYears = { [club.nationId]: 4 }
+    expect(isHomegrownFor(nextForeign, club)).toBe(true)
+    expect(registerPlayer(state, club, nextForeign).ok).toBe(true)
+    expect(squadRegistration(state, club).placesUsed).toBe(NON_HOMEGROWN_LIMIT + 1)
+  })
+
+  it('locks the list when the window is shut', () => {
+    const state = freshWorld('REG-D')
+    const club = state.clubs[state.playerClubId]
+    state.date.week = 15 // mid-season, window closed
+    const [named] = club.registeredIds
+    const player = state.players[named]!
+    expect(unregisterPlayer(state, club, player).error).toBe('closed')
+    expect(club.registeredIds).toContain(named)
+  })
+
+  it('bars an unregistered senior from selection', () => {
+    const state = freshWorld('REG-E')
+    const club = state.clubs[state.playerClubId]
+    const dropped = squadRegistration(state, club).registered
+      .slice()
+      .sort((a, b) => b.currentAbility - a.currentAbility)[0]!
+    club.registeredIds = club.registeredIds.filter((id) => id !== dropped.id)
+
+    const team = selectTeam(state, club, new Rng('sel'))
+    expect(team.starters.some((s) => s.playerId === dropped.id)).toBe(false)
+    expect(team.bench).not.toContain(dropped.id)
+  })
+
+  it('makes a new signing at an AI club displace someone rather than vanish', () => {
+    const state = freshWorld('REG-F')
+    const buyer = Object.values(state.clubs).find(
+      (c) => c.id !== state.playerClubId && c.reputation > 60,
+    )!
+
+    // Everyone homegrown, so only the 25-place limit can bite, and the list
+    // filled to the brim so it must bite.
+    for (const p of registrablePool(state, buyer)) p.trainingYears = { [buyer.nationId]: 4 }
+    const seniors = registrablePool(state, buyer)
+      .filter((p) => p.age >= U21_AGE)
+      .sort((a, b) => b.currentAbility - a.currentAbility)
+    while (seniors.length < SQUAD_LIMIT) {
+      // Age a youngster up rather than inventing a player, so everything else
+      // about him stays internally consistent.
+      const kid = registrablePool(state, buyer).find((p) => p.age < U21_AGE)
+      if (!kid) break
+      kid.age = 22
+      seniors.push(kid)
+    }
+    expect(seniors.length).toBeGreaterThanOrEqual(SQUAD_LIMIT)
+    buyer.registeredIds = seniors.slice(0, SQUAD_LIMIT).map((p) => p.id)
+    expect(squadRegistration(state, buyer).placesFree).toBe(0)
+
+    const weakestNamed = seniors.slice(0, SQUAD_LIMIT)
+      .sort((a, b) => a.currentAbility - b.currentAbility)[0]!
+
+    const arrival = Object.values(state.players).find(
+      (p) => p.clubId && p.clubId !== buyer.id && p.age >= 24 && p.currentAbility > 150,
+    )!
+    arrival.clubId = buyer.id
+    arrival.trainingYears = { [buyer.nationId]: 4 }
+    buyer.squad.push(arrival.id)
+
+    const outcome = registerOrDisplace(state, buyer, arrival)
+    expect(outcome.registered).toBe(true)
+    expect(outcome.displaced?.id).toBe(weakestNamed.id)
+    expect(buyer.registeredIds).toContain(arrival.id)
+    expect(buyer.registeredIds).not.toContain(weakestNamed.id)
+    expect(squadRegistration(state, buyer).illegal).toBe(false)
+  })
+
+  it('credits a training year only to players under 21', () => {
+    const state = freshWorld('REG-G')
+    const club = state.clubs[state.playerClubId]
+    const kid = club.squad.map((id) => state.players[id]!).find((p) => p.age < U21_AGE)!
+    const adult = club.squad.map((id) => state.players[id]!).find((p) => p.age > 25)!
+    const kidBefore = kid.trainingYears[club.nationId] ?? 0
+    const adultBefore = adult.trainingYears[club.nationId] ?? 0
+
+    accrueTrainingYear(state, kid)
+    accrueTrainingYear(state, adult)
+
+    expect(kid.trainingYears[club.nationId]).toBe(kidBefore + 1)
+    expect(adult.trainingYears[club.nationId] ?? 0).toBe(adultBefore)
+  })
+
+  it('keeps the human directors choices when the list is reconciled', () => {
+    const state = freshWorld('REG-H')
+    const club = state.clubs[state.playerClubId]
+    state.date.week = 1
+    club.registeredIds = []
+    const weakest = registrablePool(state, club)
+      .filter((p) => p.age >= U21_AGE)
+      .sort((a, b) => a.currentAbility - b.currentAbility)[0]!
+    registerPlayer(state, club, weakest)
+
+    reconcileRegistration(state, club)
+    expect(club.registeredIds, 'a deliberate pick was thrown away').toContain(weakest.id)
+    expect(squadRegistration(state, club).illegal).toBe(false)
   })
 })

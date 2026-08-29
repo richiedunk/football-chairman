@@ -1,4 +1,5 @@
 import { SAVE_VERSION, type GameState } from '../engine/types'
+import { autoRegister } from '../engine/systems/registration'
 import { clearRatingCache } from '../engine/world/attributes'
 import { levelFor } from '../engine/systems/career'
 import { createStorageAdapter, type SaveSlotMeta, type StorageAdapter } from './adapter'
@@ -108,9 +109,22 @@ function migrate(state: GameState): GameState {
     )
   }
 
-  // Future migrations go here, in ascending order:
-  //
-  //   if (state.version < 2) { ...; state.version = 2 }
+  // Migrations go here, in ascending order.
+
+  // v2: squad registration. Older saves have neither training histories nor
+  // squad lists, so both are reconstructed: nationality is the best available
+  // proxy for where a player was trained, and every club is then given a
+  // legal list built from its actual squad.
+  if (state.version < 2) {
+    for (const player of Object.values(state.players)) {
+      if (!player.trainingYears) player.trainingYears = { [player.nationalityId]: 3 }
+    }
+    for (const club of Object.values(state.clubs)) {
+      if (!club.registeredIds) club.registeredIds = []
+      autoRegister(state, club)
+    }
+    state.version = 2
+  }
 
   state.version = SAVE_VERSION
   return state

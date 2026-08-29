@@ -1,5 +1,6 @@
 import { clamp, Rng } from '../rng'
 import { computeValue, computeWageDemand, squadImportance, totalWageBill } from './valuation'
+import { releaseRegistration } from './registration'
 import type { Club, Contract, GameState, Player, SquadStatus } from '../types'
 
 /**
@@ -239,6 +240,7 @@ export function releasePlayer(
   if (player.clubId !== club.id) return { ok: false, error: 'That player is not at this club.' }
   if (!player.contract) {
     club.squad = club.squad.filter((id) => id !== player.id)
+    releaseRegistration(club, player.id)
     player.clubId = null
     return { ok: true, cost: 0 }
   }
@@ -255,6 +257,7 @@ export function releasePlayer(
   club.finances.balance -= cost
   club.finances.season.otherCosts += cost
   club.squad = club.squad.filter((id) => id !== player.id)
+  releaseRegistration(club, player.id)
   player.clubId = null
   player.contract = null
   player.value = 0

@@ -8,6 +8,7 @@ import { generateBackroom, generateFreeAgentStaff } from './staffGen'
 import { computeValue, computeWageDemand } from '../systems/valuation'
 import { scheduleLeague } from '../sim/schedule'
 import { generateArchitects } from '../systems/stadium'
+import { autoRegister } from '../systems/registration'
 import { resetCup } from '../sim/cups'
 import { SAVE_VERSION } from '../types'
 import type {
@@ -214,7 +215,7 @@ export function generateWorld(options: WorldGenOptions): GameState {
 
         // Squad. Foreign-player share rises with league wealth — a Premier
         // division is cosmopolitan, a fourth tier is overwhelmingly local.
-        const foreignChance = clamp((league.reputation / 100) * 0.62 - 0.05, 0.02, 0.6)
+        const foreignChance = clamp(Math.pow(league.reputation / 100, 1.2) * 0.72 - 0.03, 0.02, 0.68)
         const squad = generateSquad(playerCtx, club.id, reputation, nation, foreignChance)
         for (const player of squad) {
           state.players[player.id] = player
@@ -274,6 +275,11 @@ export function generateWorld(options: WorldGenOptions): GameState {
 
   // --- Free agents ---------------------------------------------------------
   generateFreeAgents(state, playerCtx, rng)
+
+  // --- Squad registration --------------------------------------------------
+  // Named after free agents exist, so a club that starts a place short can be
+  // seen to be a place short rather than quietly padded.
+  for (const club of Object.values(state.clubs)) autoRegister(state, club)
 
   // --- Fixtures and tables -------------------------------------------------
   for (const league of Object.values(state.leagues)) {
@@ -394,6 +400,7 @@ function createClub(
     facilities,
     squad: [],
     loanedIn: [],
+    registeredIds: [],
     staff: [],
     headCoachId: null,
     strategy,

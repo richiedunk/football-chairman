@@ -5,6 +5,10 @@ import { canAfford } from './finance'
 import { reactToDeparture, reactToSigning, refreshSquadStatuses } from './morale'
 import { ratingForPositionCached } from '../world/attributes'
 import { isTransferWindowOpen } from '../sim/schedule'
+import { addInboxItem } from './inbox'
+import {
+  NON_HOMEGROWN_LIMIT, releaseRegistration, settleArrival, SQUAD_LIMIT,
+} from './registration'
 import type {
   Agent, Club, CompletedTransfer, Contract, GameState, ID, NegotiationLogEntry, Player,
   TransferKind, TransferNegotiation, TransferTerms,
@@ -515,6 +519,40 @@ export interface ExecuteTransferArgs {
  * Move a player between clubs and settle the money. Shared by human deals,
  * AI-to-AI deals and free transfers so the books always balance the same way.
  */
+/**
+ * Give an arriving player a squad place, or explain why he has not got one.
+ *
+ * The two clubs behave differently on purpose. An AI club will push its worst
+ * registered player out to fit a signing in, because that is what clubs do.
+ * The human's club will not: a director of football who has just spent eight
+ * million and cannot register the player has a problem to solve, and quietly
+ * solving it for him would remove the only teeth the rule has.
+ */
+function settleArrivalRegistration(
+  state: GameState,
+  ctx: TransferContext,
+  buyer: Club,
+  player: Player,
+): void {
+  const outcome = settleArrival(state, buyer, player)
+  if (outcome.registered || buyer.id !== state.playerClubId) return
+
+  const reason = outcome.blocked === 'noHomegrownPlaces'
+    ? `The squad list already carries ${NON_HOMEGROWN_LIMIT} players trained abroad, which is the maximum. `
+      + 'To register him you will have to leave one of them out, or free a place with a homegrown player.'
+    : `All ${SQUAD_LIMIT} places on the squad list are taken. Someone has to be left out.`
+
+  addInboxItem(state, ctx.ids, {
+    category: 'player',
+    subject: `${player.knownAs} cannot be registered`,
+    from: 'Club Secretary',
+    body: `${player.knownAs} has signed, but there is no place for him on the squad list. ${reason} `
+      + 'Until then he cannot be selected.',
+    urgent: true,
+    link: { view: 'squad' },
+  })
+}
+
 export function executeTransfer(
   state: GameState,
   ctx: TransferContext,
@@ -533,6 +571,11 @@ export function executeTransfer(
     player.loanWageShare = clamp(args.wageContribution, 0, 1)
     player.listedForLoan = false
     if (!buyer.loanedIn.includes(player.id)) buyer.loanedIn.push(player.id)
+
+    // A loanee takes a place on the borrowing club's squad list and gives one
+    // back at the parent — the reason a deadline-day loan is a real cost.
+    if (seller) releaseRegistration(seller, player.id)
+    settleArrivalRegistration(state, ctx, buyer, player)
 
     // A loan move is usually good news for a player who was not playing.
     player.morale = clamp(player.morale + 8, 1, 100)
@@ -578,6 +621,7 @@ export function executeTransfer(
     seller.finances.balance += net
     seller.finances.season.transfersOut += net
     seller.squad = seller.squad.filter((id) => id !== player.id)
+    releaseRegistration(seller, player.id)
     reactToDeparture(state, seller, player)
     refreshSquadStatuses(state, seller)
   }
@@ -593,7 +637,10 @@ export function executeTransfer(
   // A player being sold while out on loan is recalled by the transfer.
   if (player.loanClubId) {
     const borrower = state.clubs[player.loanClubId]
-    if (borrower) borrower.loanedIn = borrower.loanedIn.filter((id) => id !== player.id)
+    if (borrower) {
+      borrower.loanedIn = borrower.loanedIn.filter((id) => id !== player.id)
+      releaseRegistration(borrower, player.id)
+    }
   }
 
   // Attach the player to his new club.
@@ -609,6 +656,7 @@ export function executeTransfer(
   player.loanWageShare = 0
   player.morale = clamp(player.morale + 12, 1, 100)
   buyer.squad.push(player.id)
+  settleArrivalRegistration(state, ctx, buyer, player)
 
   reactToSigning(state, buyer, player, ctx.rng)
   refreshSquadStatuses(state, buyer)

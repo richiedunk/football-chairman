@@ -17,6 +17,10 @@ import {
 import { promoteToSenior } from '../engine/systems/academy'
 import { openNegotiation } from '../engine/systems/transfers'
 import { loanedIn, loanedOut, proposeLoanIn, proposeLoanOut, recallLoan } from '../engine/systems/loans'
+import {
+  autoRegister, isHomegrownFor, isRegistrationOpen, registerPlayer, squadRegistration,
+  unregisterPlayer, type RegistrationResult,
+} from '../engine/systems/registration'
 import { AUTOSAVE_SLOT, loadGame, saveGame } from '../storage/saves'
 import { haptic } from '../platform/native'
 import type {
@@ -579,6 +583,59 @@ export const useGameStore = defineStore('game', () => {
     return s && c ? loanedIn(s, c) : []
   })
 
+  // --- Squad registration ---------------------------------------------------
+
+  const registration = computed(() => {
+    void revision.value
+    const s = state.value
+    const c = club.value
+    return s && c ? squadRegistration(s, c) : null
+  })
+
+  const registrationOpen = computed(() => {
+    void revision.value
+    const s = state.value
+    return s ? isRegistrationOpen(s.date.week) : false
+  })
+
+  function register(playerId: ID): RegistrationResult {
+    const s = state.value
+    const c = club.value
+    if (!s || !c) return { ok: false, message: 'No game loaded.' }
+    const p = s.players[playerId]
+    if (!p) return { ok: false, message: 'No such player.' }
+    const result = registerPlayer(s, c, p)
+    commit()
+    return result
+  }
+
+  function unregister(playerId: ID): RegistrationResult {
+    const s = state.value
+    const c = club.value
+    if (!s || !c) return { ok: false, message: 'No game loaded.' }
+    const p = s.players[playerId]
+    if (!p) return { ok: false, message: 'No such player.' }
+    const result = unregisterPlayer(s, c, p)
+    commit()
+    return result
+  }
+
+  /** Hand the form to the club secretary and take whatever list he produces. */
+  function autoPickSquad(): void {
+    const s = state.value
+    const c = club.value
+    if (!s || !c || !isRegistrationOpen(s.date.week)) return
+    autoRegister(s, c)
+    commit()
+  }
+
+  function isHomegrown(playerId: ID): boolean {
+    const s = state.value
+    const c = club.value
+    const p = s?.players[playerId]
+    return Boolean(s && c && p && isHomegrownFor(p, c))
+  }
+
   function idFactory(): IdFactory {
     return ids
   }
@@ -610,6 +667,7 @@ export const useGameStore = defineStore('game', () => {
     toggleShortlist, isShortlisted, setTransferListed, setLoanListed, setSquadStatus,
     renew, release, promote, bid,
     loanOut, loanIn, recall, loansOut, loansIn,
+    registration, registrationOpen, register, unregister, autoPickSquad, isHomegrown,
     idFactory, nameGenerator, reset,
   }
 })

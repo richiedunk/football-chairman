@@ -289,6 +289,36 @@ await step('stadium and architect tender', async () => {
   await page.screenshot({ path: `${SHOT}/26-works.png`, fullPage: true })
 })
 
+await step('squad registration', async () => {
+  await page.goto('http://127.0.0.1:4173/#/squad')
+  await page.waitForSelector('text=Squad list')
+  await page.click('text=Squad list')
+  await page.waitForSelector('text=Trained abroad')
+
+  const places = await page.textContent('.stat:has-text("Places") .stat__value')
+  const abroad = await page.textContent('.stat:has-text("Trained abroad") .stat__value')
+  console.log(`   ${places?.trim()} named, ${abroad?.trim()} trained abroad`)
+  await page.screenshot({ path: `${SHOT}/27-registration.png`, fullPage: true })
+
+  // Taking a player off the list must show up immediately in the counters and
+  // move him into the "left out" tab — the reactivity chain, again.
+  const before = Number((places ?? '0').trim().split('/')[0])
+  await page.click('.btn--ghost:has-text("Remove") >> nth=0')
+  await page.waitForTimeout(400)
+  const after = await page.textContent('.stat:has-text("Places") .stat__value')
+  const now = Number((after ?? '0').trim().split('/')[0])
+  if (now !== before - 1) throw new Error(`removing a player did not update the count: ${before} -> ${now}`)
+
+  await page.click('.segmented__item:has-text("Left out")')
+  await page.waitForSelector('.btn:has-text("Register")')
+  await page.click('.btn:has-text("Register") >> nth=0')
+  await page.waitForTimeout(400)
+  const restored = await page.textContent('.stat:has-text("Places") .stat__value')
+  if (Number((restored ?? '0').trim().split('/')[0]) !== before) {
+    throw new Error(`re-registering did not restore the count: ${restored}`)
+  }
+})
+
 await step('facilities', async () => {
   await page.goto('http://127.0.0.1:4173/#/facilities')
   await page.waitForSelector('text=Departments')
