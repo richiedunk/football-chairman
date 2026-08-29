@@ -6,7 +6,7 @@ import { auditSquadDepth } from '../sim/selection'
 import { ordinal } from './career'
 import { expectedWage } from '../world/staffGen'
 import type {
-  BoardMandate, Club, GameState, League, LeagueTableRow, Player, SquadRequest, Staff, StaffRole,
+  BoardMandate, Club, GameState, ID, League, LeagueTableRow, Player, SquadRequest, Staff, StaffRole,
 } from '../types'
 
 /**
@@ -148,36 +148,241 @@ function mandateProgress(
 }
 
 /**
- * Pull fan mood toward what the club's league position deserves.
+ * Supporter mood, derived rather than drifted.
  *
- * Match results alone move mood asymmetrically — a defeat hurts more than a
- * win pleases, which is true of real supporters but, applied every week with
- * no counterweight, drove every club in the world to single-figure mood inside
- * two seasons and dragged squad morale down with it. Supporters recalibrate to
- * where their club actually is; that reversion is what this restores.
+ * The earlier model nudged mood on every result and let it wander, which meant
+ * it decayed on its own: a defeat cost more than a win paid, so a mid-table
+ * club sank to single figures over a season regardless of anything the
+ * director did. Numbers that drift are also impossible to explain to a player,
+ * and mood drives attendance, matchday income and board confidence.
+ *
+ * Mood is now *computed from its causes* every week and the stored value moves
+ * toward that figure. Steady performance therefore produces a steady mood, and
+ * every point of it can be attributed to something the supporters can see.
  */
-export function updateFanMood(state: GameState, club: Club): void {
+
+export interface FanMoodFactor {
+  label: string
+  /** Contribution in mood points, positive or negative. */
+  delta: number
+}
+
+export interface FanMoodAssessment {
+  target: number
+  factors: FanMoodFactor[]
+}
+
+/** Neutral mood: supporters with nothing in particular to feel either way. */
+const FAN_MOOD_BASELINE = 52
+
+export function assessFanMood(state: GameState, club: Club): FanMoodAssessment {
+  const factors: FanMoodFactor[] = []
   const table = state.tables[club.leagueId]
   const league = state.leagues[club.leagueId]
-  if (!table || !league || table.length === 0) return
+  if (!table || !league || table.length === 0) {
+    return { target: FAN_MOOD_BASELINE, factors }
+  }
 
   const position = leaguePosition(table, club.id)
   const expected = club.board.expectation.leaguePosition
   const clubCount = table.length
+  const row = table.find((r) => r.clubId === club.id)
 
-  // Where mood settles: neutral when the club is exactly where it should be,
-  // rising or falling by how far off that it is.
-  let target = 52 + (expected - position) * 3.2
+  // Before a ball is kicked the table is alphabetical noise, so position-based
+  // judgements are suppressed until there is a season to judge. Without this,
+  // every club is assessed on a meaningless week-one position and mood swings
+  // violently across the summer.
+  const matchesPlayed = table.reduce((sum, r) => sum + r.played, 0)
+  const tableIsMeaningful = matchesPlayed >= table.length
 
-  // Absolute position matters too — bottom of the table is grim even for a
-  // club that was expected to struggle.
-  if (position > clubCount - league.relegationPlaces) target -= 14
-  if (position === 1) target += 8
+  // Early in a season the table is still noisy, so its weight ramps up rather
+  // than arriving at full strength after one match.
+  const tableConfidence = clamp((row?.played ?? 0) / 6, 0, 1)
 
-  // Money troubles sour a crowd independently of results.
-  if (club.finances.inCrisis) target -= 18
+  // 1. Where the club sits against what was expected of it. The single
+  //    largest factor, because supporters judge a season relative to their own
+  //    expectations rather than in the abstract.
+  const versusExpectation = tableIsMeaningful
+    ? clamp((expected - position) * 3.2, -22, 22) * tableConfidence
+    : 0
+  if (Math.abs(versusExpectation) >= 1) {
+    factors.push({
+      label: position < expected
+        ? `${expected - position} place${expected - position === 1 ? '' : 's'} above expectation`
+        : `${position - expected} place${position - expected === 1 ? '' : 's'} below expectation`,
+      delta: versusExpectation,
+    })
+  }
 
-  club.fanMood = clamp(club.fanMood + (clamp(target, 5, 95) - club.fanMood) * 0.1, 1, 100)
+  // 2. Recent form, independent of the table. A run of wins lifts a crowd even
+  //    when the season is already lost, and vice versa.
+  if (row && row.form.length > 0) {
+    const points = row.form.reduce((sum, r) => sum + (r === 'W' ? 3 : r === 'D' ? 1 : 0), 0)
+    const perGame = points / row.form.length
+    const formDelta = clamp((perGame - 1.35) * 9, -14, 14)
+    if (Math.abs(formDelta) >= 1) {
+      factors.push({
+        label: perGame >= 1.35 ? `Good recent form (${row.form.join('')})` : `Poor recent form (${row.form.join('')})`,
+        delta: formDelta,
+      })
+    }
+  }
+
+  // 3. Absolute position. Being in a title race or a relegation fight matters
+  //    in itself, whatever the board expected.
+  if (!tableIsMeaningful) {
+    // Nothing to say yet.
+  } else if (position === 1) factors.push({ label: 'Top of the division', delta: 9 })
+  else if (league.promotionPlaces > 0 && position <= league.promotionPlaces) {
+    factors.push({ label: 'In the automatic promotion places', delta: 7 })
+  } else if (league.playoffPlaces > 0 && position <= league.promotionPlaces + league.playoffPlaces) {
+    factors.push({ label: 'In the play-off places', delta: 4 })
+  }
+  if (
+    tableIsMeaningful
+    && league.relegationPlaces > 0
+    && position > clubCount - league.relegationPlaces
+  ) {
+    factors.push({ label: 'In the relegation places', delta: -15 * tableConfidence })
+  }
+
+  // 4. Money. A crowd notices an embargo and it notices being charged more
+  //    than the club is worth watching.
+  if (club.finances.inCrisis) {
+    factors.push({ label: 'Club in financial crisis', delta: -18 })
+  } else if (club.finances.debt > weeklyClubRevenue(state, club) * 25) {
+    factors.push({ label: 'Worrying levels of debt', delta: -6 })
+  }
+
+  const leagueAveragePrice = averageTicketPrice(state, league)
+  if (leagueAveragePrice > 0) {
+    const ratio = club.facilities.stadium.ticketPrice / leagueAveragePrice
+    if (ratio > 1.2) factors.push({ label: 'Ticket prices well above the division average', delta: -7 })
+    else if (ratio < 0.85) factors.push({ label: 'Ticket prices below the division average', delta: 4 })
+  }
+
+  // 5. Recruitment, as supporters read it: did the club sell its best players,
+  //    and did it replace them?
+  const recruitment = assessRecruitmentMood(state, club)
+  factors.push(...recruitment)
+
+  // 6. A cup run. Disproportionately important lower down, which is exactly
+  //    where it is most likely to happen.
+  const cup = Object.values(state.cups).find((c) => c.nationId === club.nationId)
+  if (cup) {
+    if (cup.winnerId === club.id) factors.push({ label: `Won the ${cup.name}`, delta: 16 })
+    else if (cup.currentRound >= 4 && cupSurvivor(state, cup, club.id)) {
+      factors.push({ label: `Still in the ${cup.name}`, delta: 8 })
+    }
+  }
+
+  // 7. Last season still colours the mood at the start of this one.
+  const lastSeason = club.history[club.history.length - 1]
+  if (lastSeason && (!tableIsMeaningful || state.date.week <= 16)) {
+    const previousLeague = state.leagues[lastSeason.leagueId]
+    if (previousLeague && previousLeague.tier > league.tier) {
+      factors.push({ label: 'Promoted last season', delta: 8 })
+    } else if (previousLeague && previousLeague.tier < league.tier) {
+      factors.push({ label: 'Relegated last season', delta: -9 })
+    }
+  }
+
+  // 8. Standing. A club whose supporters have been given nothing to shout
+  //    about for years is a harder crowd than a newly ambitious one.
+  if (club.facilities.stadium.quality < 25) {
+    factors.push({ label: 'Ground is in poor condition', delta: -4 })
+  }
+
+  const total = factors.reduce((sum, f) => sum + f.delta, 0)
+  return { target: clamp(FAN_MOOD_BASELINE + total, 1, 100), factors }
+}
+
+/**
+ * What supporters make of the club's transfer business this season: selling
+ * the best player without replacing him is the classic way a director loses a
+ * crowd, and it should cost something visible.
+ */
+function assessRecruitmentMood(state: GameState, club: Club): FanMoodFactor[] {
+  const factors: FanMoodFactor[] = []
+  const season = state.date.season
+
+  const soldThisSeason = state.completedTransfers.filter(
+    (t) => t.season === season && t.fromClubId === club.id && t.fee > 0,
+  )
+  const boughtThisSeason = state.completedTransfers.filter(
+    (t) => t.season === season && t.toClubId === club.id,
+  )
+
+  const revenue = Math.max(1, weeklyClubRevenue(state, club) * 52)
+  const salesValue = soldThisSeason.reduce((sum, t) => sum + t.fee, 0)
+  const purchasesValue = boughtThisSeason.reduce((sum, t) => sum + t.fee, 0)
+
+  // Measured against the club's own turnover, so a £2m sale means something
+  // very different in the fifth tier than in the first.
+  const netAsShareOfRevenue = (salesValue - purchasesValue) / revenue
+
+  if (netAsShareOfRevenue > 0.35) {
+    factors.push({ label: 'Sold more than the club replaced', delta: -10 })
+  } else if (netAsShareOfRevenue < -0.35) {
+    factors.push({ label: 'Backed the squad in the market', delta: 8 })
+  }
+
+  const marquee = boughtThisSeason.find((t) => t.fee > revenue * 0.25)
+  if (marquee) factors.push({ label: `Signing of ${marquee.playerName}`, delta: 5 })
+
+  return factors
+}
+
+/**
+ * Move stored mood toward the assessed target.
+ *
+ * Smoothed rather than snapped so a single result does not swing a crowd
+ * completely, but with no independent drift term — if the causes stop
+ * changing, mood settles and stays there.
+ */
+export function updateFanMood(state: GameState, club: Club): void {
+  const { target } = assessFanMood(state, club)
+  club.fanMood = clamp(club.fanMood + (target - club.fanMood) * 0.16, 1, 100)
+}
+
+function averageTicketPrice(state: GameState, league: League): number {
+  const clubs = league.clubIds.map((id) => state.clubs[id]).filter(Boolean) as Club[]
+  if (clubs.length === 0) return 0
+  return clubs.reduce((sum, c) => sum + c.facilities.stadium.ticketPrice, 0) / clubs.length
+}
+
+function cupSurvivor(state: GameState, cup: { rounds: { fixtureIds: ID[] }[] }, clubId: ID): boolean {
+  for (const round of cup.rounds) {
+    for (const fixtureId of round.fixtureIds) {
+      const fixture = state.fixtures.find((f) => f.id === fixtureId)
+      if (!fixture?.result) continue
+      if (fixture.homeClubId !== clubId && fixture.awayClubId !== clubId) continue
+      const result = fixture.result
+      const lost = result.penalties
+        ? (fixture.homeClubId === clubId
+          ? result.penalties.home < result.penalties.away
+          : result.penalties.away < result.penalties.home)
+        : (fixture.homeClubId === clubId
+          ? result.homeGoals < result.awayGoals
+          : result.awayGoals < result.homeGoals)
+      if (lost) return false
+    }
+  }
+  return true
+}
+
+/**
+ * Local copy of the revenue estimate, kept here to avoid a circular import
+ * between the board and finance modules.
+ */
+function weeklyClubRevenue(state: GameState, club: Club): number {
+  const league = state.leagues[club.leagueId]
+  const tv = league ? league.tvRevenue / 46 : 0
+  const sponsor =
+    (club.finances.sponsorship.shirtValuePerSeason + club.finances.sponsorship.kitValuePerSeason) / 52
+  const matchday =
+    (club.facilities.stadium.capacity * (0.4 + club.fanbase / 220) * club.facilities.stadium.ticketPrice) / 2
+  return Math.round(tv + sponsor + matchday)
 }
 
 export function leaguePosition(table: LeagueTableRow[], clubId: string): number {

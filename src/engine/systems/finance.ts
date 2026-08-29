@@ -68,7 +68,7 @@ export function processFinances(
 
   // Running costs: the stadium, the training ground, the scouting network and
   // the academy all cost money every week whether you use them or not.
-  const upkeep = facilityUpkeep(club)
+  const upkeep = facilityUpkeep(state, club)
   club.finances.balance -= upkeep
   ledger.otherCosts += upkeep
 
@@ -133,22 +133,152 @@ export function processFinances(
 }
 
 /**
- * Weekly cost of simply having the facilities the club has.
+ * Cost of living where the club is based.
  *
- * The per-level cost scales with the club's standing, because a level-4
- * training ground at a non-league club is a portakabin and a level-4 training
- * ground at a Premier club is not. A flat rate made upkeep 58% of revenue at
- * the bottom of the pyramid and 2% at the top: every lower-league club bled
- * slowly into a transfer embargo within a season, which blocked the entire
- * recruitment loop from about week ten.
+ * Wages and rent are not the same everywhere. A groundsman in London costs
+ * more than a groundsman in Carlisle, and a training complex outside Milan
+ * costs more to run than one outside Bydgoszcz. Combining the nation's economy
+ * with the size of the club's own city gives a single multiplier that applies
+ * to every people-and-property cost.
  */
-export function facilityUpkeep(club: Club): number {
+export function costOfLivingIndex(state: GameState, club: Club): number {
+  const nation = state.nations[club.nationId]
+  const city = nation?.cities.find((c) => c.name === club.city)
+  const citySize = city?.size ?? 45
+  // Nation economy carries most of it; the city adds a local premium, so a
+  // capital-city club pays noticeably more than a small-town one in the same
+  // country.
+  return (nation?.economyFactor ?? 1) * (0.68 + (citySize / 100) * 0.62)
+}
+
+/**
+ * Itemised weekly operating costs.
+ *
+ * Kept as a breakdown rather than a single figure for two reasons. It is the
+ * only way a player can act on the number — "your wage bill is fine, your
+ * ground is eating you alive" is actionable where a lump sum is not — and it
+ * forces each cost to be modelled on something real rather than on a level
+ * number multiplied by a constant.
+ */
+export interface OperatingCosts {
+  /** Upkeep of the stands, pitch and floodlights. Scales with seats. */
+  stadiumMaintenance: number
+  /** Rent and rates on the ground, scaled by local property costs. */
+  groundRent: number
+  /** Running the training ground — charged per player who uses it. */
+  trainingGround: number
+  /** Running the academy — charged per academy player. */
+  youthSetup: number
+  /** Medical and rehabilitation, charged per registered player. */
+  medical: number
+  /** Analysts' tooling, data feeds and subscriptions. */
+  dataDepartment: number
+  /** Scouts' travel and the network's fixed costs. */
+  scoutingNetwork: number
+  /** Groundstaff, kit, catering, admin — the people who are not on the list. */
+  supportStaff: number
+  /** Implied headcount behind that support staff figure, for the UI. */
+  supportHeadcount: number
+  total: number
+}
+
+/**
+ * Per-seat costs scale with the club's standing as well as its size.
+ *
+ * A 60,000-seat all-seater with undersoil heating, hospitality and a safety
+ * certificate is not simply twenty of a 3,000-capacity non-league ground: it
+ * costs more per seat, not the same. Without the standing term the model gave
+ * the top flight operating costs of 6% of revenue and the fifth tier 67%,
+ * which is backwards — big clubs spend more in absolute terms, small clubs
+ * have the worse *ratio*, and both need to be true at once.
+ */
+function stadiumCostPerSeat(reputation: number): number {
+  return 0.22 + Math.pow(reputation / 100, 1.6) * 1.9
+}
+
+function groundRentPerSeat(reputation: number): number {
+  return 0.12 + Math.pow(reputation / 100, 1.4) * 0.85
+}
+
+/** Weekly cost of one support-staff head, driven by local wage levels. */
+function supportStaffCost(reputation: number): number {
+  return 50 + Math.pow(reputation / 100, 1.8) * 3000
+}
+
+export function operatingCosts(state: GameState, club: Club): OperatingCosts {
   const f = club.facilities
-  const stadiumCost = f.stadium.capacity * 0.35 * (0.6 + f.stadium.quality / 160)
-  const levels =
-    f.trainingGround + f.youthFacilities + f.medicalCentre + f.dataDepartment + f.scoutingNetwork
-  const costPerLevel = 60 + club.reputation * 11
-  return Math.round(stadiumCost + levels * costPerLevel)
+  const col = costOfLivingIndex(state, club)
+
+  const squad = club.squad.map((id) => state.players[id]).filter(Boolean)
+  const seniorCount = squad.filter((p) => p && !p.isAcademy).length
+  const academyCount = squad.length - seniorCount
+  const scoutCount = club.staff
+    .map((id) => state.staff[id])
+    .filter((member) => member?.role === 'scout').length
+
+  // A bigger ground costs more to maintain whether or not anyone sits in it,
+  // and a poorly-maintained one costs more per seat, not less: neglect is
+  // expensive.
+  // Neglect is expensive: a poorly-maintained ground costs more per seat to
+  // keep certified, not less.
+  const stadiumMaintenance =
+    f.stadium.capacity
+    * stadiumCostPerSeat(club.reputation)
+    * (1.25 - (f.stadium.quality / 100) * 0.45)
+
+  const groundRent = f.stadium.capacity * groundRentPerSeat(club.reputation) * col
+
+  // Training and medical are charged per head, so squad size is a real cost
+  // and hoarding twenty-eight professionals is a decision with a price on it.
+  // The per-head figure scales with the facility's level — a level-17 training
+  // complex costs far more per player to run than a rented pitch.
+  const trainingGround = seniorCount * (3 + f.trainingGround * 10) * col
+  const youthSetup = academyCount * (6 + f.youthFacilities * 5) * col
+  const medical = squad.length * (3 + f.medicalCentre * 4) * col
+
+  // Departments whose cost is about tooling rather than headcount.
+  const dataDepartment = f.dataDepartment * (25 + f.dataDepartment * 11) * col
+  // Scouting is mostly travel, so it scales with how many scouts are actually
+  // out on the road as well as with the network behind them.
+  const scoutingNetwork = scoutCount * 90 * col + f.scoutingNetwork * (22 + f.scoutingNetwork * 7)
+
+  // Everyone the squad list does not show: groundstaff, kit, catering, ticket
+  // office, admin. Headcount follows the size of the operation; what each one
+  // costs follows local wages.
+  const supportHeadcount = Math.max(
+    2,
+    Math.round(
+      1
+      + f.stadium.capacity / 3500
+      + f.trainingGround * 0.5
+      + f.youthFacilities * 0.4
+      + f.medicalCentre * 0.35
+      + f.dataDepartment * 0.3,
+    ),
+  )
+  const supportStaff = supportHeadcount * supportStaffCost(club.reputation) * col
+
+  const total =
+    stadiumMaintenance + groundRent + trainingGround + youthSetup + medical
+    + dataDepartment + scoutingNetwork + supportStaff
+
+  return {
+    stadiumMaintenance: Math.round(stadiumMaintenance),
+    groundRent: Math.round(groundRent),
+    trainingGround: Math.round(trainingGround),
+    youthSetup: Math.round(youthSetup),
+    medical: Math.round(medical),
+    dataDepartment: Math.round(dataDepartment),
+    scoutingNetwork: Math.round(scoutingNetwork),
+    supportStaff: Math.round(supportStaff),
+    supportHeadcount,
+    total: Math.round(total),
+  }
+}
+
+/** Total weekly operating cost. Convenience wrapper over `operatingCosts`. */
+export function facilityUpkeep(state: GameState, club: Club): number {
+  return operatingCosts(state, club).total
 }
 
 /** Rough weekly revenue, used for sizing budgets and judging debt. */
@@ -179,7 +309,7 @@ export function recalculateBudgets(state: GameState, club: Club): void {
   club.finances.wageBudget = Math.max(Math.round(currentWages / 52 * 0.9), wageAllowance)
 
   // Transfer budget: what is left after wages, plus a slice of cash reserves.
-  const projectedSurplus = revenue - currentWages - facilityUpkeep(club) * 52
+  const projectedSurplus = revenue - currentWages - facilityUpkeep(state, club) * 52
   const fromReserves = Math.max(0, club.finances.balance) * 0.35
   let transferBudget = Math.round(Math.max(0, projectedSurplus * 0.55 + fromReserves))
 

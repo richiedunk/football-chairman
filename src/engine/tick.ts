@@ -419,10 +419,9 @@ function applyMatchOutcome(
     }
   }
 
-  // Fan mood follows results, more sharply for a heavy defeat than a win.
-  const homeMargin = result.homeGoals - result.awayGoals
-  home.fanMood = clamp(home.fanMood + (homeMargin > 0 ? 3 : homeMargin === 0 ? 0 : -4), 1, 100)
-  away.fanMood = clamp(away.fanMood + (homeMargin < 0 ? 3 : homeMargin === 0 ? 1 : -3), 1, 100)
+  // Fan mood is deliberately NOT adjusted here. Nudging it per result, with a
+  // defeat costing more than a win paid, is what made it decay on its own; the
+  // weekly assessment reads recent form directly from the table instead.
 
   // Player stats, ratings, fatigue.
   const allLineups = [
