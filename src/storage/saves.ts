@@ -1,0 +1,132 @@
+import { SAVE_VERSION, type GameState } from '../engine/types'
+import { clearRatingCache } from '../engine/world/attributes'
+import { levelFor } from '../engine/systems/career'
+import { createStorageAdapter, type SaveSlotMeta, type StorageAdapter } from './adapter'
+import { compressAsync, decompressAsync } from './compression'
+
+/**
+ * Save and load.
+ *
+ * The GameState is a plain serialisable graph by construction, so saving is
+ * `JSON.stringify` plus gzip. What this module adds is slot management, the
+ * denormalised metadata the load screen needs without decompressing every
+ * save, and the migration hook for when the format inevitably changes.
+ */
+
+export const AUTOSAVE_SLOT = 'autosave'
+
+let adapter: StorageAdapter = createStorageAdapter()
+
+/** Override the adapter — used by tests. */
+export function setStorageAdapter(next: StorageAdapter): void {
+  adapter = next
+}
+
+export function storageName(): string {
+  return adapter.name
+}
+
+export async function listSaves(): Promise<SaveSlotMeta[]> {
+  return adapter.list()
+}
+
+export async function saveGame(
+  state: GameState,
+  slotId: string,
+  name?: string,
+): Promise<SaveSlotMeta> {
+  state.savedAt = Date.now()
+  const json = JSON.stringify(state)
+  const data = await compressAsync(json)
+
+  const club = state.clubs[state.playerClubId]
+  const league = club ? state.leagues[club.leagueId] : null
+
+  const meta: SaveSlotMeta = {
+    id: slotId,
+    name: name ?? defaultSaveName(state),
+    savedAt: state.savedAt,
+    size: json.length,
+    summary: {
+      directorName: state.director.name,
+      clubName: club?.name ?? 'Unemployed',
+      leagueName: league?.name ?? '',
+      season: state.date.season,
+      week: state.date.week,
+      level: levelFor(state.director.xp).level,
+      xp: state.director.xp,
+    },
+  }
+
+  await adapter.write(slotId, data, meta)
+  return meta
+}
+
+export async function loadGame(slotId: string): Promise<GameState | null> {
+  const data = await adapter.read(slotId)
+  if (!data) return null
+
+  const json = await decompressAsync(data)
+  const state = JSON.parse(json) as GameState
+  const migrated = migrate(state)
+
+  // The rating cache is derived data keyed by player id, and player ids are
+  // only unique within a save. Loading without clearing it would let one
+  // save's ratings leak into another.
+  clearRatingCache()
+  return migrated
+}
+
+export async function deleteSave(slotId: string): Promise<void> {
+  await adapter.remove(slotId)
+}
+
+export async function storageQuota(): Promise<{ used: number; available: number } | null> {
+  return adapter.quota()
+}
+
+function defaultSaveName(state: GameState): string {
+  const club = state.clubs[state.playerClubId]
+  return club
+    ? `${club.shortName} — ${state.date.season}/${String((state.date.season + 1) % 100).padStart(2, '0')}`
+    : `${state.director.name} — unemployed`
+}
+
+/**
+ * Migrate an older save to the current format.
+ *
+ * Kept explicit and additive: each version bump gets its own block, and a save
+ * from any earlier version walks forward through all of them. Throwing away a
+ * player's forty-season career because a field was renamed is not acceptable.
+ */
+function migrate(state: GameState): GameState {
+  if (state.version === SAVE_VERSION) return state
+
+  if (state.version > SAVE_VERSION) {
+    throw new Error(
+      `This save was created by a newer version of the game (format ${state.version}, this build reads ${SAVE_VERSION}).`,
+    )
+  }
+
+  // Future migrations go here, in ascending order:
+  //
+  //   if (state.version < 2) { ...; state.version = 2 }
+
+  state.version = SAVE_VERSION
+  return state
+}
+
+/** Export a save as a downloadable JSON blob, for backup or sharing a seed. */
+export async function exportSave(state: GameState): Promise<Blob> {
+  return new Blob([JSON.stringify(state)], { type: 'application/json' })
+}
+
+export async function importSave(file: File): Promise<GameState> {
+  const text = await file.text()
+  const state = JSON.parse(text) as GameState
+  if (typeof state.version !== 'number' || !state.players) {
+    throw new Error('That file is not a Director of Football save.')
+  }
+  clearRatingCache()
+  return migrate(state)
+}

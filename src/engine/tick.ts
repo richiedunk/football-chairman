@@ -91,6 +91,13 @@ export function advanceWeek(state: GameState, deps: TickDeps): TickResult {
     fixture.result = matchResult
     applyMatchOutcome(state, fixture, matchResult, matchRng)
 
+    // Full results are only worth keeping for matches the player can look at.
+    // A season is ~9,000 fixtures worldwide, and storing 22 lineup ids and 22
+    // ratings for each of them was several megabytes of save file describing
+    // matches nobody will ever open. Everything the simulation needs from a
+    // result has already been applied to tables, stats and form by this point.
+    if (!detailed) slimResult(matchResult)
+
     playedClubs.add(home.id)
     playedClubs.add(away.id)
     homeClubs.set(home.id, matchResult.attendance)
@@ -445,6 +452,14 @@ function applyMatchOutcome(
     const player = state.players[best[0]]
     if (player) player.stats.motmAwards++
   }
+}
+
+/** Strip the per-player detail from a result once it has been applied. */
+function slimResult(result: MatchResult): void {
+  result.events = []
+  result.ratings = {}
+  result.homeLineup = []
+  result.awayLineup = []
 }
 
 function pushForm(form: ('W' | 'D' | 'L')[], outcome: 'W' | 'D' | 'L'): void {
