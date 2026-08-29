@@ -126,6 +126,48 @@ export function positionalCompetence(
 }
 
 /**
+ * Positional-rating cache.
+ *
+ * Rating a player for a position is a weighted sum over ~16 attributes, and
+ * team selection does it for every player against every slot, for every club,
+ * every week. Profiling a full season showed match simulation taking 63% of
+ * the weekly tick, almost all of it here.
+ *
+ * Attributes change at most once a week per player, and only through
+ * development or a retrain — both of which invalidate explicitly. The cache is
+ * transient and never serialised: it is derived data, and rebuilding it costs
+ * one weighted sum.
+ */
+const ratingCache = new Map<string, Map<Position, number>>()
+
+export function ratingForPositionCached(
+  playerId: string,
+  attrs: PlayerAttributes,
+  pos: Position,
+): number {
+  let byPosition = ratingCache.get(playerId)
+  if (!byPosition) {
+    byPosition = new Map()
+    ratingCache.set(playerId, byPosition)
+  }
+  const cached = byPosition.get(pos)
+  if (cached !== undefined) return cached
+  const value = ratingForPosition(attrs, pos)
+  byPosition.set(pos, value)
+  return value
+}
+
+/** Drop a player's cached ratings after his attributes change. */
+export function invalidatePlayerRatings(playerId: string): void {
+  ratingCache.delete(playerId)
+}
+
+/** Drop the whole cache — used when a save is loaded or a new game starts. */
+export function clearRatingCache(): void {
+  ratingCache.clear()
+}
+
+/**
  * Convert an attribute set into an effective rating for a position, on the
  * same 1-200 scale as currentAbility. This is the inverse of generation and
  * the two must agree, or a scouted attribute profile will not match the fee.

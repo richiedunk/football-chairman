@@ -1,5 +1,5 @@
 import { clamp, Rng } from '../rng'
-import { positionalCompetence, ratingForPosition } from '../world/attributes'
+import { positionalCompetence, ratingForPositionCached } from '../world/attributes'
 import type {
   CoachProfile, Club, Formation, GameState, Player, Position, Staff,
 } from '../types'
@@ -49,6 +49,7 @@ export interface AvailabilityContext {
 /** Whether a player can be selected at all this week. */
 export function isAvailable(player: Player, ctx?: AvailabilityContext): boolean {
   if (player.injury && player.injury.weeksRemaining > 0) return false
+  if (player.suspendedWeeks > 0) return false
   if (ctx?.suspendedIds.has(player.id)) return false
   if (player.loanClubId) return false
   return true
@@ -68,7 +69,7 @@ export function selectionScore(
   const competence = positionalCompetence(player.position, player.altPositions, slot)
   if (competence < 0.2) return 0
 
-  let score = ratingForPosition(player.attributes, slot) * competence
+  let score = ratingForPositionCached(player.id, player.attributes, slot) * competence
 
   // Form and sharpness. A player who has not played is not match fit, which is
   // what makes a squad rotation policy matter rather than just a squad list.
@@ -148,17 +149,22 @@ export function selectTeam(
   const taken = new Set<string>()
   const starters: { playerId: string; position: Position }[] = []
 
+  // A coach's weekly whim is about the player, not the slot — he fancies
+  // someone this week, or does not. Drawing it once per player rather than
+  // once per player per slot is both more faithful and eleven times cheaper,
+  // and this loop is the hottest path in the whole simulation.
+  const jitterScale = 3 + (coach?.rotationTendency ?? 40) / 12
+  const jitter = new Map<string, number>()
+  for (const player of pool) jitter.set(player.id, rng.normal(0, jitterScale))
+
   for (const slot of orderedSlots) {
     let best: Player | null = null
     let bestScore = -1
     for (const player of pool) {
       if (taken.has(player.id)) continue
-      const score = selectionScore(player, slot, coach, club)
-      // A little noise so the same eleven is not picked mechanically every
-      // week, scaled by how much this coach rotates.
-      const jitter = rng.normal(0, 3 + (coach?.rotationTendency ?? 40) / 12)
-      if (score + jitter > bestScore) {
-        bestScore = score + jitter
+      const score = selectionScore(player, slot, coach, club) + (jitter.get(player.id) ?? 0)
+      if (score > bestScore) {
+        bestScore = score
         best = player
       }
     }
@@ -212,7 +218,7 @@ function computeStrength(
   for (const { playerId, position } of starters) {
     const player = state.players[playerId]
     if (!player) continue
-    const rating = ratingForPosition(player.attributes, position)
+    const rating = ratingForPositionCached(player.id, player.attributes, position)
       * positionalCompetence(player.position, player.altPositions, position)
       * (0.85 + (player.fitness / 100) * 0.15)
       * (0.88 + (player.form / 100) * 0.2)
@@ -292,7 +298,7 @@ export function auditSquadDepth(
       (p) => positionalCompetence(p.position, p.altPositions, position) >= 0.7,
     )
     const bestRating = capable.length
-      ? Math.max(...capable.map((p) => ratingForPosition(p.attributes, position)))
+      ? Math.max(...capable.map((p) => ratingForPositionCached(p.id, p.attributes, position)))
       : 0
     return {
       position,

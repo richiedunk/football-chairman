@@ -1,5 +1,7 @@
 import { clamp, Rng } from '../rng'
-import { calibrate, generateAttributes, POSITION_WEIGHTS, ratingForPosition } from '../world/attributes'
+import {
+  calibrate, generateAttributes, invalidatePlayerRatings, POSITION_WEIGHTS, ratingForPosition,
+} from '../world/attributes'
 import { staffEffectiveness } from '../world/staffGen'
 import type { AttributeKey, Club, GameState, Player, Staff } from '../types'
 
@@ -152,16 +154,28 @@ function applyAbilityChange(player: Player, delta: number, rng: Rng): void {
   if (!growing && player.age > PLATEAU_END_AGE && rng.chance(0.35)) {
     const key = rng.pick(MENTAL_ATTRIBUTES)
     player.attributes[key] = clamp(player.attributes[key] + 1, 1, 20)
+    invalidatePlayerRatings(player.id)
   }
 
+  let attributeMoved = false
   if (rng.chance(Math.min(1, Math.abs(delta)))) {
     const key = rng.pick(pool)
     const step = growing ? 1 : -1
-    player.attributes[key] = clamp(player.attributes[key] + step, 1, 20)
+    const next = clamp(player.attributes[key] + step, 1, 20)
+    if (next !== player.attributes[key]) {
+      player.attributes[key] = next
+      attributeMoved = true
+    }
   }
 
-  // Keep the attribute set consistent with the ability number.
-  calibrate(player.attributes, player.position, Math.round(player.currentAbility))
+  // Recalibrating is the single most expensive operation in the weekly tick —
+  // it runs an iterative solve over every weighted attribute. Most weeks a
+  // player's ability creeps by a fraction of a point and no attribute moves at
+  // all, so there is nothing to reconcile. Only pay for it when there is.
+  if (attributeMoved) {
+    calibrate(player.attributes, player.position, Math.round(player.currentAbility))
+    invalidatePlayerRatings(player.id)
+  }
 }
 
 /** Effective coaching quality for this player, 0.5 - 1.6. */
@@ -243,4 +257,5 @@ export function retrainPosition(
   const targetAbility = clamp(player.currentAbility * 0.94, 1, 200)
   player.attributes = generateAttributes(rng, newPosition, targetAbility, 0.5)
   player.currentAbility = ratingForPosition(player.attributes, newPosition)
+  invalidatePlayerRatings(player.id)
 }

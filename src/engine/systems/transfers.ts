@@ -3,7 +3,7 @@ import { IdFactory, ID_PREFIX } from '../ids'
 import { computeAskingPrice, computeValue, computeWageDemand, squadImportance, totalWageBill } from './valuation'
 import { canAfford } from './finance'
 import { reactToDeparture, reactToSigning, refreshSquadStatuses } from './morale'
-import { ratingForPosition } from '../world/attributes'
+import { ratingForPositionCached } from '../world/attributes'
 import { isTransferWindowOpen } from '../sim/schedule'
 import type {
   Agent, Club, CompletedTransfer, Contract, GameState, ID, NegotiationLogEntry, Player,
@@ -384,7 +384,9 @@ export function moveAppeal(state: GameState, player: Player, buyer: Club): numbe
     .map((id) => state.players[id])
     .filter((p): p is Player => Boolean(p) && !p.isAcademy && p.position === player.position)
   const better = rivals.filter(
-    (p) => ratingForPosition(p.attributes, p.position) > ratingForPosition(player.attributes, player.position),
+    (p) =>
+      ratingForPositionCached(p.id, p.attributes, p.position)
+      > ratingForPositionCached(player.id, player.attributes, player.position),
   ).length
   appeal += better === 0 ? 0.25 : better === 1 ? 0.05 : -0.18 * better
 

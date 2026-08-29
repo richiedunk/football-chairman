@@ -96,6 +96,17 @@ function runMatch(
   const ratings: Record<ID, number> = {}
   const involvement: Record<ID, number> = {}
 
+  // Weighted pick tables, built once per match.
+  //
+  // Choosing a goalscorer, an assister, a bookable offender or an injury
+  // victim are all weighted draws over the same eleven players. Rebuilding
+  // those tables inside the chance loop meant allocating four arrays per
+  // chance, ~26 chances a match, ~120 matches a week — comfortably the largest
+  // source of garbage in the whole simulation. The eleven do not change during
+  // the match, so neither do the weights.
+  const homeTables = buildPickTables(state, home)
+  const awayTables = buildPickTables(state, away)
+
   let homeGoals = 0
   let awayGoals = 0
   const shots = { home: 0, away: 0 }
@@ -149,10 +160,13 @@ function runMatch(
         0.6,
       )
 
+      const attackTables = isHome ? homeTables : awayTables
+      const defendTables = isHome ? awayTables : homeTables
+
       if (!rng.chance(openingChance)) {
         // Chance broken up before a shot on target.
         if (detailed && rng.chance(0.28)) {
-          const player = pickAttacker(state, attackTeam, rng)
+          const player = pickWeighted(attackTables.players, attackTables.scorerWeights, rng)
           if (player) {
             events.push(makeEvent(minute, 'chanceMissed', attackClub.id, player.id, undefined,
               `${player.knownAs} drags a shot wide from the edge of the area.`))
@@ -176,13 +190,15 @@ function runMatch(
       )
 
       if (rng.chance(conversion)) {
-        const scorer = pickScorer(state, attackTeam, rng)
+        const scorer = pickWeighted(attackTables.players, attackTables.scorerWeights, rng)
         if (!scorer) continue
         if (isHome) homeGoals++
         else awayGoals++
         involvement[scorer.id] = (involvement[scorer.id] ?? 0) + 3
 
-        const assister = rng.chance(0.72) ? pickAssister(state, attackTeam, scorer.id, rng) : null
+        const assister = rng.chance(0.72)
+          ? pickWeightedExcluding(attackTables.players, attackTables.assistWeights, scorer.id, rng)
+          : null
         if (assister) involvement[assister.id] = (involvement[assister.id] ?? 0) + 1.4
 
         if (detailed) {
@@ -201,8 +217,8 @@ function runMatch(
           ))
         }
       } else {
-        const shooter = pickScorer(state, attackTeam, rng)
-        const keeperId = defendTeam.starters.find((s) => s.position === 'GK')?.playerId
+        const shooter = pickWeighted(attackTables.players, attackTables.scorerWeights, rng)
+        const keeperId = defendTables.keeperId
         if (shooter) involvement[shooter.id] = (involvement[shooter.id] ?? 0) + 0.6
         if (keeperId) involvement[keeperId] = (involvement[keeperId] ?? 0) + 1
         if (detailed && keeperId) {
@@ -219,9 +235,15 @@ function runMatch(
     // points over a season rather than in one memorable incident.
     if (rng.chance(0.09)) {
       const isHome = rng.chance(0.5)
-      const team = isHome ? home : away
       const club = isHome ? homeClub : awayClub
-      const offender = pickByTemperament(state, team, rng, sentOff, booked)
+      const tables = isHome ? homeTables : awayTables
+      const offender = pickWeighted(
+        tables.players,
+        tables.disciplineWeights.map((w, i) =>
+          sentOff.has(tables.players[i].id) ? 0 : booked.has(tables.players[i].id) ? w * 0.25 : w,
+        ),
+        rng,
+      )
       if (offender) {
         const minute = clamp(minuteBase + rng.int(1, 5), 1, 90)
         // A player already booked goes for a second yellow. Without this the
@@ -256,7 +278,12 @@ function runMatch(
       const isHome = rng.chance(0.5)
       const team = isHome ? home : away
       const club = isHome ? homeClub : awayClub
-      const victim = pickInjuryVictim(state, team, rng, sentOff)
+      const tables = isHome ? homeTables : awayTables
+      const victim = pickWeighted(
+        tables.players,
+        tables.injuryWeights.map((w, i) => (sentOff.has(tables.players[i].id) ? 0 : w)),
+        rng,
+      )
       if (victim) {
         const minute = clamp(minuteBase + rng.int(1, 5), 1, 90)
         const side = isHome ? 'home' : 'away'
@@ -369,71 +396,85 @@ const ASSIST_WEIGHT: Record<Position, number> = {
   AM: 24, ML: 18, MR: 18, MC: 16, ST: 12, DL: 8, DR: 8, DM: 6, DC: 3, GK: 0.5,
 }
 
-function pickScorer(state: GameState, team: SelectedTeam, rng: Rng): Player | null {
-  const candidates = team.starters
-    .map((s) => ({ player: state.players[s.playerId], slot: s.position }))
-    .filter((c): c is { player: Player; slot: Position } => Boolean(c.player))
-  if (candidates.length === 0) return null
-
-  const weights = candidates.map(
-    (c) => (SCORER_WEIGHT[c.slot] ?? 1) * (0.4 + c.player.attributes.shooting / 14),
-  )
-  return rng.weighted(candidates, weights).player
+interface PickTables {
+  players: Player[]
+  scorerWeights: number[]
+  assistWeights: number[]
+  disciplineWeights: number[]
+  injuryWeights: number[]
+  keeperId: ID | null
 }
 
-function pickAssister(state: GameState, team: SelectedTeam, excludeId: ID, rng: Rng): Player | null {
-  const candidates = team.starters
-    .map((s) => ({ player: state.players[s.playerId], slot: s.position }))
-    .filter((c): c is { player: Player; slot: Position } => Boolean(c.player) && c.player.id !== excludeId)
-  if (candidates.length === 0) return null
+function buildPickTables(state: GameState, team: SelectedTeam): PickTables {
+  const players: Player[] = []
+  const slots: Position[] = []
+  let keeperId: ID | null = null
 
-  const weights = candidates.map(
-    (c) => (ASSIST_WEIGHT[c.slot] ?? 1) * (0.4 + (c.player.attributes.passing + c.player.attributes.vision) / 26),
-  )
-  return rng.weighted(candidates, weights).player
+  for (const { playerId, position } of team.starters) {
+    const player = state.players[playerId]
+    if (!player) continue
+    players.push(player)
+    slots.push(position)
+    if (position === 'GK') keeperId = player.id
+  }
+
+  const scorerWeights: number[] = []
+  const assistWeights: number[] = []
+  const disciplineWeights: number[] = []
+  const injuryWeights: number[] = []
+
+  for (let i = 0; i < players.length; i++) {
+    const player = players[i]
+    const slot = slots[i]
+    scorerWeights.push((SCORER_WEIGHT[slot] ?? 1) * (0.4 + player.attributes.shooting / 14))
+    assistWeights.push(
+      (ASSIST_WEIGHT[slot] ?? 1)
+      * (0.4 + (player.attributes.passing + player.attributes.vision) / 26),
+    )
+    // Low temperament means more cards, and 'hothead' compounds it.
+    disciplineWeights.push(
+      (21 - player.attributes.temperament) * (player.traits.includes('hothead') ? 2.2 : 1),
+    )
+    injuryWeights.push(
+      10 + player.injuryProneness * 0.8 + Math.max(0, 100 - player.fitness) * 0.5,
+    )
+  }
+
+  return { players, scorerWeights, assistWeights, disciplineWeights, injuryWeights, keeperId }
 }
 
-function pickAttacker(state: GameState, team: SelectedTeam, rng: Rng): Player | null {
-  return pickScorer(state, team, rng)
+function pickWeighted(players: Player[], weights: number[], rng: Rng): Player | null {
+  if (players.length === 0) return null
+  let total = 0
+  for (const w of weights) total += w > 0 ? w : 0
+  if (total <= 0) return players[rng.int(0, players.length - 1)]
+  let roll = rng.next() * total
+  for (let i = 0; i < players.length; i++) {
+    roll -= weights[i] > 0 ? weights[i] : 0
+    if (roll <= 0) return players[i]
+  }
+  return players[players.length - 1]
 }
 
-function pickByTemperament(
-  state: GameState,
-  team: SelectedTeam,
+function pickWeightedExcluding(
+  players: Player[],
+  weights: number[],
+  excludeId: ID,
   rng: Rng,
-  sentOff: Set<ID>,
-  booked: Set<ID>,
 ): Player | null {
-  const candidates = team.starters
-    .map((s) => state.players[s.playerId])
-    .filter((p): p is Player => Boolean(p) && !sentOff.has(p.id))
-  if (candidates.length === 0) return null
-  // Low temperament means more cards, and 'hothead' compounds it. An
-  // already-booked player is far less likely to commit the next one — he knows
-  // what it costs — but when he does, it ends his afternoon.
-  const weights = candidates.map(
-    (p) =>
-      (21 - p.attributes.temperament)
-      * (p.traits.includes('hothead') ? 2.2 : 1)
-      * (booked.has(p.id) ? 0.25 : 1),
-  )
-  return rng.weighted(candidates, weights)
-}
-
-function pickInjuryVictim(
-  state: GameState,
-  team: SelectedTeam,
-  rng: Rng,
-  sentOff: Set<ID>,
-): Player | null {
-  const candidates = team.starters
-    .map((s) => state.players[s.playerId])
-    .filter((p): p is Player => Boolean(p) && !sentOff.has(p.id))
-  if (candidates.length === 0) return null
-  const weights = candidates.map(
-    (p) => 10 + p.injuryProneness * 0.8 + Math.max(0, 100 - p.fitness) * 0.5,
-  )
-  return rng.weighted(candidates, weights)
+  let total = 0
+  for (let i = 0; i < players.length; i++) {
+    if (players[i].id === excludeId) continue
+    total += weights[i] > 0 ? weights[i] : 0
+  }
+  if (total <= 0) return null
+  let roll = rng.next() * total
+  for (let i = 0; i < players.length; i++) {
+    if (players[i].id === excludeId) continue
+    roll -= weights[i] > 0 ? weights[i] : 0
+    if (roll <= 0) return players[i]
+  }
+  return null
 }
 
 function simulateExtraTime(

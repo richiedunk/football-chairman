@@ -436,6 +436,8 @@ export interface Player {
   /** 0-100. Long-term robustness; low means frequent injuries. */
   injuryProneness: number
   injury: Injury | null
+  /** Weeks of suspension still to serve. Blocks selection while above zero. */
+  suspendedWeeks: number
   /** How the player sees their standing at the club. */
   squadStatus: SquadStatus
   /** What the player believes they deserve. Mismatch causes unrest. */

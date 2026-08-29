@@ -15,6 +15,8 @@ export class Rng {
   private s1 = 0
   private s2 = 0
   private s3 = 0
+  /** Spare value from the last Box-Muller pair — see `normal`. */
+  private spareNormal: number | null = null
 
   constructor(seed: number | string) {
     const n = typeof seed === 'string' ? hashString(seed) : seed >>> 0
@@ -122,11 +124,22 @@ export class Rng {
    * freak tail cannot produce a 300-rated wonderkid.
    */
   normal(mean = 0, stdDev = 1): number {
+    // Box-Muller yields two independent normals per pair of uniforms. Keeping
+    // the second halves the cost of the transcendentals, which matters: the
+    // simulation draws tens of thousands of normals per week.
+    if (this.spareNormal !== null) {
+      const spare = this.spareNormal
+      this.spareNormal = null
+      return mean + clamp(spare, -4, 4) * stdDev
+    }
     let u = 0
     let v = 0
     while (u === 0) u = this.next()
     while (v === 0) v = this.next()
-    const z = Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v)
+    const radius = Math.sqrt(-2 * Math.log(u))
+    const angle = 2 * Math.PI * v
+    this.spareNormal = radius * Math.sin(angle)
+    const z = radius * Math.cos(angle)
     return mean + clamp(z, -4, 4) * stdDev
   }
 

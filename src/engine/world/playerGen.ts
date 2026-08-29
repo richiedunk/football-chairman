@@ -147,6 +147,7 @@ export function generatePlayer(ctx: PlayerGenContext, opts: PlayerGenOptions): P
       ? rng.normalInt(64, 10, 40, 92)
       : rng.normalInt(28, 14, 3, 70),
     injury: null,
+    suspendedWeeks: 0,
     squadStatus: opts.squadStatus ?? 'rotation',
     desiredStatus: opts.squadStatus ?? 'rotation',
     traits,

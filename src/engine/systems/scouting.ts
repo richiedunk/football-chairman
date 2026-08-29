@@ -1,5 +1,5 @@
 import { clamp, Rng } from '../rng'
-import { ratingForPosition } from '../world/attributes'
+import { ratingForPositionCached } from '../world/attributes'
 import { computeAskingPrice, computeWageDemand } from './valuation'
 import type {
   AttributeKey, Club, GameState, ID, Player, Position, ScoutAssignment, ScoutReport, Staff,
@@ -364,7 +364,7 @@ function computeRecommendation(
 
   const inPosition = squad.filter((p) => p.position === player.position)
   const bestInPosition = inPosition.length
-    ? Math.max(...inPosition.map((p) => ratingForPosition(p.attributes, p.position)))
+    ? Math.max(...inPosition.map((p) => ratingForPositionCached(p.id, p.attributes, p.position)))
     : 0
 
   let score = 50
