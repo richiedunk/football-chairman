@@ -170,6 +170,7 @@ export function generatePlayer(ctx: PlayerGenContext, opts: PlayerGenOptions): P
     sellOnClauseOwed: [],
     developmentRate: rng.float(0.7, 1.35),
     trainingYears: seedTrainingYears(rng, nationality, opts, age),
+    weeksUnattached: 0,
   }
 
   return player
@@ -209,6 +210,19 @@ function seedTrainingYears(
  * `clubStrength` is the club's reputation, 0-100, mapped onto the ability of
  * its best player. The rest of the squad falls away along SQUAD_QUALITY_CURVE.
  */
+/**
+ * The ability of the best player a club of a given standing would have.
+ *
+ * Deliberately convex: a linear mapping hands 180-rated players to every
+ * mid-table top-flight club, and the world ends up with hundreds of elite
+ * players instead of the couple of dozen that make the top of the market feel
+ * scarce. Squad generation and AI recruitment both work off this, so a club's
+ * idea of "someone at our level" means the same thing in both places.
+ */
+export function abilityCeilingFor(clubStrength: number): number {
+  return clamp(45 + Math.pow(clubStrength / 100, 1.55) * 148, 42, 194)
+}
+
 export function generateSquad(
   ctx: PlayerGenContext,
   clubId: ID,
@@ -222,7 +236,7 @@ export function generateSquad(
   // every mid-table top-flight club, and the world ends up with hundreds of
   // elite players instead of the couple of dozen that make the top of the
   // market feel scarce.
-  const bestAbility = clamp(45 + Math.pow(clubStrength / 100, 1.55) * 148, 42, 194)
+  const bestAbility = abilityCeilingFor(clubStrength)
 
   const slots: Position[] = []
   for (const { position, count } of SQUAD_SHAPE) {

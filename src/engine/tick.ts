@@ -13,6 +13,7 @@ import { decayStadium, progressStadiumWork, releaseArchitects } from './systems/
 import { processContracts } from './systems/contracts'
 import { processScouting } from './systems/scouting'
 import { generateIncomingOffers, processAiTransfers, processNegotiations } from './systems/transfers'
+import { runAiSquadManagement } from './systems/aiSquad'
 import { checkForExposure, generateOrganicStories } from './systems/media'
 import { processBoard, processCoachRelations, sortTable, updateFanMood } from './systems/board'
 import { addInboxItem, addNews, expireItems } from './systems/inbox'
@@ -294,6 +295,10 @@ export function advanceWeek(state: GameState, deps: TickDeps): TickResult {
     })
   }
   processAiTransfers(state, transferCtx)
+  // Renewals, academy promotions and free-agent signings. Runs every week and
+  // outside the window as well, because a club short of players in February
+  // cannot wait until June and a free agent needs no window.
+  runAiSquadManagement(state, { rng: rng.fork('aisquad'), ids })
   reportIncomingOffers(state, ids, transferCtx)
 
   // --- 7b. Squad registration lock -----------------------------------------

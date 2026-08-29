@@ -141,12 +141,10 @@ testable today; the store integrations are not.
 
 ## Known defects
 
-- **Senior squads bleed out over a long save.** AI clubs never renew a
-  contract and replace players far more slowly than expiry and retirement
-  remove them. Measured from world creation: 26.0 senior players per club at
-  the start, 22.9 after two seasons, 12.2 after four, 2.6 after six, with
-  nearly 8,000 free agents piled up. This makes any long career unplayable and
-  has to be fixed before anything else on the list.
+- **The world's player population grows about 400 a season** — 7,457 at
+  creation, 12,106 after ten. Academy intake outpaces retirement. Bounded and
+  slow, but a thirty-season career would carry roughly 24,000 players and a
+  save around 9 MB. Worth watching rather than fixing now.
 
 ## Standing rules for this project
 

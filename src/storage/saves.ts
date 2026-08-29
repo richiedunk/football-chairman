@@ -126,6 +126,15 @@ function migrate(state: GameState): GameState {
     state.version = 2
   }
 
+  // v3: free agents keep track of how long nobody has called, which is what
+  // lets an ageing player climb down the pyramid instead of vanishing.
+  if (state.version < 3) {
+    for (const player of Object.values(state.players)) {
+      if (typeof player.weeksUnattached !== 'number') player.weeksUnattached = 0
+    }
+    state.version = 3
+  }
+
   state.version = SAVE_VERSION
   return state
 }

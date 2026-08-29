@@ -626,6 +626,13 @@ export interface Player {
    * Englishman who left for Spain at sixteen is not.
    */
   trainingYears: Record<ID, number>
+  /**
+   * Consecutive weeks without a club.
+   *
+   * Drives how far a free agent will climb down: his demands soften, and a
+   * player nobody has called in two seasons stops waiting for the phone.
+   */
+  weeksUnattached: number
 }
 
 export type PlayerTrait =
@@ -1326,4 +1333,4 @@ export interface GameSettings {
   hapticsEnabled: boolean
 }
 
-export const SAVE_VERSION = 2
+export const SAVE_VERSION = 3

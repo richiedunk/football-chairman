@@ -646,6 +646,7 @@ export function executeTransfer(
   // Attach the player to his new club.
   player.clubId = buyer.id
   player.contract = contract
+  player.weeksUnattached = 0
   player.purchaseFee = upfront
   player.joinedSeason = state.date.season
   player.transferRequested = false

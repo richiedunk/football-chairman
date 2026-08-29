@@ -11,7 +11,8 @@ import { computeValue, computeWageDemand } from './systems/valuation'
 import { addInboxItem, addNews } from './systems/inbox'
 import { emptyStats } from './world/playerGen'
 import { cupResultFor, resetCup } from './sim/cups'
-import { accrueTrainingYear, autoRegister } from './systems/registration'
+import { accrueTrainingYear, autoRegister, releaseRegistration } from './systems/registration'
+import { PATIENCE_WEEKS } from './systems/aiSquad'
 import {
   contractTermsFor, paySeasonBonuses, signContract, type ContractOffer,
 } from './systems/directorContract'
@@ -393,18 +394,57 @@ function processPlayerYearEnd(state: GameState, deps: RolloverDeps): void {
     const club = player.clubId ? state.clubs[player.clubId] : null
     if (club) {
       club.squad = club.squad.filter((id) => id !== player.id)
+      releaseRegistration(club, player.id)
       if (club.id === state.playerClubId) {
         addInboxItem(state, ids, {
           category: 'player',
           subject: `${player.knownAs} retires`,
           from: 'Club Secretary',
-          body: `${player.knownAs} has announced his retirement at the age of ${player.age}.`,
+          body: `${player.knownAs} has announced his retirement at the age of ${player.age}. `
+            + `${retirementReason(player, rng)}`,
           link: { view: 'squad' },
         })
       }
     }
     delete state.players[player.id]
   }
+}
+
+/**
+ * Why a player stopped.
+ *
+ * Not everyone plays until nobody will have them. Players leave for coaching
+ * badges, a job at the club, a studio, an injury that never quite cleared, or
+ * because they have had enough of living out of a suitcase. It is flavour, but
+ * it is the flavour that makes a squad list read like people rather than rows,
+ * and it is what an academy graduate's story should be able to end with.
+ */
+function retirementReason(player: Player, rng: Rng): string {
+  const name = player.knownAs
+  const options: string[] = [
+    `He is taking his coaching badges and hopes to stay in the game.`,
+    `He has been offered a role in the academy and intends to take it.`,
+    `He says he wants to be at home while his children are still young.`,
+    `He is joining a broadcaster as a pundit from next season.`,
+    `His body has not been right for two years and he has stopped pretending otherwise.`,
+    `He is going into business back in his home town.`,
+    `He goes with no plans beyond a long holiday.`,
+    `He has taken a scouting job and will be at grounds most weekends anyway.`,
+  ]
+
+  // A player still going strong who stops is doing it for a reason worth
+  // reading; one whose legs went does not need explaining.
+  if (player.age >= 36) {
+    options.push(`Nobody expected ${name} to last this long, and he outlasted most of them.`)
+  }
+  if (player.currentAbility > 140) {
+    options.push(`He leaves as one of the better players of his generation.`)
+  }
+  if (!player.clubId) {
+    options.push(`He had been without a club since last season and has decided to stop waiting.`)
+  }
+
+  return rng.pick(options)
 }
 
 /**
@@ -463,13 +503,39 @@ function releaseUnpromotedYouth(state: GameState, deps: RolloverDeps): void {
   }
 }
 
-function retirementProbability(player: Player): number {
-  if (player.age < 31) return 0
+/**
+ * The chance a player stops playing at the end of this season.
+ *
+ * Exported so the rules can be checked directly: the alternative is asserting
+ * on the outcome of a seeded roll, which tests the dice rather than the rule.
+ */
+export function retirementProbability(player: Player): number {
+  // Nobody has called in two years. He is not waiting by the phone any more,
+  // whatever his age — and without this the free-agent pool only ever grows.
+  if (!player.clubId && player.weeksUnattached >= PATIENCE_WEEKS) return 0.7
+
+  // Players do not only stop when their legs go. Some take a coaching job, or
+  // a job at the club, or a seat in a studio; some never get right after an
+  // injury; some have simply had enough of it. It is a small hazard, but
+  // without it every career in the world ends the same way.
+  if (player.age < 31) {
+    if (player.age < 27) return 0
+    let early = 0.012
+    // A player who is not getting a game has less to turn down.
+    if (player.stats.appearances < 6) early *= 2.4
+    // A body that keeps breaking down makes the decision for him.
+    if (player.injuryProneness > 65) early *= 1.8
+    return early
+  }
+
   const base = (player.age - 30) * 0.09
   // A player still good enough for his level carries on longer.
   const qualityFactor = clamp(1.4 - player.currentAbility / 140, 0.4, 1.6)
   const gameTime = player.stats.appearances >= 12 ? 0.55 : 1.3
-  return clamp(base * qualityFactor * gameTime, 0, 0.95)
+  // An older player without a club is a season closer to stopping than one
+  // still on somebody's books.
+  const unattached = player.clubId ? 1 : 1.5
+  return clamp(base * qualityFactor * gameTime * unattached, 0, 0.95)
 }
 
 /**

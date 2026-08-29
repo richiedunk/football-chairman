@@ -1,0 +1,377 @@
+import { clamp, hashString, Rng } from '../rng'
+import { IdFactory } from '../ids'
+import { abilityCeilingFor } from '../world/playerGen'
+import { ratingForPositionCached } from '../world/attributes'
+import { promoteToSenior } from './academy'
+import { addInboxItem } from './inbox'
+import { suggestRenewal } from './contracts'
+import { executeTransfer, moveAppeal } from './transfers'
+import { computeValue, computeWageDemand, totalWageBill } from './valuation'
+import type { Club, Contract, GameState, Player } from '../types'
+
+/**
+ * How AI clubs keep a squad together.
+ *
+ * Without this the world quietly empties itself. Contracts expired, nobody
+ * renewed them, academies produced players nobody promoted, and the transfer
+ * market replaced perhaps half a player per club per season against four or
+ * five leaving. Measured from a fresh world, senior squads fell from 26
+ * players to 22.9 after two seasons, 12.2 after four and 2.6 after six, with
+ * almost 8,000 free agents stacked up outside the game — clubs unable to field
+ * eleven men while a queue of unemployed professionals waited to be asked.
+ *
+ * The three things missing were the three things every club actually does:
+ * renew the players it wants to keep, promote from its own academy, and sign
+ * free agents when it is short. The fourth follows from them — a player an
+ * upper-tier club lets go is picked up further down, and drops through the
+ * divisions until nobody calls at all.
+ */
+
+/** Senior players an AI club aims to carry. */
+export const TARGET_SENIOR_SQUAD = 24
+
+/** Below this a club is short enough to take what it can get. */
+export const THIN_SENIOR_SQUAD = 20
+
+/** Below this a club cannot field a side and hires whoever will come. */
+export const EMERGENCY_SQUAD = 16
+
+/** Weeks without a club after which a player stops waiting for the phone. */
+export const PATIENCE_WEEKS = 104
+
+export interface AiSquadContext {
+  rng: Rng
+  ids: IdFactory
+}
+
+export function seniorSquad(state: GameState, club: Club): Player[] {
+  return club.squad
+    .map((id) => state.players[id])
+    .filter((p): p is Player => Boolean(p) && !p.isAcademy)
+}
+
+/**
+ * Weekly squad management for every club the human does not run.
+ *
+ * The free-agent pool is built once and shared, because scanning every player
+ * in the world for each of 238 clubs would cost more than the rest of the tick
+ * put together.
+ */
+export function runAiSquadManagement(state: GameState, ctx: AiSquadContext): void {
+  const freeAgents: Player[] = []
+
+  for (const player of Object.values(state.players)) {
+    if (player.clubId || player.isAcademy) continue
+    player.weeksUnattached += 1
+    // Demands soften the longer nobody calls. This is the mechanism that lets
+    // a player released by a second-tier club end up playing non-league.
+    if (player.weeksUnattached % 4 === 0) {
+      player.wageDemand = Math.max(90, Math.round(player.wageDemand * 0.93))
+    }
+    freeAgents.push(player)
+  }
+
+  freeAgents.sort((a, b) => b.currentAbility - a.currentAbility)
+
+  const week = state.date.week
+  for (const club of Object.values(state.clubs)) {
+    const clubRng = ctx.rng.fork(club.id)
+
+    // The human's squad is his own problem — nobody renews his contracts or
+    // does his shopping, and a director who ignores both should watch his
+    // squad thin out. But a club with seven players is not a hard lesson, it
+    // is a broken game state, so the secretary signs free agents to fulfil
+    // the fixture list and nothing more.
+    if (club.id === state.playerClubId) {
+      if (seniorSquad(state, club).length < EMERGENCY_SQUAD) {
+        const signing = recruitFreeAgents(state, ctx, club, freeAgents, clubRng)
+        if (signing) {
+          addInboxItem(state, ctx.ids, {
+            category: 'player',
+            subject: 'The secretary has signed a free agent',
+            from: 'Club Secretary',
+            body: `We cannot fulfil our fixtures with the players we have, so I have signed `
+              + `${signing.knownAs} on a free transfer. I would rather you did this yourself.`,
+            urgent: true,
+            link: { view: 'squad' },
+          })
+        }
+      }
+      continue
+    }
+
+    // Renewals run through the second half of the season rather than on one
+    // fixed afternoon. A club whose wage bill leaves no room in March may have
+    // room in April once someone else's deal has run down, and one attempt per
+    // season meant a failed wage check was the same as a decision to let the
+    // player go.
+    if (week >= RENEWAL_FIRST_WEEK && week <= RENEWAL_LAST_WEEK) {
+      processAiRenewals(state, club)
+    }
+
+    // A club in crisis still has to field a team, and in fact does exactly
+    // this: promotes from within and signs whoever is free. Only renewals at
+    // market wages are beyond it, and the wage budget already says so.
+    promoteFromAcademy(state, club, clubRng)
+    recruitFreeAgents(state, ctx, club, freeAgents, clubRng)
+  }
+}
+
+/** Weeks in which AI clubs work through their expiring contracts. */
+const RENEWAL_FIRST_WEEK = 26
+const RENEWAL_LAST_WEEK = 46
+
+/**
+ * A stable per-player, per-season coin flip.
+ *
+ * Renewals get many attempts across the spring, so a fresh roll each week
+ * would erode every probability to one. Deriving the roll from the player and
+ * the season means "these talks broke down" stays broken down.
+ */
+function settledChance(key: string, probability: number): boolean {
+  return (hashString(key) % 10_000) / 10_000 < probability
+}
+
+/**
+ * Decide who to keep before their deal runs out.
+ *
+ * A club keeps roughly the players it would pick, within the wage budget, and
+ * lets the rest walk. The deliberate leak is that a handful of deals fall
+ * through anyway — that is where the free-transfer market comes from, and a
+ * world where every club renews everyone has no free agents worth signing.
+ */
+export function processAiRenewals(state: GameState, club: Club): number {
+  const season = state.date.season
+  const seniors = seniorSquad(state, club)
+  const ranked = seniors
+    .map((p) => ({ p, score: ratingForPositionCached(p.id, p.attributes, p.position) }))
+    .sort((a, b) => b.score - a.score)
+  const rank = new Map(ranked.map((entry, i) => [entry.p.id, i]))
+
+  const league = state.leagues[club.leagueId]
+  const nation = state.nations[club.nationId]
+  let renewed = 0
+  let wageBill = totalWageBill(state, club)
+
+  for (const player of seniors) {
+    if (!player.contract || player.contract.expiresSeason > season) continue
+
+    // Keepers last longer than outfielders, and a thin squad is less fussy.
+    const ageLimit = player.position === 'GK' ? 37 : 35
+    if (player.age > ageLimit) continue
+
+    // How good a player has to be to be worth another contract, by age.
+    //
+    // Ranking on ability alone quietly turns every club into a retirement
+    // home: an ageing player still rates well, so he keeps renewing while the
+    // 22-year-old behind him is let go. Measured over ten seasons that put 27%
+    // of the top flight past 32 and only 10% of non-league, which is the age
+    // pyramid upside down. A thirty-three-year-old now has to be a genuine
+    // first-teamer to be kept, and the ones who are not go down a division
+    // rather than out of the game.
+    // Lower down the pyramid a thirty-four-year-old who knows the level is an
+    // asset, not a problem. Applying one standard everywhere left the top
+    // flight three times as old as non-league, which is the age pyramid the
+    // wrong way up: in reality the experienced pro drops down and keeps
+    // playing, and it is the biggest clubs that will not carry him.
+    const veteranAllowance = club.reputation < 40 ? 7 : club.reputation < 65 ? 3 : 0
+    const threshold = player.age <= 24 ? 24
+      : player.age <= 28 ? 20
+      : player.age <= 31 ? 15 + veteranAllowance
+      : 8 + veteranAllowance
+    const position = rank.get(player.id) ?? 99
+    const wanted = position < threshold
+      || (seniors.length <= THIN_SENIOR_SQUAD && position < threshold + 6)
+    if (!wanted) continue
+
+    // Some talks break down however much both sides want it to work — the
+    // reason a free-transfer market exists at all.
+    if (!settledChance(`${player.id}:${season}:renew`, 0.86)) continue
+
+    // An ambitious player at a club going nowhere would rather take his
+    // chances, which is how good players reach the free market.
+    if (player.traits.includes('ambitious') && club.board.confidence < 40
+      && settledChance(`${player.id}:${season}:ambition`, 0.4)) {
+      continue
+    }
+
+    const offer = suggestRenewal(state, club, player)
+    let wage = offer.wage
+    if (wageBill + (wage - player.contract.wage) > club.finances.wageBudget) {
+      // A squad player who is not in demand will sign for close to what he is
+      // already on. A first-teamer will not, and the club has to let him go.
+      if (position >= 11 && wageBill <= club.finances.wageBudget) {
+        wage = Math.max(player.contract.wage, Math.round(offer.wage * 0.8))
+      }
+      if (wageBill + (wage - player.contract.wage) > club.finances.wageBudget) continue
+    }
+    const delta = wage - player.contract.wage
+
+    player.contract.wage = wage
+    player.contract.expiresSeason = season + offer.seasons
+    player.contract.inNegotiation = false
+    player.contract.weeksSinceRenewalRequest = 0
+    wageBill += delta
+    renewed += 1
+
+    player.value = computeValue(player, league, nation, season)
+  }
+
+  return renewed
+}
+
+/**
+ * Push the best of the academy up when the senior squad needs bodies.
+ *
+ * The season-roll pass already promotes the exceptional; this promotes the
+ * merely useful, which is what actually keeps a lower-league squad stocked.
+ */
+export function promoteFromAcademy(state: GameState, club: Club, rng: Rng): Player | null {
+  const seniors = seniorSquad(state, club).length
+  if (seniors >= TARGET_SENIOR_SQUAD) return null
+  if (seniors >= EMERGENCY_SQUAD && !rng.chance(0.35)) return null
+
+  const candidate = club.squad
+    .map((id) => state.players[id])
+    .filter((p): p is Player => Boolean(p) && p.isAcademy && p.age >= 17)
+    .sort((a, b) => b.potentialAbility - a.potentialAbility)[0]
+  if (!candidate) return null
+
+  const result = promoteToSenior(state, club, candidate)
+  return result.ok ? candidate : null
+}
+
+/**
+ * Sign a free agent when short.
+ *
+ * Free agents can be signed outside a window, which is exactly why this is the
+ * mechanism that stops a club being unable to field eleven in February. What a
+ * club considers "our level" comes from the same curve squad generation uses,
+ * so a club short of players reaches down rather than sideways.
+ */
+export function recruitFreeAgents(
+  state: GameState,
+  ctx: AiSquadContext,
+  club: Club,
+  pool: Player[],
+  rng: Rng,
+): Player | null {
+  // A club nine men short does not sign one player a week and wait. Below the
+  // floor it keeps going until it can field a side, which is the difference
+  // between a bad season and a club that never recovers.
+  let signed: Player | null = null
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const next = recruitOne(state, ctx, club, pool, rng)
+    if (!next) break
+    signed = next
+    if (seniorSquad(state, club).length >= EMERGENCY_SQUAD) break
+  }
+  return signed
+}
+
+function recruitOne(
+  state: GameState,
+  ctx: AiSquadContext,
+  club: Club,
+  pool: Player[],
+  rng: Rng,
+): Player | null {
+  const squad = seniorSquad(state, club)
+  if (squad.length >= TARGET_SENIOR_SQUAD) return null
+
+  const shortfall = TARGET_SENIOR_SQUAD - squad.length
+  const desperation = clamp(shortfall / 8, 0, 1)
+  // Below the floor the club cannot put out a side with anyone left over, and
+  // it stops shopping and starts hiring. Without this a club that fell behind
+  // never caught up, and a handful reached zero senior players.
+  const emergency = squad.length < EMERGENCY_SQUAD
+  if (!emergency && !rng.chance(0.45 + desperation * 0.5)) return null
+
+  const league = state.leagues[club.leagueId]
+  const nation = state.nations[club.nationId]
+  const ceiling = abilityCeilingFor(club.reputation)
+  // A club will not sign someone plainly above its station without a fee, and
+  // will not sign someone plainly beneath it unless it is desperate.
+  const floor = emergency ? 0 : ceiling * (0.5 - desperation * 0.28)
+  const wageBill = totalWageBill(state, club)
+  const budget = club.finances.wageBudget
+
+  let best: Player | null = null
+  let bestScore = -Infinity
+
+  for (const player of pool) {
+    if (player.clubId) continue // signed earlier in this same pass
+    if (player.currentAbility > ceiling * 1.02) continue
+    if (player.currentAbility < floor) break // the list is sorted, so we are done
+
+    const wage = Math.max(90, Math.round(computeWageDemand(player, league, nation)))
+
+    // Below the floor the wage budget stops applying. A club that cannot
+    // fulfil its fixtures signs players and answers for the overspend later —
+    // which the crisis machinery already handles, and which is the correct
+    // outcome rather than a club quietly ceasing to exist.
+    //
+    // The smallest clubs cannot afford sixteen players at prevailing wages at
+    // all: one measured non-league side had a budget of £11,638 a week and
+    // nine players already on £10,344 of it. Left to the budget it stalled at
+    // thirteen players for ever.
+    if (!emergency && wageBill + wage > budget) continue
+
+    // Would he come? A player nobody has called for a year is not choosy, and
+    // a club with nine fit men is not in a position to be turned down.
+    if (!emergency) {
+      const patience = clamp(player.weeksUnattached / 45, 0, 1)
+      if (moveAppeal(state, player, club) + patience * 0.55 < 0.55) continue
+    }
+
+    // A club in trouble shops on price, not on quality. One that is merely
+    // short takes the best player it can get — discounting age by how much
+    // this club can afford to care about it. A Premier club has no use for a
+    // thirty-four-year-old free agent; a non-league club is delighted with
+    // one, and that asymmetry is what carries a career down the divisions
+    // instead of ending it.
+    const ageWeight = clamp(club.reputation / 55, 0.15, 1.6)
+    const veteranValue = player.age >= 30 && club.reputation < 40 ? 8 : 0
+    const score = emergency
+      ? -wage
+      : player.currentAbility
+        - (player.age > 31 ? (player.age - 31) * 6 * ageWeight : 0)
+        + veteranValue
+    if (score > bestScore) {
+      best = player
+      bestScore = score
+    }
+  }
+
+  if (!best) return null
+
+  // Short deals for free agents cycled the same players back onto the market
+  // every year and doubled the churn the renewal pass had to absorb.
+  const seasons = best.age <= 23 ? 4 : best.age <= 30 ? 3 : 2
+  const contract: Contract = {
+    wage: Math.max(90, Math.round(computeWageDemand(best, league, nation))),
+    expiresSeason: state.date.season + seasons,
+    signingBonus: 0,
+    releaseClause: null,
+    appearanceFee: 0,
+    goalBonus: 0,
+    loyaltyBonus: 0,
+    inNegotiation: false,
+    weeksSinceRenewalRequest: 0,
+  }
+
+  executeTransfer(state, ctx, {
+    player: best,
+    buyer: club,
+    seller: null,
+    fee: 0,
+    kind: 'free',
+    contract,
+    agentFee: 0,
+    sellOnPercentage: 0,
+    wageContribution: 0,
+    loanUntilSeason: null,
+  })
+
+  return best
+}

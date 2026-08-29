@@ -140,7 +140,15 @@ export function suggestRenewal(
 
   // Contract length follows age: long deals for young players so their value
   // is protected, short ones for players approaching decline.
-  const seasons = player.age <= 23 ? 5 : player.age <= 27 ? 4 : player.age <= 30 ? 3 : 2
+  // Clubs stop committing to players past thirty: a thirty-three-year-old
+  // gets a year at a time, which is both how it works and what keeps a squad
+  // from silently ageing into a retirement home on the back of three-year
+  // deals signed when everyone was thirty.
+  const seasons = player.age <= 23 ? 5
+    : player.age <= 27 ? 4
+    : player.age <= 30 ? 3
+    : player.age <= 32 ? 2
+    : 1
 
   return {
     wage: Math.round(marketWage / 50) * 50,

@@ -32,6 +32,13 @@ import {
   SQUAD_LIMIT, U21_AGE, unregisterPlayer,
 } from '../src/engine/systems/registration'
 import { selectTeam } from '../src/engine/sim/selection'
+import {
+  EMERGENCY_SQUAD, PATIENCE_WEEKS, processAiRenewals, promoteFromAcademy, runAiSquadManagement,
+  seniorSquad,
+} from '../src/engine/systems/aiSquad'
+import { prepareNewGame, startCareerAt } from '../src/engine/newGame'
+import { advanceWeek } from '../src/engine/tick'
+import { retirementProbability } from '../src/engine/season'
 import type { GameState } from '../src/engine/types'
 
 function freshWorld(seed = 'SYSTEMS'): GameState {
@@ -1136,4 +1143,154 @@ describe('squad registration', () => {
     expect(club.registeredIds, 'a deliberate pick was thrown away').toContain(weakest.id)
     expect(squadRegistration(state, club).illegal).toBe(false)
   })
+})
+
+describe('AI squad management', () => {
+  it('renews the players a club wants and lets the rest go', () => {
+    const state = freshWorld('AI-RENEW')
+    const club = Object.values(state.clubs).find(
+      (c) => c.id !== state.playerClubId && c.reputation > 50,
+    )!
+    // Everyone out of contract at the end of this season.
+    const seniors = seniorSquad(state, club)
+    for (const p of seniors) {
+      if (p.contract) p.contract.expiresSeason = state.date.season
+    }
+
+    const renewed = processAiRenewals(state, club)
+    expect(renewed).toBeGreaterThan(8)
+
+    const kept = seniors.filter((p) => p.contract && p.contract.expiresSeason > state.date.season)
+    const released = seniors.filter((p) => p.contract && p.contract.expiresSeason <= state.date.season)
+    expect(kept.length).toBeGreaterThan(0)
+    expect(released.length, 'a club that renews everyone has no free market').toBeGreaterThan(0)
+
+    // The players kept are better than the players let go. Without this the
+    // renewal rule is doing nothing useful.
+    const avg = (list: typeof kept) =>
+      list.reduce((sum, p) => sum + p.currentAbility, 0) / Math.max(1, list.length)
+    expect(avg(kept)).toBeGreaterThan(avg(released))
+  })
+
+  it('will not keep a thirty-four-year-old who is not a first-teamer', () => {
+    const state = freshWorld('AI-AGE')
+    const club = Object.values(state.clubs).find(
+      (c) => c.id !== state.playerClubId && c.reputation > 70,
+    )!
+    const seniors = seniorSquad(state, club)
+      .slice()
+      .sort((a, b) => b.currentAbility - a.currentAbility)
+    // A fringe player, aged out.
+    const veteran = seniors[seniors.length - 3]!
+    veteran.age = 34
+    if (veteran.contract) veteran.contract.expiresSeason = state.date.season
+
+    processAiRenewals(state, club)
+    expect(veteran.contract!.expiresSeason).toBe(state.date.season)
+  })
+
+  it('signs free agents when short, outside the window', () => {
+    const state = freshWorld('AI-FREE')
+    const club = Object.values(state.clubs).find((c) => c.id !== state.playerClubId)!
+    state.date.week = 15 // window firmly shut
+
+    // Strip the squad back to a side that cannot be fielded.
+    const seniors = seniorSquad(state, club)
+    for (const p of seniors.slice(10)) {
+      club.squad = club.squad.filter((id) => id !== p.id)
+      p.clubId = null
+      p.contract = null
+      p.weeksUnattached = 30
+    }
+    expect(seniorSquad(state, club).length).toBe(10)
+
+    const ctx = { rng: new Rng('recruit'), ids: new IdFactory(state.nextId) }
+    for (let week = 0; week < 6; week++) runAiSquadManagement(state, ctx)
+
+    expect(
+      seniorSquad(state, club).length,
+      'a club short of a side did not sign anyone',
+    ).toBeGreaterThanOrEqual(EMERGENCY_SQUAD)
+  })
+
+  it('promotes from the academy rather than leaving the squad short', () => {
+    const state = freshWorld('AI-YOUTH')
+    const club = Object.values(state.clubs).find(
+      (c) => c.id !== state.playerClubId
+        && c.squad.some((id) => state.players[id]?.isAcademy),
+    )!
+    for (const p of seniorSquad(state, club).slice(14)) {
+      club.squad = club.squad.filter((id) => id !== p.id)
+      p.clubId = null
+    }
+    const academyBefore = club.squad.filter((id) => state.players[id]?.isAcademy).length
+    expect(academyBefore).toBeGreaterThan(0)
+
+    let promoted = null
+    for (let i = 0; i < 20 && !promoted; i++) {
+      promoted = promoteFromAcademy(state, club, new Rng(`youth:${i}`))
+    }
+    expect(promoted, 'no academy player was ever promoted').toBeTruthy()
+    expect(promoted!.isAcademy).toBe(false)
+  })
+
+  it('stops a player nobody has called in two seasons, at any age', () => {
+    const state = freshWorld('AI-RETIRE')
+    const club = state.clubs[state.playerClubId]
+    const player = seniorSquad(state, club)[0]!
+    player.age = 24 // young enough that age alone would never end a career
+
+    expect(retirementProbability(player), 'a 24-year-old under contract').toBe(0)
+
+    player.clubId = null
+    player.contract = null
+    player.weeksUnattached = PATIENCE_WEEKS
+    expect(retirementProbability(player)).toBeGreaterThan(0.5)
+  })
+
+  it('lets a career end for reasons other than age', () => {
+    const state = freshWorld('AI-EARLY')
+    const club = state.clubs[state.playerClubId]
+    const player = seniorSquad(state, club).find((p) => p.age >= 28 && p.age < 31)
+      ?? seniorSquad(state, club)[0]!
+    player.age = 29
+    player.stats.appearances = 30
+    player.injuryProneness = 20
+    const settled = retirementProbability(player)
+
+    // Coaching badges, a job at the club, a studio, a body that never came
+    // right: a small hazard, but not zero.
+    expect(settled).toBeGreaterThan(0)
+    expect(settled).toBeLessThan(0.05)
+
+    // A player who is not getting a game has less to turn down.
+    player.stats.appearances = 2
+    expect(retirementProbability(player)).toBeGreaterThan(settled)
+  })
+
+  it('keeps squads playable across six seasons', () => {
+    // The defect this whole system exists to fix: squads fell from 26 players
+    // to 12.2 by season four and 2.6 by season six, while thousands of free
+    // agents waited to be asked. Slow, and the only test that would have
+    // caught it — nothing shorter than a multi-season run shows the drain.
+    const setup = prepareNewGame({
+      seed: 'DECAY', directorName: 'T', background: 'scout',
+      worldSize: 'compact', homeNationId: 'eng', startingSeason: 2025,
+    })
+    const state = startCareerAt(setup, setup.candidates[0].id)
+
+    for (let season = 0; season < 6; season++) {
+      for (let w = 0; w < 52; w++) advanceWeek(state, { ids: setup.ids, names: setup.names })
+    }
+
+    // Measured mid-season, when a thin squad would actually cost points.
+    for (let w = 0; w < 14; w++) advanceWeek(state, { ids: setup.ids, names: setup.names })
+
+    const ai = Object.values(state.clubs).filter((c) => c.id !== state.playerClubId)
+    const sizes = ai.map((c) => seniorSquad(state, c).length)
+    const average = sizes.reduce((a, b) => a + b, 0) / sizes.length
+
+    expect(average, `squads averaged ${average.toFixed(1)} after six seasons`).toBeGreaterThan(20)
+    expect(Math.min(...sizes), 'a club cannot field a side').toBeGreaterThanOrEqual(14)
+  }, 600_000)
 })
