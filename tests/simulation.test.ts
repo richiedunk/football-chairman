@@ -261,3 +261,53 @@ describe('season simulation', () => {
     expect(seniors.length, 'squad shrank below a fieldable eleven').toBeGreaterThanOrEqual(11)
   })
 })
+
+describe('cup competitions', () => {
+  it('converges from an odd field to a single winner', () => {
+    const setup = prepareNewGame({
+      seed: 'CUPTEST', directorName: 'T', background: 'scout',
+      worldSize: 'compact', homeNationId: 'eng', startingSeason: 2025,
+    })
+    const state = startCareerAt(setup, setup.candidates[0].id)
+    const deps = { ids: setup.ids, names: setup.names }
+    const cup = Object.values(state.cups).find((c) => c.nationId === 'eng')!
+    const entrants = cup.entrantIds.length
+
+    // A 114-club field is deliberately not a power of two: the bye maths has
+    // to bring it to one after the first round, not before it.
+    expect(entrants).toBeGreaterThan(64)
+    expect(Math.log2(entrants) % 1).not.toBe(0)
+
+    for (let week = 0; week < 46; week++) advanceWeek(state, deps)
+
+    expect(cup.winnerId, 'the cup produced no winner').toBeTruthy()
+    expect(state.clubs[cup.winnerId!]).toBeDefined()
+
+    // Each round must exactly halve the field.
+    const sizes = cup.rounds.map((r) => r.fixtureIds.length)
+    for (let i = 1; i < sizes.length; i++) {
+      expect(sizes[i], `round ${i} did not halve the field`).toBe(sizes[i - 1] === 50 ? 32 : sizes[i - 1] / 2)
+    }
+    expect(sizes[sizes.length - 1], 'the final was not a single tie').toBe(1)
+  })
+
+  it('never leaves a knockout tie drawn', () => {
+    const setup = prepareNewGame({
+      seed: 'KNOCKOUT', directorName: 'T', background: 'scout',
+      worldSize: 'compact', homeNationId: 'eng', startingSeason: 2025,
+    })
+    const state = startCareerAt(setup, setup.candidates[0].id)
+    const deps = { ids: setup.ids, names: setup.names }
+    for (let week = 0; week < 46; week++) advanceWeek(state, deps)
+
+    const cupFixtures = state.fixtures.filter(
+      (f) => f.competitionType === 'cup' && f.result,
+    )
+    expect(cupFixtures.length).toBeGreaterThan(0)
+    for (const fixture of cupFixtures) {
+      const r = fixture.result!
+      const decided = r.homeGoals !== r.awayGoals || Boolean(r.penalties)
+      expect(decided, `a cup tie finished level with no shootout`).toBe(true)
+    }
+  })
+})

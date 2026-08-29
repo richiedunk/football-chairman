@@ -19,10 +19,24 @@ const myRow = computed(() => store.table.find((r) => r.clubId === club.value?.id
 const nextOpponent = computed(() => {
   const f = store.nextFixture
   const c = club.value
-  if (!f || !c) return null
+  const s = store.game
+  if (!f || !c || !s) return null
   const isHome = f.homeClubId === c.id
   const opponent = store.clubById(isHome ? f.awayClubId : f.homeClubId)
-  return opponent ? { opponent, isHome, week: f.week } : null
+  if (!opponent) return null
+
+  // Cup ties need naming, or a knockout round is indistinguishable from a
+  // league fixture on the one screen the player checks every week.
+  const competition =
+    f.competitionType === 'league'
+      ? store.league?.name ?? 'League'
+      : s.cups[f.competitionId]?.name ?? 'Cup'
+  const round =
+    f.competitionType === 'league'
+      ? null
+      : s.cups[f.competitionId]?.rounds.find((r) => r.round === f.round)?.name ?? null
+
+  return { opponent, isHome, week: f.week, competition, round }
 })
 
 const wageHeadroom = computed(() => {
@@ -100,7 +114,8 @@ async function advance() {
                 {{ nextOpponent.isHome ? 'vs' : 'away to' }} {{ nextOpponent.opponent.name }}
               </div>
               <div class="small muted">
-                Week {{ nextOpponent.week }} · {{ nextOpponent.opponent.reputation > club.reputation ? 'Tougher opposition' : 'Winnable' }}
+                Week {{ nextOpponent.week }} · {{ nextOpponent.round ?? nextOpponent.competition }}
+                · {{ nextOpponent.opponent.reputation > club.reputation ? 'Tougher opposition' : 'Winnable' }}
               </div>
             </div>
             <FormRun :form="store.table.find((r) => r.clubId === nextOpponent!.opponent.id)?.form ?? []" />
@@ -236,7 +251,11 @@ async function advance() {
             <div class="list__main">
               <div class="list__primary">{{ entry.result.summary }}</div>
               <div class="list__secondary">
-                Week {{ entry.fixture.week }} · {{ entry.result.attendance.toLocaleString() }} in
+                Week {{ entry.fixture.week }} ·
+                {{ entry.fixture.competitionType === 'league'
+                  ? 'League'
+                  : store.game?.cups[entry.fixture.competitionId]?.name ?? 'Cup' }}
+                · {{ entry.result.attendance.toLocaleString() }} in
               </div>
             </div>
           </div>

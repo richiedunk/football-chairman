@@ -18,6 +18,7 @@ import { addInboxItem, addNews, expireItems } from './systems/inbox'
 import { computeValue } from './systems/valuation'
 import { runSeasonRollover } from './season'
 import { produceIntake, INTAKE_WEEK } from './systems/academy'
+import { drawNextRoundIfDue, settleRound } from './sim/cups'
 import type {
   Club, Fixture, GameState, ID, MatchResult, Player, SeasonPhase,
 } from './types'
@@ -61,6 +62,35 @@ export function advanceWeek(state: GameState, deps: TickDeps): TickResult {
     runAcademyIntake(state, ids, names, rng)
   }
 
+  // --- 1b. Cup draws --------------------------------------------------------
+  // Drawn before matches are simulated so this week's cup ties are played in
+  // the same pass as the league programme — which is what makes a cup run cost
+  // squad depth rather than simply adding money.
+  for (const cup of Object.values(state.cups)) {
+    const drawn = drawNextRoundIfDue(state, cup, ids, rng.fork(`cupdraw:${cup.id}`))
+    if (drawn.length === 0) continue
+    state.fixtures.push(...drawn)
+
+    const involvesPlayer = drawn.some(
+      (f) => f.homeClubId === state.playerClubId || f.awayClubId === state.playerClubId,
+    )
+    if (involvesPlayer) {
+      const tie = drawn.find(
+        (f) => f.homeClubId === state.playerClubId || f.awayClubId === state.playerClubId,
+      )!
+      const home = tie.homeClubId === state.playerClubId
+      const opponent = state.clubs[home ? tie.awayClubId : tie.homeClubId]
+      const round = cup.rounds[cup.rounds.length - 1]
+      addInboxItem(state, ids, {
+        category: 'match',
+        subject: `${cup.name}: ${round?.name ?? 'draw'}`,
+        from: 'Competition Secretary',
+        body: `You have been drawn ${home ? 'at home to' : 'away to'} ${opponent?.name ?? 'an opponent'} in the ${round?.name.toLowerCase() ?? 'next round'}.`,
+        link: { view: 'league' },
+      })
+    }
+  }
+
   // --- 2. Matches -----------------------------------------------------------
   const playedClubs = new Set<ID>()
   const homeClubs = new Map<ID, number>()
@@ -84,9 +114,15 @@ export function advanceWeek(state: GameState, deps: TickDeps): TickResult {
       || involvesTrackedPlayer(state, home, away)
 
     const matchRng = rng.fork(fixture.id)
+    // A knockout tie has to produce a winner, or nobody is eliminated and the
+    // competition never reaches a final.
+    const matchCtx = {
+      suspendedIds,
+      mustHaveWinner: fixture.competitionType !== 'league',
+    }
     const matchResult = detailed
-      ? simulateMatch(state, home, away, matchRng, { suspendedIds }, true)
-      : quickSimulate(state, home, away, matchRng, { suspendedIds })
+      ? simulateMatch(state, home, away, matchRng, matchCtx, true)
+      : quickSimulate(state, home, away, matchRng, matchCtx)
 
     fixture.result = matchResult
     applyMatchOutcome(state, fixture, matchResult, matchRng)
@@ -104,6 +140,24 @@ export function advanceWeek(state: GameState, deps: TickDeps): TickResult {
 
     if (home.id === state.playerClubId || away.id === state.playerClubId) {
       result.playerFixtures.push({ fixture, result: matchResult })
+    }
+  }
+
+  // --- 2b. Settle cup rounds ------------------------------------------------
+  for (const cup of Object.values(state.cups)) {
+    const round = cup.rounds[cup.rounds.length - 1]
+    if (!round || round.week !== week) continue
+    const settled = settleRound(state, cup, round)
+    if (settled.winnerId === state.playerClubId) {
+      addInboxItem(state, ids, {
+        category: 'match',
+        subject: `You have won the ${cup.name}`,
+        from: 'Chairman',
+        body: `${state.clubs[state.playerClubId]?.name} are ${cup.name} winners. Nobody will forget this season.`,
+        link: { view: 'club' },
+      })
+    } else if (settled.eliminated.includes(state.playerClubId)) {
+      addNews(state, ids, 'match', `Knocked out of the ${cup.name} in the ${round.name.toLowerCase()}.`)
     }
   }
 

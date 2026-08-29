@@ -10,6 +10,7 @@ import { awardXp, closeCareerEntry, eligibleClubs, levelFor, ordinal, seasonEndX
 import { computeValue, computeWageDemand } from './systems/valuation'
 import { addInboxItem, addNews } from './systems/inbox'
 import { emptyStats } from './world/playerGen'
+import { cupResultFor, resetCup } from './sim/cups'
 import type { Club, GameState, ID, JobOffer, League, Player, SeasonHistory } from './types'
 
 /**
@@ -45,6 +46,8 @@ export function runSeasonRollover(state: GameState, deps: RolloverDeps): void {
       const prize = awardSeasonPrizeMoney(club, league, position)
       const closed = rollOverLedger(club)
 
+      const domesticCup = Object.values(state.cups).find((c) => c.nationId === club.nationId)
+
       const history: SeasonHistory = {
         season,
         leagueId: league.id,
@@ -54,7 +57,7 @@ export function runSeasonRollover(state: GameState, deps: RolloverDeps): void {
         points: row.points,
         goalsFor: row.goalsFor,
         goalsAgainst: row.goalsAgainst,
-        cupResult: '—',
+        cupResult: domesticCup ? cupResultFor(state, domesticCup, club.id) : '—',
         continentalResult: '—',
         netSpend: closed.transfersIn - closed.transfersOut,
         finalBalance: club.finances.balance,
@@ -90,6 +93,15 @@ export function runSeasonRollover(state: GameState, deps: RolloverDeps): void {
     if (entry) {
       entry.bestFinish = Math.min(entry.bestFinish, position)
       entry.xpEarned += state.director.xpThisSeason
+      for (const cup of Object.values(state.cups)) {
+        if (cup.winnerId === playerClub.id) {
+          entry.trophies.push(`${cup.name} ${season}`)
+          awardXp(
+            state.director, Math.round(500 * (0.5 + (league?.reputation ?? 40) / 100 * 1.5)),
+            `Won the ${cup.name}`, 'trophies', season, state.date.week,
+          )
+        }
+      }
     }
     playerClub.board.tenureSeasons += 1
   }
@@ -144,6 +156,7 @@ export function runSeasonRollover(state: GameState, deps: RolloverDeps): void {
   state.phase = 'preseason'
 
   state.fixtures = []
+  for (const cup of Object.values(state.cups)) resetCup(state, cup)
   for (const league of Object.values(state.leagues)) {
     state.fixtures.push(
       ...scheduleLeague(rng.fork(`fixtures:${league.id}`), ids, league.id, league.clubIds, state.date.season),

@@ -73,7 +73,10 @@ const sections = computed(() => [
         <div class="table__scroll">
           <table class="table">
             <thead>
-              <tr><th>Season</th><th>Division</th><th class="num">Pos</th><th class="num">Pts</th></tr>
+              <tr>
+                <th>Season</th><th>Division</th><th class="num">Pos</th>
+                <th class="num">Pts</th><th>Cup</th>
+              </tr>
             </thead>
             <tbody>
               <tr v-for="h in club.history.slice().reverse().slice(0, 12)" :key="h.season">
@@ -81,6 +84,7 @@ const sections = computed(() => [
                 <td class="truncate" style="max-width: 130px">{{ h.leagueName }}</td>
                 <td class="num">{{ h.position }}</td>
                 <td class="num">{{ h.points }}</td>
+                <td class="truncate tiny" style="max-width: 130px">{{ h.cupResult }}</td>
               </tr>
             </tbody>
           </table>

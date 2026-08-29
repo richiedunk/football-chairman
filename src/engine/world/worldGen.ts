@@ -7,6 +7,7 @@ import { generatePlayer, generateSquad, generateYouthIntake } from './playerGen'
 import { generateBackroom } from './staffGen'
 import { computeValue, computeWageDemand } from '../systems/valuation'
 import { scheduleLeague } from '../sim/schedule'
+import { resetCup } from '../sim/cups'
 import { SAVE_VERSION } from '../types'
 import type {
   Agent, BoardExpectation, BoardMandate, Club, ClubFinances, ClubStrategy, CupCompetition,
@@ -276,6 +277,10 @@ export function generateWorld(options: WorldGenOptions): GameState {
     }
     state.cups[cup.id] = cup
   }
+
+  // Cup entrants and the round calendar are derived, so they are established
+  // the same way at world creation as at every subsequent season roll.
+  for (const cup of Object.values(state.cups)) resetCup(state, cup)
 
   state.nextId = ids.value
   return state
@@ -619,8 +624,16 @@ function generateOutlets(rng: Rng, ids: IdFactory, def: NationDef): MediaOutlet[
   return outlets
 }
 
+/**
+ * Round-by-round cup prize money, paid to every club that survives a round.
+ *
+ * Scaled so a winner collects roughly a seventh of what winning the top
+ * division pays — a cup run is a windfall, not a substitute for league revenue.
+ * The early rounds matter most in absolute terms at the bottom of the pyramid,
+ * where a first-round cheque is several months of wages.
+ */
 function buildCupPrizeMoney(topFlightPrize: number): number[] {
-  const base = topFlightPrize * 0.02
+  const base = topFlightPrize * 0.003
   return [1, 1.6, 2.6, 4.2, 7, 12, 22].map((m) => Math.round((base * m) / 1000) * 1000)
 }
 

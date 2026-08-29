@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router'
 import { useGameStore } from '../../stores/game'
 import FormRun from '../components/FormRun.vue'
 import { sortTable } from '../../engine/systems/board'
+import { survivorsOf } from '../../engine/sim/cups'
 
 const store = useGameStore()
 const route = useRoute()
@@ -52,6 +53,27 @@ const results = computed(() => {
     .filter((f) => f.competitionId === l.id && f.season === s.date.season && f.result)
     .sort((a, b) => b.week - a.week)
     .slice(0, 40)
+})
+
+/** The domestic cup for this division's nation, and where the player stands. */
+const cup = computed(() => {
+  const s = store.game
+  const l = league.value
+  if (!s || !l) return null
+  const competition = Object.values(s.cups).find((c) => c.nationId === l.nationId)
+  if (!competition) return null
+
+  const currentRound = competition.rounds[competition.rounds.length - 1] ?? null
+  const stillIn = survivorsOf(s, competition).includes(store.club?.id ?? '')
+  const tie = currentRound
+    ? s.fixtures.find(
+        (f) =>
+          currentRound.fixtureIds.includes(f.id)
+          && (f.homeClubId === store.club?.id || f.awayClubId === store.club?.id),
+      )
+    : null
+
+  return { competition, currentRound, stillIn, tie }
 })
 
 const otherLeagues = computed(() => {
@@ -145,6 +167,40 @@ function short(clubId: string) {
         <div v-if="!fixtures.length" class="empty">No fixtures remaining.</div>
       </div>
     </div>
+
+    <template v-if="cup">
+      <div class="section-title">{{ cup.competition.name }}</div>
+      <div class="card">
+        <div class="card__body">
+          <div class="row row--between mb">
+            <span class="small muted">
+              {{ cup.competition.winnerId ? 'Winners' : cup.currentRound?.name ?? 'Not yet under way' }}
+            </span>
+            <span
+              v-if="cup.competition.winnerId"
+              class="chip chip--gold"
+            >{{ store.clubById(cup.competition.winnerId)?.shortName }}</span>
+            <span
+              v-else
+              class="chip"
+              :class="cup.stillIn ? 'chip--accent' : 'chip--danger'"
+            >{{ cup.stillIn ? 'Still in' : 'Out' }}</span>
+          </div>
+          <div v-if="cup.tie" class="small">
+            {{ short(cup.tie.homeClubId) }}
+            <template v-if="cup.tie.result">
+              {{ cup.tie.result.homeGoals }}–{{ cup.tie.result.awayGoals }}
+              <span v-if="cup.tie.result.penalties" class="tiny faint">
+                ({{ cup.tie.result.penalties.home }}–{{ cup.tie.result.penalties.away }} pens)
+              </span>
+            </template>
+            <template v-else> v </template>
+            {{ short(cup.tie.awayClubId) }}
+          </div>
+          <div v-else class="small muted">No tie this round.</div>
+        </div>
+      </div>
+    </template>
 
     <div class="section-title">Other divisions</div>
     <div class="card">
