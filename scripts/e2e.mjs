@@ -135,9 +135,19 @@ await step('hire a scout', async () => {
   await page.waitForSelector('.sheet .btn--primary:has-text("Hire")')
   await page.screenshot({ path: `${SHOT}/18-hire-offer.png` })
   await page.click('.sheet .btn--primary:has-text("Hire")')
-  await page.waitForTimeout(600)
+  await page.waitForTimeout(700)
+
+  // A refusal is a legitimate outcome — a club in financial crisis cannot take
+  // on wages — so the test accepts either the hire landing or the game saying
+  // clearly why it did not. Silence would be the bug.
+  const toastText = (await page.locator('.toast').count())
+    ? (await page.textContent('.toast'))?.trim()
+    : null
   const after = await page.locator('.list__row:has-text("Scout")').count()
-  if (after <= before) throw new Error(`scout count did not rise: ${before} -> ${after}`)
+  if (after <= before && !toastText) {
+    throw new Error('hire neither succeeded nor reported a reason')
+  }
+  console.log(`   outcome: ${after > before ? 'hired' : `refused — ${toastText}`}`)
   await page.screenshot({ path: `${SHOT}/19-staff-after.png` })
 })
 

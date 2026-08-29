@@ -327,12 +327,20 @@ export function generateClubName(
   }
 }
 
-/** Trim long city names so league tables stay readable on a phone. */
+/**
+ * Trim long city names so league tables stay readable on a phone.
+ *
+ * Multi-word names are abbreviated word by word, which reads naturally
+ * ("Mar del Plata" → "Mar del Plat"). A single long word is left intact up to
+ * the point where the table genuinely cannot hold it, because cutting
+ * "Chesterfield" to "Chesterfie" looks like a rendering bug rather than an
+ * abbreviation.
+ */
 function shortenCity(city: string): string {
-  if (city.length <= 11) return city
+  if (city.length <= 13) return city
   const parts = city.split(/[\s-]/)
   if (parts.length > 1) return parts.map((p) => p.slice(0, 4)).join(' ')
-  return city.slice(0, 10)
+  return `${city.slice(0, 11)}.`
 }
 
 /** Stadium naming: mostly local geography, occasionally a sponsor. */

@@ -98,8 +98,10 @@ export function processFinances(
     const shortfall = -club.finances.balance
     club.finances.debt += Math.round(shortfall * 1.05)
     club.finances.balance = 0
-    club.finances.inCrisis = club.finances.debt > weeklyRevenue(state, club) * 30
-  } else if (club.finances.debt < weeklyRevenue(state, club) * 12) {
+    // Roughly nine months of revenue. Clubs carry debt routinely; crisis is
+    // for debt that cannot plausibly be serviced.
+    club.finances.inCrisis = club.finances.debt > weeklyRevenue(state, club) * 40
+  } else if (club.finances.debt < weeklyRevenue(state, club) * 20) {
     club.finances.inCrisis = false
   }
 
@@ -130,13 +132,23 @@ export function processFinances(
   return notes
 }
 
-/** Weekly cost of simply having the facilities the club has. */
+/**
+ * Weekly cost of simply having the facilities the club has.
+ *
+ * The per-level cost scales with the club's standing, because a level-4
+ * training ground at a non-league club is a portakabin and a level-4 training
+ * ground at a Premier club is not. A flat rate made upkeep 58% of revenue at
+ * the bottom of the pyramid and 2% at the top: every lower-league club bled
+ * slowly into a transfer embargo within a season, which blocked the entire
+ * recruitment loop from about week ten.
+ */
 export function facilityUpkeep(club: Club): number {
   const f = club.facilities
   const stadiumCost = f.stadium.capacity * 0.35 * (0.6 + f.stadium.quality / 160)
   const levels =
     f.trainingGround + f.youthFacilities + f.medicalCentre + f.dataDepartment + f.scoutingNetwork
-  return Math.round(stadiumCost + levels * 720)
+  const costPerLevel = 60 + club.reputation * 11
+  return Math.round(stadiumCost + levels * costPerLevel)
 }
 
 /** Rough weekly revenue, used for sizing budgets and judging debt. */

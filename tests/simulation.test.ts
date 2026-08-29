@@ -256,6 +256,17 @@ describe('season simulation', () => {
     // Doing nothing should not bankrupt a club inside one season — the game
     // has to be survivable for a player who is still learning it.
     expect(club.finances.balance).toBeGreaterThanOrEqual(0)
+    // And it must not drift into a transfer embargo, which would block the
+    // recruitment loop the whole game is built around. This caught facility
+    // upkeep being a flat per-level cost, which took 58% of a non-league
+    // club's revenue and put most of the lower pyramid under embargo.
+    expect(club.finances.inCrisis, 'the starting club fell into crisis doing nothing').toBe(false)
+
+    const worldInCrisis = Object.values(state.clubs).filter((c) => c.finances.inCrisis).length
+    expect(
+      worldInCrisis / Object.keys(state.clubs).length,
+      'too much of the world is under embargo',
+    ).toBeLessThan(0.1)
     expect(totalWageBill(state, club)).toBeGreaterThan(0)
     const seniors = club.squad.map((id) => state.players[id]).filter((p) => p && !p.isAcademy)
     expect(seniors.length, 'squad shrank below a fieldable eleven').toBeGreaterThanOrEqual(11)

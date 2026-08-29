@@ -11,4 +11,8 @@ running one of these rather than by reading code.
 | `npx tsx scripts/seasontest.ts` | Runs three full seasons and prints finances, board confidence, fan mood, XP and squad size each year. Catches slow drift that a single-week test cannot. |
 | `npx tsx scripts/phasetime.ts` | Times each simulation phase separately over a whole world. Use before optimising anything. |
 | `npx tsx scripts/cuptest.ts` | Runs a cup to completion and prints the round-by-round field size. |
+| `npx tsx scripts/financecheck.ts` | Revenue, wages, upkeep and net position by division at world creation. Found facility upkeep taking 58% of a non-league club's revenue. |
+| `npx tsx scripts/crisischeck.ts` | Runs three careers for a season and reports how much of the world ends up under a transfer embargo. |
+| `npx tsx scripts/attrcheck.ts` | Attribute means by division, and how far generated attributes drift from the ability they encode. |
+| `npx tsx scripts/staffcheck.ts` | How many unattached staff exist and how many each club can actually hire. |
 | `node scripts/e2e.mjs` | Drives the built app in a real mobile-sized browser and screenshots every screen. Needs `npm run build && npx vite preview` first, and `SHOT=<dir>` for the screenshots. |

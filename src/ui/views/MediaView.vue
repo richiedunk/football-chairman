@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, inject, ref } from 'vue'
+import { computed, inject, ref, watch } from 'vue'
 import { useGameStore } from '../../stores/game'
 import MeterBar from '../components/MeterBar.vue'
 import AppSheet from '../components/AppSheet.vue'
@@ -31,18 +31,33 @@ const selectedOption = computed(
 )
 
 /**
- * Candidate targets: shortlisted players and your own squad. Deliberately not
- * every player in the world — you can only credibly brief about people you
- * have some connection to.
+ * Candidate targets, filtered by what the briefing is actually for.
+ *
+ * Leaking interest in one of your own players, or briefing that he is
+ * unsettled, is incoherent — those stories are about someone else's player.
+ * Talking up form or an academy prospect is only ever about your own. Offering
+ * the wrong list makes the whole mechanic read as arbitrary.
  */
 const targets = computed(() => {
   const s = store.game
   if (!s) return []
-  const ids = new Set([...s.shortlist, ...(store.club?.squad ?? [])])
-  return Array.from(ids)
+
+  const aboutOthers = ['transferLink', 'playerUnrest'].includes(briefKind.value)
+  const pool = aboutOthers
+    ? [...s.shortlist, ...Object.keys(s.scoutReports)]
+    : (store.club?.squad ?? [])
+
+  return Array.from(new Set(pool))
     .map((id) => s.players[id])
     .filter((p): p is NonNullable<typeof p> => Boolean(p))
+    .filter((p) => (aboutOthers ? p.clubId !== store.club?.id : p.clubId === store.club?.id))
+    .filter((p) => (briefKind.value === 'academyHype' ? p.isAcademy || p.age <= 21 : true))
     .slice(0, 60)
+})
+
+// Changing what the briefing is about invalidates the previous target.
+watch(briefKind, () => {
+  briefTarget.value = targets.value[0]?.id ?? ''
 })
 
 function openBrief() {
@@ -211,6 +226,9 @@ function outletName(id: string) {
             {{ p.knownAs }} ({{ store.clubById(p.clubId ?? '')?.shortName ?? 'free agent' }})
           </option>
         </select>
+        <div v-if="!targets.length" class="field__hint" style="color: var(--warn)">
+          Nobody to brief about. Scout some players first, or shortlist a target.
+        </div>
       </div>
 
       <div class="field">
@@ -248,7 +266,11 @@ function outletName(id: string) {
       </div>
 
       <template #footer>
-        <button class="btn btn--primary btn--block" @click="submitBrief">Make the call</button>
+        <button
+          class="btn btn--primary btn--block"
+          :disabled="selectedOption.needsPlayer && !briefTarget"
+          @click="submitBrief"
+        >Make the call</button>
       </template>
     </AppSheet>
   </div>
