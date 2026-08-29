@@ -1,6 +1,7 @@
 import { clamp, Rng } from '../rng'
 import { totalWageBill } from './valuation'
 import { emptyLedger } from '../world/worldGen'
+import { revenuePerHead } from './stadium'
 import type { Club, FinanceLedger, GameState, League, Player } from '../types'
 
 /**
@@ -25,11 +26,12 @@ export function processFinances(
 
   // --- Income ---------------------------------------------------------------
   if (playedHomeThisWeek) {
-    // Matchday: tickets plus per-head spend on everything else, scaled by how
-    // good the ground is.
-    const perHead = club.facilities.stadium.ticketPrice
-      * (1 + (club.facilities.stadium.quality / 100) * 0.55)
-    const gate = Math.round(playedHomeThisWeek.attendance * perHead)
+    // Matchday income is per head, and what a head is worth depends on what
+    // they are sitting in: a covered seat outsells a terrace, and executive
+    // boxes outsell everything. That is what makes an upgrade adding twenty
+    // boxes potentially worth more than an expansion adding five thousand
+    // seats.
+    const gate = Math.round(playedHomeThisWeek.attendance * revenuePerHead(club.facilities.stadium))
     club.finances.balance += gate
     ledger.matchdayIncome += gate
   }
@@ -234,7 +236,12 @@ export function operatingCosts(state: GameState, club: Club): OperatingCosts {
     * stadiumCostPerSeat(club.reputation)
     * (1.25 - (f.stadium.quality / 100) * 0.45)
 
-  const groundRent = f.stadium.capacity * groundRentPerSeat(club.reputation) * col
+  // A tenant pays a commercial rent to its landlord; an owner pays rates and
+  // ground charges, which are real but smaller. This is the ongoing cost of
+  // not owning your own ground.
+  const tenancyFactor = f.stadium.owned ? 1 : 2.4
+  const groundRent =
+    f.stadium.capacity * groundRentPerSeat(club.reputation) * col * tenancyFactor
 
   // Training and medical are charged per head, so squad size is a real cost
   // and hoarding twenty-eight professionals is a decision with a price on it.
@@ -297,7 +304,8 @@ export function weeklyRevenue(state: GameState, club: Club): number {
     (club.finances.sponsorship.shirtValuePerSeason + club.finances.sponsorship.kitValuePerSeason) / 52
   // Matchday averaged over the season: roughly every other week is at home.
   const matchday =
-    (club.facilities.stadium.capacity * (0.4 + club.fanbase / 220) * club.facilities.stadium.ticketPrice) / 2
+    (club.facilities.stadium.capacity * (0.4 + club.fanbase / 220)
+      * revenuePerHead(club.facilities.stadium)) / 2
   return Math.round(tv + sponsor + matchday)
 }
 

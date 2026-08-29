@@ -22,6 +22,7 @@ const routes: RouteRecordRaw[] = [
   { path: '/club', name: 'club', component: () => import('./ui/views/ClubView.vue'), meta: { tab: 'club' } },
   { path: '/finance', name: 'finance', component: () => import('./ui/views/FinanceView.vue'), meta: { tab: 'club' } },
   { path: '/facilities', name: 'facilities', component: () => import('./ui/views/FacilitiesView.vue'), meta: { tab: 'club' } },
+  { path: '/stadium', name: 'stadium', component: () => import('./ui/views/StadiumView.vue'), meta: { tab: 'club' } },
   { path: '/staff', name: 'staff', component: () => import('./ui/views/StaffView.vue'), meta: { tab: 'club' } },
   { path: '/academy', name: 'academy', component: () => import('./ui/views/AcademyView.vue'), meta: { tab: 'club' } },
   { path: '/board', name: 'board', component: () => import('./ui/views/BoardView.vue'), meta: { tab: 'club' } },

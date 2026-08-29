@@ -254,6 +254,41 @@ await step('finance', async () => {
   await page.screenshot({ path: `${SHOT}/13-finance.png`, fullPage: true })
 })
 
+await step('stadium and architect tender', async () => {
+  await page.goto('http://127.0.0.1:4173/#/stadium')
+  await page.waitForSelector('text=The stands', { timeout: 15000 })
+  await page.screenshot({ path: `${SHOT}/23-stadium.png`, fullPage: true })
+
+  const repair = page.locator('.btn:has-text("Repairs")').first()
+  if (await repair.count() === 0) {
+    console.log('   every stand in good order — nothing to repair')
+    return
+  }
+  await repair.click()
+  await page.waitForSelector('.btn:has-text("Invite tenders")')
+  await page.screenshot({ path: `${SHOT}/24-stadium-brief.png` })
+  await page.click('.btn:has-text("Invite tenders")')
+  await page.waitForSelector('text=Tenders received')
+  await page.waitForTimeout(300)
+  await page.screenshot({ path: `${SHOT}/25-tenders.png`, fullPage: true })
+
+  const quotes = await page.locator('.sheet .list__row').count()
+  if (quotes === 0) throw new Error('no architect tendered for repairs')
+  console.log(`   ${quotes} firms tendered`)
+
+  // Borrowing, so the award does not depend on the club's cash position.
+  await page.click('.segmented__item:has-text("Borrow")')
+  await page.click('.sheet .list__row >> nth=0')
+  await page.waitForTimeout(500)
+  const outcome = await page.textContent('.toast')
+  console.log(`   ${outcome?.trim().slice(0, 90)}`)
+
+  // The card must appear without navigating away: a screen that only updates
+  // on remount is the signature of a broken reactivity chain.
+  await page.waitForSelector('text=Work in progress', { timeout: 10000 })
+  await page.screenshot({ path: `${SHOT}/26-works.png`, fullPage: true })
+})
+
 await step('facilities', async () => {
   await page.goto('http://127.0.0.1:4173/#/facilities')
   await page.waitForSelector('text=Departments')

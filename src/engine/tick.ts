@@ -8,7 +8,8 @@ import { processInjuries } from './systems/injuries'
 import { processMorale, refreshSquadStatuses } from './systems/morale'
 import { developPlayer } from './systems/development'
 import { processFinances } from './systems/finance'
-import { progressProjects, decayStadium } from './systems/facilities'
+import { progressProjects } from './systems/facilities'
+import { decayStadium, progressStadiumWork, releaseArchitects } from './systems/stadium'
 import { processContracts } from './systems/contracts'
 import { processScouting } from './systems/scouting'
 import { generateIncomingOffers, processAiTransfers, processNegotiations } from './systems/transfers'
@@ -188,10 +189,36 @@ export function advanceWeek(state: GameState, deps: TickDeps): TickResult {
       ? { attendance: homeClubs.get(club.id) ?? 0 }
       : null)
     progressProjects(club)
-    decayStadium(club, clubRng)
+
+    // The ground wears out whether or not anyone is looking at it, and the
+    // safety officer starts closing places long before it falls down.
+    const wear = decayStadium(state, club, clubRng)
+    const building = progressStadiumWork(state, club, clubRng)
 
     if (club.id === state.playerClubId) {
       reportInjuries(state, ids, newInjuries)
+      for (const closure of wear.closures) {
+        addInboxItem(state, ids, {
+          category: 'facilities',
+          subject: 'Safety notice served',
+          from: 'Safety Officer',
+          body: closure,
+          urgent: true,
+          link: { view: 'stadium' },
+        })
+      }
+      for (const warning of wear.warnings) {
+        addNews(state, ids, 'facilities', warning, { view: 'stadium' })
+      }
+      for (const notice of building.notices) {
+        addInboxItem(state, ids, {
+          category: 'facilities',
+          subject: building.completed ? 'Building work complete' : 'Update from the architects',
+          from: club.facilities.stadiumProject?.architectFirm ?? 'Project Office',
+          body: notice,
+          link: { view: 'stadium' },
+        })
+      }
     }
   }
 
@@ -373,6 +400,9 @@ export function advanceWeek(state: GameState, deps: TickDeps): TickResult {
     if (!inRotation(club, 4)) continue
     processBoard(state, club, rng.fork(`aiboard:${club.id}`))
   }
+
+  // --- 11b. Architects ------------------------------------------------------
+  releaseArchitects(state)
 
   // --- 12. Housekeeping -----------------------------------------------------
   for (const item of expireItems(state)) {

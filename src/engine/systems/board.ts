@@ -287,10 +287,35 @@ export function assessFanMood(state: GameState, club: Club): FanMoodAssessment {
     }
   }
 
-  // 8. Standing. A club whose supporters have been given nothing to shout
-  //    about for years is a harder crowd than a newly ambitious one.
+  // 8. The ground itself. Supporters notice a crumbling stand, closed
+  //    turnstiles, and — for years afterwards — being moved somewhere else.
   if (club.facilities.stadium.quality < 25) {
     factors.push({ label: 'Ground is in poor condition', delta: -4 })
+  }
+  const closed = club.facilities.stadium.stands.reduce((sum, s) => sum + s.closedSeats, 0)
+  if (closed > 0) {
+    factors.push({
+      label: `${closed.toLocaleString()} places closed on safety grounds`,
+      delta: -clamp(4 + (closed / Math.max(1, club.facilities.stadium.capacity)) * 30, 4, 14),
+    })
+  }
+  const relocated = club.facilities.stadium.relocatedSeason
+  if (relocated !== null) {
+    const seasonsSince = state.date.season - relocated
+    if (seasonsSince <= 4) {
+      factors.push({
+        label: seasonsSince === 0
+          ? 'The club has left its old ground'
+          : `Still adjusting to the move, ${seasonsSince} season${seasonsSince === 1 ? '' : 's'} on`,
+        delta: -clamp(14 - seasonsSince * 3.2, 1, 14),
+      })
+    }
+  }
+  if (club.facilities.stadiumProject && club.facilities.stadiumProject.capacityReduction > 0) {
+    factors.push({
+      label: 'Watching football on a building site',
+      delta: -5,
+    })
   }
 
   const total = factors.reduce((sum, f) => sum + f.delta, 0)

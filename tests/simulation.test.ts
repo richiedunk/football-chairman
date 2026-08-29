@@ -482,11 +482,16 @@ describe('loans', () => {
     const borrower = suitors[0].club
     const borrowerBillBefore = totalWageBill(state, borrower)
 
-    // Cover most of the wage so the club says yes; the split is what is under
-    // test, not the persuasion.
-    const outcome = proposeLoanOut(
-      state, { rng: new Rng('w'), ids: setup.ids }, player.id, borrower.id, 0.6, 1,
-    )
+    // Whether a given club says yes is a die roll; the wage split is not, and
+    // that is what this test is about. Retry until the loan lands rather than
+    // depending on one seeded roll — which made the test fail the moment an
+    // unrelated change shifted the world's RNG stream.
+    let outcome = { ok: false, message: 'not attempted' }
+    for (let attempt = 0; attempt < 40 && !outcome.ok; attempt++) {
+      outcome = proposeLoanOut(
+        state, { rng: new Rng(`w${attempt}`), ids: setup.ids }, player.id, borrower.id, 0.6, 1,
+      )
+    }
     expect(outcome.ok, outcome.message).toBe(true)
 
     // The parent keeps 60%, the borrower picks up 40%. Neither pays it twice.

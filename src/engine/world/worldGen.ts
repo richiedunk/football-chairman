@@ -7,12 +7,13 @@ import { generatePlayer, generateSquad, generateYouthIntake } from './playerGen'
 import { generateBackroom, generateFreeAgentStaff } from './staffGen'
 import { computeValue, computeWageDemand } from '../systems/valuation'
 import { scheduleLeague } from '../sim/schedule'
+import { generateArchitects } from '../systems/stadium'
 import { resetCup } from '../sim/cups'
 import { SAVE_VERSION } from '../types'
 import type {
   Agent, BoardExpectation, BoardMandate, Club, ClubFinances, ClubStrategy, CupCompetition,
   DirectorBackground, Facilities, GameState, ID, League, LeagueTableRow, MediaOutlet, Nation, Player,
-  Position, Staff,
+  Position, Staff, Stand, StandId, StandType,
 } from '../types'
 
 /**
@@ -87,6 +88,7 @@ export function generateWorld(options: WorldGenOptions): GameState {
     staff: {},
     agents: {},
     outlets: {},
+    architects: {},
     tables: {},
     fixtures: [],
     cups: {},
@@ -250,6 +252,16 @@ export function generateWorld(options: WorldGenOptions): GameState {
     setBudgets(state, club)
   }
 
+  // --- Architects ----------------------------------------------------------
+  // One panel for the whole world: firms take work across borders, and a
+  // per-nation panel would leave small countries with two builders.
+  for (const architect of generateArchitects(
+    rng.fork('architects'), ids, nationRecords.map((n) => n.id),
+    Math.max(34, Math.round(nationRecords.length * 3)),
+  )) {
+    state.architects[architect.id] = architect
+  }
+
   // --- Unattached staff ----------------------------------------------------
   for (const member of generateFreeAgentStaff(
     staffCtx, Object.keys(state.clubs).length, nationRecords,
@@ -328,13 +340,32 @@ function createClub(
   const cityFactor = 0.55 + (citySize / 100) * 0.75
   const capacity = Math.round((capacityBase * cityFactor) / 250) * 250
 
+  // Grounds are built stand by stand, with condition and type reflecting the
+  // club's standing: a non-league ground is a terrace with a roof over one
+  // side, a top-flight one is four covered stands and a row of boxes.
+  const totalCapacity = clamp(capacity, 800, 82_000)
+  const stands = generateStands(rng, totalCapacity, reputation, season)
+
+  // Stands are each rounded to the nearest fifty, so the ground's capacity is
+  // whatever they actually add up to rather than the figure they were sized
+  // from — otherwise the cached total disagrees with the stands beneath it.
+  const builtCapacity = stands.reduce((sum, st) => sum + st.capacity, 0)
+
   const facilities: Facilities = {
     stadium: {
       name: generateStadiumName(rng, city, naming.name),
-      capacity: clamp(capacity, 800, 82_000),
+      capacity: builtCapacity,
       quality: clamp(rng.normalInt(reputation * 0.85 + 12, 10, 5, 99), 5, 99),
       ticketPrice: Math.round(clamp(8 + (reputation / 100) * 42, 6, 62)),
+      stands,
+      builtYear: Math.min(...stands.map((st) => st.builtYear)),
+      // Most clubs own their ground; a minority of smaller ones are tenants,
+      // which closes off every option but relocation.
+      owned: reputation > 30 || rng.chance(0.75),
+      pitchCondition: clamp(rng.normalInt(60 + reputation * 0.3, 12, 25, 99), 25, 99),
+      relocatedSeason: null,
     },
+    stadiumProject: null,
     trainingGround: facilityLevel(rng, reputation),
     youthFacilities: facilityLevel(rng, reputation),
     medicalCentre: facilityLevel(rng, reputation),
@@ -380,6 +411,62 @@ function createClub(
     fanMood: rng.normalInt(62, 10, 30, 90),
     isPlayerClub: false,
   }
+}
+
+/**
+ * Lay out an existing ground.
+ *
+ * Stands vary in age and condition within one stadium, because real grounds
+ * are built piecemeal over a century — which is what gives a club one
+ * crumbling end and three sound ones, and therefore something specific to fix.
+ */
+function generateStands(
+  rng: Rng,
+  totalCapacity: number,
+  reputation: number,
+  season: number,
+): Stand[] {
+  const shares = [0.3, 0.27, 0.22, 0.21]
+  const names = ['Main Stand', 'North Stand', 'East Stand', 'West Stand']
+  const ids: StandId[] = ['north', 'south', 'east', 'west']
+
+  return ids.map((id, index) => {
+    // The main stand is newest and best appointed; the ends lag behind.
+    const isMain = index === 0
+    const modernity = clamp(reputation / 100 + (isMain ? 0.2 : 0) + rng.float(-0.18, 0.18), 0, 1)
+
+    const type: StandType = modernity > 0.62
+      ? 'coveredSeated'
+      : modernity > 0.3 ? 'seated' : 'terrace'
+
+    const builtYear = Math.round(clamp(
+      season - rng.normal(38 - modernity * 26, 16),
+      season - 95,
+      season - 2,
+    ))
+
+    return {
+      id,
+      name: names[index],
+      capacity: Math.round((totalCapacity * shares[index]) / 50) * 50,
+      // Condition follows age as well as standing. Without the age term a
+      // stand built six years ago could be generated half-derelict, which
+      // reads as a bug the moment the build year is shown next to it.
+      condition: clamp(
+        rng.normalInt(
+          clamp(96 - (season - builtYear) * 1.15 + reputation * 0.12, 20, 97),
+          10, 15, 98,
+        ),
+        15, 98,
+      ),
+      type,
+      hospitalityBoxes: isMain
+        ? Math.max(0, Math.round(rng.normal(reputation / 3.5, reputation / 8)))
+        : Math.max(0, Math.round(rng.normal(reputation / 14, 3))),
+      builtYear,
+      closedSeats: 0,
+    }
+  })
 }
 
 function facilityLevel(rng: Rng, reputation: number): number {

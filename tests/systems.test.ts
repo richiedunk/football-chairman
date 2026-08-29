@@ -19,6 +19,10 @@ import {
 import { expectedWage } from '../src/engine/world/staffGen'
 import { issueBriefing, checkForExposure } from '../src/engine/systems/media'
 import { computeValue, formatMoney, totalWageBill } from '../src/engine/systems/valuation'
+import {
+  awardContract, baseCost, decayStadium, inviteTenders, progressStadiumWork, revenuePerHead,
+  usableCapacity,
+} from '../src/engine/systems/stadium'
 import { compress, decompress, MemoryAdapter } from '../src/storage/adapter'
 import { loadGame, saveGame, setStorageAdapter } from '../src/storage/saves'
 import type { GameState } from '../src/engine/types'
@@ -687,7 +691,12 @@ describe('board requests', () => {
     club.board.lastRequestWeek = -99
     const before = club.board.confidence
 
-    const response = makeRequest(state, club, 'lowerExpectation', new Rng('refuse'))
+    // Pick something the board will actually hear, or the request is turned
+    // away before it costs anything and the test proves nothing.
+    const option = availableRequests(state, club).find((o) => o.available && o.risk === 'high')
+    expect(option, 'no high-risk request was available to test with').toBeTruthy()
+
+    const response = makeRequest(state, club, option!.kind, new Rng('refuse'))
     if (response.outcome === 'refused') {
       expect(club.board.confidence).toBeLessThan(before)
       expect(response.confidenceChange).toBeLessThan(0)
@@ -726,5 +735,226 @@ describe('board requests', () => {
 
     const option = availableRequests(state, club).find((o) => o.kind === 'lowerExpectation')!
     expect(option.available).toBe(false)
+  })
+})
+
+describe('stadium', () => {
+  it('builds grounds stand by stand, with condition following age', () => {
+    const state = freshWorld('STANDS')
+    for (const club of Object.values(state.clubs)) {
+      const stadium = club.facilities.stadium
+      expect(stadium.stands.length).toBe(4)
+
+      const built = stadium.stands.reduce((sum, s) => sum + s.capacity, 0)
+      expect(built).toBeGreaterThan(0)
+      // The cached capacity must agree with the stands it is derived from.
+      expect(stadium.capacity).toBe(usableCapacity(stadium, club.facilities.stadiumProject))
+
+      for (const stand of stadium.stands) {
+        expect(stand.builtYear).toBeLessThan(state.date.season)
+        expect(stand.condition).toBeGreaterThan(0)
+        expect(stand.closedSeats).toBe(0)
+      }
+    }
+
+    // Across the world, newer stands should be in better condition than old
+    // ones — otherwise a stand built five years ago can generate derelict.
+    const all = Object.values(state.clubs).flatMap((c) => c.facilities.stadium.stands)
+    const recent = all.filter((s) => state.date.season - s.builtYear < 12)
+    const ancient = all.filter((s) => state.date.season - s.builtYear > 55)
+    const mean = (list: typeof all) => list.reduce((sum, s) => sum + s.condition, 0) / list.length
+    expect(mean(recent)).toBeGreaterThan(mean(ancient) + 10)
+  })
+
+  it('values a covered seat above a terrace place, and a box above both', () => {
+    const state = freshWorld('PERHEAD')
+    const club = state.clubs[state.playerClubId]
+    const stadium = club.facilities.stadium
+
+    for (const stand of stadium.stands) {
+      stand.type = 'terrace'
+      stand.hospitalityBoxes = 0
+      stand.condition = 70
+    }
+    const terraced = revenuePerHead(stadium)
+
+    for (const stand of stadium.stands) stand.type = 'coveredSeated'
+    const covered = revenuePerHead(stadium)
+    expect(covered).toBeGreaterThan(terraced)
+
+    stadium.stands[0].hospitalityBoxes = 40
+    expect(revenuePerHead(stadium)).toBeGreaterThan(covered)
+  })
+
+  it('closes places when a stand is left to rot, and reopens them on repair', () => {
+    const state = freshWorld('SAFETY')
+    const club = state.clubs[state.playerClubId]
+    const stand = club.facilities.stadium.stands[0]
+    stand.condition = 12
+
+    // The safety officer acts probabilistically; run enough weeks to be sure.
+    let closed = 0
+    for (let week = 0; week < 400 && closed === 0; week++) {
+      decayStadium(state, club, new Rng(`safety${week}`))
+      closed = stand.closedSeats
+    }
+    expect(closed, 'a condemned stand was never closed').toBeGreaterThan(0)
+    expect(club.facilities.stadium.capacity).toBeLessThan(
+      club.facilities.stadium.stands.reduce((sum, s) => sum + s.capacity, 0),
+    )
+  })
+
+  it('prices repairs sensibly relative to the club', () => {
+    const state = freshWorld('PRICING')
+    for (const club of Object.values(state.clubs).slice(0, 40)) {
+      const stand = club.facilities.stadium.stands[0]
+      stand.condition = 35
+      const cost = baseCost(state, club, { kind: 'repair', standId: stand.id })
+      const annualRevenue = weeklyRevenue(state, club) * 52
+      // Repairing one stand should be a real expense but never more than a
+      // club's entire yearly income — an earlier version quoted £208,000 to
+      // repair an 850-place non-league terrace.
+      expect(cost).toBeGreaterThan(0)
+      expect(cost, `${club.name} repair cost`).toBeLessThan(annualRevenue)
+    }
+  })
+
+  it('gives every club firms willing to quote for repairs', () => {
+    const state = freshWorld('PANEL')
+    for (const club of Object.values(state.clubs).slice(0, 30)) {
+      const stand = club.facilities.stadium.stands[0]
+      const bids = inviteTenders(state, club, { kind: 'repair', standId: stand.id })
+      const willing = bids.filter((b) => b.available)
+      expect(
+        willing.length,
+        `nobody would quote for repairs at ${club.name} (reputation ${club.reputation})`,
+      ).toBeGreaterThan(0)
+    }
+  })
+
+  it('produces a spread of quotes rather than one rounded figure', () => {
+    const state = freshWorld('SPREAD')
+    const club = state.clubs[state.playerClubId]
+    const stand = club.facilities.stadium.stands[0]
+    stand.condition = 40
+
+    const bids = inviteTenders(state, club, { kind: 'repair', standId: stand.id })
+      .filter((b) => b.available)
+    const distinctCosts = new Set(bids.map((b) => b.cost))
+    const distinctWeeks = new Set(bids.map((b) => b.weeks))
+    // A flat rounding step once made every cheap firm quote exactly the same,
+    // which removed the point of comparing them.
+    expect(distinctCosts.size).toBeGreaterThan(3)
+    expect(distinctWeeks.size).toBeGreaterThan(2)
+  })
+
+  it('completes a repair, restoring condition and reopening closed places', () => {
+    const state = freshWorld('REPAIR')
+    const club = state.clubs[state.playerClubId]
+    club.facilities.stadium.owned = true
+    club.finances.balance = 50_000_000
+    const stand = club.facilities.stadium.stands[0]
+    stand.condition = 30
+    stand.closedSeats = 200
+
+    const spec = { kind: 'repair' as const, standId: stand.id }
+    const bid = inviteTenders(state, club, spec).find((b) => b.available)!
+    const award = awardContract(state, club, new IdFactory(90_000), spec, bid.architectId)
+    expect(award.ok, award.message).toBe(true)
+    expect(club.facilities.stadiumProject).toBeTruthy()
+
+    for (let week = 0; week < 200 && club.facilities.stadiumProject; week++) {
+      progressStadiumWork(state, club, new Rng(`build${week}`))
+    }
+    expect(club.facilities.stadiumProject).toBeNull()
+    expect(stand.condition).toBeGreaterThan(80)
+    expect(stand.closedSeats).toBe(0)
+  })
+
+  it('refuses a second project while one is running', () => {
+    const state = freshWorld('ONEATATIME')
+    const club = state.clubs[state.playerClubId]
+    club.facilities.stadium.owned = true
+    club.finances.balance = 50_000_000
+    const spec = { kind: 'repair' as const, standId: club.facilities.stadium.stands[0].id }
+    const bids = inviteTenders(state, club, spec).filter((b) => b.available)
+
+    expect(awardContract(state, club, new IdFactory(91_000), spec, bids[0].architectId).ok).toBe(true)
+    const second = awardContract(state, club, new IdFactory(92_000), spec, bids[1].architectId)
+    expect(second.ok).toBe(false)
+    expect(second.message).toContain('already')
+  })
+
+  it('lets a tenant maintain its ground but not alter it', () => {
+    const state = freshWorld('TENANT')
+    const club = state.clubs[state.playerClubId]
+    club.facilities.stadium.owned = false
+    club.finances.balance = 50_000_000
+    const standId = club.facilities.stadium.stands[0].id
+
+    // Repairs are always allowed: a landlord permits maintenance, and
+    // forbidding it created a dead end where safety closures piled up with no
+    // remedy short of a move the club could never afford.
+    const repairSpec = { kind: 'repair' as const, standId }
+    const repairBid = inviteTenders(state, club, repairSpec).find((b) => b.available)!
+    expect(awardContract(state, club, new IdFactory(93_000), repairSpec, repairBid.architectId).ok)
+      .toBe(true)
+    club.facilities.stadiumProject = null
+
+    // Altering somebody else's property is not.
+    const expandSpec = { kind: 'expand' as const, standId, capacity: 2000 }
+    const expandBid = inviteTenders(state, club, expandSpec).find((b) => b.available)!
+    const expand = awardContract(state, club, new IdFactory(93_500), expandSpec, expandBid.architectId)
+    expect(expand.ok).toBe(false)
+    expect(expand.message).toContain('does not own')
+  })
+
+  it('charges a tenant more in ground rent than an owner', () => {
+    const state = freshWorld('RENT')
+    const club = state.clubs[state.playerClubId]
+    club.facilities.stadium.owned = true
+    const owned = operatingCosts(state, club).groundRent
+    club.facilities.stadium.owned = false
+    const rented = operatingCosts(state, club).groundRent
+    expect(rented).toBeGreaterThan(owned)
+  })
+
+  it('lets a club borrow for work it could never pay for in cash', () => {
+    const state = freshWorld('BORROW')
+    const club = state.clubs[state.playerClubId]
+    club.facilities.stadium.owned = true
+    club.finances.balance = 1000
+    const spec = { kind: 'repair' as const, standId: club.facilities.stadium.stands[0].id }
+    const bid = inviteTenders(state, club, spec).find((b) => b.available)!
+
+    const cash = awardContract(state, club, new IdFactory(94_000), spec, bid.architectId, 'cash')
+    expect(cash.ok).toBe(false)
+
+    const debtBefore = club.finances.debt
+    const borrowed = awardContract(state, club, new IdFactory(95_000), spec, bid.architectId, 'borrow')
+    expect(borrowed.ok, borrowed.message).toBe(true)
+    expect(club.finances.debt).toBe(debtBefore + bid.cost)
+    expect(club.finances.balance).toBeGreaterThan(1000)
+  })
+
+  it('marks the architect busy for the duration of the job', () => {
+    const state = freshWorld('BUSY')
+    const club = state.clubs[state.playerClubId]
+    club.facilities.stadium.owned = true
+    club.finances.balance = 50_000_000
+    const spec = { kind: 'repair' as const, standId: club.facilities.stadium.stands[0].id }
+    const bid = inviteTenders(state, club, spec).find((b) => b.available)!
+
+    awardContract(state, club, new IdFactory(96_000), spec, bid.architectId)
+    const architect = state.architects[bid.architectId]
+    expect(architect.busyUntil).toBeTruthy()
+
+    // And a different club cannot engage them meanwhile.
+    const other = Object.values(state.clubs).find((c) => c.id !== club.id)!
+    const otherBids = inviteTenders(state, other, {
+      kind: 'repair', standId: other.facilities.stadium.stands[0].id,
+    })
+    const sameFirm = otherBids.find((b) => b.architectId === bid.architectId)!
+    expect(sameFirm.available).toBe(false)
   })
 })

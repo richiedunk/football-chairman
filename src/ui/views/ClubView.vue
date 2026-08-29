@@ -16,6 +16,7 @@ const level = computed(() => levelFor(store.game?.director.xp ?? 0))
 const sections = computed(() => [
   { to: '/board', icon: '🏛', label: 'Board', detail: club.value ? confidenceLabel(club.value.board.confidence) : '' },
   { to: '/finance', icon: '💷', label: 'Finances', detail: formatMoney(club.value?.finances.balance ?? 0, store.currency) },
+  { to: '/stadium', icon: '🏟', label: 'Stadium', detail: club.value?.facilities.stadiumProject?.description ?? `${club.value?.facilities.stadium.capacity.toLocaleString()} places` },
   { to: '/facilities', icon: '🏗', label: 'Facilities', detail: `${club.value?.facilities.projects.length ?? 0} project${club.value?.facilities.projects.length === 1 ? '' : 's'} under way` },
   { to: '/staff', icon: '📋', label: 'Staff', detail: store.headCoach?.knownAs ?? 'No head coach' },
   { to: '/academy', icon: '🎓', label: 'Academy', detail: `${store.academy.length} in the setup` },

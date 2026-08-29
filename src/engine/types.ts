@@ -253,6 +253,8 @@ export interface Sponsorship {
 
 export interface Facilities {
   stadium: Stadium
+  /** Stadium work runs one project at a time; everything else is separate. */
+  stadiumProject: StadiumProject | null
   /** All 1-20. Each level costs progressively more to build and to run. */
   trainingGround: number
   youthFacilities: number
@@ -263,17 +265,139 @@ export interface Facilities {
   projects: FacilityProject[]
 }
 
+export type StandId = 'north' | 'south' | 'east' | 'west'
+
+export type StandType = 'terrace' | 'seated' | 'coveredSeated'
+
+/**
+ * A single stand.
+ *
+ * Stadiums are modelled stand by stand rather than as one capacity number
+ * because that is how they are actually built, maintained and condemned. A
+ * club with three good stands and one crumbling terrace has a specific,
+ * addressable problem; a club with "quality 47" has an abstraction.
+ */
+export interface Stand {
+  id: StandId
+  name: string
+  /** Seats or standing places built. Not all of them are necessarily usable. */
+  capacity: number
+  /** 0-100 physical condition. Decays with age; restored by repair work. */
+  condition: number
+  type: StandType
+  /** Executive boxes. Worth far more per head than an ordinary seat. */
+  hospitalityBoxes: number
+  builtYear: number
+  /**
+   * Places closed by the safety officer. Unusable until the stand is repaired,
+   * and the single most expensive consequence of neglecting the ground.
+   */
+  closedSeats: number
+}
+
 export interface Stadium {
   name: string
+  /** Usable capacity: built places, less anything closed or under works. */
   capacity: number
-  /** 0-100; affects matchday revenue per head and fan mood. */
+  /** 0-100, derived from the stands. Drives matchday spend and fan mood. */
   quality: number
   /** Base ticket price. */
   ticketPrice: number
+  stands: Stand[]
+  builtYear: number
+  /**
+   * Whether the club owns its ground. A tenant pays rent, cannot rebuild, and
+   * has relocation as its only route to a bigger stadium.
+   */
+  owned: boolean
+  /** 0-100. A poor pitch raises injury risk and annoys the coach. */
+  pitchCondition: number
+  /**
+   * Season the club last moved ground, if it ever has. Supporters remember a
+   * relocation for years, and the fan-mood assessment needs to be able to say
+   * so rather than leaving an unexplained collapse.
+   */
+  relocatedSeason: number | null
+}
+
+// ---------------------------------------------------------------------------
+// Stadium works
+// ---------------------------------------------------------------------------
+
+export type StadiumWorkKind = 'repair' | 'upgrade' | 'expand' | 'rebuild' | 'relocate'
+
+/**
+ * A firm that builds stadiums.
+ *
+ * Architects are the reason a capital project is a decision rather than a
+ * purchase. Cheap firms overrun, prestige firms deliver landmarks that lift
+ * the club's standing, and the good ones are busy when you need them.
+ */
+export interface Architect {
+  id: ID
+  firm: string
+  /** 0-100. Drives fee, and how much the finished ground flatters the club. */
+  reputation: number
+  /** The kinds of work this firm actually does well. */
+  specialisms: StadiumWorkKind[]
+  /** Multiplier on the base cost of the work. */
+  costFactor: number
+  /** Multiplier on the base duration. */
+  speedFactor: number
+  /** 0-100. Low reliability means overruns in both money and time. */
+  reliability: number
+  /** Bonus to the finished stand's condition and the ground's character. */
+  craftsmanship: number
+  nationId: ID
+  /** Season and week they are free again. Null when available now. */
+  busyUntil: { season: number; week: number } | null
+}
+
+/** One firm's answer to a tender. */
+export interface ArchitectBid {
+  architectId: ID
+  firm: string
+  cost: number
+  weeks: number
+  /** Their pitch, in their own words. */
+  note: string
+  /** Plain-language read on the risk of overrun. */
+  risk: 'dependable' | 'usually fine' | 'has form for overruns' | 'a gamble'
+  available: boolean
+  unavailableReason?: string
+}
+
+export interface StadiumProject {
+  id: ID
+  kind: StadiumWorkKind
+  standId: StandId | null
+  architectId: ID
+  architectFirm: string
+  /** What was agreed at tender. */
+  agreedCost: number
+  agreedWeeks: number
+  weeklyCost: number
+  weeksRemaining: number
+  /** What it has actually cost and taken so far. */
+  spent: number
+  overrunCost: number
+  overrunWeeks: number
+  description: string
+  /** Places taken out of use for the duration of the work. */
+  capacityReduction: number
+  /** Applied on completion. */
+  outcome: {
+    capacity?: number
+    type?: StandType
+    hospitalityBoxes?: number
+    condition?: number
+    stadiumName?: string
+    newStands?: Stand[]
+    pitchCondition?: number
+  }
 }
 
 export type FacilityKind =
-  | 'stadium'
   | 'trainingGround'
   | 'youthFacilities'
   | 'medicalCentre'
@@ -283,8 +407,6 @@ export type FacilityKind =
 export interface FacilityProject {
   id: ID
   kind: FacilityKind
-  /** For stadium projects, the seats being added. */
-  capacityAdded?: number
   targetLevel?: number
   totalCost: number
   weeklyCost: number
@@ -982,6 +1104,7 @@ export interface GameState {
   staff: Record<ID, Staff>
   agents: Record<ID, Agent>
   outlets: Record<ID, MediaOutlet>
+  architects: Record<ID, Architect>
 
   /** League tables keyed by league id. */
   tables: Record<ID, LeagueTableRow[]>

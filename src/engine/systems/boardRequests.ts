@@ -124,7 +124,7 @@ export function availableRequests(state: GameState, club: Club): BoardRequestOpt
       description: 'A major capital project, underwritten by the board.',
       risk: 'high',
       ...gate(
-        club.facilities.projects.some((p) => p.kind === 'stadium')
+        club.facilities.stadiumProject
           ? { ok: false, reason: 'Building work is already under way at the ground.' }
           : club.reputation < 25
             ? { ok: false, reason: 'A club this size cannot fill the seats it already has.' }
@@ -312,7 +312,7 @@ function grant(
       }
       return {
         outcome: 'granted',
-        message: `The board have approved a capital injection of ${formatMoney(grantAmount, currency)} for the ground. They will expect it spent on the ground.`,
+        message: `The board have approved a capital injection of ${formatMoney(grantAmount, currency)} for the ground. Appoint an architect and get the work under way.`,
         amount: grantAmount,
         confidenceChange,
       }

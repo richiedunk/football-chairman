@@ -46,8 +46,31 @@ export const useGameStore = defineStore('game', () => {
   let ids = new IdFactory(1)
   let names = new NameGenerator(new Rng('names'))
 
-  /** Signal that the state has changed and derived values must recompute. */
+  /**
+   * Signal that the state has changed and derived values must recompute.
+   *
+   * Bumping the revision counter is not enough on its own. Since Vue 3.4 a
+   * computed stops propagating when it re-evaluates to the same value, and
+   * `game` and `club` always return the *same object reference* — so a view
+   * computed derived from either of them would never re-run, however many
+   * times the revision changed. The symptom is a screen that shows stale data
+   * until you navigate away and back, which is exactly how this was found:
+   * awarding a stadium contract updated the state but not the page.
+   *
+   * Refreshing the identity of the two roots everything hangs off fixes it
+   * everywhere at once, rather than requiring every view to remember to touch
+   * the revision counter. Nested objects are shared, not copied, so existing
+   * references to a club's finances or squad stay valid — only a stale
+   * reference to a *top-level* club or state field would be missed, and the
+   * engine always re-reads those from the tables.
+   */
   function commit(): void {
+    const current = state.value
+    if (current) {
+      const club = current.clubs[current.playerClubId]
+      if (club) current.clubs[current.playerClubId] = { ...club }
+      state.value = { ...current }
+    }
     revision.value++
     triggerRef(state)
   }
