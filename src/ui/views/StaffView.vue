@@ -4,9 +4,12 @@ import { useGameStore } from '../../stores/game'
 import MeterBar from '../components/MeterBar.vue'
 import AppSheet from '../components/AppSheet.vue'
 import { formatWage } from '../../engine/systems/valuation'
-import { availableCoaches, hireCoach, relationshipLabel, respondToRequest } from '../../engine/systems/board'
-import { ROLE_LABELS, STYLE_LABELS, staffEffectiveness } from '../../engine/world/staffGen'
-import type { Staff } from '../../engine/types'
+import {
+  availableCoaches, availableStaff, dismissStaff, hireCoach, hireStaff, relationshipLabel,
+  respondToRequest,
+} from '../../engine/systems/board'
+import { expectedWage, ROLE_LABELS, STYLE_LABELS, staffEffectiveness } from '../../engine/world/staffGen'
+import type { Staff, StaffRole } from '../../engine/types'
 
 const store = useGameStore()
 const toast = inject<(t: string, k?: 'info' | 'error' | 'success') => void>('toast')
@@ -48,6 +51,69 @@ function confirmHire() {
   } else {
     toast?.(result.error, 'error')
   }
+}
+
+// --- Backroom hiring -------------------------------------------------------
+const hireRole = ref<StaffRole | null>(null)
+const selectedStaff = ref<Staff | null>(null)
+const staffWage = ref(0)
+const staffSeasons = ref(2)
+
+const HIREABLE_ROLES: StaffRole[] = [
+  'scout', 'assistantCoach', 'physio', 'analyst', 'academyDirector',
+  'fitnessCoach', 'goalkeepingCoach',
+]
+
+const roleCandidates = computed(() => {
+  const s = store.game
+  const c = club.value
+  if (!s || !c || !hireRole.value) return []
+  return availableStaff(s, c, hireRole.value)
+})
+
+function countOf(role: StaffRole): number {
+  return store.staff.filter((s) => s.role === role).length
+}
+
+function openRoleHire(role: StaffRole) {
+  hireRole.value = role
+  selectedStaff.value = null
+}
+
+function pickStaff(candidate: Staff) {
+  selectedStaff.value = candidate
+  staffWage.value = expectedWage(candidate)
+  staffSeasons.value = 2
+}
+
+function confirmStaffHire() {
+  const s = store.game
+  const c = club.value
+  const candidate = selectedStaff.value
+  if (!s || !c || !candidate) return
+  const result = hireStaff(s, c, candidate, staffWage.value, staffSeasons.value)
+  store.commit()
+  if (result.ok) {
+    toast?.(`${candidate.knownAs} has joined as ${ROLE_LABELS[candidate.role].toLowerCase()}.`, 'success')
+    hireRole.value = null
+    selectedStaff.value = null
+  } else {
+    toast?.(result.error, 'error')
+  }
+}
+
+function dismiss(member: Staff) {
+  const s = store.game
+  const c = club.value
+  if (!s || !c) return
+  const result = dismissStaff(s, c, member)
+  store.commit()
+  toast?.(
+    result.ok
+      ? `${member.knownAs} has left. Settlement cost ${result.cost.toLocaleString()}.`
+      : result.error,
+    result.ok ? 'success' : 'error',
+  )
 }
 
 function answer(requestId: string, accept: boolean) {
@@ -179,14 +245,100 @@ function answer(requestId: string, accept: boolean) {
             <div class="list__value">{{ staffEffectiveness(member) }}</div>
             <div class="list__sub">rating</div>
           </div>
+          <button class="btn btn--ghost btn--sm" aria-label="Dismiss" @click="dismiss(member)">✕</button>
         </div>
         <div v-if="!others.length" class="empty">No backroom staff.</div>
+      </div>
+    </div>
+
+    <div class="section-title">Hire</div>
+    <div class="card">
+      <div class="list">
+        <button
+          v-for="role in HIREABLE_ROLES"
+          :key="role"
+          class="list__row"
+          @click="openRoleHire(role)"
+        >
+          <div class="list__main">
+            <div class="list__primary">{{ ROLE_LABELS[role] }}</div>
+            <div class="list__secondary">
+              {{ countOf(role) }} employed
+              <template v-if="role === 'scout' && countOf(role) < 2">
+                — more scouts means more ground covered
+              </template>
+            </div>
+          </div>
+          <span class="faint">›</span>
+        </button>
       </div>
     </div>
 
     <button v-if="coach" class="btn btn--ghost btn--block mt" @click="hiringOpen = true">
       Replace the head coach
     </button>
+
+    <AppSheet
+      v-if="hireRole"
+      :title="`Hire a ${ROLE_LABELS[hireRole].toLowerCase()}`"
+      subtitle="Only people who would consider a club this size are shown"
+      @close="hireRole = null; selectedStaff = null"
+    >
+      <div v-if="!selectedStaff" class="list">
+        <button v-for="c in roleCandidates" :key="c.id" class="list__row" @click="pickStaff(c)">
+          <div class="list__main">
+            <div class="list__primary">{{ c.knownAs }}</div>
+            <div class="list__secondary">
+              {{ c.age }}y · wants {{ formatWage(expectedWage(c), store.currency) }}/wk
+            </div>
+          </div>
+          <div class="list__trail">
+            <div class="list__value">{{ staffEffectiveness(c) }}</div>
+            <div class="list__sub">rating</div>
+          </div>
+        </button>
+        <div v-if="!roleCandidates.length" class="empty">
+          Nobody available for this role who would join a club of this size.
+        </div>
+      </div>
+
+      <div v-else>
+        <div class="mb">
+          <div class="bold">{{ selectedStaff.knownAs }}</div>
+          <div class="small muted">
+            {{ ROLE_LABELS[selectedStaff.role] }} · rating {{ staffEffectiveness(selectedStaff) }}
+            · reputation {{ Math.round(selectedStaff.reputation) }}
+          </div>
+        </div>
+        <div class="field">
+          <label class="field__label">Weekly wage — {{ formatWage(staffWage, store.currency) }}</label>
+          <input
+            v-model.number="staffWage"
+            class="slider"
+            type="range"
+            :min="200"
+            :max="Math.max(3000, Math.round(expectedWage(selectedStaff) * 3))"
+            :step="50"
+          />
+          <div class="field__hint">
+            He expects around {{ formatWage(expectedWage(selectedStaff), store.currency) }}.
+            You have {{ formatWage((club?.finances.wageBudget ?? 0) - store.wageBill, store.currency) }} of headroom.
+          </div>
+        </div>
+        <div class="field">
+          <label class="field__label">Contract — {{ staffSeasons }} season{{ staffSeasons === 1 ? '' : 's' }}</label>
+          <input v-model.number="staffSeasons" class="slider" type="range" min="1" max="5" />
+        </div>
+      </div>
+
+      <template #footer>
+        <div v-if="selectedStaff" class="btn-row">
+          <button class="btn btn--ghost" @click="selectedStaff = null">Back</button>
+          <button class="btn btn--primary" @click="confirmStaffHire">Hire</button>
+        </div>
+        <div v-else class="tiny faint center">Select someone to make an offer.</div>
+      </template>
+    </AppSheet>
 
     <AppSheet
       v-if="hiringOpen"

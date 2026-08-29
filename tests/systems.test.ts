@@ -6,6 +6,8 @@ import { executeTransfer, moveAppeal } from '../src/engine/systems/transfers'
 import { buildReport, starsForLeague } from '../src/engine/systems/scouting'
 import { evaluateRenewal, suggestRenewal } from '../src/engine/systems/contracts'
 import { awardXp, CAREER_LEVELS, canTakeJobAt, levelFor, levelProgress } from '../src/engine/systems/career'
+import { availableStaff, dismissStaff, hireStaff } from '../src/engine/systems/board'
+import { expectedWage } from '../src/engine/world/staffGen'
 import { issueBriefing, checkForExposure } from '../src/engine/systems/media'
 import { computeValue, formatMoney, totalWageBill } from '../src/engine/systems/valuation'
 import { compress, decompress, MemoryAdapter } from '../src/storage/adapter'
@@ -349,5 +351,79 @@ describe('formatting', () => {
       (sum, id) => sum + (state.players[id]?.contract?.wage ?? 0), 0,
     )
     expect(total).toBeGreaterThanOrEqual(players)
+  })
+})
+
+describe('staff hiring', () => {
+  it('generates a pool of unattached staff to hire from', () => {
+    const state = freshWorld('HIRING')
+    const unemployed = Object.values(state.staff).filter((s) => s.clubId === null)
+    // Without this pool every hiring screen in the game is empty, and the
+    // scouting screen's advice to hire a scout is impossible to follow.
+    expect(unemployed.length).toBeGreaterThan(50)
+    const roles = new Set(unemployed.map((s) => s.role))
+    expect(roles.has('headCoach')).toBe(true)
+    expect(roles.has('scout')).toBe(true)
+    expect(roles.has('physio')).toBe(true)
+  })
+
+  it('offers every club at least one candidate for each role', () => {
+    const state = freshWorld('HIRING2')
+    const club = state.clubs[state.playerClubId]
+    for (const role of ['headCoach', 'scout', 'physio', 'analyst'] as const) {
+      expect(
+        availableStaff(state, club, role).length,
+        `no ${role} available to ${club.name} (reputation ${club.reputation})`,
+      ).toBeGreaterThan(0)
+    }
+  })
+
+  it('hires a scout and adds him to the wage bill', () => {
+    const state = freshWorld('HIRING3')
+    const club = state.clubs[state.playerClubId]
+    const before = totalWageBill(state, club)
+    const candidate = availableStaff(state, club, 'scout')[0]
+
+    const result = hireStaff(state, club, candidate, expectedWage(candidate), 2)
+    expect(result.ok).toBe(true)
+    expect(candidate.clubId).toBe(club.id)
+    expect(club.staff).toContain(candidate.id)
+    expect(totalWageBill(state, club)).toBeGreaterThan(before)
+  })
+
+  it('refuses a lowball offer and a club that is too small', () => {
+    const state = freshWorld('HIRING4')
+    const club = state.clubs[state.playerClubId]
+    const candidate = availableStaff(state, club, 'scout')[0]
+
+    const lowball = hireStaff(state, club, candidate, 1, 2)
+    expect(lowball.ok).toBe(false)
+
+    const elite = Object.values(state.staff).find(
+      (s) => s.clubId === null && s.role === 'scout' && s.reputation > club.reputation + 30,
+    )
+    if (elite) expect(hireStaff(state, club, elite, expectedWage(elite), 2).ok).toBe(false)
+  })
+
+  it('dismisses a staff member and pays up their contract', () => {
+    const state = freshWorld('HIRING5')
+    const club = state.clubs[state.playerClubId]
+    club.finances.balance = 5_000_000
+    const scout = club.staff.map((id) => state.staff[id]).find((s) => s.role === 'scout')!
+
+    const before = club.finances.balance
+    const result = dismissStaff(state, club, scout)
+    expect(result.ok).toBe(true)
+    expect(scout.clubId).toBeNull()
+    expect(club.staff).not.toContain(scout.id)
+    expect(club.finances.balance).toBeLessThan(before)
+  })
+
+  it('will not let the head coach be dismissed without a replacement', () => {
+    const state = freshWorld('HIRING6')
+    const club = state.clubs[state.playerClubId]
+    const coach = state.staff[club.headCoachId!]
+    const result = dismissStaff(state, club, coach)
+    expect(result.ok).toBe(false)
   })
 })

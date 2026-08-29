@@ -4,7 +4,7 @@ import { NameGenerator } from '../names/generator'
 import { NATION_DEFS, type NationDef } from './nations'
 import { generateClubName, generateStadiumName, type ClubNameStyle } from './clubNames'
 import { generatePlayer, generateSquad, generateYouthIntake } from './playerGen'
-import { generateBackroom } from './staffGen'
+import { generateBackroom, generateFreeAgentStaff } from './staffGen'
 import { computeValue, computeWageDemand } from '../systems/valuation'
 import { scheduleLeague } from '../sim/schedule'
 import { resetCup } from '../sim/cups'
@@ -244,6 +244,13 @@ export function generateWorld(options: WorldGenOptions): GameState {
   }
   for (const club of Object.values(state.clubs)) {
     setBudgets(state, club)
+  }
+
+  // --- Unattached staff ----------------------------------------------------
+  for (const member of generateFreeAgentStaff(
+    staffCtx, Object.keys(state.clubs).length, nationRecords,
+  )) {
+    state.staff[member.id] = member
   }
 
   // --- Agents --------------------------------------------------------------

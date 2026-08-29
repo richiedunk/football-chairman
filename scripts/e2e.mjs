@@ -122,6 +122,25 @@ await step('scouting', async () => {
   await page.screenshot({ path: `${SHOT}/10-scouting.png`, fullPage: true })
 })
 
+await step('hire a scout', async () => {
+  await page.goto('http://127.0.0.1:4173/#/staff')
+  await page.waitForSelector('text=Hire')
+  const before = await page.locator('.list__row:has-text("Scout")').count()
+  await page.click('.list__row:has-text("Scout") >> nth=-1')
+  await page.waitForSelector('.sheet')
+  await page.screenshot({ path: `${SHOT}/17-hire-list.png` })
+  const candidates = await page.locator('.sheet .list__row').count()
+  if (candidates === 0) throw new Error('no hireable scouts offered')
+  await page.click('.sheet .list__row >> nth=0')
+  await page.waitForSelector('.sheet .btn--primary:has-text("Hire")')
+  await page.screenshot({ path: `${SHOT}/18-hire-offer.png` })
+  await page.click('.sheet .btn--primary:has-text("Hire")')
+  await page.waitForTimeout(600)
+  const after = await page.locator('.list__row:has-text("Scout")').count()
+  if (after <= before) throw new Error(`scout count did not rise: ${before} -> ${after}`)
+  await page.screenshot({ path: `${SHOT}/19-staff-after.png` })
+})
+
 await step('media briefing', async () => {
   await page.goto('http://127.0.0.1:4173/#/media')
   await page.waitForSelector('text=Brief a journalist')

@@ -4,8 +4,9 @@ import { ledgerBalance } from './finance'
 import { positionalCompetence, ratingForPositionCached } from '../world/attributes'
 import { auditSquadDepth } from '../sim/selection'
 import { ordinal } from './career'
+import { expectedWage } from '../world/staffGen'
 import type {
-  BoardMandate, Club, GameState, League, LeagueTableRow, Player, SquadRequest, Staff,
+  BoardMandate, Club, GameState, League, LeagueTableRow, Player, SquadRequest, Staff, StaffRole,
 } from '../types'
 
 /**
@@ -342,13 +343,83 @@ export function respondToRequest(
   return `You tell ${coachStaff.knownAs} it is not possible. He is not happy, but he knows where he stands.`
 }
 
+/**
+ * Unattached staff who would consider working for this club.
+ *
+ * The reputation ceiling is what stops a non-league side hiring a coach who
+ * has run a top-flight club, and it is why improving the club is what unlocks
+ * better staff rather than simply having money.
+ */
+export function availableStaff(state: GameState, club: Club, role: StaffRole): Staff[] {
+  const ceiling = club.reputation + (role === 'headCoach' ? 18 : 24)
+  return Object.values(state.staff)
+    .filter((s) => s.role === role && s.clubId === null && s.reputation <= ceiling)
+    .sort((a, b) => b.reputation - a.reputation)
+    .slice(0, 15)
+}
+
 /** Candidates for a vacant head coach position, filtered by club standing. */
 export function availableCoaches(state: GameState, club: Club): Staff[] {
-  return Object.values(state.staff)
-    .filter((s) => s.role === 'headCoach' && s.clubId === null)
-    .filter((s) => s.reputation <= club.reputation + 18)
-    .sort((a, b) => b.reputation - a.reputation)
-    .slice(0, 12)
+  return availableStaff(state, club, 'headCoach')
+}
+
+/**
+ * Hire a non-coach staff member. Separate from hireCoach because appointing a
+ * head coach replaces an incumbent and changes who picks the team, whereas
+ * adding a scout is simply another salary.
+ */
+export function hireStaff(
+  state: GameState,
+  club: Club,
+  member: Staff,
+  wage: number,
+  seasons: number,
+): { ok: true } | { ok: false; error: string } {
+  if (member.clubId) return { ok: false, error: 'That person is already employed.' }
+  if (member.role === 'headCoach') {
+    return { ok: false, error: 'Use the head coach appointment for that.' }
+  }
+  if (member.reputation > club.reputation + 24) {
+    return { ok: false, error: `${member.knownAs} would not consider a club of this size.` }
+  }
+  if (wage < expectedWage(member) * 0.75) {
+    return { ok: false, error: `${member.knownAs} expects considerably more than that.` }
+  }
+  if (club.finances.inCrisis) {
+    return { ok: false, error: 'The club cannot take on more wages while in crisis.' }
+  }
+
+  member.clubId = club.id
+  member.contract = { wage: Math.round(wage), expiresSeason: state.date.season + seasons }
+  member.joinedSeason = state.date.season
+  club.staff.push(member.id)
+  return { ok: true }
+}
+
+/** Dismiss a staff member, paying up the remainder of their deal. */
+export function dismissStaff(
+  state: GameState,
+  club: Club,
+  member: Staff,
+): { ok: true; cost: number } | { ok: false; error: string } {
+  if (member.clubId !== club.id) return { ok: false, error: 'They do not work here.' }
+  if (member.id === club.headCoachId) {
+    return { ok: false, error: 'Appoint a replacement head coach instead.' }
+  }
+
+  const seasonsLeft = Math.max(0, (member.contract?.expiresSeason ?? state.date.season) - state.date.season)
+  const cost = Math.round((member.contract?.wage ?? 0) * (seasonsLeft * 52 + 26) * 0.5)
+  if (cost > club.finances.balance) {
+    return { ok: false, error: 'The club cannot afford the settlement.' }
+  }
+
+  club.finances.balance -= cost
+  club.finances.season.otherCosts += cost
+  club.staff = club.staff.filter((id) => id !== member.id)
+  member.clubId = null
+  member.contract = null
+  member.assignment = null
+  return { ok: true, cost }
 }
 
 /** Hire a coach. Returns an error if the wages cannot be met. */

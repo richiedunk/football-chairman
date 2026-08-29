@@ -208,6 +208,56 @@ export function generateBackroom(
   return staff
 }
 
+/**
+ * A pool of unattached staff looking for work.
+ *
+ * Without this the world contains no hireable staff at all — every generated
+ * coach, scout and physio already has a club — and the hiring screens are
+ * empty. The pool spans the full range of quality so that a lower-league club
+ * has genuine options and a big club still has to pay for the good ones.
+ */
+export function generateFreeAgentStaff(
+  ctx: StaffGenContext,
+  clubCount: number,
+  nations: Nation[],
+): Staff[] {
+  const out: Staff[] = []
+
+  // Sized relative to the world so a compact world is not swamped and a large
+  // one is not starved.
+  const counts: [StaffRole, number][] = [
+    ['headCoach', Math.max(12, Math.round(clubCount * 0.12))],
+    ['assistantCoach', Math.max(8, Math.round(clubCount * 0.06))],
+    ['scout', Math.max(16, Math.round(clubCount * 0.14))],
+    ['physio', Math.max(8, Math.round(clubCount * 0.07))],
+    ['analyst', Math.max(8, Math.round(clubCount * 0.07))],
+    ['academyDirector', Math.max(8, Math.round(clubCount * 0.06))],
+    ['fitnessCoach', Math.max(6, Math.round(clubCount * 0.05))],
+    ['goalkeepingCoach', Math.max(6, Math.round(clubCount * 0.05))],
+  ]
+
+  for (const [role, count] of counts) {
+    for (let i = 0; i < count; i++) {
+      // Quality is drawn across the whole range rather than clustered, so the
+      // pool always contains both bargains and people you cannot afford.
+      const quality = ctx.rng.float(8, 88)
+      const nation = ctx.rng.weighted(nations, nations.map((n) => n.population))
+      const staff = generateStaff(ctx, role, null, quality, nation)
+      out.push(staff)
+    }
+  }
+
+  return out
+}
+
+/**
+ * What a staff member expects to be paid. Exposed so the hiring screen can
+ * show a realistic starting figure rather than leaving the player to guess.
+ */
+export function expectedWage(staff: Staff): number {
+  return staffWage(staff.reputation, staff.role)
+}
+
 /** Overall usefulness of a staff member in their role, 0-100. */
 export function staffEffectiveness(staff: Staff): number {
   const keys = ROLE_KEY_ATTRIBUTES[staff.role]
