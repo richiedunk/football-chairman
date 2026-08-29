@@ -11,7 +11,7 @@ import {
 } from './registration'
 import type {
   Agent, Club, CompletedTransfer, Contract, GameState, ID, NegotiationLogEntry, Player,
-  TransferKind, TransferNegotiation, TransferTerms,
+  Position, TransferKind, TransferNegotiation, TransferTerms,
 } from '../types'
 
 /**
@@ -714,38 +714,54 @@ export function processAiTransfers(state: GameState, ctx: TransferContext): void
   if (!isTransferWindowOpen(state.date.week)) return
   const { rng } = ctx
 
+  // Everyone who could move, indexed by position and sorted by ability.
+  //
+  // Built once a week and shared. The old code scanned all ten thousand
+  // players in the world for every club that fancied a signing, which is what
+  // kept the activity rate pinned so low: raising it was unaffordable. With an
+  // index a club looks at a few dozen players in its own bracket instead.
+  const market = buildMarketIndex(state)
+
   for (const club of Object.values(state.clubs)) {
     if (club.id === state.playerClubId) continue
-    if (club.finances.inCrisis) continue
-    // Clubs do not act every week; the window would empty in a fortnight.
-    if (!rng.chance(0.1)) continue
+
+    // A club in crisis was skipped entirely, which meant it could not sell —
+    // the one thing it most needs to do. It could only sit there paying wages
+    // it could not afford while the interest compounded, and the lower
+    // divisions filled up with clubs that could never trade their way out.
+    // It may now sell and loan out; it still may not buy.
+    const inCrisis = club.finances.inCrisis
 
     const squad = club.squad
       .map((id) => state.players[id])
       .filter((p): p is Player => Boolean(p) && !p.isAcademy)
 
-    // Sell first: surplus players, and anyone who has asked to leave.
+    // Sell, loan and buy are checked independently rather than as an
+    // exclusive chain. A club that has just sold someone is more likely to
+    // sign someone, not less, and the old `continue` after each branch meant
+    // a club could do at most one piece of business a week.
+    // A club that has to raise money will listen to offers for anyone who is
+    // not part of the spine, not just the ones it has already given up on.
     const sellable = squad.filter(
-      (p) => p.listedForTransfer || p.transferRequested || (squad.length > 26 && p.squadStatus === 'backup'),
+      (p) => p.listedForTransfer || p.transferRequested
+        || (squad.length > 26 && p.squadStatus === 'backup')
+        || (inCrisis && (p.squadStatus === 'backup' || p.squadStatus === 'rotation')),
     )
-    if (sellable.length > 0 && rng.chance(0.4)) {
+    if (sellable.length > 0 && rng.chance(inCrisis ? SELL_CHANCE * 2.5 : SELL_CHANCE)) {
       const player = rng.pick(sellable)
       const buyerPool = Object.values(state.clubs).filter(
         (c) => c.id !== club.id && !c.finances.inCrisis && c.finances.transferBudget >= player.value,
       )
       if (buyerPool.length > 0) {
         const buyer = rng.pick(buyerPool)
-        if (buyer.id !== state.playerClubId) {
-          aiCompleteDeal(state, ctx, player, club, buyer)
-          continue
-        }
+        if (buyer.id !== state.playerClubId) aiCompleteDeal(state, ctx, player, club, buyer)
       }
     }
 
     // Loan out a young player who is not getting a game. This is the single
     // most common piece of business in football and without it the loan market
     // is empty except for whatever the human club does.
-    if (rng.chance(0.25)) {
+    if (rng.chance(LOAN_CHANCE)) {
       const stuck = squad.filter(
         (p) => p.age <= 22 && !p.loanClubId && p.stats.appearances < 3 && !p.injury,
       )
@@ -774,25 +790,33 @@ export function processAiTransfers(state: GameState, ctx: TransferContext): void
             wageContribution: rng.float(0.3, 0.8),
             loanUntilSeason: state.date.season,
           })
-          continue
         }
       }
     }
 
     // Buy: find the position where the club is weakest relative to its league.
+    if (inCrisis) continue
     if (squad.length >= 28) continue
+    if (!rng.chance(BUY_CHANCE)) continue
     const targetPosition = weakestPosition(state, club, squad)
     if (!targetPosition) continue
 
-    const candidates = Object.values(state.players).filter((p) => {
-      if (p.clubId === club.id || p.isAcademy || p.loanClubId) return false
-      if (p.position !== targetPosition) return false
-      if (p.currentAbility < club.reputation * 1.1) return false
+    const wageRoom = club.finances.wageBudget - totalWageBill(state, club)
+    const league = state.leagues[club.leagueId]
+    const nation = state.nations[club.nationId]
+
+    const candidates: Player[] = []
+    for (const p of market.get(targetPosition) ?? []) {
+      // The list is sorted by ability, so once it drops below the club's
+      // standard there is nothing further down worth looking at.
+      if (p.currentAbility < club.reputation * 1.1) break
+      if (p.clubId === club.id) continue
       const price = p.clubId ? p.value * 1.3 : 0
-      if (price > club.finances.transferBudget) return false
-      const wage = computeWageDemand(p, state.leagues[club.leagueId], state.nations[club.nationId])
-      return totalWageBill(state, club) + wage <= club.finances.wageBudget
-    })
+      if (price > club.finances.transferBudget) continue
+      if (computeWageDemand(p, league, nation) > wageRoom) continue
+      candidates.push(p)
+      if (candidates.length >= 40) break
+    }
 
     if (candidates.length === 0) continue
     const target = rng.weighted(candidates, candidates.map((p) => p.currentAbility))
@@ -802,8 +826,34 @@ export function processAiTransfers(state: GameState, ctx: TransferContext): void
     // approach becomes an offer the director gets to answer.
     if (sellerClub?.id === state.playerClubId) continue
 
-    if (rng.chance(0.55)) aiCompleteDeal(state, ctx, target, sellerClub, club)
+    aiCompleteDeal(state, ctx, target, sellerClub, club)
   }
+}
+
+/**
+ * How often a club does each kind of business, per week of an open window.
+ *
+ * Set from the real rate rather than from feel. A Premier League club makes
+ * something like six to eight permanent signings across a season's two
+ * windows, and the same is true further down; the old rates produced half a
+ * signing per club per season across the entire world, which left the transfer
+ * market inert and clubs sitting on money they had no way to spend.
+ */
+const SELL_CHANCE = 0.2
+const LOAN_CHANCE = 0.14
+const BUY_CHANCE = 0.42
+
+/** Transferable players by position, best first. */
+function buildMarketIndex(state: GameState): Map<Position, Player[]> {
+  const index = new Map<Position, Player[]>()
+  for (const player of Object.values(state.players)) {
+    if (player.isAcademy || player.loanClubId) continue
+    const list = index.get(player.position)
+    if (list) list.push(player)
+    else index.set(player.position, [player])
+  }
+  for (const list of index.values()) list.sort((a, b) => b.currentAbility - a.currentAbility)
+  return index
 }
 
 function aiCompleteDeal(

@@ -609,7 +609,7 @@ describe('operating costs', () => {
     const parts =
       costs.stadiumMaintenance + costs.groundRent + costs.trainingGround
       + costs.youthSetup + costs.medical + costs.dataDepartment
-      + costs.scoutingNetwork + costs.supportStaff
+      + costs.scoutingNetwork + costs.supportStaff + costs.generalOverheads
     // Rounding of each line can differ from rounding the sum by a pound or two.
     expect(Math.abs(parts - costs.total)).toBeLessThanOrEqual(8)
     expect(costs.supportHeadcount).toBeGreaterThanOrEqual(2)
@@ -665,8 +665,8 @@ describe('operating costs', () => {
     const smallRatio = smallCosts / weeklyRevenue(state, small)
     expect(smallRatio).toBeGreaterThan(bigRatio)
     // And neither end is absurd.
-    expect(bigRatio).toBeLessThan(0.35)
-    expect(smallRatio).toBeLessThan(0.65)
+    expect(bigRatio).toBeLessThan(0.42)
+    expect(smallRatio).toBeLessThan(0.75)
   })
 })
 

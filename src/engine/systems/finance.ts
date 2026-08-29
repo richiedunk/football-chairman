@@ -195,6 +195,19 @@ export interface OperatingCosts {
   supportStaff: number
   /** Implied headcount behind that support staff figure, for the UI. */
   supportHeadcount: number
+  /**
+   * Everything else it takes to run a football club: staging matches, travel,
+   * insurance, policing and stewarding, commercial and ticketing operations,
+   * professional fees and tax.
+   *
+   * A proportion of turnover rather than an itemised list, because that is
+   * what it is — the costs scale with the size of the operation and none of
+   * them is a decision the director of football makes. Without it clubs banked
+   * 15-28% of everything they earned and the balances climbed for ever;
+   * football clubs run at or about break-even, and a world where they do not
+   * is one where money has nowhere to go.
+   */
+  generalOverheads: number
   total: number
 }
 
@@ -219,6 +232,23 @@ function groundRentPerSeat(reputation: number): number {
 /** Weekly cost of one support-staff head, driven by local wage levels. */
 function supportStaffCost(reputation: number): number {
   return 50 + Math.pow(reputation / 100, 1.8) * 3000
+}
+
+/**
+ * Share of turnover that goes on running the club, beyond the itemised lines.
+ *
+ * Rises gently with the size of the operation, and gently is the point. The
+ * itemised lines above carry the economies of scale — a ground, a training
+ * pitch and a physiotherapist cost roughly what they cost whoever owns them,
+ * which is why they eat a quarter of a non-league club's income and a twelfth
+ * of a big club's. Staging matches, travelling, insuring and administering do
+ * scale with the operation, so the share climbs, but only enough to put more
+ * drag on the clubs with money to spare without cancelling the gradient: a
+ * steeper version cancelled it exactly and left every division paying the same
+ * 35-39% of revenue to run itself.
+ */
+function generalOverheadShare(reputation: number): number {
+  return 0.15 + (reputation / 100) * 0.08
 }
 
 export function operatingCosts(state: GameState, club: Club): OperatingCosts {
@@ -279,9 +309,11 @@ export function operatingCosts(state: GameState, club: Club): OperatingCosts {
   )
   const supportStaff = supportHeadcount * supportStaffCost(club.reputation) * col
 
+  const generalOverheads = weeklyRevenue(state, club) * generalOverheadShare(club.reputation)
+
   const total =
     stadiumMaintenance + groundRent + trainingGround + youthSetup + medical
-    + dataDepartment + scoutingNetwork + supportStaff
+    + dataDepartment + scoutingNetwork + supportStaff + generalOverheads
 
   return {
     stadiumMaintenance: Math.round(stadiumMaintenance),
@@ -293,6 +325,7 @@ export function operatingCosts(state: GameState, club: Club): OperatingCosts {
     scoutingNetwork: Math.round(scoutingNetwork),
     supportStaff: Math.round(supportStaff),
     supportHeadcount,
+    generalOverheads: Math.round(generalOverheads),
     total: Math.round(total),
   }
 }
@@ -316,6 +349,28 @@ export function weeklyRevenue(state: GameState, club: Club): number {
 }
 
 /**
+ * The most of its revenue a board will ever commit to wages.
+ *
+ * Above this a club must sell before it can buy. Set above the squad-cost
+ * limit rather than at it, because the limit is measured against income
+ * including prize money and player-trading profit, which run-rate revenue
+ * does not count.
+ */
+const WAGE_BUDGET_CEILING = 0.68
+
+/**
+ * The share of what is left after running costs that a board puts on wages.
+ *
+ * The remainder is what the club has to trade with and to keep in reserve, so
+ * this is also the number that decides whether transfer fees can move at all.
+ * It is deliberately thin. Real clubs fund transfers mostly out of player
+ * sales rather than out of profit, which is exactly why they run at about
+ * break-even, and a share generous enough to leave a comfortable surplus
+ * produced clubs sitting on three times their annual revenue in cash.
+ */
+const WAGE_BUDGET_SHARE = 0.88
+
+/**
  * Board-set budgets, recalculated at the start of each season and when the
  * club changes division. The board is not generous: it allocates from
  * projected revenue, and it holds a reserve back.
@@ -326,9 +381,37 @@ export function recalculateBudgets(state: GameState, club: Club): void {
 
   // Wage budget: a share of revenue that shrinks as the board's financial
   // caution rises. A board that has just watched you overspend is tighter.
+  //
+  // The floor used to sit at 90% of the wages already committed, which
+  // guaranteed that any club whose bill had drifted above the allowance was
+  // permanently over budget and could therefore never sign anybody. Measured
+  // after the wage recalibration, that was 8 of 20 top-flight clubs, 11 of 24
+  // in the third tier and 17 of 22 in non-league — frozen out of the market,
+  // banking every penny they earned. The floor now sits slightly *above*
+  // committed wages, so a club can always do some business.
+  //
+  // The ceiling is the other half of it. A club whose bill has run past
+  // WAGE_BUDGET_CEILING of revenue gets no room at all and has to sell before
+  // it can buy, which is the pressure the squad-cost rule is meant to create.
   const cautionFactor = 1 - (club.board.expectation.financialImportance / 100) * 0.16
-  const wageAllowance = Math.round((revenue * 0.6 * cautionFactor) / 52)
-  club.finances.wageBudget = Math.max(Math.round(currentWages / 52 * 0.9), wageAllowance)
+  const weeklyWages = currentWages / 52
+  // Budgeted out of what is left after the club's running costs, not as a flat
+  // share of turnover. The flat share was internally inconsistent at the
+  // bottom of the pyramid, where upkeep alone eats a third of income: 58% for
+  // wages plus 34% upkeep plus staff came to more than the club earned, so
+  // non-league sides were handed a budget they could never survive spending
+  // and ten of twenty-two ended up in financial crisis.
+  const runningCosts = facilityUpkeep(state, club) * 52
+  const wageAllowance = Math.round(
+    (Math.max(0, revenue - runningCosts) * WAGE_BUDGET_SHARE * cautionFactor) / 52,
+  )
+  const ceiling = Math.round((weeklyRevenue(state, club)) * WAGE_BUDGET_CEILING)
+  club.finances.wageBudget = Math.max(
+    Math.min(Math.max(Math.round(weeklyWages * 1.05), wageAllowance), ceiling),
+    // Never below what is already committed, or the club cannot pay its own
+    // players without being told it is overspending.
+    Math.round(weeklyWages),
+  )
 
   // Transfer budget: what is left after wages, plus a slice of cash reserves.
   const projectedSurplus = revenue - currentWages - facilityUpkeep(state, club) * 52

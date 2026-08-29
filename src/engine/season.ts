@@ -336,12 +336,47 @@ function processPlayerYearEnd(state: GameState, deps: RolloverDeps): void {
   const retiring: Player[] = []
 
   for (const player of Object.values(state.players)) {
+    // Self-healing invariant: an academy player always belongs to a club.
+    // Anything else is invisible to every system that manages players, so it
+    // is cleaned up here rather than left to accumulate — this also repairs
+    // saves made before the expiry path was fixed.
+    if (player.isAcademy && !player.clubId) {
+      delete state.players[player.id]
+      continue
+    }
+
     // Contracts that ran out. The player leaves for nothing, which is the
     // whole reason the renewals screen exists.
     if (player.contract && player.contract.expiresSeason <= season) {
       const club = player.clubId ? state.clubs[player.clubId] : null
       const borrower = player.loanClubId ? state.clubs[player.loanClubId] : null
       if (borrower) borrower.loanedIn = borrower.loanedIn.filter((id) => id !== player.id)
+
+      // An academy player whose deal runs out is released, not turned into a
+      // free agent who happens to still be marked as somebody's youth player.
+      //
+      // Leaving him marked academy with no club made him invisible to every
+      // system in the game: the academy churn pass only looks inside squads,
+      // the free-agent pass skips anyone marked academy so his weeks-without-a-
+      // club never ticked up, and retirement never reached him because it is
+      // driven by that counter. They accumulated for ever — 2,378 of them by
+      // season twelve, more than a fifth of the world's players, none of whom
+      // could be signed, released or retired by anything.
+      if (player.isAcademy) {
+        if (club) club.squad = club.squad.filter((id) => id !== player.id)
+        if (rng.chance(0.25)) {
+          // A handful drop into the free-agent pool and go on to have careers
+          // lower down, which is also true to life.
+          player.isAcademy = false
+          player.clubId = null
+          player.contract = null
+          player.value = 0
+        } else {
+          delete state.players[player.id]
+        }
+        continue
+      }
+
       if (club) {
         club.squad = club.squad.filter((id) => id !== player.id)
         if (club.id === state.playerClubId) {

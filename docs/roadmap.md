@@ -164,19 +164,18 @@ anyone is listening.
 
 ## Known defects
 
-- **Clubs accumulate cash with nothing to spend it on.** A top-flight club
-  averages £319m in the bank after six seasons and it keeps growing, because
-  AI transfer activity runs at roughly half a permanent signing per club per
-  season against revenue that always exceeds costs. Surfaced by the squad-cost
-  work and left alone deliberately: the squad-cost rule binds on the ratio, not
-  on cash, so it works regardless. But it means the financial-crisis machinery
-  almost never fires, and financial pressure across the world is weaker than it
-  should be. The fix is on the transfer side, not the finance side.
-
-- **The world's player population grows about 400 a season** — 7,457 at
-  creation, 12,106 after ten. Academy intake outpaces retirement. Bounded and
-  slow, but a thirty-season career would carry roughly 24,000 players and a
-  save around 9 MB. Worth watching rather than fixing now.
+- **Non-league clubs still fall into financial crisis too often** — around 7 of
+  22, against 1-2 of 24 in every other division. They run on margins of a few
+  percent and any bad season tips them into debt they service slowly. They can
+  now trade their way out, which they could not before, but the rate is higher
+  than it should be.
+- **Cash still drifts upward at the top.** A top-flight club averages £189m
+  after eight seasons, against £306m before this work but still climbing.
+  Transfer fees cannot fix it — one club's fee is another's income, so they net
+  to zero worldwide — and the remaining gap is that permanent fee-paying deals
+  run at about one per club per season against a real six to eight. Total squad
+  turnover is close to right (roughly five moves a club a season across
+  permanent, free and loan); it is the mix that is wrong.
 
 ## Standing rules for this project
 
