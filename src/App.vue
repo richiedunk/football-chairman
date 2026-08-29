@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { computed, onMounted, provide, ref } from 'vue'
+import { computed, onMounted, onUnmounted, provide, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useGameStore } from './stores/game'
 import AppTopBar from './ui/components/AppTopBar.vue'
 import AppTabBar from './ui/components/AppTabBar.vue'
 import { listSaves } from './storage/saves'
+import { bindAppStateChange, bindBackButton } from './platform/native'
 
 const store = useGameStore()
 const route = useRoute()
@@ -30,10 +31,32 @@ const isSetupRoute = computed(() =>
 )
 const showChrome = computed(() => store.loaded && !isSetupRoute.value)
 
+const cleanups: (() => void)[] = []
+
 onMounted(async () => {
   hasSaves.value = (await listSaves()).length > 0
   // A reload mid-career should land back in the game, not on the title screen.
   if (!store.loaded && !isSetupRoute.value) router.replace({ name: 'start' })
+
+  // Android's hardware back button, so back navigates rather than quitting.
+  cleanups.push(
+    await bindBackButton(
+      () => !['start', 'home'].includes(String(route.name)),
+      () => router.back(),
+    ),
+  )
+
+  // Mobile operating systems kill backgrounded apps without warning, so the
+  // last chance to persist progress is the moment the app loses focus.
+  cleanups.push(
+    await bindAppStateChange(() => {
+      if (store.loaded && store.game?.settings.autosave) void store.autosave()
+    }),
+  )
+})
+
+onUnmounted(() => {
+  for (const cleanup of cleanups) cleanup()
 })
 </script>
 

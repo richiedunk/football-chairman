@@ -217,8 +217,10 @@ export function formatMoney(amount: number, currency = 'GBP'): string {
   const sign = amount < 0 ? '-' : ''
   if (abs >= 1_000_000_000) return `${sign}${symbol}${(abs / 1_000_000_000).toFixed(2)}bn`
   if (abs >= 1_000_000) {
+    // Football money is written "£45m" and "£1.5m" — a decimal place is
+    // meaningful at one million and noise at forty-five.
     const m = abs / 1_000_000
-    return `${sign}${symbol}${m >= 100 ? m.toFixed(0) : m.toFixed(1)}m`
+    return `${sign}${symbol}${m >= 10 ? m.toFixed(0) : m.toFixed(1)}m`
   }
   if (abs >= 1_000) return `${sign}${symbol}${Math.round(abs / 1_000)}k`
   return `${sign}${symbol}${Math.round(abs)}`

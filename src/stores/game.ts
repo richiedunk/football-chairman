@@ -17,6 +17,7 @@ import {
 import { promoteToSenior } from '../engine/systems/academy'
 import { openNegotiation } from '../engine/systems/transfers'
 import { AUTOSAVE_SLOT, loadGame, saveGame } from '../storage/saves'
+import { haptic } from '../platform/native'
 import type {
   Club, Fixture, GameState, ID, InboxItem, League, MatchResult, Player, Staff,
 } from '../engine/types'
@@ -287,6 +288,7 @@ export const useGameStore = defineStore('game', () => {
     const s = state.value
     if (!s) return { ok: false, reason: 'No game loaded.' }
     if (blockers.value.length > 0) {
+      if (s.settings.hapticsEnabled) void haptic('warning')
       return {
         ok: false,
         reason: `${blockers.value.length} matter${blockers.value.length === 1 ? '' : 's'} need${blockers.value.length === 1 ? 's' : ''} your decision first.`,
@@ -300,6 +302,15 @@ export const useGameStore = defineStore('game', () => {
       await nextFrame()
       lastTick.value = advanceWeek(s, { ids, names })
       commit()
+
+      if (s.settings.hapticsEnabled) {
+        // Weight the feedback by what actually happened: being sacked should
+        // not feel the same as a quiet week.
+        if (lastTick.value.sacked) void haptic('error')
+        else if (lastTick.value.seasonEnded) void haptic('success')
+        else if (lastTick.value.playerFixtures.length) void haptic('medium')
+        else void haptic('light')
+      }
 
       if (s.settings.autosave) {
         void autosave()

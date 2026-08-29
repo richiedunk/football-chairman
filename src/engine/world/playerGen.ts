@@ -267,9 +267,18 @@ export function generateYouthIntake(
     // hopeless teenager with a hidden number attached. That matters because the
     // coach decides who plays: a 50-rated wonderkid would never get on the pitch
     // to develop, and the talent would rot in the reserves.
-    const currentAbility = isWonderkid
-      ? Math.round(clamp(rng.normal(floor + 46, 12), 55, 130))
-      : Math.round(clamp(rng.normal(floor + 12, 10), 20, 95))
+    //
+    // The age ceiling still applies. A well-funded academy could otherwise
+    // produce a 15-year-old rated above what any 15-year-old has ever been,
+    // which contradicts the same curve squad generation is held to.
+    const ceilingForAge = maxAbilityForAge(age)
+    const currentAbility = Math.round(
+      clamp(
+        isWonderkid ? rng.normal(floor + 46, 12) : rng.normal(floor + 12, 10),
+        20,
+        Math.min(isWonderkid ? 130 : 95, ceilingForAge),
+      ),
+    )
 
     const potentialCeiling = isWonderkid
       ? clamp(rng.normal(168, 12), 140, 198)
