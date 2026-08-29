@@ -90,14 +90,27 @@ export function processBoard(
     if (club.board.confidence < 18 && seasonProgress > 0.2) {
       if (rng.chance(0.25)) {
         club.board.warnings += 1
+        // Say what actually cost you the job. A board that dismisses a
+        // director for the finances and cites the league table teaches him
+        // the wrong lesson, and financial collapse is meant to end in a
+        // sacking rather than in an administrator — you are the director of
+        // football, not the owner.
+        const financial = club.finances.inCrisis
+          || club.finances.regulation.sanctions.some((s) => s.seasonsRemaining > 0)
+        const grounds = financial
+          ? `${club.name} are in a financial state the board hold you responsible for`
+          : `${club.name} sit ${position}${ordinal(position)} against a target of ${expected}${ordinal(expected)}`
+
         if (club.board.warnings >= 3) {
           messages.push(
-            `The board have terminated your contract. ${club.name} sit ${position}${ordinal(position)} against a target of ${expected}${ordinal(expected)}, and they have run out of patience.`,
+            `The board have terminated your contract. ${grounds}, and they have run out of patience. Your successor will rebuild as they see fit.`,
           )
           return { messages, sacked: true }
         }
         messages.push(
-          `Formal warning from the board (${club.board.warnings} of 3). They expected ${expected}${ordinal(expected)} and the club is ${position}${ordinal(position)}. Results must improve.`,
+          financial
+            ? `Formal warning from the board (${club.board.warnings} of 3). The club's finances are not where they should be and they hold you responsible. This has to be fixed.`
+            : `Formal warning from the board (${club.board.warnings} of 3). They expected ${expected}${ordinal(expected)} and the club is ${position}${ordinal(position)}. Results must improve.`,
         )
       }
     } else if (club.board.confidence > 60 && club.board.warnings > 0 && rng.chance(0.2)) {

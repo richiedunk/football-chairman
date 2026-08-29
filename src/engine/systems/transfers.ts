@@ -620,6 +620,14 @@ export function executeTransfer(
     }
     seller.finances.balance += net
     seller.finances.season.transfersOut += net
+
+    // Profit on disposal is the fee less what the player is still carried at.
+    // An academy graduate has a book value of zero, so his whole fee is
+    // profit; a signing sold below what is left of his fee is a loss the
+    // books have to swallow. This is the single most important number in
+    // squad-cost compliance, and the reason a club in trouble sells its own
+    // young players rather than its expensive ones.
+    seller.finances.season.playerTradingProfit += net - player.bookValue
     seller.squad = seller.squad.filter((id) => id !== player.id)
     releaseRegistration(seller, player.id)
     reactToDeparture(state, seller, player)
@@ -648,6 +656,12 @@ export function executeTransfer(
   player.contract = contract
   player.weeksUnattached = 0
   player.purchaseFee = upfront
+  // The fee is written down over the contract signed with it, which is what
+  // makes a long contract a financial instrument rather than just a longer
+  // commitment: the same fee costs less per season on a five-year deal.
+  const amortisationSeasons = Math.max(1, contract.expiresSeason - state.date.season)
+  player.bookValue = upfront
+  player.amortisationCharge = Math.round(upfront / amortisationSeasons)
   player.joinedSeason = state.date.season
   player.transferRequested = false
   player.listedForTransfer = false

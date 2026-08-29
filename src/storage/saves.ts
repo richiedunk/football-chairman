@@ -135,6 +135,30 @@ function migrate(state: GameState): GameState {
     state.version = 3
   }
 
+  // v4: transfer-fee amortisation and financial regulation. An older save has
+  // fees booked as lump sums with no book value left to write down, so every
+  // player is treated as fully amortised — which is both the safe reading and
+  // very nearly the true one for anyone signed more than a season ago.
+  if (state.version < 4) {
+    for (const player of Object.values(state.players)) {
+      if (typeof player.bookValue !== 'number') player.bookValue = 0
+      if (typeof player.amortisationCharge !== 'number') player.amortisationCharge = 0
+    }
+    for (const club of Object.values(state.clubs)) {
+      if (!club.finances.regulation) {
+        club.finances.regulation = {
+          lastRatio: null, breachSeasons: 0, sanctions: [], pointsDeducted: 0,
+        }
+      }
+      for (const ledger of [club.finances.season, club.finances.lastSeason]) {
+        if (!ledger) continue
+        if (typeof ledger.amortisation !== 'number') ledger.amortisation = 0
+        if (typeof ledger.playerTradingProfit !== 'number') ledger.playerTradingProfit = 0
+      }
+    }
+    state.version = 4
+  }
+
   state.version = SAVE_VERSION
   return state
 }

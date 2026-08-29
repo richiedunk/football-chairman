@@ -1,4 +1,5 @@
 import { isTransferWindowOpen } from '../sim/schedule'
+import { embargoAllows } from './regulation'
 import { ratingForPositionCached } from '../world/attributes'
 import type { Club, GameState, ID, Player } from '../types'
 
@@ -140,6 +141,7 @@ export type RegistrationError =
   | 'alreadyRegistered'
   | 'squadFull'
   | 'noHomegrownPlaces'
+  | 'embargo'
 
 export const REGISTRATION_MESSAGES: Record<RegistrationError, string> = {
   closed: 'The registration window is closed. Squad lists are locked until it reopens.',
@@ -149,6 +151,9 @@ export const REGISTRATION_MESSAGES: Record<RegistrationError, string> = {
   noHomegrownPlaces:
     `Only ${NON_HOMEGROWN_LIMIT} places may go to players trained outside the country, and they are all taken. `
     + 'A homegrown player would still fit.',
+  embargo:
+    'The club is under a registration embargo for breaching the squad-cost rules. '
+    + 'Nobody new may be added to the squad list until it is lifted.',
 }
 
 export interface RegistrationResult {
@@ -170,6 +175,13 @@ export function canRegister(
   if (!opts.ignoreWindow && !isRegistrationOpen(state.date.week)) return fail('closed')
   if (!registrablePool(state, club).some((p) => p.id === player.id)) return fail('notAtClub')
   if (club.registeredIds.includes(player.id)) return fail('alreadyRegistered')
+  // An embargo is where financial regulation stops being a message and starts
+  // being a consequence: the club may still buy whoever it likes, and may not
+  // put him on the team sheet. It bars players signed since the embargo was
+  // imposed, not the squad the club already had.
+  if (needsRegistration(player) && !embargoAllows(club, player.joinedSeason)) {
+    return fail('embargo')
+  }
   // An under-21 is always eligible, so "registering" him is a no-op we accept
   // rather than an error — the UI never offers it.
   if (!needsRegistration(player)) return { ok: true }
@@ -242,6 +254,9 @@ export function autoRegister(state: GameState, club: Club): Player[] {
 
   for (const { player } of ranked) {
     if (named.length >= SQUAD_LIMIT) break
+    // Anyone signed since the embargo was imposed sits out, which is what
+    // makes the sanction cost something without dismantling the club.
+    if (!embargoAllows(club, player.joinedSeason)) continue
     const homegrown = isHomegrownFor(player, club)
     if (!homegrown && nonHomegrown >= NON_HOMEGROWN_LIMIT) continue
     named.push(player.id)
@@ -289,6 +304,7 @@ export function reconcileRegistration(state: GameState, club: Club): Player[] {
 
   for (const { player } of candidates) {
     if (kept.length >= SQUAD_LIMIT) break
+    if (!embargoAllows(club, player.joinedSeason)) continue
     const homegrown = isHomegrownFor(player, club)
     if (!homegrown && nonHomegrown >= NON_HOMEGROWN_LIMIT) continue
     kept.push(player.id)

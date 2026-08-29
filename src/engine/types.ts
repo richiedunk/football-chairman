@@ -233,6 +233,40 @@ export interface ClubFinances {
   sponsorship: Sponsorship
   /** Set true when wages cannot be paid; triggers board crisis. */
   inCrisis: boolean
+  /** Standing with the financial regulator. */
+  regulation: ClubRegulation
+}
+
+/**
+ * A club's record with the financial authorities.
+ *
+ * The rule modelled is the squad-cost ratio rather than a three-year
+ * profit-and-loss test. A P&L test barely moves at the bottom of a pyramid
+ * spanning two orders of magnitude, and takes three seasons to bite; a ratio
+ * of what you spend on the squad against what you earn means the same thing
+ * to a non-league club as to a champion, and it bites in season one.
+ */
+export interface ClubRegulation {
+  /** Squad cost as a share of revenue, from the last completed season. */
+  lastRatio: number | null
+  /** Consecutive completed seasons in breach. */
+  breachSeasons: number
+  sanctions: RegulationSanction[]
+  /** Points to be deducted from the current season's table. */
+  pointsDeducted: number
+}
+
+export type SanctionKind = 'warning' | 'fine' | 'pointsDeduction' | 'registrationEmbargo'
+
+export interface RegulationSanction {
+  id: ID
+  season: number
+  kind: SanctionKind
+  /** Money for a fine, points for a deduction, otherwise zero. */
+  amount: number
+  reason: string
+  /** Seasons a lasting sanction still runs for. Zero for one-off sanctions. */
+  seasonsRemaining: number
 }
 
 export interface FinanceLedger {
@@ -246,6 +280,10 @@ export interface FinanceLedger {
   facilitiesSpend: number
   staffWages: number
   agentFees: number
+  /** This season's write-down of transfer fees. A cost, but not a cash cost. */
+  amortisation: number
+  /** Profit on player sales above book value, less losses below it. */
+  playerTradingProfit: number
   interestPaid: number
   otherIncome: number
   otherCosts: number
@@ -612,6 +650,19 @@ export interface Player {
   joinedSeason: number
   /** Fee paid for them, for amortisation and sell-on reporting. */
   purchaseFee: number
+  /**
+   * Unamortised remainder of the transfer fee.
+   *
+   * A fee is not an expense in the season it is paid: it is written down over
+   * the length of the contract signed with it. What is left is the player's
+   * book value, and selling him for more than that is a profit while selling
+   * him for less is a loss — which is why a club under financial pressure
+   * sells an academy graduate, whose book value is zero and whose whole fee is
+   * profit, rather than the expensive signing it would take a loss on.
+   */
+  bookValue: number
+  /** Annual write-down of the fee. Counts towards the squad-cost ratio. */
+  amortisationCharge: number
   /** Percentage of any future sale owed to a previous club, 0-1. */
   sellOnClauseOwed: { clubId: ID; percentage: number }[]
   /** Hidden development modifier — some players just kick on, some stall. */
@@ -1333,4 +1384,4 @@ export interface GameSettings {
   hapticsEnabled: boolean
 }
 
-export const SAVE_VERSION = 3
+export const SAVE_VERSION = 4

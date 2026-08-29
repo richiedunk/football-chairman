@@ -45,6 +45,11 @@ import {
 import {
   achievements as achievementService, capabilities, purchases, resetReportedAchievements,
 } from '../src/platform/services'
+import {
+  assessClub, assessSquadCost, underEmbargo,
+} from '../src/engine/systems/regulation'
+import { accrueAmortisation } from '../src/engine/systems/finance'
+import type { FinanceLedger } from '../src/engine/types'
 import type { GameState } from '../src/engine/types'
 
 function freshWorld(seed = 'SYSTEMS'): GameState {
@@ -1394,5 +1399,183 @@ describe('achievements', () => {
     expect(await purchases.products()).toEqual([])
     expect(await purchases.buy('xp-boost-small')).toEqual({ status: 'unavailable' })
     expect(await purchases.restore()).toEqual([])
+  })
+})
+
+describe('financial regulation', () => {
+  function ledgerWith(over: Partial<FinanceLedger>): FinanceLedger {
+    return {
+      matchdayIncome: 0, tvIncome: 0, sponsorshipIncome: 0, prizeMoney: 0,
+      transfersIn: 0, wagesPaid: 0, transfersOut: 0, facilitiesSpend: 0,
+      staffWages: 0, agentFees: 0, amortisation: 0, playerTradingProfit: 0,
+      interestPaid: 0, otherIncome: 0, otherCosts: 0,
+      ...over,
+    }
+  }
+
+  it('counts wages, written-down fees and agents against revenue', () => {
+    const assessment = assessSquadCost(ledgerWith({
+      tvIncome: 100_000_000,
+      wagesPaid: 50_000_000,
+      staffWages: 10_000_000,
+      amortisation: 8_000_000,
+      agentFees: 2_000_000,
+    }))
+    expect(assessment.squadCost).toBe(70_000_000)
+    expect(assessment.relevantIncome).toBe(100_000_000)
+    expect(assessment.ratio).toBeCloseTo(0.7, 5)
+    expect(assessment.inBreach, 'exactly at the limit is not a breach').toBe(false)
+  })
+
+  it('counts profit on player sales as income', () => {
+    const base = { tvIncome: 100_000_000, wagesPaid: 80_000_000 }
+    const without = assessSquadCost(ledgerWith(base))
+    const with_ = assessSquadCost(ledgerWith({ ...base, playerTradingProfit: 50_000_000 }))
+
+    expect(without.inBreach, '80% of revenue is a breach').toBe(true)
+    expect(with_.inBreach, 'selling well is the orthodox way out').toBe(false)
+    expect(with_.relevantIncome).toBe(150_000_000)
+  })
+
+  it('ignores the cash a transfer cost and counts the write-down', () => {
+    // The distinction the whole system rests on: paying £40m in one go is not
+    // a £40m cost this season, and a club can be flush with cash and still
+    // fail the test.
+    const cash = assessSquadCost(ledgerWith({
+      tvIncome: 100_000_000, wagesPaid: 40_000_000, transfersIn: 60_000_000,
+    }))
+    expect(cash.inBreach, 'cash spent on fees is not a squad cost').toBe(false)
+
+    const booked = assessSquadCost(ledgerWith({
+      tvIncome: 100_000_000, wagesPaid: 40_000_000, amortisation: 35_000_000,
+    }))
+    expect(booked.inBreach).toBe(true)
+  })
+
+  it('escalates warning, then embargo, then points', () => {
+    const state = freshWorld('REG-ESC')
+    const club = state.clubs[state.playerClubId]
+    const ids = new IdFactory(state.nextId)
+    const breaching = () => ledgerWith({ tvIncome: 1_000_000, wagesPaid: 800_000 })
+
+    const first = assessClub(state, club, breaching(), ids)
+    expect(first.imposed.map((s) => s.kind)).toEqual(['warning'])
+    expect(underEmbargo(club)).toBe(false)
+
+    state.date.season += 1
+    const second = assessClub(state, club, breaching(), ids)
+    expect(second.imposed.some((s) => s.kind === 'registrationEmbargo')).toBe(true)
+    expect(underEmbargo(club)).toBe(true)
+
+    state.date.season += 1
+    const third = assessClub(state, club, breaching(), ids)
+    const deduction = third.imposed.find((s) => s.kind === 'pointsDeduction')
+    expect(deduction, 'a third breach must cost points').toBeTruthy()
+    expect(deduction!.amount).toBeGreaterThanOrEqual(3)
+    expect(club.finances.regulation.pointsDeducted).toBe(deduction!.amount)
+  })
+
+  it('forgives a club that comes back inside the limit', () => {
+    const state = freshWorld('REG-FORGIVE')
+    const club = state.clubs[state.playerClubId]
+    const ids = new IdFactory(state.nextId)
+
+    assessClub(state, club, ledgerWith({ tvIncome: 1_000_000, wagesPaid: 900_000 }), ids)
+    expect(club.finances.regulation.breachSeasons).toBe(1)
+
+    state.date.season += 1
+    const clean = assessClub(state, club, ledgerWith({ tvIncome: 1_000_000, wagesPaid: 400_000 }), ids)
+    expect(clean.imposed).toEqual([])
+    expect(club.finances.regulation.breachSeasons).toBe(0)
+    expect(club.finances.regulation.lastRatio).toBeCloseTo(0.4, 5)
+  })
+
+  it('bars a player signed since the embargo, not the squad already there', () => {
+    const state = freshWorld('REG-EMB')
+    const club = state.clubs[state.playerClubId]
+    const ids = new IdFactory(state.nextId)
+    state.date.week = 1
+
+    const existing = registrablePool(state, club).find((p) => p.age >= U21_AGE)!
+    existing.joinedSeason = state.date.season - 2
+
+    // Two breaches: warning, then embargo.
+    const breaching = () => ledgerWith({ tvIncome: 1_000_000, wagesPaid: 900_000 })
+    assessClub(state, club, breaching(), ids)
+    assessClub(state, club, breaching(), ids)
+    expect(underEmbargo(club)).toBe(true)
+
+    const newcomer = registrablePool(state, club).find(
+      (p) => p.age >= U21_AGE && p.id !== existing.id,
+    )!
+    newcomer.joinedSeason = state.date.season + 1
+
+    club.registeredIds = []
+    expect(registerPlayer(state, club, existing).ok, 'an existing player was barred').toBe(true)
+    expect(registerPlayer(state, club, newcomer).error).toBe('embargo')
+  })
+
+  it('spreads a fee across the contract and books a profit on the sale', () => {
+    const state = freshWorld('REG-AMORT')
+    const buyer = Object.values(state.clubs).find(
+      (c) => c.id !== state.playerClubId && c.reputation > 60,
+    )!
+    const seller = Object.values(state.clubs).find(
+      (c) => c.id !== buyer.id && c.id !== state.playerClubId,
+    )!
+    const player = state.players[seller.squad.find((id) => !state.players[id].isAcademy)!]
+    const ctx = { rng: new Rng('amort'), ids: new IdFactory(state.nextId) }
+    buyer.finances.balance = 100_000_000
+
+    executeTransfer(state, ctx, {
+      player, buyer, seller, fee: 20_000_000, kind: 'permanent',
+      contract: {
+        wage: 50_000, expiresSeason: state.date.season + 4, signingBonus: 0,
+        releaseClause: null, appearanceFee: 0, goalBonus: 0, loyaltyBonus: 0,
+        inNegotiation: false, weeksSinceRenewalRequest: 0,
+      },
+      agentFee: 0, sellOnPercentage: 0, wageContribution: 0, loanUntilSeason: null,
+    })
+
+    expect(player.bookValue).toBe(20_000_000)
+    expect(player.amortisationCharge).toBe(5_000_000)
+
+    // A season of write-down, accrued weekly rather than in one lump.
+    for (let week = 0; week < 52; week++) accrueAmortisation(state, buyer)
+    expect(player.bookValue).toBeCloseTo(15_000_000, -4)
+    expect(buyer.finances.season.amortisation).toBeCloseTo(5_000_000, -4)
+
+    // Sold above what he is carried at: the difference is profit.
+    const onward = Object.values(state.clubs).find(
+      (c) => c.id !== buyer.id && c.id !== seller.id && c.id !== state.playerClubId,
+    )!
+    onward.finances.balance = 100_000_000
+    player.sellOnClauseOwed = []
+    executeTransfer(state, ctx, {
+      player, buyer: onward, seller: buyer, fee: 25_000_000, kind: 'permanent',
+      contract: player.contract!, agentFee: 0, sellOnPercentage: 0,
+      wageContribution: 0, loanUntilSeason: null,
+    })
+    expect(buyer.finances.season.playerTradingProfit).toBeCloseTo(10_000_000, -4)
+  })
+
+  it('makes an academy graduate pure profit', () => {
+    const state = freshWorld('REG-GRAD')
+    const seller = Object.values(state.clubs).find((c) => c.id !== state.playerClubId)!
+    const buyer = Object.values(state.clubs).find(
+      (c) => c.id !== seller.id && c.id !== state.playerClubId,
+    )!
+    const player = state.players[seller.squad.find((id) => !state.players[id].isAcademy)!]
+    player.bookValue = 0 // came through the academy: nothing to write off
+    player.sellOnClauseOwed = []
+    buyer.finances.balance = 100_000_000
+
+    executeTransfer(state, { rng: new Rng('grad'), ids: new IdFactory(state.nextId) }, {
+      player, buyer, seller, fee: 8_000_000, kind: 'permanent',
+      contract: player.contract!, agentFee: 0, sellOnPercentage: 0,
+      wageContribution: 0, loanUntilSeason: null,
+    })
+
+    expect(seller.finances.season.playerTradingProfit).toBe(8_000_000)
   })
 })

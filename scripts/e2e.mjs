@@ -298,11 +298,26 @@ await step('squad registration', async () => {
   const places = await page.textContent('.stat:has-text("Places") .stat__value')
   const abroad = await page.textContent('.stat:has-text("Trained abroad") .stat__value')
   console.log(`   ${places?.trim()} named, ${abroad?.trim()} trained abroad`)
-  await page.screenshot({ path: `${SHOT}/27-registration.png`, fullPage: true })
+
+  // Which half of this runs depends on where in the calendar the run has got
+  // to, and that is not fixed: how many weeks the earlier steps manage to
+  // advance depends on what the board and the squad throw up. Both states are
+  // worth asserting, so branch on the screen's own statement of the rule
+  // rather than assuming a window is open. An earlier version of this step
+  // assumed one, passed twice by luck, and then failed.
+  const windowOpen = await page.locator('text=The window is open').count() > 0
+  const before = Number((places ?? '0').trim().split('/')[0])
+
+  if (!windowOpen) {
+    const removable = await page.locator('.btn--ghost:has-text("Remove")').count()
+    if (removable > 0) throw new Error('the squad list is editable with the window shut')
+    console.log('   window shut — list correctly locked')
+    await page.screenshot({ path: `${SHOT}/27-registration.png`, fullPage: true })
+    return
+  }
 
   // Taking a player off the list must show up immediately in the counters and
   // move him into the "left out" tab — the reactivity chain, again.
-  const before = Number((places ?? '0').trim().split('/')[0])
   await page.click('.btn--ghost:has-text("Remove") >> nth=0')
   await page.waitForTimeout(400)
   const after = await page.textContent('.stat:has-text("Places") .stat__value')
@@ -317,6 +332,15 @@ await step('squad registration', async () => {
   if (Number((restored ?? '0').trim().split('/')[0]) !== before) {
     throw new Error(`re-registering did not restore the count: ${restored}`)
   }
+  console.log('   window open — add and remove both round-trip')
+})
+
+await step('squad-cost ratio', async () => {
+  await page.goto('http://127.0.0.1:4173/#/finance')
+  await page.waitForSelector('text=Squad-cost ratio')
+  const ratio = await page.textContent('text=/^\\d+% \\/ 70%$/')
+  console.log(`   ${ratio?.trim() ?? 'not yet computed'}`)
+  await page.screenshot({ path: `${SHOT}/29-squadcost.png`, fullPage: true })
 })
 
 await step('facilities', async () => {

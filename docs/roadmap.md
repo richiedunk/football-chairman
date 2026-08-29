@@ -30,7 +30,7 @@ These are game designs *modelled on* real competition rules, not reproductions
 of them. Where a real rule is fiddly, the game takes the shape and drops the
 paperwork.
 
-### 1. Squad registration
+### 1. Squad registration — built
 
 Modelled on the Premier League's squad rules:
 
@@ -67,7 +67,7 @@ club for breaking a squad-cost rule, and a squad-cost rule is exactly the thing
 a director of football breaks. Losing nine points because you could not stop
 signing people is the sanction landing where the decision was made.
 
-### 2. Financial regulation
+### 2. Financial regulation — built
 
 Two real models, and the game should use the second:
 
@@ -163,6 +163,15 @@ question**, decided from GameState by pure code with no platform imports, and
 anyone is listening.
 
 ## Known defects
+
+- **Clubs accumulate cash with nothing to spend it on.** A top-flight club
+  averages £319m in the bank after six seasons and it keeps growing, because
+  AI transfer activity runs at roughly half a permanent signing per club per
+  season against revenue that always exceeds costs. Surfaced by the squad-cost
+  work and left alone deliberately: the squad-cost rule binds on the ratio, not
+  on cash, so it works regardless. But it means the financial-crisis machinery
+  almost never fires, and financial pressure across the world is weaker than it
+  should be. The fix is on the transfer side, not the finance side.
 
 - **The world's player population grows about 400 a season** — 7,457 at
   creation, 12,106 after ten. Academy intake outpaces retirement. Bounded and

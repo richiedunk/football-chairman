@@ -1,6 +1,7 @@
 import { clamp, Rng } from '../rng'
 import { computeValue, computeWageDemand, squadImportance, totalWageBill } from './valuation'
 import { releaseRegistration } from './registration'
+import { writeOffBookValue } from './finance'
 import type { Club, Contract, GameState, Player, SquadStatus } from '../types'
 
 /**
@@ -264,6 +265,7 @@ export function releasePlayer(
 
   club.finances.balance -= cost
   club.finances.season.otherCosts += cost
+  writeOffBookValue(state, player)
   club.squad = club.squad.filter((id) => id !== player.id)
   releaseRegistration(club, player.id)
   player.clubId = null

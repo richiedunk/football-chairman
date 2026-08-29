@@ -5,6 +5,7 @@ import PosBadge from '../components/PosBadge.vue'
 import MeterBar from '../components/MeterBar.vue'
 import { formatWage } from '../../engine/systems/valuation'
 import { NON_HOMEGROWN_LIMIT, SQUAD_LIMIT } from '../../engine/systems/registration'
+import { underEmbargo } from '../../engine/systems/regulation'
 import type { Player } from '../../engine/types'
 
 const store = useGameStore()
@@ -25,6 +26,8 @@ const named = computed(() => (view.value?.registered ?? []).slice().sort(byAbili
 
 /** The strongest player currently left out — the headline cost of the list. */
 const bestOmitted = computed(() => omitted.value[0] ?? null)
+
+const embargoed = computed(() => (store.club ? underEmbargo(store.club) : false))
 
 function add(player: Player) {
   const result = store.register(player.id)
@@ -86,6 +89,20 @@ function autoPick() {
         <p v-else class="tiny" style="margin: 0; color: var(--warn)">
           The window is shut. This list is lodged with the league and cannot be changed.
         </p>
+      </div>
+    </div>
+
+    <div
+      v-if="embargoed"
+      class="card"
+      style="border-color: var(--danger); background: rgba(248,113,113,0.06)"
+    >
+      <div class="card__body">
+        <div class="bold small" style="color: var(--danger)">Registration embargo in force</div>
+        <div class="tiny muted">
+          The club breached the squad-cost rules. Anyone signed since cannot be added to
+          this list, however much you paid for him.
+        </div>
       </div>
     </div>
 

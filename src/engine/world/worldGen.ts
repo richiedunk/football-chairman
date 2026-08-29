@@ -505,6 +505,7 @@ function createFinances(rng: Rng, reputation: number, league: League, nation: Na
       expiresSeason: league.tier === 1 ? 0 : 0, // set by caller relative to season
     },
     inCrisis: false,
+    regulation: { lastRatio: null, breachSeasons: 0, sanctions: [], pointsDeducted: 0 },
   }
 }
 
@@ -520,6 +521,8 @@ export function emptyLedger() {
     facilitiesSpend: 0,
     staffWages: 0,
     agentFees: 0,
+    amortisation: 0,
+    playerTradingProfit: 0,
     interestPaid: 0,
     otherIncome: 0,
     otherCosts: 0,

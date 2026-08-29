@@ -101,6 +101,12 @@ export function processFinances(
     }
   }
 
+  // --- Amortisation ---------------------------------------------------------
+  // Accrued weekly into the ledger, and never touched against the balance:
+  // writing a fee down is a cost, not a payment. The cash left when the player
+  // was signed.
+  accrueAmortisation(state, club)
+
   // --- Crisis handling ------------------------------------------------------
   const wasInCrisis = club.finances.inCrisis
   if (club.finances.balance < 0) {
@@ -336,6 +342,51 @@ export function recalculateBudgets(state: GameState, club: Club): void {
   }
 
   club.finances.transferBudget = transferBudget
+}
+
+/**
+ * Write down a week's share of every transfer fee the club is still carrying.
+ *
+ * Deliberately not a cash movement. The money left the account the day the
+ * player signed; what accrues here is the accounting cost, and the difference
+ * between the two is the whole reason a club can be flush with cash and still
+ * fail a squad-cost test.
+ */
+export function accrueAmortisation(state: GameState, club: Club): void {
+  let charged = 0
+  for (const id of club.squad) {
+    const player = state.players[id]
+    if (!player || player.bookValue <= 0) continue
+    const weekly = Math.min(player.bookValue, player.amortisationCharge / 52)
+    player.bookValue -= weekly
+    charged += weekly
+  }
+  if (charged > 0) club.finances.season.amortisation += charged
+}
+
+/**
+ * Write off whatever is left of a player's fee when he leaves for nothing.
+ *
+ * A released, retired or expired player still carrying book value is a loss,
+ * and it lands in the same season's accounts as everything else.
+ */
+export function writeOffBookValue(state: GameState, player: Player): void {
+  if (player.bookValue <= 0) return
+  const club = player.clubId ? state.clubs[player.clubId] : null
+  if (club) club.finances.season.amortisation += player.bookValue
+  player.bookValue = 0
+  player.amortisationCharge = 0
+}
+
+/** What the club will write down across a full season, at today's squad. */
+export function annualAmortisation(state: GameState, club: Club): number {
+  let total = 0
+  for (const id of club.squad) {
+    const player = state.players[id]
+    if (!player || player.bookValue <= 0) continue
+    total += Math.min(player.bookValue, player.amortisationCharge)
+  }
+  return Math.round(total)
 }
 
 /** Prize money and central payments awarded at the end of a season. */

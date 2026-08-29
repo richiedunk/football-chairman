@@ -5,6 +5,11 @@ import MeterBar from '../components/MeterBar.vue'
 import { formatMoney, formatWage } from '../../engine/systems/valuation'
 import { ledgerBalance, ledgerExpenditure, ledgerIncome, weeklyRevenue } from '../../engine/systems/finance'
 import { committedWages, expiringContracts } from '../../engine/systems/contracts'
+import {
+  projectedSquadCost, SANCTION_LABELS, SQUAD_COST_LIMIT, underEmbargo,
+} from '../../engine/systems/regulation'
+
+const LIMIT_PERCENT = Math.round(SQUAD_COST_LIMIT * 100)
 
 const store = useGameStore()
 const club = computed(() => store.club)
@@ -29,13 +34,28 @@ const costLines = computed(() => {
   return [
     { label: 'Player wages', value: l.wagesPaid },
     { label: 'Staff wages', value: l.staffWages },
-    { label: 'Transfer fees', value: l.transfersIn },
+    { label: 'Transfer fees paid', value: l.transfersIn },
     { label: 'Agent fees', value: l.agentFees },
     { label: 'Construction', value: l.facilitiesSpend },
     { label: 'Interest', value: l.interestPaid },
     { label: 'Running costs', value: l.otherCosts },
   ].filter((x) => x.value > 0)
 })
+
+const squadCost = computed(() => {
+  const s = store.game
+  const c = club.value
+  return s && c ? projectedSquadCost(s, c) : null
+})
+
+const ratioPercent = computed(() => {
+  const a = squadCost.value
+  if (!a || !Number.isFinite(a.ratio)) return null
+  return Math.round(a.ratio * 100)
+})
+
+const sanctions = computed(() => club.value?.finances.regulation.sanctions ?? [])
+const embargoed = computed(() => (club.value ? underEmbargo(club.value) : false))
 
 const wageTable = computed(() =>
   store.squad
@@ -92,6 +112,70 @@ const committed = computed(() => {
         <div class="small bold" style="color: var(--danger)">Transfer embargo in force</div>
         <div class="tiny muted">
           The club cannot cover its outgoings. Sell players or cut wages before you can sign anyone.
+        </div>
+      </div>
+    </div>
+
+    <div class="section-title">Squad-cost ratio</div>
+    <div class="card">
+      <div class="card__body">
+        <div class="row row--between mb">
+          <span class="small muted">Projected for this season</span>
+          <span
+            class="bold num"
+            :style="ratioPercent !== null && ratioPercent > LIMIT_PERCENT ? 'color: var(--danger)' : ''"
+          >{{ ratioPercent === null ? '—' : `${ratioPercent}%` }} / {{ LIMIT_PERCENT }}%</span>
+        </div>
+        <MeterBar :value="ratioPercent ?? 0" :max="LIMIT_PERCENT" invert />
+        <p class="tiny muted" style="margin: 8px 0 0">
+          Wages, transfer fees written down and agent fees, against revenue plus profit on
+          player sales. Go over and the league sanctions the club.
+        </p>
+      </div>
+      <div v-if="squadCost" class="divider" />
+      <div v-if="squadCost" class="card__body">
+        <div
+          v-for="line in squadCost.components.filter((c) => c.amount > 0)"
+          :key="line.label"
+          class="row row--between small"
+          style="margin-bottom: 3px"
+        >
+          <span class="muted">{{ line.income ? '+' : '−' }} {{ line.label }}</span>
+          <span class="num">{{ formatMoney(line.amount, store.currency) }}</span>
+        </div>
+      </div>
+      <div
+        v-if="embargoed"
+        class="card__body"
+        style="background: rgba(248,113,113,0.1)"
+      >
+        <div class="small bold" style="color: var(--danger)">Registration embargo</div>
+        <div class="tiny muted">
+          You may sign players. You may not add anyone signed since the embargo to the
+          squad list, so they cannot be selected until it is lifted.
+        </div>
+      </div>
+    </div>
+
+    <div v-if="sanctions.length" class="card">
+      <div class="card__head"><span class="card__title">On record</span></div>
+      <div class="list">
+        <div v-for="s in sanctions" :key="s.id" class="list__row list__row--static">
+          <div class="list__main">
+            <div class="list__primary">
+              {{ SANCTION_LABELS[s.kind] }}
+              <span v-if="s.kind === 'fine'" class="chip chip--warn">
+                {{ formatMoney(s.amount, store.currency) }}
+              </span>
+              <span v-else-if="s.kind === 'pointsDeduction'" class="chip chip--danger">
+                −{{ s.amount }} pts
+              </span>
+              <span v-if="s.seasonsRemaining > 0" class="chip chip--info">Active</span>
+            </div>
+            <div class="list__secondary" style="white-space: normal">
+              {{ s.season }}/{{ (s.season + 1) % 100 }} — {{ s.reason }}
+            </div>
+          </div>
         </div>
       </div>
     </div>

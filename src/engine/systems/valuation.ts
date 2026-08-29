@@ -113,7 +113,15 @@ export function computeWageDemand(
   // Veterans take a discount as options thin out, unless they are still elite.
   if (player.age >= 32) wage *= clamp(1 - (player.age - 31) * 0.07, 0.5, 1)
 
-  const leagueFactor = league ? 0.45 + (league.reputation / 100) * 0.95 : 0.6
+  // How much a division pays for the same player.
+  //
+  // Recalibrated when the squad-cost rule was built and immediately showed
+  // that nobody could break it. Wages were 22% of revenue in the top flight
+  // and 44% in non-league, against a real range of roughly 55-75% everywhere,
+  // and clubs were sitting on hundreds of millions they had no way to spend.
+  // The slope is steeper than the old one because the error was worst at the
+  // top: a division's ability to pay rises far faster than its standing does.
+  const leagueFactor = league ? 0.04 + (league.reputation / 100) * 4.96 : 1.3
   const economyFactor = nation ? nation.economyFactor : 1
   wage *= leagueFactor * economyFactor
 
@@ -124,7 +132,7 @@ export function computeWageDemand(
   if (player.ambitionVsMoney > 70) wage *= 1.12
   if (player.ambitionVsMoney < 30) wage *= 0.94
 
-  return Math.max(200, Math.round(wage / 50) * 50)
+  return Math.max(250, Math.round(wage / 50) * 50)
 }
 
 /**

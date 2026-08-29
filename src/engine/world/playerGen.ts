@@ -167,6 +167,8 @@ export function generatePlayer(ctx: PlayerGenContext, opts: PlayerGenOptions): P
     isAcademy: opts.isAcademy ?? false,
     joinedSeason: season - Math.min(rng.int(0, 6), Math.max(0, age - 17)),
     purchaseFee: 0,
+    bookValue: 0,
+    amortisationCharge: 0,
     sellOnClauseOwed: [],
     developmentRate: rng.float(0.7, 1.35),
     trainingYears: seedTrainingYears(rng, nationality, opts, age),

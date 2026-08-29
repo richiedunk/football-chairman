@@ -12,6 +12,11 @@ import { addInboxItem, addNews } from './systems/inbox'
 import { emptyStats } from './world/playerGen'
 import { cupResultFor, resetCup } from './sim/cups'
 import { accrueTrainingYear, autoRegister, releaseRegistration } from './systems/registration'
+import { writeOffBookValue } from './systems/finance'
+import {
+  applyPointsDeductions, assessClub, SANCTION_LABELS, SQUAD_COST_LIMIT,
+  type RegulationOutcome,
+} from './systems/regulation'
 import { PATIENCE_WEEKS } from './systems/aiSquad'
 import {
   contractTermsFor, paySeasonBonuses, signContract, type ContractOffer,
@@ -50,6 +55,11 @@ export function runSeasonRollover(state: GameState, deps: RolloverDeps): void {
 
       const prize = awardSeasonPrizeMoney(club, league, position)
       const closed = rollOverLedger(club)
+
+      // Judged on the books just closed, not on live figures — a rule
+      // assessed against a moving number is one nobody can plan against.
+      const verdict = assessClub(state, club, closed, ids)
+      if (club.id === state.playerClubId) reportRegulation(state, ids, verdict)
 
       const domesticCup = Object.values(state.cups).find((c) => c.nationId === club.nationId)
 
@@ -193,6 +203,23 @@ export function runSeasonRollover(state: GameState, deps: RolloverDeps): void {
     state.tables[league.id] = league.clubIds.map((clubId) => emptyTableRow(clubId))
   }
 
+  // Points deductions land on the fresh tables, so every screen that reads a
+  // table sees them without knowing regulation exists.
+  for (const { club, points } of applyPointsDeductions(state)) {
+    if (club.id === state.playerClubId) {
+      addInboxItem(state, ids, {
+        category: 'board',
+        subject: `${points}-point deduction`,
+        from: 'The League',
+        body: `The club begins the season on minus ${points} points following repeated breaches of the squad-cost rules. `
+          + 'The board have made their view of this known.',
+        urgent: true,
+        link: { view: 'finance' },
+      })
+      club.board.confidence = clamp(club.board.confidence - 14, 0, 100)
+    }
+  }
+
   // Reset seasonal player statistics after they have been archived.
   for (const player of Object.values(state.players)) {
     player.stats = emptyStats()
@@ -327,6 +354,11 @@ function processPlayerYearEnd(state: GameState, deps: RolloverDeps): void {
           })
         }
       }
+      // Anything left of his fee is written off. A player allowed to run his
+      // contract down has usually been fully written down by then, which is
+      // exactly why letting one go for nothing costs nothing in the books
+      // even though it costs everything on the pitch.
+      writeOffBookValue(state, player)
       player.clubId = null
       player.contract = null
       player.loanClubId = null
@@ -391,6 +423,7 @@ function processPlayerYearEnd(state: GameState, deps: RolloverDeps): void {
   }
 
   for (const player of retiring) {
+    writeOffBookValue(state, player)
     const club = player.clubId ? state.clubs[player.clubId] : null
     if (club) {
       club.squad = club.squad.filter((id) => id !== player.id)
@@ -595,6 +628,55 @@ function generateJobOffers(state: GameState, deps: RolloverDeps): JobOffer[] {
       pitch: writePitch(club, level.title, overperformance),
     }
     return offer
+  })
+}
+
+/**
+ * Tell the director what the regulator decided, and why.
+ *
+ * The itemised breakdown matters more than the verdict. A club told only that
+ * it failed learns nothing it can act on; a club shown that two thirds of the
+ * problem is amortisation on three signings knows to stop signing people.
+ */
+function reportRegulation(
+  state: GameState,
+  ids: IdFactory,
+  outcome: RegulationOutcome,
+): void {
+  const { assessment, imposed } = outcome
+  if (!assessment.inBreach && imposed.length === 0) {
+    if (assessment.ratio > SQUAD_COST_LIMIT * 0.92 && Number.isFinite(assessment.ratio)) {
+      addNews(state, ids, 'finance',
+        `Squad costs finished at ${Math.round(assessment.ratio * 100)}% of income — inside the limit, but not by much.`,
+        { view: 'finance' })
+    }
+    return
+  }
+
+  const costs = assessment.components.filter((c) => !c.income && c.amount > 0)
+  const breakdown = costs
+    .sort((a, b) => b.amount - a.amount)
+    .map((c) => `${c.label} ${Math.round(c.amount).toLocaleString()}`)
+    .join(', ')
+
+  const penalties = imposed.length > 0
+    ? imposed.map((s) => (s.kind === 'fine'
+      ? `${SANCTION_LABELS[s.kind]} of ${s.amount.toLocaleString()}`
+      : s.kind === 'pointsDeduction'
+        ? `${s.amount}-point deduction, applied next season`
+        : SANCTION_LABELS[s.kind])).join('. ')
+    : 'No sanction this time.'
+
+  addInboxItem(state, ids, {
+    category: 'finance',
+    subject: `Squad-cost assessment: ${Math.round(assessment.ratio * 100)}% of income`,
+    from: 'The League',
+    body: `Squad costs of ${Math.round(assessment.squadCost).toLocaleString()} against relevant income of `
+      + `${Math.round(assessment.relevantIncome).toLocaleString()}, a ratio of `
+      + `${Math.round(assessment.ratio * 100)}% against a limit of ${Math.round(SQUAD_COST_LIMIT * 100)}%. `
+      + `Made up of: ${breakdown}. ${penalties}`,
+    urgent: true,
+    link: { view: 'finance' },
   })
 }
 

@@ -39,4 +39,5 @@ export const ID_PREFIX = {
   request: 'r',
   cup: 'k',
   transfer: 't',
+  sanction: 'x',
 } as const
