@@ -1,0 +1,87 @@
+<script setup lang="ts">
+import { onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { useGameStore } from '../../stores/game'
+import { deleteSave, listSaves, storageName } from '../../storage/saves'
+import type { SaveSlotMeta } from '../../storage/adapter'
+
+const router = useRouter()
+const store = useGameStore()
+const saves = ref<SaveSlotMeta[]>([])
+const error = ref('')
+
+onMounted(refresh)
+
+async function refresh() {
+  try {
+    saves.value = await listSaves()
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : 'Could not read saved games.'
+  }
+}
+
+async function open(slot: SaveSlotMeta) {
+  error.value = ''
+  try {
+    if (await store.load(slot.id)) router.push('/home')
+    else error.value = 'That save could not be read.'
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : 'That save could not be read.'
+  }
+}
+
+async function remove(slot: SaveSlotMeta) {
+  await deleteSave(slot.id)
+  await refresh()
+}
+
+function when(ts: number) {
+  return new Date(ts).toLocaleString(undefined, {
+    day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
+  })
+}
+</script>
+
+<template>
+  <div>
+    <div style="text-align: center; padding: 26px 0 22px">
+      <div style="font-size: 2.6rem; line-height: 1">⚽</div>
+      <h1 style="margin-top: 10px; font-size: 1.5rem">Director of Football</h1>
+      <p class="small muted" style="margin-top: 6px">
+        You run recruitment, contracts, the academy and the books.<br />
+        Someone else picks the team.
+      </p>
+    </div>
+
+    <button class="btn btn--primary btn--block" @click="router.push('/new')">
+      Start a new career
+    </button>
+
+    <div v-if="error" class="card mt">
+      <div class="card__body small" style="color: var(--danger)">{{ error }}</div>
+    </div>
+
+    <template v-if="saves.length">
+      <div class="section-title">Continue</div>
+      <div class="card">
+        <div class="list">
+          <div v-for="slot in saves" :key="slot.id" class="list__row list__row--static">
+            <button class="list__main" style="background:none;border:0;color:inherit;text-align:left;padding:0" @click="open(slot)">
+              <div class="list__primary">{{ slot.summary.clubName }}</div>
+              <div class="list__secondary">
+                {{ slot.summary.leagueName }} · {{ slot.summary.season }}, week {{ slot.summary.week }}
+                · L{{ slot.summary.level }}
+              </div>
+              <div class="tiny faint">{{ slot.name }} · {{ when(slot.savedAt) }}</div>
+            </button>
+            <button class="btn btn--ghost btn--sm" aria-label="Delete save" @click="remove(slot)">✕</button>
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <p class="tiny faint center mt">
+      Saves are stored on this device ({{ storageName() }}). Clearing site data removes them.
+    </p>
+  </div>
+</template>

@@ -917,6 +917,12 @@ export interface InboxItem {
   link: { view: string; id?: ID } | null
   /** Week the item expires and auto-resolves with its default option. */
   expiresWeek: number | null
+  /**
+   * Structured context for the decision resolver. Inbox bodies are prose meant
+   * for a human; anything the game needs to act on has to be here, not parsed
+   * back out of a sentence.
+   */
+  payload?: Record<string, string | number> | null
 }
 
 export interface InboxDecision {

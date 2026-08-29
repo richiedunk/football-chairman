@@ -1,0 +1,119 @@
+<script setup lang="ts">
+import { computed, inject, ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { useGameStore } from '../../stores/game'
+import { CATEGORY_ICONS, CATEGORY_LABELS } from '../../engine/systems/inbox'
+import type { InboxCategory, InboxItem } from '../../engine/types'
+
+const store = useGameStore()
+const router = useRouter()
+const toast = inject<(t: string, k?: 'info' | 'error' | 'success') => void>('toast')
+
+const filter = ref<'all' | 'unread' | 'decisions'>('all')
+const openId = ref<string | null>(null)
+
+const items = computed(() => {
+  const all = store.inbox
+  if (filter.value === 'unread') return all.filter((i) => !i.read)
+  if (filter.value === 'decisions') return all.filter((i) => i.decision && !i.decision.chosenId)
+  return all
+})
+
+function toggle(item: InboxItem) {
+  openId.value = openId.value === item.id ? null : item.id
+  if (openId.value) store.markRead(item.id)
+}
+
+function choose(item: InboxItem, optionId: string) {
+  const outcome = store.decide(item.id, optionId)
+  if (outcome) toast?.(outcome, 'success')
+}
+
+function follow(item: InboxItem) {
+  if (!item.link) return
+  const { view, id } = item.link
+  router.push(id ? `/${view}/${id}` : `/${view}`)
+}
+
+function icon(category: InboxCategory) {
+  return CATEGORY_ICONS[category] ?? '•'
+}
+</script>
+
+<template>
+  <div>
+    <div class="segmented mb">
+      <button class="segmented__item" :class="{ 'is-active': filter === 'all' }" @click="filter = 'all'">
+        All
+      </button>
+      <button class="segmented__item" :class="{ 'is-active': filter === 'unread' }" @click="filter = 'unread'">
+        Unread ({{ store.unread }})
+      </button>
+      <button class="segmented__item" :class="{ 'is-active': filter === 'decisions' }" @click="filter = 'decisions'">
+        Decisions ({{ store.pendingDecisions }})
+      </button>
+    </div>
+
+    <div v-if="items.length === 0" class="card">
+      <div class="empty">Nothing here.</div>
+    </div>
+
+    <div v-for="item in items" :key="item.id" class="card">
+      <button
+        class="list__row"
+        style="border-bottom: 0"
+        :style="!item.read ? 'background: rgba(96,165,250,0.05)' : ''"
+        @click="toggle(item)"
+      >
+        <span style="font-size: 1.15rem" aria-hidden="true">{{ icon(item.category) }}</span>
+        <div class="list__main">
+          <div class="list__primary">
+            <span v-if="!item.read" style="color: var(--info)">● </span>{{ item.subject }}
+          </div>
+          <div class="list__secondary">
+            {{ item.from }} · {{ CATEGORY_LABELS[item.category] }} · wk {{ item.week }}
+          </div>
+        </div>
+        <span v-if="item.urgent && item.decision && !item.decision.chosenId" class="chip chip--danger">Urgent</span>
+        <span v-else-if="item.decision && !item.decision.chosenId" class="chip chip--warn">Decide</span>
+      </button>
+
+      <div v-if="openId === item.id" class="card__body" style="border-top: 1px solid var(--border)">
+        <p class="small" style="white-space: pre-line">{{ item.body }}</p>
+
+        <template v-if="item.decision">
+          <div v-if="!item.decision.chosenId" class="mt">
+            <div class="small bold mb">{{ item.decision.prompt }}</div>
+            <div class="col">
+              <button
+                v-for="option in item.decision.options"
+                :key="option.id"
+                class="btn btn--block"
+                :class="option.id === item.decision.options[0].id ? 'btn--primary' : 'btn--ghost'"
+                :disabled="!option.available"
+                style="flex-direction: column; align-items: flex-start; padding: 10px 14px; height: auto; min-height: var(--tap)"
+                @click="choose(item, option.id)"
+              >
+                <span>{{ option.label }}</span>
+                <span class="tiny" style="opacity: 0.75; font-weight: 400">
+                  {{ option.available ? option.hint : option.unavailableReason }}
+                </span>
+              </button>
+            </div>
+          </div>
+          <div v-else class="mt small" style="color: var(--accent)">
+            {{ item.decision.outcomeText ?? 'Answered.' }}
+          </div>
+        </template>
+
+        <button v-if="item.link" class="btn btn--ghost btn--sm btn--block mt" @click="follow(item)">
+          Open
+        </button>
+      </div>
+    </div>
+
+    <button v-if="store.unread > 0" class="btn btn--ghost btn--block mt" @click="store.markAllRead()">
+      Mark all read
+    </button>
+  </div>
+</template>

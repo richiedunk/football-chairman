@@ -25,6 +25,7 @@ export interface InboxBuilder {
     defaultOptionId: string
   }
   expiresInWeeks?: number
+  payload?: Record<string, string | number> | null
 }
 
 export function addInboxItem(
@@ -55,6 +56,7 @@ export function addInboxItem(
     decision,
     link: builder.link ?? null,
     expiresWeek: builder.expiresInWeeks ? state.date.week + builder.expiresInWeeks : null,
+    payload: builder.payload ?? null,
   }
 
   state.inbox.unshift(item)

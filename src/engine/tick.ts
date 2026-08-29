@@ -533,6 +533,12 @@ function reportIncomingOffers(
       urgent: true,
       link: { view: 'player', id: offer.player.id },
       expiresInWeeks: 2,
+      payload: {
+        kind: 'transferOffer',
+        playerId: offer.player.id,
+        buyerId: offer.buyer.id,
+        fee: offer.fee,
+      },
       decision: {
         prompt: `How do you want to respond to ${offer.buyer.name}?`,
         options: [
