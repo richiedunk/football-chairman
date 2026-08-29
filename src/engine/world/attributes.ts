@@ -172,6 +172,29 @@ export function clearRatingCache(): void {
  * same 1-200 scale as currentAbility. This is the inverse of generation and
  * the two must agree, or a scouted attribute profile will not match the fee.
  */
+/**
+ * Mapping between the 1-20 attribute scale and the 1-200 ability scale.
+ *
+ * These are NOT proportional, and treating them as though they were is wrong
+ * in a way that is obvious the moment you look at a lower-division squad: a
+ * simple `mean x 10` gives a fourth-tier player Passing 2 and Shooting 1,
+ * which reads as broken and leaves no room to tell one poor player from
+ * another.
+ *
+ * The 1-20 scale is absolute across all of football. A non-league professional
+ * is not one-tenth of a world-class one — he is slower and less technical, but
+ * he is still a footballer, with a mean somewhere around 5. The best players in
+ * the world average about 17, not 20, because nobody is elite at everything.
+ * Anchoring those two points gives the linear mapping below.
+ */
+const ABILITY_AT_MEAN_ZERO = -55
+const ABILITY_PER_ATTRIBUTE_POINT = 15
+
+/** Attribute mean that corresponds to a given ability. Inverse of the above. */
+export function meanAttributeForAbility(ability: number): number {
+  return clamp((ability - ABILITY_AT_MEAN_ZERO) / ABILITY_PER_ATTRIBUTE_POINT, 1, 20)
+}
+
 export function ratingForPosition(attrs: PlayerAttributes, pos: Position): number {
   const weights = POSITION_WEIGHTS[pos]
   let total = 0
@@ -181,8 +204,8 @@ export function ratingForPosition(attrs: PlayerAttributes, pos: Position): numbe
     weightSum += weight
   }
   if (weightSum === 0) return 1
-  // Attributes are 1-20; scale the weighted mean onto the 1-200 ability scale.
-  return clamp((total / weightSum) * 10, 1, 200)
+  const mean = total / weightSum
+  return clamp(mean * ABILITY_PER_ATTRIBUTE_POINT + ABILITY_AT_MEAN_ZERO, 1, 200)
 }
 
 /**
@@ -204,7 +227,7 @@ export function generateAttributes(
 
   // Target mean attribute value that will reproduce `currentAbility` through
   // ratingForPosition. Solved directly rather than iterated.
-  const targetMean = clamp(currentAbility / 10, 1, 20)
+  const targetMean = meanAttributeForAbility(currentAbility)
 
   const attrs = {} as PlayerAttributes
   for (const key of ALL_ATTRIBUTES) {

@@ -85,9 +85,13 @@ function choose(clubId: string) {
             {{ summaryFor(club)?.league }} · {{ club.city }} · founded {{ club.founded }}
           </div>
         </div>
+        <!-- Club colours tint the chip but never set the text colour: a club
+             whose secondary is near-black renders an unreadable label on a
+             dark ground. Border and wash carry the identity instead. -->
         <span
           class="chip"
-          :style="{ background: club.colors.primary + '33', borderColor: club.colors.primary, color: club.colors.secondary }"
+          :style="{ background: club.colors.primary + '2b', borderColor: club.colors.primary }"
+          style="color: var(--text)"
         >{{ club.nickname }}</span>
       </button>
 

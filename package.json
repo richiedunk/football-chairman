@@ -29,6 +29,7 @@
   "devDependencies": {
     "@capacitor/cli": "^6.2.0",
     "@vitejs/plugin-vue": "^5.2.1",
+    "playwright": "^1.62.1",
     "typescript": "^5.7.2",
     "vite": "^6.0.5",
     "vitest": "^2.1.8",
