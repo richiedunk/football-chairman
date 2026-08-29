@@ -106,6 +106,48 @@ A compressed sequence at the close of each window: offers arriving with hours
 rather than weeks to answer, rival clubs hijacking deals in progress, and
 selling clubs suddenly reasonable about a price they would not discuss in July.
 
+## Platform integrations (store-side, not engine)
+
+None of this touches the simulation. It is shell work, it needs real developer
+accounts and signing certificates, and it cannot be tested in this environment
+— but the abstraction it hangs off should exist before it is needed, alongside
+the haptics wrapper already in `src/platform/`.
+
+### The one that changes a design decision
+
+**Apple Pay and Google Pay are the wrong mechanism for XP boosts.** They are
+for physical goods and services. Digital content consumed inside the app must
+go through **StoreKit** on iOS and **Google Play Billing** on Android, which
+take a platform cut. Shipping an XP boost behind Apple Pay would fail review.
+So the purchasable-boost idea is an in-app purchase, with everything that
+implies: products defined in App Store Connect and the Play Console, receipt
+validation, and restore-purchases handling.
+
+### The rest
+
+- **Sign in with Apple** — needed the moment any other third-party sign-in is
+  offered; Apple requires it as an option. Apple Developer Program membership
+  and a configured capability.
+- **Google Play Games Services** — achievements, leaderboards, cloud saves.
+  Career milestones map onto achievements almost directly. Cloud saves need
+  checking against the snapshot size limit: our save is around 3.5 MB gzipped,
+  which is not obviously inside it.
+- **Game Center** — the iOS counterpart, same shape.
+
+The useful work available now is the seam: a `platform/` module the game calls
+(`achievements.unlock('first-promotion')`, `purchases.buy('xp-boost')`) that
+no-ops on the web and gets a real implementation per platform later. That is
+testable today; the store integrations are not.
+
+## Known defects
+
+- **Senior squads bleed out over a long save.** AI clubs never renew a
+  contract and replace players far more slowly than expiry and retirement
+  remove them. Measured from world creation: 26.0 senior players per club at
+  the start, 22.9 after two seasons, 12.2 after four, 2.6 after six, with
+  nearly 8,000 free agents piled up. This makes any long career unplayable and
+  has to be fixed before anything else on the list.
+
 ## Standing rules for this project
 
 - The engine stays pure TypeScript with no framework imports.
