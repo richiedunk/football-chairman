@@ -345,5 +345,5 @@ export function contractSummary(state: GameState): string {
   if (!contract) return 'You are not under contract.'
   const seasonsLeft = contract.expiresSeason - state.date.season
   if (seasonsLeft <= 0) return 'Your contract expires at the end of this season.'
-  return `${seasonsLeft} season${seasonsLeft === 1 ? '' : 's'} remaining.`
+  return `Contract runs ${seasonsLeft} more season${seasonsLeft === 1 ? '' : 's'}.`
 }

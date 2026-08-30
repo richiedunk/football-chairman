@@ -488,6 +488,22 @@ await step('career and earnings', async () => {
   await page.screenshot({ path: `${SHOT}/15-career.png`, fullPage: true })
 })
 
+await step('the career carries a clock', async () => {
+  // Age is only worth having if the player can see it running down; a number
+  // held in state that nothing surfaces costs nothing and so changes nothing.
+  await page.goto('http://127.0.0.1:4173/#/career')
+  await page.waitForSelector('.career-clock')
+  const age = Number((await page.textContent('.career-clock__value'))?.trim())
+  if (age !== 30) throw new Error(`a new director should be 30, not ${age}`)
+  const note = (await page.textContent('.career-clock__note'))?.trim()
+  if (!/SEASONS TO 65/.test(note ?? '')) throw new Error(`clock says "${note}"`)
+  if (!(await page.locator('.career-standdown').count())) {
+    throw new Error('no way to stand down early')
+  }
+  console.log(`   ${age} years old — ${note}`)
+  await page.screenshot({ path: `${SHOT}/15b-clock.png`, fullPage: true })
+})
+
 await step('deadline day', async () => {
   // How far the earlier steps got is not fixed — a blocked tick can cost a
   // week — so the screen is checked against the week the game is actually on

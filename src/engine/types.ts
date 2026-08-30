@@ -1293,6 +1293,13 @@ export interface GameState {
 
 export interface DirectorProfile {
   name: string
+  /**
+   * Your age. Thirty on the first day, gone after sixty-five, which bounds a
+   * career at thirty-five seasons and is what makes time cost anything: a
+   * three-year rebuild at fifty-eight is not the same decision as the same
+   * rebuild at thirty-four. See systems/directorCareer.ts.
+   */
+  age: number
   /** 0-100 standing in the game. Drives job offers and who takes your calls. */
   reputation: number
   /** Traits the player picked at the start, shaping their strengths. */
@@ -1329,6 +1336,13 @@ export interface DirectorProfile {
   earningsThisSeason: number
   /** Itemised, newest first, for the career screen. */
   earnings: EarningEntry[]
+  /**
+   * Set once, when the career ends. Its presence is what the UI reads to know
+   * the save is finished — there is no going back and no further weeks to
+   * play, only the record to look at.
+   */
+  retiredAtSeason?: number
+  retiredBecause?: 'age' | 'choice'
 }
 
 export interface DirectorContract {
@@ -1465,4 +1479,4 @@ export interface GameSettings {
   hapticsEnabled: boolean
 }
 
-export const SAVE_VERSION = 6
+export const SAVE_VERSION = 7

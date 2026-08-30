@@ -273,11 +273,10 @@ looking.
 One tap then runs the whole routine: clear blockers, run the week, play the
 match, show the result, return to the dashboard.
 
-## Director age and career length
+## Director age and career length — built
 
-You start at **30** and you are finished at **65**, no exceptions. There is no
-age on the director today, and adding it changes the shape of a save from
-open-ended to a career with a horizon.
+You start at **30** and you are finished at **65**, no exceptions. That changes
+the shape of a save from open-ended to a career with a horizon.
 
 Why it earns its place:
 
@@ -294,6 +293,23 @@ Starting at 30 is the other half. The jobs board already gates by experience;
 age gives that gate a reason. You are not starting at a non-league club because
 the game says so, you are starting there because you are thirty and nobody
 sensible hands a thirty-year-old a Premier League recruitment department.
+
+**As built.** The birthday lands at the season roll, after the review, so the
+season just finished is counted at the age it was worked. The last season
+anyone works is the one during which they turn 65: they see it out, then they
+go, and the job offers on the table are cleared with them rather than dangling
+a career the rules have already ended. The week button refuses to advance
+afterwards — a hard stop that a still-working button would quietly repeal.
+
+**And you may go early.** "Sixty-five at the latest" fixes the last day; it does
+not oblige anyone to use all of it. Standing down is a confirmed, irreversible
+action at the foot of the career screen, and the record tells the two apart:
+*steps down at 58* is not *retires at 65*.
+
+The clock is on the career screen — age, a bar for the share of a career
+already spent, and the seasons left, which turns amber at eight and red at
+three. An age held in state that nothing surfaces would cost nothing, and so
+would change nothing.
 
 ## Recruitment model
 

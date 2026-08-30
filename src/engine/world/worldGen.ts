@@ -13,6 +13,7 @@ import { createOwner, ownerName, startingOwnerKind } from '../systems/ownership'
 import { realClubsFor, type RealClub } from './realClubs'
 import { resetCup } from '../sim/cups'
 import { SAVE_VERSION } from '../types'
+import { STARTING_AGE } from '../systems/directorCareer'
 import type {
   Agent, BoardExpectation, BoardMandate, Club, ClubFinances, ClubStrategy, CupCompetition,
   DirectorBackground, Facilities, GameState, ID, League, LeagueTableRow, MediaOutlet, Nation, Player,
@@ -70,6 +71,7 @@ export function generateWorld(options: WorldGenOptions): GameState {
     playerClubId: '',
     director: {
       name: options.directorName,
+      age: STARTING_AGE,
       reputation: 8,
       background: options.background,
       xp: 0,

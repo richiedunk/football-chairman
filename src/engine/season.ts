@@ -4,6 +4,7 @@ import { NameGenerator } from './names/generator'
 import { scheduleLeague } from './sim/schedule'
 import { emptyTableRow } from './world/worldGen'
 import { ageOneYear } from './systems/development'
+import { mustRetire } from './systems/directorCareer'
 import { awardSeasonPrizeMoney, negotiateSponsorship, recalculateBudgets, rollOverLedger } from './systems/finance'
 import { setSeasonExpectation, setSeasonMandates, sortTable } from './systems/board'
 import { awardXp, closeCareerEntry, eligibleClubs, levelFor, ordinal, seasonEndXp } from './systems/career'
@@ -258,6 +259,31 @@ export function runSeasonRollover(state: GameState, deps: RolloverDeps): void {
   state.director.xpThisSeason = 0
   state.director.xpLog = []
   state.director.earningsThisSeason = 0
+
+  // --- 8. A year older -----------------------------------------------------
+  //
+  // After the review, so the season just finished is counted as worked at the
+  // age it was worked at. The last season anyone works is the one during which
+  // they turn sixty-five: they see it out, then they go.
+  state.director.age += 1
+  if (mustRetire(state.director)) {
+    state.director.retiredAtSeason = state.date.season
+    state.director.retiredBecause = 'age'
+    // No offers for a man who has finished. Leaving them on the table would
+    // dangle a career the rules have already ended.
+    state.director.jobOffers = []
+    addInboxItem(state, ids, {
+      category: 'board',
+      subject: `That is the end of it — you are ${state.director.age}`,
+      from: 'Your representative',
+      body:
+        'Nobody works past sixty-five in this game, and there are no exceptions '
+        + 'made — not for you and not for anyone.\n\n'
+        + 'Your record is on the career screen. It is the only part of the job '
+        + 'that outlasts it.',
+      link: { view: 'career' },
+    })
+  }
 }
 
 // ---------------------------------------------------------------------------

@@ -6,6 +6,7 @@ import { clearRatingCache } from '../engine/world/attributes'
 import { levelFor } from '../engine/systems/career'
 import { createStorageAdapter, type SaveSlotMeta, type StorageAdapter } from './adapter'
 import { compressAsync, decompressAsync } from './compression'
+import { RETIREMENT_AGE, STARTING_AGE } from '../engine/systems/directorCareer'
 
 /**
  * Save and load.
@@ -183,6 +184,24 @@ function migrate(state: GameState): GameState {
   if (state.version < 6) {
     if (!Array.isArray(state.takeovers)) state.takeovers = []
     state.version = 6
+  }
+
+  // v7: the director has an age. An existing career is dated from how long it
+  // has already run — the earliest career entry is the first season worked, so
+  // a save five seasons old belongs to a thirty-five-year-old. Anyone already
+  // past sixty-five is held at sixty-five rather than retired on load: ending
+  // somebody's save as they open it is a rotten way to meet a new rule.
+  if (state.version < 7) {
+    const d = state.director
+    if (typeof d.age !== 'number') {
+      const firstSeason = d.careerHistory.reduce(
+        (earliest, entry) => Math.min(earliest, entry.fromSeason),
+        state.date.season,
+      )
+      const seasonsWorked = Math.max(0, state.date.season - firstSeason)
+      d.age = Math.min(RETIREMENT_AGE, STARTING_AGE + seasonsWorked)
+    }
+    state.version = 7
   }
 
   state.version = SAVE_VERSION

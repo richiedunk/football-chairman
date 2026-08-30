@@ -52,6 +52,7 @@ const intent = computed(() => {
   const readingFixture = reading ? store.fixtureById(reading) : null
 
   return advanceIntent({
+    retired: store.game?.director.retiredBecause ?? null,
     unreadResult: readingFixture?.result?.summary ?? null,
     blockers: store.blockers.length,
     isDeadlineWeek: store.isDeadline,

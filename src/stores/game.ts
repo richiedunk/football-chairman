@@ -263,6 +263,25 @@ export const useGameStore = defineStore('game', () => {
     return s && c ? totalWageBill(s, c) : 0
   })
 
+  /** True once the career has ended, whether by the calendar or by choice. */
+  const retired = computed(() => {
+    void revision.value
+    return state.value?.director.retiredAtSeason !== undefined
+  })
+
+  /**
+   * Stand down early. "Sixty-five at the latest" means the last day is fixed;
+   * it does not mean you have to use all of it.
+   */
+  function retire(): void {
+    const s = state.value
+    if (!s || s.director.retiredAtSeason !== undefined) return
+    s.director.retiredAtSeason = s.date.season
+    s.director.retiredBecause = 'choice'
+    s.director.jobOffers = []
+    commit()
+  }
+
   const career = computed(() => {
     void revision.value
     const s = state.value
@@ -363,6 +382,11 @@ export const useGameStore = defineStore('game', () => {
   async function nextWeek(): Promise<{ ok: boolean; reason?: string }> {
     const s = state.value
     if (!s) return { ok: false, reason: 'No game loaded.' }
+    // A finished career is finished. Sixty-five is a hard stop, and the one
+    // way a rule like that loses its force is if the button still works.
+    if (s.director.retiredAtSeason !== undefined) {
+      return { ok: false, reason: 'Your career is over. There are no more weeks to play.' }
+    }
     if (blockers.value.length > 0) {
       if (s.settings.hapticsEnabled) void haptic('warning')
       return {
@@ -867,7 +891,7 @@ export const useGameStore = defineStore('game', () => {
     // selectors
     loaded, game, club, league, nation, currency, dateLabel, phaseLabel, transferWindow,
     squad, academy, staff, headCoach, table, leaguePosition,
-    inbox, unread, pendingDecisions, blockers, wageBill, career,
+    inbox, unread, pendingDecisions, blockers, wageBill, career, retired, retire,
     matchQueue, queueMatchReports, dismissMatchReport, fixtureById,
     upcomingFixtures, nextFixture, recentResults,
     // lookups

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { advanceIntent, type AdvanceContext } from '../src/ui/advance'
 
 const base: AdvanceContext = {
+  retired: null,
   unreadResult: null,
   blockers: 0,
   isDeadlineWeek: false,
@@ -35,6 +36,24 @@ describe('advanceIntent', () => {
 
   it('leaves availability off when everyone is fit', () => {
     expect(advanceIntent(ctx()).detail).toBe('AWAY · THE PREM')
+  })
+
+  it('has nothing left to offer once the career is over', () => {
+    const i = advanceIntent(ctx({ retired: 'age' }))
+    expect(i.kind).toBe('retired')
+    expect(i.label).toBe('Your career is over')
+    expect(i.route).toBe('/career')
+  })
+
+  it('says it differently when you chose to go', () => {
+    expect(advanceIntent(ctx({ retired: 'choice' })).label).toBe('You stood down')
+  })
+
+  it('puts the end of a career above everything else', () => {
+    const i = advanceIntent(ctx({
+      retired: 'age', unreadResult: 'Chelsea 1-2 United', blockers: 3, isDeadlineWeek: true,
+    }))
+    expect(i.kind).toBe('retired')
   })
 
   it('looks backwards only while a result is unread', () => {

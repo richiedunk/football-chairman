@@ -17,7 +17,7 @@
 
 import type { SeasonPhase } from '../engine/types'
 
-export type AdvanceKind = 'postMatch' | 'blocked' | 'deadline' | 'seasonStart' | 'match' | 'week'
+export type AdvanceKind = 'retired' | 'postMatch' | 'blocked' | 'deadline' | 'seasonStart' | 'match' | 'week'
 
 export interface AdvanceIntent {
   kind: AdvanceKind
@@ -35,6 +35,8 @@ export interface AdvanceIntent {
 }
 
 export interface AdvanceContext {
+  /** The career has ended. There is nothing after this and no way back. */
+  retired: 'age' | 'choice' | null
   /**
    * A result the player has just been shown and not yet dismissed. While one
    * is on screen the button does nothing else: the report is the thing being
@@ -86,7 +88,20 @@ function availability(out: number, suspended: number): string | null {
 }
 
 export function advanceIntent(ctx: AdvanceContext): AdvanceIntent {
-  // 0. A result on screen. The only time the button looks backwards rather
+  // 0. A finished career. Above everything, because nothing else can happen
+  //    afterwards — and the button still has to lead somewhere, so it leads to
+  //    the record, which is the only part of the job that outlasts it.
+  if (ctx.retired) {
+    return {
+      kind: 'retired',
+      label: ctx.retired === 'choice' ? 'You stood down' : 'Your career is over',
+      detail: 'THE RECORD IS ALL THAT IS LEFT',
+      tone: 'accent',
+      route: '/career',
+    }
+  }
+
+  // 0b. A result on screen. The only time the button looks backwards rather
   //    than forwards, because the thing worth naming has already happened.
   if (ctx.unreadResult) {
     return {
