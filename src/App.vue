@@ -39,7 +39,17 @@ const showChrome = computed(() => store.loaded && !isSetupRoute.value)
 // The advance button belongs to the dashboard, but it lives in the shell so
 // it cannot move and is never inside a scrolling region. The primary action of
 // a game played one-handed should not need a scroll to reach.
-const showAdvance = computed(() => showChrome.value && route.name === 'home')
+//
+// It also appears on a match report the player has just been handed, where it
+// reads "Continue" — but NOT on one they reopened from the results list. There
+// it would be a button that advances the week sitting under a match from three
+// weeks ago, which is a way to lose a week by tapping the wrong thing. A
+// reopened report is an ordinary detail screen and the back arrow closes it.
+const showAdvance = computed(() => {
+  if (!showChrome.value) return false
+  if (route.name === 'home') return true
+  return route.name === 'match' && store.matchQueue.includes(String(route.params.id ?? ''))
+})
 
 const cleanups: (() => void)[] = []
 

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { advanceIntent, type AdvanceContext } from '../src/ui/advance'
 
 const base: AdvanceContext = {
+  unreadResult: null,
   blockers: 0,
   isDeadlineWeek: false,
   openDeadlineOffers: 0,
@@ -34,6 +35,20 @@ describe('advanceIntent', () => {
 
   it('leaves availability off when everyone is fit', () => {
     expect(advanceIntent(ctx()).detail).toBe('AWAY · THE PREM')
+  })
+
+  it('looks backwards only while a result is unread', () => {
+    const i = advanceIntent(ctx({ unreadResult: 'Chelsea 1-2 United' }))
+    expect(i.kind).toBe('postMatch')
+    expect(i.label).toBe('Continue')
+    expect(i.detail).toBe('CHELSEA 1-2 UNITED')
+  })
+
+  it('shows the result ahead of anything else, blockers included', () => {
+    // The report is already on screen. Sending the player to the inbox from
+    // under it would lose the result they were reading.
+    expect(advanceIntent(ctx({ unreadResult: 'Chelsea 1-2 United', blockers: 2, isDeadlineWeek: true })).kind)
+      .toBe('postMatch')
   })
 
   it('blocks on things that expire, and sends you to them', () => {

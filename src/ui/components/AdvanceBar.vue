@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, inject } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useGameStore } from '../../stores/game'
 import { advanceIntent } from '../advance'
 
@@ -13,6 +13,14 @@ import { advanceIntent } from '../advance'
  */
 const store = useGameStore()
 const router = useRouter()
+const route = useRoute()
+
+/** The report currently on screen, if the player is reading one. */
+const openReport = computed(() => {
+  if (route.name !== 'match') return null
+  const id = String(route.params.id ?? '')
+  return store.matchQueue.includes(id) ? id : null
+})
 const toast = inject<(t: string, k?: 'info' | 'error' | 'success') => void>('toast')
 
 const intent = computed(() => {
@@ -40,7 +48,11 @@ const intent = computed(() => {
   }
   next = describeFixture()
 
+  const reading = openReport.value
+  const readingFixture = reading ? store.fixtureById(reading) : null
+
   return advanceIntent({
+    unreadResult: readingFixture?.result?.summary ?? null,
     blockers: store.blockers.length,
     isDeadlineWeek: store.isDeadline,
     openDeadlineOffers: store.deadlineOffers.length,
@@ -52,6 +64,15 @@ const intent = computed(() => {
 })
 
 async function press() {
+  // Dismissing a report either moves to the next result of the same week —
+  // a cup replay and a league game can both land — or hands the week back.
+  const reading = openReport.value
+  if (reading) {
+    const next = store.dismissMatchReport(reading)
+    router.replace(next ? `/match/${next}` : '/home')
+    return
+  }
+
   const to = intent.value.route
   if (to) {
     router.push(to)
@@ -76,8 +97,14 @@ async function press() {
     router.push('/career')
     return
   }
+  // The match is the week's payoff. It gets a screen rather than a toast that
+  // slides away while you are still reading it — and everything behind it
+  // (ratings, the events, the coach's read) was already being computed and
+  // thrown away.
   if (tick?.playerFixtures.length) {
-    toast?.(tick.playerFixtures[0].result.summary, 'info')
+    const ids = tick.playerFixtures.map((f) => f.fixture.id)
+    store.queueMatchReports(ids)
+    router.push(`/match/${ids[0]}`)
   }
 }
 </script>

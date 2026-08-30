@@ -130,6 +130,23 @@ console.log(`   club: ${clubName}`)
 // behaviour, so the test answers the decision and carries on, which also
 // exercises the decision resolver.
 let decisionsAnswered = 0
+// A week that contains a match now ends on the report screen rather than on a
+// toast, and a week can contain two — a cup replay and a league game. The
+// button is the same button in the same place, so clearing them is a matter of
+// pressing it until the report is gone.
+let reportsSeen = 0
+async function clearMatchReports() {
+  for (let i = 0; i < 4 && page.url().includes('#/match/'); i++) {
+    if (!(await page.locator('.report-score__goals').count())) {
+      throw new Error('match report rendered without a scoreline')
+    }
+    reportsSeen++
+    await page.click('.advance')
+    await page.waitForTimeout(250)
+  }
+  if (page.url().includes('#/match/')) throw new Error('could not get off the match report')
+}
+
 async function advanceOneWeek() {
   if (!page.url().includes('#/home')) {
     await page.goto('http://127.0.0.1:4173/#/home')
@@ -138,6 +155,7 @@ async function advanceOneWeek() {
   await page.click('.advance')
   await page.waitForFunction(() => !document.querySelector('.overlay'), null, { timeout: 30000 })
   await page.waitForTimeout(150)
+  await clearMatchReports()
 
   if (page.url().includes('#/inbox')) {
     // Clear every outstanding decision, not just the first. A busy window
@@ -165,11 +183,14 @@ async function advanceOneWeek() {
     await page.click('.advance')
     await page.waitForFunction(() => !document.querySelector('.overlay'), null, { timeout: 30000 })
     await page.waitForTimeout(150)
+    await clearMatchReports()
   }
 }
 
 await step('advance 10 weeks', async () => {
   for (let i = 0; i < 10; i++) await advanceOneWeek()
+  console.log(`   match reports shown: ${reportsSeen}`)
+  if (reportsSeen === 0) throw new Error('ten weeks passed without a single match report')
   // A tick can end on the inbox when it hit a blocker, so the dashboard shot
   // is taken from the dashboard rather than from wherever the last tap left us.
   await page.goto('http://127.0.0.1:4173/#/home')
@@ -177,6 +198,38 @@ await step('advance 10 weeks', async () => {
   await page.waitForTimeout(300)
   await page.screenshot({ path: `${SHOT}/07-home-after.png` })
   console.log(`   decisions answered: ${decisionsAnswered}`)
+})
+
+await step('a match report can be reopened and reads in full', async () => {
+  // Everything on this screen was already being simulated and discarded, so
+  // the check is that each part of it actually arrives: the scoreline, the
+  // three match figures, the coach's read, and per-player ratings.
+  await page.goto('http://127.0.0.1:4173/#/home')
+  await page.waitForSelector('.dash-standing')
+  const recent = page.locator('.list__row:has-text("W")').first()
+  await page.locator('text=Recent').waitFor({ timeout: 15000 })
+  await recent.click()
+  await page.waitForSelector('.report-score__goals', { timeout: 15000 })
+
+  const score = (await page.textContent('.report-score__goals'))?.replace(/\s+/g, '')
+  if (!/^\d+.\d+$/.test(score ?? '')) throw new Error(`unreadable scoreline: ${score}`)
+  const stats = await page.locator('.report-stats__cell').count()
+  if (stats !== 3) throw new Error(`expected three match figures, got ${stats}`)
+  const ratings = await page.locator('.report-rating').count()
+  if (ratings < 11) throw new Error(`expected a rated eleven, got ${ratings}`)
+  const verdict = (await page.textContent('.report-score__verdict'))?.trim()
+  if (!verdict) throw new Error('no verdict on the result')
+  console.log(`   ${score} · ${ratings} rated · "${verdict}"`)
+  await page.screenshot({ path: `${SHOT}/07-match.png`, fullPage: true })
+
+  // A reopened report is a detail screen, not a moment: it must NOT carry the
+  // advance button, or a stray tap under an old result costs a week.
+  if (await page.locator('.advance').count()) {
+    throw new Error('a reopened report is offering to advance the week')
+  }
+  await page.click('.topbar__back')
+  await page.waitForTimeout(300)
+  if (page.url().includes('#/match/')) throw new Error('stuck on a reopened report')
 })
 
 await step('squad screen', async () => {

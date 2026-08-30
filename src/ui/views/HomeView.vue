@@ -209,14 +209,6 @@ const estate = computed(() => {
     ? Math.round(rated.reduce((sum, r) => sum + r, 0) / rated.length)
     : 0
 
-  // A head coach's reputation is what the world thinks; his attributes are
-  // what you get. The dashboard shows what you get.
-  const coach = store.headCoach
-  const coachAttrs = coach ? Object.values(coach.attributes) : []
-  const coachRating = coachAttrs.length
-    ? Math.round(coachAttrs.reduce((sum, v) => sum + v, 0) / coachAttrs.length)
-    : 0
-
   // Facility levels run 1-20; the chart runs 0-100, so they are scaled rather
   // than shown raw. A player who has seen "Training 14" in the facilities
   // screen should still recognise it here as roughly seventy.
@@ -224,7 +216,10 @@ const estate = computed(() => {
 
   return [
     { key: 'squad', label: 'SQUAD', value: squadStrength, to: '/squad' },
-    { key: 'coach', label: 'COACH', value: coachRating, to: '/staff' },
+    // The head coach is staff rather than estate, and he already has a screen
+    // of his own. A neglected medical centre is the opposite: invisible until
+    // players start breaking, which is exactly what a glanceable bar is for.
+    { key: 'medical', label: 'MEDICAL', value: level(f.medicalCentre), to: '/facilities' },
     { key: 'youth', label: 'YOUTH', value: level(f.youthFacilities), to: '/academy' },
     { key: 'train', label: 'TRAIN', value: level(f.trainingGround), to: '/facilities' },
     { key: 'scout', label: 'SCOUT', value: level(f.scoutingNetwork), to: '/scouting' },
@@ -352,10 +347,11 @@ function barColour(value: number): string {
         <span class="card__title">Recent</span>
       </div>
       <div class="list">
-        <div
+        <button
           v-for="entry in store.recentResults.slice(0, 4)"
           :key="entry.fixture.id"
-          class="list__row list__row--static"
+          class="list__row"
+          @click="router.push(`/match/${entry.fixture.id}`)"
         >
           <div class="list__main">
             <div class="list__primary">{{ entry.result.summary }}</div>
@@ -367,7 +363,8 @@ function barColour(value: number): string {
               · {{ entry.result.attendance.toLocaleString() }} IN
             </div>
           </div>
-        </div>
+          <Chevron :size="14" />
+        </button>
       </div>
     </template>
   </div>

@@ -387,6 +387,34 @@ what it does to your players.
 
 It wants a stable calendar underneath it, which is why it is last.
 
+## The match report
+
+The match engine was always producing far more than the game showed. Every
+result carries per-player ratings, the events, both lineups, possession and
+shot counts; the UI surfaced one field of it — the one-line summary — as a
+toast and a row in a list. Everything else was computed weekly and discarded.
+That was also the only part of the original brief never built: *result, player
+ratings, key highlights, manager feedback*.
+
+So a result now gets a screen, landed on the moment the match is played, and
+the advance button becomes **Continue** — which is the state the design drew
+and could not implement, because there was no post-match moment for it to
+belong to. A week with two matches queues both.
+
+**The judgement is the part the engine did not have.** A scoreline is not a
+verdict: losing at the champions and losing at home to the bottom club are the
+same three characters and mean opposite things, and a director shown only
+"lost 2-1" has to work that out himself every week. `matchReport.ts` compares
+the result to what the fixture was worth before kick-off, and hands the verdict
+to the head coach to say out loud — the one football opinion in the game that
+is his to give rather than yours, and it reads differently depending on how he
+gets on with you.
+
+A report reopened later from the results list is a detail screen, not a moment,
+and deliberately does **not** carry the advance button. A control that advances
+the week, sitting under a match from three weeks ago, is a way to lose a week
+by tapping the wrong thing.
+
 ## Real club names
 
 The game ships with the actual clubs, in the divisions they actually play in,

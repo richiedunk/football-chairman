@@ -311,6 +311,32 @@ export const useGameStore = defineStore('game', () => {
       .map((f) => ({ fixture: f, result: f.result as MatchResult }))
   })
 
+  // --- Match reports --------------------------------------------------------
+
+  /**
+   * Matches played this tick that the player has not read yet.
+   *
+   * Held as a queue rather than a single fixture because a cup replay and a
+   * league game can land in the same week, and showing one while silently
+   * dropping the other would lose a result the player is entitled to see.
+   */
+  const matchQueue = ref<ID[]>([])
+
+  function queueMatchReports(fixtureIds: ID[]): void {
+    matchQueue.value = [...fixtureIds]
+  }
+
+  /** Mark a report read. Returns the next one to show, or null when done. */
+  function dismissMatchReport(fixtureId: ID): ID | null {
+    matchQueue.value = matchQueue.value.filter((id) => id !== fixtureId)
+    return matchQueue.value[0] ?? null
+  }
+
+  function fixtureById(id: ID): Fixture | null {
+    void revision.value
+    return state.value?.fixtures.find((f) => f.id === id) ?? null
+  }
+
   // --- Lookups --------------------------------------------------------------
 
   function player(id: ID): Player | null {
@@ -842,6 +868,7 @@ export const useGameStore = defineStore('game', () => {
     loaded, game, club, league, nation, currency, dateLabel, phaseLabel, transferWindow,
     squad, academy, staff, headCoach, table, leaguePosition,
     inbox, unread, pendingDecisions, blockers, wageBill, career,
+    matchQueue, queueMatchReports, dismissMatchReport, fixtureById,
     upcomingFixtures, nextFixture, recentResults,
     // lookups
     player, clubById, leagueById, staffById,

@@ -23,6 +23,7 @@ export const SCREEN_LABELS: Record<string, string> = {
   academy: 'Academy',
   board: 'Boardroom',
   media: 'Media',
+  match: 'Match report',
   league: 'League table',
   career: 'Career',
   achievements: 'Milestones',

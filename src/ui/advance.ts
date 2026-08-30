@@ -17,7 +17,7 @@
 
 import type { SeasonPhase } from '../engine/types'
 
-export type AdvanceKind = 'blocked' | 'deadline' | 'seasonStart' | 'match' | 'week'
+export type AdvanceKind = 'postMatch' | 'blocked' | 'deadline' | 'seasonStart' | 'match' | 'week'
 
 export interface AdvanceIntent {
   kind: AdvanceKind
@@ -35,6 +35,12 @@ export interface AdvanceIntent {
 }
 
 export interface AdvanceContext {
+  /**
+   * A result the player has just been shown and not yet dismissed. While one
+   * is on screen the button does nothing else: the report is the thing being
+   * read, and the next week can wait for a tap.
+   */
+  unreadResult: string | null
   /** Decisions that expire if ignored. These, and only these, block. */
   blockers: number
   isDeadlineWeek: boolean
@@ -80,6 +86,18 @@ function availability(out: number, suspended: number): string | null {
 }
 
 export function advanceIntent(ctx: AdvanceContext): AdvanceIntent {
+  // 0. A result on screen. The only time the button looks backwards rather
+  //    than forwards, because the thing worth naming has already happened.
+  if (ctx.unreadResult) {
+    return {
+      kind: 'postMatch',
+      label: 'Continue',
+      detail: ctx.unreadResult.toUpperCase(),
+      tone: 'accent',
+      route: null,
+    }
+  }
+
   // 1. Anything that expires if ignored comes first. The button keeps its
   //    place and its shape but opens the blocker rather than stepping over it.
   //    It never blocks merely to make something be read: that is how a game

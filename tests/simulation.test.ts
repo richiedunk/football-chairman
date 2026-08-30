@@ -526,6 +526,59 @@ describe('loans', () => {
     }
   })
 
+  it('lets AI clubs be injured in matches, not just the player\'s', () => {
+    // Match injuries reach a squad by replaying the events a match recorded,
+    // and for a long time only the player's own matches recorded any — so the
+    // player was the only club in the world whose players could be hurt in a
+    // game. Over a season that came to exactly twice the injuries of every AI
+    // club, an invisible handicap nobody chose.
+    //
+    // Asserting on the mechanism rather than on a ratio: one club against two
+    // hundred is a small integer against an average, and swings enough between
+    // seeds to make a ratio test flaky. Under the bug this count is exactly
+    // nought, which nothing else in the model can produce.
+    const setup = prepareNewGame({
+      seed: 'INJURYFAIR', directorName: 'T', background: 'scout',
+      worldSize: 'compact', homeNationId: 'eng', startingSeason: 2025,
+    })
+    const state = startCareerAt(setup, firstEligible(setup))
+    const deps = { ids: setup.ids, names: setup.names }
+    for (let week = 0; week < 20; week++) advanceWeek(state, deps)
+
+    // Counting distinct clubs, not players, and demanding a majority. A few
+    // AI matches are simulated in full anyway — the ones involving a player on
+    // your shortlist — so "at least one" was satisfied under the bug too.
+    // Measured, the two behaviours are 194 of 237 clubs against 1.
+    const aiClubs = Object.values(state.clubs).filter((c) => c.id !== state.playerClubId)
+    const hurt = aiClubs.filter((club) =>
+      club.squad.some((id) => state.players[id]?.injury?.type === 'Match injury'),
+    ).length
+    expect(hurt, `only ${hurt} of ${aiClubs.length} AI clubs have a match injury`)
+      .toBeGreaterThan(aiClubs.length / 4)
+  })
+
+  it('leaves clubs with a believable number of players unavailable', () => {
+    // Around two to three out of a senior squad is what a real club carries.
+    // Nought would make squad depth pointless; six would make it the game.
+    const setup = prepareNewGame({
+      seed: 'INJURYLOAD', directorName: 'T', background: 'scout',
+      worldSize: 'compact', homeNationId: 'eng', startingSeason: 2025,
+    })
+    const state = startCareerAt(setup, firstEligible(setup))
+    const deps = { ids: setup.ids, names: setup.names }
+    for (let week = 0; week < 30; week++) advanceWeek(state, deps)
+
+    const out = Object.values(state.clubs).map(
+      (c) => c.squad.filter((id) => state.players[id]?.injury).length,
+    )
+    const average = out.reduce((a, b) => a + b, 0) / out.length
+    // The floor is 1.8 rather than 1: when match injuries reached only the
+    // player's club the world sat at 1.0-1.2, and a bound that passes on that
+    // is not a bound.
+    expect(average, `clubs are missing ${average.toFixed(2)} players`).toBeGreaterThan(1.8)
+    expect(average, `clubs are missing ${average.toFixed(2)} players`).toBeLessThan(4)
+  })
+
   it('generates loan activity across the world', () => {
     const setup = prepareNewGame({
       seed: 'LOANWORLD', directorName: 'T', background: 'scout',

@@ -288,10 +288,15 @@ function runMatch(
         const minute = clamp(minuteBase + rng.int(1, 5), 1, 90)
         const side = isHome ? 'home' : 'away'
         onPitch[side].delete(victim.id)
-        if (detailed) {
-          events.push(makeEvent(minute, 'injury', club.id, victim.id, undefined,
-            `${victim.knownAs} goes down and cannot continue.`))
-        }
+        // Recorded whether or not the match is being narrated. Every other
+        // event here is commentary, and dropping it for an AI match costs
+        // nothing — but an injury is a lasting change to a squad, and the tick
+        // applies those by replaying this list. Guarding it behind `detailed`
+        // meant only the player's own club could be hurt in a match: measured
+        // over forty weeks, the player carried exactly twice the injuries of
+        // every AI club in the world, which is a handicap nobody chose.
+        events.push(makeEvent(minute, 'injury', club.id, victim.id, undefined,
+          `${victim.knownAs} goes down and cannot continue.`))
         // Forced substitution.
         const replacement = team.bench.find((id) => !onPitch[side].has(id))
         if (replacement && subsUsed[side] < 5) {
