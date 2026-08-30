@@ -103,7 +103,7 @@ function withdraw(negotiation: TransferNegotiation) {
     <button
       v-if="store.isDeadline"
       class="card"
-      style="width: 100%; text-align: left; cursor: pointer; border-color: var(--warn); background: rgba(251,191,36,0.08)"
+      style="width: 100%; text-align: left; cursor: pointer; background: var(--warn-wash)"
       @click="router.push('/deadline')"
     >
       <div class="card__body">

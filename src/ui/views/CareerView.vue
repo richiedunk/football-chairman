@@ -169,7 +169,7 @@ function decline(offerId: string) {
 
     <template v-if="director.jobOffers.length">
       <div class="section-title">Approaches</div>
-      <div v-for="offer in director.jobOffers" :key="offer.id" class="card" style="border-color: var(--accent)">
+      <div v-for="offer in director.jobOffers" :key="offer.id" class="card card--boxed" style="border-color: var(--accent)">
         <div class="card__head">
           <span class="card__title">{{ offer.clubName }}</span>
           <span class="chip chip--accent">Rep {{ offer.clubReputation }}</span>
@@ -265,7 +265,7 @@ function decline(offerId: string) {
           v-for="l in CAREER_LEVELS"
           :key="l.level"
           class="list__row list__row--static"
-          :style="l.level === level.level ? 'background: rgba(74,222,128,0.07)' : ''"
+          :style="l.level === level.level ? 'background: var(--accent-wash)' : ''"
         >
           <div class="pos" style="width: 26px">{{ l.level }}</div>
           <div class="list__main">

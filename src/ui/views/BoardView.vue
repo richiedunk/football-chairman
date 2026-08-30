@@ -157,7 +157,7 @@ const gap = computed(() => {
     <div
       v-if="store.takeover"
       class="card"
-      style="border-color: var(--warn); background: rgba(251,191,36,0.06)"
+      style="background: var(--warn-wash)"
     >
       <div class="card__body">
         <div class="bold small" style="color: var(--warn)">{{ TAKEOVER_STAGE[store.takeover.stage] }}</div>
@@ -220,7 +220,7 @@ const gap = computed(() => {
       </div>
     </div>
 
-    <div v-if="lastResponse" class="card" :style="lastResponse.outcome === 'refused' ? 'border-color: var(--danger)' : 'border-color: var(--accent)'">
+    <div v-if="lastResponse" class="card card--boxed" :style="lastResponse.outcome === 'refused' ? 'border-color: var(--danger)' : 'border-color: var(--accent)'">
       <div class="card__body small">{{ lastResponse.message }}</div>
     </div>
 

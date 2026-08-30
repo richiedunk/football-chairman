@@ -107,7 +107,7 @@ const committed = computed(() => {
           </div>
         </div>
       </div>
-      <div v-if="club.finances.inCrisis" class="card__body" style="background: rgba(248,113,113,0.1)">
+      <div v-if="club.finances.inCrisis" class="card__body" style="background: var(--danger-wash)">
         <div class="small bold" style="color: var(--danger)">Transfer embargo in force</div>
         <div class="tiny muted">
           The club cannot cover its outgoings. Sell players or cut wages before you can sign anyone.
@@ -146,7 +146,7 @@ const committed = computed(() => {
       <div
         v-if="embargoed"
         class="card__body"
-        style="background: rgba(248,113,113,0.1)"
+        style="background: var(--danger-wash)"
       >
         <div class="small bold" style="color: var(--danger)">Registration embargo</div>
         <div class="tiny muted">

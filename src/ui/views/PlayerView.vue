@@ -545,7 +545,7 @@ function doRelease() {
               v-for="s in suitors"
               :key="s.club.id"
               class="list__row"
-              :style="chosenSuitor === s.club.id ? 'background: rgba(74,222,128,0.09)' : ''"
+              :style="chosenSuitor === s.club.id ? 'background: var(--accent-wash)' : ''"
               @click="chosenSuitor = s.club.id"
             >
               <div class="list__main">

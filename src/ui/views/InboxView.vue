@@ -83,7 +83,7 @@ function severity(item: InboxItem): string {
       <button
         class="list__row"
         style="border-bottom: 0"
-        :style="!item.read ? 'background: rgba(96,165,250,0.05)' : ''"
+        :style="!item.read ? 'background: rgba(106, 169, 255, 0.07)' : ''"
         @click="toggle(item)"
       >
         <span

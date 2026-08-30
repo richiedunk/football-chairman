@@ -95,7 +95,7 @@ function autoPick() {
     <div
       v-if="embargoed"
       class="card"
-      style="border-color: var(--danger); background: rgba(248,113,113,0.06)"
+      style="background: var(--danger-wash)"
     >
       <div class="card__body">
         <div class="bold small" style="color: var(--danger)">Registration embargo in force</div>
@@ -109,7 +109,7 @@ function autoPick() {
     <div
       v-if="bestOmitted"
       class="card"
-      style="border-color: var(--danger); background: rgba(248,113,113,0.06)"
+      style="background: var(--danger-wash)"
     >
       <div class="card__body">
         <div class="bold small" style="color: var(--danger)">

@@ -87,7 +87,7 @@ const registration = computed(() => store.registration)
       :style="{
         width: '100%', textAlign: 'left', cursor: 'pointer',
         borderColor: registration.unregistered.length ? 'var(--danger)' : undefined,
-        background: registration.unregistered.length ? 'rgba(248,113,113,0.06)' : undefined,
+        background: registration.unregistered.length ? 'var(--danger-wash)' : undefined,
       }"
       @click="router.push('/registration')"
     >
@@ -115,7 +115,7 @@ const registration = computed(() => store.registration)
     <button
       v-if="shortages.length"
       class="card"
-      style="width: 100%; text-align: left; border-color: var(--warn); background: rgba(251,191,36,0.06); cursor: pointer"
+      style="width: 100%; text-align: left; background: var(--warn-wash); cursor: pointer"
       @click="showDepth = !showDepth"
     >
       <div class="card__body">

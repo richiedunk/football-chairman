@@ -190,7 +190,7 @@ function answer(requestId: string, accept: boolean) {
       </div>
     </div>
 
-    <div v-else class="card" style="border-color: var(--danger)">
+    <div v-else class="card card--boxed" style="border-color: var(--danger)">
       <div class="card__body">
         <div class="bold" style="color: var(--danger)">No head coach</div>
         <p class="small muted">

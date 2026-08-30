@@ -159,7 +159,7 @@ function conditionLabel(condition: number): string {
         </div>
       </div>
 
-      <div v-if="closedSeats > 0" class="card__body" style="background: rgba(248,113,113,0.1)">
+      <div v-if="closedSeats > 0" class="card__body" style="background: var(--danger-wash)">
         <div class="small bold" style="color: var(--danger)">
           {{ closedSeats.toLocaleString() }} places closed by the safety officer
         </div>
@@ -178,7 +178,7 @@ function conditionLabel(condition: number): string {
     </div>
 
     <!-- Work in progress -->
-    <div v-if="project" class="card" style="border-color: var(--info)">
+    <div v-if="project" class="card card--boxed" style="border-color: var(--info)">
       <div class="card__head">
         <span class="card__title">Work in progress</span>
         <span class="chip chip--info">{{ WORK_LABELS[project.kind] }}</span>
