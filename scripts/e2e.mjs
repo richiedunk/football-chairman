@@ -209,7 +209,7 @@ async function advanceOneWeek() {
     await page.waitForSelector('.advance-bar .advance')
   }
   await clickAdvance()
-  await page.waitForFunction(() => !document.querySelector('.overlay'), null, { timeout: 30000 })
+  await page.waitForFunction(() => !document.querySelector('.loading'), null, { timeout: 30000 })
   await page.waitForTimeout(300)
   await readNotice()
   await clearMatchReports()
@@ -239,7 +239,7 @@ async function advanceOneWeek() {
     // that hit one has not moved the clock yet. Take the week now that the
     // way is clear, or the caller's count of weeks is a count of taps.
     await clickAdvance()
-    await page.waitForFunction(() => !document.querySelector('.overlay'), null, { timeout: 30000 })
+    await page.waitForFunction(() => !document.querySelector('.loading'), null, { timeout: 30000 })
     await page.waitForTimeout(300)
     await readNotice()
     await clearMatchReports()
@@ -356,6 +356,60 @@ await step('league table', async () => {
   await page.goto('http://127.0.0.1:4173/#/league')
   await page.waitForSelector('.table')
   await page.screenshot({ path: `${SHOT}/10-league.png` })
+})
+
+await step('the club hub reaches the buried screens', async () => {
+  // The recurring complaint was that everything below the five tabs was hard
+  // to find. Each of these must be one tap from the dashboard.
+  for (const [label, path] of [
+    ['Boardroom', '#/board'],
+    ['Staff', '#/staff'],
+    ['Facilities', '#/facilities'],
+    ['Finances', '#/finance'],
+  ]) {
+    await page.goto('http://127.0.0.1:4173/#/home')
+    await page.waitForSelector('.hub')
+    await tap(`.hub__item:has-text("${label}")`)
+    await page.waitForTimeout(400)
+    if (!page.url().includes(path)) throw new Error(`${label} went to ${page.url()}`)
+  }
+  await page.goto('http://127.0.0.1:4173/#/home')
+  await page.waitForSelector('.hub')
+  await page.screenshot({ path: `${SHOT}/07c-hub.png`, fullPage: true })
+})
+
+await step('a facility request names a facility', async () => {
+  await page.goto('http://127.0.0.1:4173/#/board')
+  await page.waitForSelector('text=Ask the board', { timeout: 15000 })
+  const ask = page.locator('.list__row:has-text("fund a facility upgrade")')
+  if (!(await ask.count())) {
+    console.log('   not askable right now — work already under way')
+    return
+  }
+  await tap(ask.first())
+  await page.waitForSelector('.sheet', { timeout: 15000 })
+  const choices = await page.locator('.sheet .list__row').count()
+  if (choices < 5) throw new Error(`expected the five facilities, got ${choices}`)
+  console.log(`   ${choices} facilities offered, each priced`)
+  await page.screenshot({ path: `${SHOT}/21b-facility-ask.png` })
+  await tap('.sheet .btn:has-text("Put it to the board")')
+  await page.waitForTimeout(500)
+  const outcome = await readNotice()
+  console.log(`   ${outcome?.slice(0, 80)}`)
+})
+
+await step('the league carries its own news', async () => {
+  // The feed has been written to since the game was built and read by nothing.
+  // It belongs beside the table it is about.
+  await page.goto('http://127.0.0.1:4173/#/league')
+  await page.waitForSelector('.segmented__item:has-text("News")', { timeout: 15000 })
+  await tap('.segmented__item:has-text("News")')
+  await page.waitForTimeout(400)
+  const items = await page.locator('.list__primary').count()
+  const empty = await page.locator('.empty').count()
+  if (items === 0 && empty === 0) throw new Error('news tab shows neither items nor an empty state')
+  console.log(`   ${items} item${items === 1 ? '' : 's'} filed to this division`)
+  await page.screenshot({ path: `${SHOT}/10b-news.png` })
 })
 
 await step('inbox', async () => {

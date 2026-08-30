@@ -2,7 +2,9 @@ import { clamp, Rng } from '../rng'
 import { weeklyRevenue } from './finance'
 import { totalWageBill, formatMoney } from './valuation'
 import { levelFor } from './career'
-import type { Club, GameState, BoardMandate } from '../types'
+import type { Club, FacilityKind, GameState, BoardMandate } from '../types'
+import type { IdFactory } from '../ids'
+import { FACILITY_LABELS, startUpgrade, upgradeCost } from './facilities'
 import { requestReceptiveness } from './ownership'
 
 /**
@@ -195,6 +197,15 @@ export function makeRequest(
   kind: BoardRequestKind,
   rng: Rng,
   amount = 0,
+  /**
+   * Which facility the money is for. "Fund a facility upgrade" used to be a
+   * request with no object: the board handed over a round sum and told you to
+   * go and start something with it. A director asks for a specific thing, and
+   * the board's answer depends on which thing it is — a training ground at
+   * level 18 is a different conversation from an academy at level 4.
+   */
+  facility?: FacilityKind,
+  ids?: IdFactory,
 ): BoardResponse {
   const option = availableRequests(state, club).find((o) => o.kind === kind)
   if (!option) return { outcome: 'refused', message: 'That is not something you can ask for.', confidenceChange: 0 }
@@ -223,6 +234,15 @@ export function makeRequest(
   const riskPenalty = option.risk === 'high' ? 0.28 : option.risk === 'medium' ? 0.14 : 0.04
   willingness -= riskPenalty
 
+  // A specific upgrade has a specific price, and a board weighs that price
+  // against what the club turns over. Asking to take the training ground from
+  // eighteen to nineteen is not the same conversation as fixing the academy.
+  if (kind === 'fundFacility' && facility) {
+    const cost = upgradeCost(facility, club.facilities[facility] as number, club.reputation)
+    const weeksOfRevenue = cost / Math.max(1, weeklyRevenue(state, club))
+    willingness -= clamp(weeksOfRevenue / 90, 0, 0.4)
+  }
+
   // Asking for a lot is harder than asking for a little.
   if (option.maxAmount && amount > 0) {
     willingness -= (amount / Math.max(1, option.maxAmount)) * 0.35
@@ -234,9 +254,9 @@ export function makeRequest(
   // A near miss becomes a partial grant rather than a flat no — a board that
   // meets you halfway is far more interesting than one that only ever says
   // yes or no.
-  if (roll < willingness) return grant(state, club, kind, amount, 1, rng)
+  if (roll < willingness) return grant(state, club, kind, amount, 1, rng, facility, ids)
   if (roll < willingness + 0.2 && option.maxAmount && amount > 0) {
-    return grant(state, club, kind, amount, rng.float(0.35, 0.65), rng)
+    return grant(state, club, kind, amount, rng.float(0.35, 0.65), rng, facility, ids)
   }
 
   const confidenceChange = -(option.risk === 'high' ? 5 : option.risk === 'medium' ? 3 : 1.5)
@@ -255,6 +275,8 @@ function grant(
   amount: number,
   fraction: number,
   rng: Rng,
+  facility?: FacilityKind,
+  ids?: IdFactory,
 ): BoardResponse {
   const currency = state.settings.currency
   const granted = Math.round(amount * fraction)
@@ -296,12 +318,33 @@ function grant(
       }
 
     case 'fundFacility': {
-      // The board pays: the next upgrade the club starts costs it nothing.
-      club.finances.balance += estimatedUpgradeGrant(state, club)
+      // The board pays for the thing you asked about, and the work starts.
+      // Granting a sum and sending the director to another screen to spend it
+      // was a request that ended in homework.
+      if (!facility || !ids) {
+        return {
+          outcome: 'refused',
+          message: 'The board asked which facility you meant.',
+          confidenceChange: 0,
+        }
+      }
+      const level = club.facilities[facility] as number
+      const cost = upgradeCost(facility, level, club.reputation)
+      club.finances.balance += cost
+      const started = startUpgrade(club, ids, facility)
+      if ('error' in started) {
+        // The money is theirs either way; they said yes to the work.
+        return {
+          outcome: 'granted',
+          message: `The board have released ${formatMoney(cost, currency)}, but the work cannot start: ${started.error}`,
+          amount: cost,
+          confidenceChange,
+        }
+      }
       return {
         outcome: 'granted',
-        message: `The board will underwrite the work. ${formatMoney(estimatedUpgradeGrant(state, club), currency)} has been made available — start the upgrade from the facilities screen.`,
-        amount: estimatedUpgradeGrant(state, club),
+        message: `The board will underwrite it. Work on the ${FACILITY_LABELS[facility].toLowerCase()} has begun — level ${level + 1} in ${started.project.weeksRemaining} weeks.`,
+        amount: cost,
         confidenceChange,
       }
     }
@@ -361,11 +404,6 @@ function grant(
 }
 
 /** Roughly what the next facility upgrade will cost, for the board's grant. */
-function estimatedUpgradeGrant(state: GameState, club: Club): number {
-  const revenue = weeklyRevenue(state, club)
-  return Math.round(revenue * 18)
-}
-
 function refusalMessage(kind: BoardRequestKind, club: Club): string {
   const confidence = club.board.confidence
   const cold = confidence < 40

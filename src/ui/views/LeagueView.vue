@@ -1,16 +1,20 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useRoute } from 'vue-router'
+import { useRouter } from 'vue-router'
 import { useGameStore } from '../../stores/game'
 import FormRun from '../components/FormRun.vue'
 import { sortTable } from '../../engine/systems/board'
 import { survivorsOf, tieAggregate } from '../../engine/sim/cups'
 import Chevron from '../components/Chevron.vue'
+import { CATEGORY_LABELS } from '../../engine/systems/inbox'
+import { FIRST_MATCH_WEEK } from '../../engine/sim/schedule'
 
 const store = useGameStore()
+const router = useRouter()
 const route = useRoute()
 
-const tab = ref<'table' | 'fixtures' | 'results'>('table')
+const tab = ref<'table' | 'fixtures' | 'results' | 'news'>('table')
 
 const league = computed(() => {
   const id = route.params.id ? String(route.params.id) : store.club?.leagueId
@@ -101,6 +105,25 @@ const otherLeagues = computed(() => {
 function short(clubId: string) {
   return store.clubById(clubId)?.shortName ?? '—'
 }
+
+/**
+ * What has happened in this division.
+ *
+ * The feed has been written to from nine places since the game was built and
+ * displayed by nothing at all — the same shape as a qualification place that
+ * leads nowhere. It belongs here rather than in the inbox: the inbox is for
+ * things addressed to you, and a rival being taken over is not addressed to
+ * anyone. It is news about this league, so it sits beside this league's table.
+ */
+const news = computed(() => {
+  const s = store.game
+  const l = league.value
+  if (!s || !l) return []
+  return s.newsFeed.filter((item) => item.leagueId === l.id).slice(0, 40)
+})
+
+/** True before a ball is kicked, so a table of zeroes explains itself. */
+const notStarted = computed(() => table.value.every((row) => row.played === 0))
 </script>
 
 <template>
@@ -114,7 +137,33 @@ function short(clubId: string) {
       <button class="segmented__item" :class="{ 'is-active': tab === 'table' }" @click="tab = 'table'">Table</button>
       <button class="segmented__item" :class="{ 'is-active': tab === 'results' }" @click="tab = 'results'">Results</button>
       <button class="segmented__item" :class="{ 'is-active': tab === 'fixtures' }" @click="tab = 'fixtures'">Fixtures</button>
+      <button class="segmented__item" :class="{ 'is-active': tab === 'news' }" @click="tab = 'news'">News</button>
     </div>
+
+    <template v-if="tab === 'news'">
+      <div v-if="!news.length" class="empty">Nothing has happened here yet.</div>
+      <div v-else class="list">
+        <button
+          v-for="item in news"
+          :key="item.id"
+          class="list__row"
+          :disabled="!item.link"
+          @click="item.link && router.push(item.link.id ? `/${item.link.view}/${item.link.id}` : `/${item.link.view}`)"
+        >
+          <div class="list__main">
+            <div class="list__primary" style="white-space: normal">{{ item.text }}</div>
+            <div class="list__secondary num">
+              S{{ item.season }} W{{ item.week }} · {{ CATEGORY_LABELS[item.category] }}
+            </div>
+          </div>
+          <Chevron v-if="item.link" :size="14" />
+        </button>
+      </div>
+    </template>
+
+    <p v-if="tab === 'table' && notStarted" class="tiny faint" style="margin: -2px 0 8px">
+      Nobody has kicked a ball yet — the season starts in week {{ FIRST_MATCH_WEEK }}.
+    </p>
 
     <div v-if="tab === 'table'" class="card">
       <div class="table__scroll">

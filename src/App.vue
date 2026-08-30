@@ -7,6 +7,7 @@ import AppStatusBar from './ui/components/AppStatusBar.vue'
 import AppTabBar from './ui/components/AppTabBar.vue'
 import AdvanceBar from './ui/components/AdvanceBar.vue'
 import NoticeScreen, { type Notice } from './ui/components/NoticeScreen.vue'
+import { nextLine } from './ui/loadingLines'
 import { listSaves } from './storage/saves'
 import { bindAppStateChange, bindBackButton } from './platform/native'
 
@@ -51,6 +52,19 @@ const showChrome = computed(() => store.loaded && !isSetupRoute.value)
  * opening a player from halfway down a squad list dropped you halfway down his
  * profile.
  */
+/**
+ * A new line each time the game goes away to think. Chosen when `busy` turns
+ * on rather than on a timer: the tick is one synchronous call, so nothing
+ * repaints while it runs and a rotating message would sit frozen.
+ */
+const loadingLine = ref(nextLine())
+watch(
+  () => store.busy,
+  (busy) => {
+    if (busy) loadingLine.value = nextLine(loadingLine.value)
+  },
+)
+
 const content = ref<HTMLElement | null>(null)
 watch(
   () => route.fullPath,
@@ -126,14 +140,11 @@ onUnmounted(() => {
     <AdvanceBar v-if="showAdvance" />
     <AppTabBar v-if="showChrome" />
 
-    <Transition name="fade">
-      <div v-if="store.busy" class="overlay">
-        <div class="col" style="align-items: center; gap: 14px">
-          <div class="spinner" />
-          <div class="small muted">{{ store.busyMessage }}</div>
-        </div>
-      </div>
-    </Transition>
+    <div v-if="store.busy" class="loading">
+      <div class="loading__bar"><div class="loading__sweep" /></div>
+      <div class="loading__line">{{ loadingLine }}</div>
+      <div class="loading__task">{{ store.busyMessage }}</div>
+    </div>
 
 
   </div>

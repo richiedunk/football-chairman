@@ -14,7 +14,21 @@ import { projectedSquadCost, SANCTION_THRESHOLD, SQUAD_COST_LIMIT } from '../../
  */
 const store = useGameStore()
 
-const week = computed(() => (store.game ? `W${store.game.date.week}` : ''))
+/**
+ * The week, and what kind of week it is.
+ *
+ * "W6" with every league reading "played 0" looks like a world that has
+ * stopped. It has not: the season starts at week 6 and weeks 1-5 are
+ * pre-season. Naming the phase costs four characters and answers the question
+ * before it is asked.
+ */
+const week = computed(() => {
+  const s = store.game
+  if (!s) return ''
+  if (s.phase === 'preseason') return `W${s.date.week} PRE`
+  if (s.phase === 'endOfSeason') return `W${s.date.week} END`
+  return `W${s.date.week}`
+})
 
 const balance = computed(() => {
   const c = store.club

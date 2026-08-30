@@ -23,6 +23,8 @@ import { Rng } from '../../engine/rng'
 import AppSheet from '../components/AppSheet.vue'
 import { ordinal } from '../../engine/systems/career'
 import { formatMoney } from '../../engine/systems/valuation'
+import { FACILITY_LABELS, facilityGrade, upgradeCost } from '../../engine/systems/facilities'
+import type { FacilityKind } from '../../engine/types'
 
 const store = useGameStore()
 const notify = inject<(t: string, k?: 'info' | 'error' | 'success') => void>('notify')
@@ -66,6 +68,8 @@ function openRequest(option: BoardRequestOption) {
   }
   asking.value = option
   askAmount.value = option.suggestedAmount ?? 0
+  // Default to whatever is furthest behind: the one a director would name.
+  askFacility.value = weakestFacility.value
   lastResponse.value = null
 }
 
@@ -77,6 +81,8 @@ function submit(kind: BoardRequestKind) {
     s, c, kind,
     new Rng(`${s.seed}:board:${kind}:${s.date.season}:${s.date.week}`),
     askAmount.value,
+    kind === 'fundFacility' ? askFacility.value : undefined,
+    store.idFactory(),
   )
   store.commit()
   lastResponse.value = { outcome: response.outcome, message: response.message }
@@ -104,6 +110,31 @@ const RISK_CHIP: Record<BoardRequestOption['risk'], string> = {
   medium: 'Big ask',
   high: 'Costly if refused',
 }
+
+const askFacility = ref<FacilityKind>('trainingGround')
+
+/** Every facility, with what the next level would cost — cheapest fix first. */
+const facilityChoices = computed(() => {
+  const c = club.value
+  if (!c) return []
+  return (Object.keys(FACILITY_LABELS) as FacilityKind[])
+    .map((kind) => {
+      const level = c.facilities[kind] as number
+      return {
+        kind,
+        label: FACILITY_LABELS[kind],
+        level,
+        grade: facilityGrade(level),
+        cost: upgradeCost(kind, level, c.reputation),
+      }
+    })
+    .sort((a, b) => a.level - b.level)
+})
+
+/** What a director would ask about first: whatever is furthest behind. */
+const weakestFacility = computed<FacilityKind>(
+  () => facilityChoices.value[0]?.kind ?? 'trainingGround',
+)
 </script>
 
 <template>
@@ -333,6 +364,36 @@ const RISK_CHIP: Record<BoardRequestOption['risk'], string> = {
       @close="asking = null"
     >
       <p class="small muted mb">{{ asking.description }}</p>
+
+      <!-- A facility request needs an object. "Fund a facility upgrade" with
+           no facility named was a request the board could only answer with a
+           round sum and an instruction to go and spend it somewhere else. -->
+      <div v-if="asking.kind === 'fundFacility'" class="field">
+        <label class="field__label">Which one</label>
+        <div class="list">
+          <button
+            v-for="f in facilityChoices"
+            :key="f.kind"
+            class="list__row"
+            :style="askFacility === f.kind ? 'background: var(--accent-wash)' : ''"
+            @click="askFacility = f.kind"
+          >
+            <div class="list__main">
+              <div class="list__primary">{{ f.label }}</div>
+              <div class="list__secondary num">
+                LEVEL {{ f.level }} · {{ f.grade.toUpperCase() }}
+              </div>
+            </div>
+            <div class="list__trail">
+              <div class="list__value">{{ formatMoney(f.cost, store.currency) }}</div>
+              <div class="list__sub">TO {{ f.level + 1 }}</div>
+            </div>
+          </button>
+        </div>
+        <div class="field__hint">
+          The dearer the upgrade, the harder it is to get. They pay for the one you name.
+        </div>
+      </div>
 
       <div v-if="asking.maxAmount" class="field">
         <label class="field__label">How much — {{ formatMoney(askAmount, store.currency) }}</label>

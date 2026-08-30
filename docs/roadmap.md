@@ -529,6 +529,59 @@ surfaced: a counter reading 169.
 The next version of this run needs to accept offers when they come, which is
 the difference between measuring a career and measuring a chair.
 
+## Getting around
+
+The recurring complaint, said three separate ways: everything below the five
+tabs is hard to reach and easy to forget exists. The nav stays at five — that
+part was right — and the dashboard grows a hub of the places a director
+actually goes: the boardroom, the staff room, facilities, finances, the
+academy, and a way through to everything else. Each carries a line of live
+state, so the row is worth reading even when you are not going anywhere.
+
+Two specific holes it closes. "Start the upgrade from the facilities screen"
+was an instruction with no route attached. And there was no quick way to the
+staff room at all, which is where hiring and dismissing happens.
+
+## Asking for a specific thing
+
+"Ask the board to fund a facility upgrade" was a request with no object: the
+board handed over a round sum — eighteen weeks of revenue, regardless of what
+you wanted it for — and told you to go and spend it somewhere else.
+
+Now you name the facility. The sheet lists all five with their level, their
+grade and what the next level costs, worst first, because that is the one a
+director would raise. The board weighs the actual price against turnover, so
+taking the training ground from eighteen to nineteen is a harder conversation
+than fixing an academy at four. And a yes starts the work, rather than ending
+in homework.
+
+## The season starts in week six
+
+Every league in the world reads "played 0" until week six, because week six is
+matchday one and weeks one to five are pre-season. That is correct and it
+looked broken — a table of zeroes with a week number beside it and nothing
+saying why. Measured across eight divisions, home and overseas, they all move
+in step from week six onward.
+
+Fixed by saying so: the status strip marks the phase (`W3 PRE`), and a table
+with nothing in it explains that nobody has kicked a ball yet.
+
+## Waiting for the week
+
+A week costs about 275ms at the median and can pass a second at the season
+roll. That is long enough to feel like a hang, so it gets a proper screen
+rather than a small spinner — and a line of terrace humour to read while it
+runs.
+
+One constraint shaped it: the tick is a single synchronous call, so nothing
+repaints while it runs. A rotating carousel of messages would freeze on its
+first entry and look worse than nothing. So there is one line per advance,
+chosen fresh each time, and the only moving part is a CSS transform, which is
+composited off the main thread and therefore keeps going while everything else
+is blocked.
+
+Making the tick itself faster is a separate job and not this one.
+
 ## Out of work
 
 Being sacked drops you onto a jobs board, not out of the game — and the board

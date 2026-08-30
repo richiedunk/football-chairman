@@ -4,6 +4,8 @@ import { useRouter } from 'vue-router'
 import { useGameStore } from '../../stores/game'
 import { ordinal } from '../../engine/systems/career'
 import { headerBand } from '../colour'
+import { confidenceLabel } from '../../engine/systems/board'
+import { formatMoney } from '../../engine/systems/valuation'
 import { ratingForPositionCached } from '../../engine/world/attributes'
 import FormRun from '../components/FormRun.vue'
 import Chevron from '../components/Chevron.vue'
@@ -230,6 +232,59 @@ const estate = computed(() => {
 function barColour(value: number): string {
   return value >= 60 ? 'var(--accent)' : value >= 40 ? 'var(--warn)' : 'var(--danger)'
 }
+
+/**
+ * The places you go that are not one of the five tabs.
+ *
+ * Chosen by how often a director actually needs them rather than by tidiness:
+ * the boardroom and the staff room are where the two hardest decisions live,
+ * and both were buried. Each carries a line of live state, so the row is worth
+ * reading even when you are not going anywhere.
+ */
+const hub = computed(() => {
+  const c = club.value
+  if (!c) return []
+  const coach = store.headCoach
+  const projects = c.facilities.projects.length
+  return [
+    {
+      to: '/board',
+      label: 'Boardroom',
+      note: confidenceLabel(c.board.confidence),
+      icon: 'M3 21h18M5 21V8l7-5 7 5v13M9 21v-6h6v6',
+    },
+    {
+      to: '/staff',
+      label: 'Staff',
+      note: coach?.knownAs ?? 'No head coach',
+      icon: 'M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2M9 3a4 4 0 100 8 4 4 0 000-8zM22 21v-2a4 4 0 00-3-3.87',
+    },
+    {
+      to: '/facilities',
+      label: 'Facilities',
+      note: projects ? `${projects} under way` : 'Nothing under way',
+      icon: 'M3 21h18M6 21V9l6-4 6 4v12M10 21v-5h4v5',
+    },
+    {
+      to: '/finance',
+      label: 'Finances',
+      note: formatMoney(c.finances.balance, store.currency),
+      icon: 'M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6',
+    },
+    {
+      to: '/academy',
+      label: 'Academy',
+      note: `${store.academy.length} in the setup`,
+      icon: 'M22 10L12 5 2 10l10 5 10-5zM6 12v5c0 1 2.7 2 6 2s6-1 6-2v-5',
+    },
+    {
+      to: '/club',
+      label: 'Everything',
+      note: 'Media, career, saves',
+      icon: 'M4 6h16M4 12h16M4 18h16',
+    },
+  ]
+})
 </script>
 
 <template>
@@ -339,6 +394,24 @@ function barColour(value: number): string {
           />
         </span>
         <span class="estate__label">{{ d.label }}</span>
+      </button>
+    </div>
+
+    <!-- The rest of the club. The five tabs cover the daily loop; this is
+         everything else, named and one tap away, because the alternative is
+         remembering that a Facilities screen exists at all. -->
+    <div class="card__head" style="padding-top: 18px">
+      <span class="card__title">Run the club</span>
+    </div>
+    <div class="hub">
+      <button v-for="place in hub" :key="place.to" class="hub__item" @click="router.push(place.to)">
+        <span class="hub__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path :d="place.icon" />
+          </svg>
+        </span>
+        <span class="hub__label">{{ place.label }}</span>
+        <span v-if="place.note" class="hub__note">{{ place.note }}</span>
       </button>
     </div>
 
