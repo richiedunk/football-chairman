@@ -18,11 +18,14 @@ const showBack = computed(() => !tabRoots.has(String(route.name)))
 // screen, with the club demoted to the line beneath. The band stays the same
 // either way, so the club never stops being present.
 const isRoot = computed(() => !showBack.value)
-const title = computed(() =>
-  isRoot.value
-    ? store.club?.name ?? 'Director of Football'
-    : screenLabel(String(route.name)),
-)
+const title = computed(() => {
+  if (isRoot.value) return store.club?.name ?? 'Director of Football'
+  // A route may name its own heading. SCREEN_LABELS is the list of screens a
+  // message is allowed to link to, so a screen nothing links to — the
+  // not-found screen — does not belong in it, and falling back to the route
+  // name put "Not-found" across the top of the app.
+  return (route.meta.title as string | undefined) ?? screenLabel(String(route.name))
+})
 const subtitle = computed(() => {
   const club = store.club
   if (!club) return ''

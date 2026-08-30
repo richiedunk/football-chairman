@@ -111,7 +111,21 @@ const cleanups: (() => void)[] = []
 onMounted(async () => {
   hasSaves.value = (await listSaves()).length > 0
   // A reload mid-career should land back in the game, not on the title screen.
-  if (!store.loaded && !isSetupRoute.value) router.replace({ name: 'start' })
+  // Except on a screen that does not exist: bouncing a bad address to "Start a
+  // new career" is what made a mistyped link look like a lost save, and the
+  // not-found screen offers the title as a button instead.
+  //
+  // `await router.isReady()` is load-bearing. The initial navigation resolves
+  // asynchronously, so on a cold load this ran while `route.name` was still
+  // undefined — the exemption did not match, and a bad address was replaced
+  // with the title screen anyway. It passed under a light load and failed
+  // under a heavy one, which is the worst way for a bug like this to behave.
+  await router.isReady()
+  const landed = router.currentRoute.value.name
+  const setup = ['start', 'new-game', 'club-select', 'welcome', 'looking'].includes(String(landed))
+  if (!store.loaded && !setup && landed !== 'not-found') {
+    router.replace({ name: 'start' })
+  }
 
   // Android's hardware back button, so back navigates rather than quitting.
   cleanups.push(

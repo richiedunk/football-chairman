@@ -1,5 +1,4 @@
 import { createRouter, createWebHashHistory, type RouteRecordRaw } from 'vue-router'
-import { useGameStore } from './stores/game'
 
 /**
  * Hash history, deliberately.
@@ -58,7 +57,8 @@ const routes: RouteRecordRaw[] = [
     // router.resolve() does not fail on an unknown path, it matches the
     // catch-all, and without a name there is nothing to test.
     name: 'not-found',
-    redirect: () => (useGameStore().loaded ? '/home' : '/'),
+    meta: { title: 'Wrong turnstile' },
+    component: () => import('./ui/views/NotFoundView.vue'),
   },
 ]
 

@@ -404,16 +404,54 @@ await step('the staff roster shows vacancies', async () => {
   await page.screenshot({ path: `${SHOT}/19b-roster.png`, fullPage: true })
 })
 
-await step('inbox links go where they say', async () => {
+await step('an address that does not exist says so', async () => {
   // A link to a route that does not exist used to fall through the router's
-  // catch-all onto the title screen, which looks exactly like losing the save.
+  // catch-all — onto the dashboard mid-career, and onto the title screen from
+  // cold, which looks exactly like losing the save.
   await page.goto('http://127.0.0.1:4173/#/media')
   await page.waitForTimeout(400)
   if (page.url().includes('#/media') === false) throw new Error(`media went to ${page.url()}`)
+
   await page.goto('http://127.0.0.1:4173/#/media/nonexistent-id')
-  await page.waitForTimeout(500)
-  if (page.url().includes('#/home') === false) {
-    throw new Error(`a bad link landed on ${page.url()} rather than the dashboard`)
+  await page.waitForSelector('.notfound', { timeout: 10000 })
+
+  // It has to stay put and show the address, not silently move the player.
+  if (!page.url().includes('nonexistent-id')) {
+    throw new Error(`the not-found screen navigated away to ${page.url()}`)
+  }
+  const shown = (await page.textContent('.notfound__path'))?.trim()
+  if (!shown?.includes('nonexistent-id')) throw new Error(`address not shown: ${shown}`)
+
+  // Mid-career it is a screen inside the game, not a dead end outside it.
+  if (!(await page.locator('.tabbar').count())) throw new Error('not-found lost the game chrome')
+  // And it does not put its own route name across the top of the app.
+  const heading = (await page.textContent('.topbar__club'))?.trim()
+  if (/not.?found/i.test(heading ?? '')) throw new Error(`header leaks the route name: ${heading}`)
+  await page.screenshot({ path: `${SHOT}/29-notfound.png` })
+
+  await tap('.btn--primary:has-text("Back to the dashboard")')
+  await page.waitForTimeout(400)
+  if (!page.url().includes('#/home')) throw new Error(`the way back went to ${page.url()}`)
+})
+
+await step('a bad address from cold does not look like a lost save', async () => {
+  // The case that prompted this: a fresh load on an address that does not
+  // resolve. It used to be replaced with the title screen, so the first thing
+  // you saw was "Start a new career" — indistinguishable from having lost the
+  // career you were halfway through.
+  const cold = await browser.newPage({ viewport: { width: 390, height: 844 } })
+  try {
+    await cold.goto('http://127.0.0.1:4173/#/nowhere-at-all', { waitUntil: 'networkidle' })
+    await cold.waitForSelector('.notfound', { timeout: 10000 })
+    if (await cold.locator('text=Start a new career').count()) {
+      throw new Error('a bad address from cold still lands on the title screen')
+    }
+    if (!(await cold.locator('.btn--primary:has-text("Back to the title screen")').count())) {
+      throw new Error('no way back offered from cold')
+    }
+    console.log('   cold load on a bad address stays on the not-found screen')
+  } finally {
+    await cold.close()
   }
 })
 

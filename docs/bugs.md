@@ -17,6 +17,19 @@ _(nothing outstanding)_
 
 ## Fixed
 
+### A bad address looked like being logged out of your game
+An unresolvable address was answered with a redirect — to the dashboard
+mid-career, and to the title screen from cold. The second one is the problem:
+landing on "Start a new career" after tapping a link is indistinguishable from
+having lost the save. There is now a not-found screen that says what happened,
+shows the address, and offers the way back as a button.
+
+Underneath it was a race. The cold-load guard in `App.vue` read `route.name`
+before the router had finished resolving the initial navigation, so the
+not-found exemption did not match and the redirect fired anyway. It passed
+under a light load and failed under a heavy one. It now waits on
+`router.isReady()`.
+
 ### Ordinary names were being abbreviated on squad lists
 "Gonzalo Montero Robledo" was shown as "G. Montero Robledo" — 23 characters
 and 178px wide, in a 288px box. The abbreviation budget had been set at 22
