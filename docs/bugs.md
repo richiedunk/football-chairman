@@ -13,7 +13,40 @@ will break next.
 
 ## Open
 
-_(nothing outstanding)_
+### The player table inflates, and senior squads thin as it does
+Measured with `scripts/population.ts` on a standard world (492 clubs), twelve
+seasons, staying employed throughout:
+
+| | start | s1 | s3 | s5 | s6 |
+|---|---|---|---|---|---|
+| total players | 15,307 | 17,048 | 19,597 | 19,513 | 18,970 |
+| senior, contracted | 12,792 | 12,780 | 12,983 | 11,371 | **11,059** |
+| academy | 2,121 | 4,047 | 5,844 | 4,824 | 4,534 |
+| free agents | 394 | 221 | 770 | **3,318** | 3,377 |
+
+Correction to an earlier note here: players are **not** never removed —
+`season.ts` deletes them on retirement. What happens is that generation
+outpaces absorption. Academy intakes nearly triple the academy population in
+three seasons, then those players wash out into a free-agent pool that grows
+eightfold and never drains, while the number of players actually under senior
+contract *falls* by 1,700. That last row is the "squads thin at the season
+roll" defect seen from the other side: it is not that squads are being emptied,
+it is that the world is producing players clubs do not sign.
+
+Two costs. The tick walks the whole table every week, so 19,000 players instead
+of 15,300 is part of why a week is slow. And 3,377 free agents, median age 22,
+are mostly players no club will ever take.
+
+Separately and less urgently, the *per-player record* grows too — about 1.5 KB
+at creation, 2.2 KB by season fifteen — which is `careerStats`, one row per
+player per season. That is deliberate history, linear and modest, and the same
+shape as `club.history`. Not a bug; noted so it is not mistaken for one later.
+
+### Save export and import are written but unreachable
+`exportSave` and `importSave` exist in `src/storage/saves.ts` and nothing in
+the UI calls either, so there is no way for a player to back a career up or
+move it to another device. `exportSave` also serialises uncompressed, which
+would hand the player a ~50 MB file where the stored save is ~5 MB.
 
 ## Fixed
 
