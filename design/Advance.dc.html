@@ -1,0 +1,95 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap">
+  <style>
+    body { margin: 0; font-family: 'Inter', system-ui, sans-serif; }
+    .mono { font-family: 'JetBrains Mono', monospace }
+    .cap  { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.11em; color: #4B5563; padding-bottom: 7px }
+    .btn  { height: 56px; border-radius: 28px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px }
+    .lbl  { font-size: 16px; font-weight: 700; letter-spacing: -0.015em }
+    .sub  { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.09em }
+    .why  { font-size: 11px; color: #6B7280; line-height: 1.45; padding-top: 7px }
+  </style>
+</helmet>
+
+<div style="width: 390px; height: 844px; background: #08090B; color: #DDE1E6; display: flex; flex-direction: column; overflow: hidden">
+
+  <div style="padding: 20px 16px 4px; flex-shrink: 0">
+    <div style="font-size: 22px; font-weight: 700; letter-spacing: -0.03em">One button, six states</div>
+    <div style="font-size: 12px; color: #6B7280; padding-top: 5px; line-height: 1.45">Always the same place. It names the next real event, never a week number — and it will not step over anything unskippable.</div>
+  </div>
+
+  <div style="flex-grow: 1; padding: 14px 16px 0; display: flex; flex-direction: column; gap: 15px">
+
+    <div>
+      <div class="cap">MATCH WEEK · NOTHING BLOCKING</div>
+      <div class="btn" style="background: #C8FF4D; color: #10130A">
+        <div class="lbl">Advance to Chelsea</div>
+        <div class="sub" style="color: rgba(16,19,10,0.62)">SAT · AWAY · 2 OUT</div>
+      </div>
+      <div class="why">The default. Runs the week, plays the match, returns with the result.</div>
+    </div>
+
+    <div>
+      <div class="cap">SOMETHING WILL LAPSE IF YOU GO</div>
+      <div class="btn" style="background: #FFB020; color: #17120A">
+        <div class="lbl">2 things need you first</div>
+        <div class="sub" style="color: rgba(23,18,10,0.65)">NEWCASTLE BID · BRUNO RENEWAL</div>
+      </div>
+      <div class="why">Same button, same place — but it opens the first blocker instead of advancing. You can still say no to both; you just can't sleepwalk past them.</div>
+    </div>
+
+    <div>
+      <div class="cap">NO FIXTURE THIS WEEK</div>
+      <div class="btn" style="background: #C8FF4D; color: #10130A">
+        <div class="lbl">Advance a week</div>
+        <div class="sub" style="color: rgba(16,19,10,0.62)">INTERNATIONAL BREAK · 6 CALLED UP</div>
+      </div>
+      <div class="why">The subtitle carries whatever the week actually is, so the button never lies about a blank week.</div>
+    </div>
+
+    <div>
+      <div class="cap">DEADLINE WEEK</div>
+      <div class="btn" style="background: #F85149; color: #FFFFFF">
+        <div class="lbl">Deadline day</div>
+        <div class="sub" style="color: rgba(255,255,255,0.72)">4 OFFERS OPEN · CLOSES 11PM</div>
+      </div>
+      <div class="why">The one week the button changes character, because closing the window is irreversible.</div>
+    </div>
+
+    <div>
+      <div class="cap">STRAIGHT AFTER A MATCH</div>
+      <div class="btn" style="background: #C8FF4D; color: #10130A">
+        <div class="lbl">Continue</div>
+        <div class="sub" style="color: rgba(16,19,10,0.62)">CHELSEA 1 &ndash; 2 UNITED</div>
+      </div>
+      <div class="why">Post-match is the only time it says nothing about what's next — the result is the thing on screen.</div>
+    </div>
+
+    <div>
+      <div class="cap">SEASON BOUNDARY</div>
+      <div class="btn" style="background: #C8FF4D; color: #10130A">
+        <div class="lbl">Start the season</div>
+        <div class="sub" style="color: rgba(16,19,10,0.62)">SQUAD REGISTERED · 24/25</div>
+      </div>
+      <div class="why">Named moments get named. Pre-season, deadline day, the last day, the board review.</div>
+    </div>
+
+  </div>
+
+  <div style="padding: 14px 16px 18px; border-top: 1px solid #1A1D23; flex-shrink: 0">
+    <div class="mono" style="font-size: 10px; color: #6B7280; letter-spacing: 0.11em; padding-bottom: 6px">THE RULE</div>
+    <div style="font-size: 12px; color: #98A0AC; line-height: 1.5">Weeks are an engine detail. The button speaks in events: an opponent, a break, a deadline, a season. It blocks only on things that expire if ignored — never to make you read something.</div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

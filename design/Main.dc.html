@@ -10,145 +10,157 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap">
   <style>
     body { margin: 0; font-family: 'Inter', system-ui, sans-serif; }
+    .mono { font-family: 'JetBrains Mono', monospace }
   </style>
 </helmet>
 
 <div style="width: 390px; height: 844px; background: #08090B; color: #DDE1E6; display: flex; flex-direction: column; overflow: hidden">
 
-  <!-- HEADER — the only club-coloured surface. Band is the club primary
-       clamped to a readable dark; the 3px strip beneath is the true colour. -->
-  <div style="background: #4A0F0A; padding: 18px 16px 14px; display: flex; align-items: flex-end; justify-content: space-between">
+  <!-- HEADER -->
+  <div style="background: #4A0F0A; padding: 17px 16px 13px; display: flex; align-items: flex-end; justify-content: space-between; flex-shrink: 0">
     <div style="display: flex; flex-direction: column; gap: 3px">
       <div style="font-size: 21px; font-weight: 700; letter-spacing: -0.025em; color: #FFFFFF">Manchester United</div>
-      <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.09em; color: rgba(255,255,255,0.62)">THE PREM · S27/28 · W22</div>
+      <div class="mono" style="font-size: 10px; letter-spacing: 0.09em; color: rgba(255,255,255,0.6)">THE PREM · SEASON 27/28</div>
     </div>
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 008 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H2a2 2 0 110-4h.09A1.65 1.65 0 004.6 8a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 3.68 1.65 1.65 0 0010 2.17V2a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H22a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
   </div>
   <div style="height: 3px; background: #DA291C; flex-shrink: 0"></div>
 
-  <!-- STATUS STRIP — the continuous numbers, always on screen -->
-  <div style="height: 30px; background: #101216; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #6B7280; flex-shrink: 0; border-bottom: 1px solid #1A1D23">
-    <div><span style="color: #C8FF4D; font-weight: 700">£41.2m</span> AVAIL</div>
+  <!-- STATUS STRIP -->
+  <div class="mono" style="height: 29px; background: #101216; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; font-size: 11px; color: #6B7280; flex-shrink: 0; border-bottom: 1px solid #1A1D23">
+    <div>W22</div>
+    <div><span style="color: #C8FF4D; font-weight: 700">£41.2m</span></div>
     <div>WAGE <span style="color: #FFB020">68%</span></div>
     <div>FFP <span style="color: #C8FF4D">OK</span></div>
   </div>
 
-  <!-- HERO — position, the one number you open the app for -->
-  <div style="padding: 16px 16px 14px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #1A1D23">
-    <div style="display: flex; align-items: baseline; gap: 12px">
-      <div style="display: flex; align-items: baseline; gap: 1px">
-        <div style="font-size: 52px; font-weight: 700; line-height: 0.85; letter-spacing: -0.05em">4</div>
-        <div style="font-size: 19px; font-weight: 500; color: #6B7280; letter-spacing: -0.02em">th</div>
-      </div>
-      <div style="display: flex; flex-direction: column; gap: 4px">
-        <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #6B7280">44 PTS · TARGET 6TH</div>
-        <div style="display: flex; gap: 3px">
-          <div style="width: 15px; height: 4px; border-radius: 2px; background: #C8FF4D"></div>
-          <div style="width: 15px; height: 4px; border-radius: 2px; background: #C8FF4D"></div>
-          <div style="width: 15px; height: 4px; border-radius: 2px; background: #3A3D45"></div>
-          <div style="width: 15px; height: 4px; border-radius: 2px; background: #C8FF4D"></div>
-          <div style="width: 15px; height: 4px; border-radius: 2px; background: #F85149"></div>
+  <!-- HERO — the standing, at a size nothing else competes with -->
+  <div style="padding: 20px 16px 16px; border-bottom: 1px solid #1A1D23; flex-shrink: 0">
+    <div style="display: flex; align-items: flex-start; justify-content: space-between">
+      <div style="display: flex; align-items: baseline; gap: 14px">
+        <div style="display: flex; align-items: baseline; gap: 1px">
+          <div style="font-size: 66px; font-weight: 700; line-height: 0.78; letter-spacing: -0.055em">4</div>
+          <div style="font-size: 23px; font-weight: 500; color: #6B7280; letter-spacing: -0.03em">th</div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 7px; padding-top: 4px">
+          <div class="mono" style="font-size: 12px; color: #98A0AC">44 PTS · <span style="color: #6B7280">+3 ON 5TH</span></div>
+          <div style="display: flex; gap: 3px">
+            <div style="width: 17px; height: 4px; border-radius: 2px; background: #C8FF4D"></div>
+            <div style="width: 17px; height: 4px; border-radius: 2px; background: #C8FF4D"></div>
+            <div style="width: 17px; height: 4px; border-radius: 2px; background: #3A3D45"></div>
+            <div style="width: 17px; height: 4px; border-radius: 2px; background: #C8FF4D"></div>
+            <div style="width: 17px; height: 4px; border-radius: 2px; background: #F85149"></div>
+          </div>
         </div>
       </div>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#3A3D45" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-top: 5px"><path d="M9 18l6-6-6-6"/></svg>
+    </div>
+
+    <!-- Board confidence sits with the standing, because that's what drives it -->
+    <div style="display: flex; align-items: center; gap: 11px; padding-top: 17px">
+      <div class="mono" style="font-size: 10px; letter-spacing: 0.1em; color: #6B7280; width: 46px">BOARD</div>
+      <div style="flex-grow: 1; height: 5px; border-radius: 3px; background: #22262E; overflow: hidden; position: relative">
+        <div style="width: 58%; height: 5px; background: #FFB020"></div>
+        <div style="position: absolute; left: 72%; top: -3px; width: 1px; height: 11px; background: #4B5563"></div>
+      </div>
+      <div class="mono" style="font-size: 11px; color: #FFB020; width: 62px; text-align: right">TARGET 6TH</div>
+    </div>
+  </div>
+
+  <!-- NEXT MATCH — the one event with a shape of its own -->
+  <div style="background: #0E1015; border-bottom: 1px solid #1A1D23; padding: 14px 16px; display: flex; align-items: center; gap: 13px; flex-shrink: 0">
+    <div style="width: 3px; height: 40px; background: #034694; border-radius: 2px; flex-shrink: 0"></div>
+    <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 3px">
+      <div class="mono" style="font-size: 10px; letter-spacing: 0.1em; color: #6B7280">SATURDAY · AWAY</div>
+      <div style="font-size: 19px; font-weight: 600; letter-spacing: -0.02em">Chelsea</div>
     </div>
     <div style="text-align: right; display: flex; flex-direction: column; gap: 3px">
-      <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #6B7280; letter-spacing: 0.08em">SAT · AWAY</div>
-      <div style="font-size: 15px; font-weight: 600; letter-spacing: -0.01em">Chelsea</div>
-      <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #F85149">2 OUT 1 DBT</div>
+      <div class="mono" style="font-size: 11px; color: #98A0AC">3RD · 47 PTS</div>
+      <div class="mono" style="font-size: 11px; color: #F85149">2 OUT · 1 DOUBT</div>
+    </div>
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#3A3D45" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+  </div>
+
+  <!-- DECISIONS — an inbox, not a grid -->
+  <div class="mono" style="padding: 15px 16px 3px; font-size: 10px; color: #6B7280; letter-spacing: 0.12em; display: flex; justify-content: space-between; flex-shrink: 0">
+    <span>WAITING ON YOU</span><span style="color: #F85149">3</span>
+  </div>
+  <div style="flex-shrink: 0">
+    <div style="display: flex; gap: 11px; padding: 11px 16px; border-top: 1px solid #1A1D23; align-items: center">
+      <div style="width: 3px; height: 28px; background: #F85149; flex-shrink: 0; border-radius: 2px"></div>
+      <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 2px">
+        <div style="font-size: 14px; font-weight: 500">Bruno's deal expires in June</div>
+        <div class="mono" style="font-size: 10px; color: #6B7280">FREE TO TALK TO CLUBS IN 6 WEEKS</div>
+      </div>
+    </div>
+    <div style="display: flex; gap: 11px; padding: 11px 16px; border-top: 1px solid #1A1D23; align-items: center">
+      <div style="width: 3px; height: 28px; background: #FFB020; flex-shrink: 0; border-radius: 2px"></div>
+      <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 2px">
+        <div style="font-size: 14px; font-weight: 500">Newcastle bid £34m for Mainoo</div>
+        <div class="mono" style="font-size: 10px; color: #6B7280">VALUED £41M · REPLY IN 4 DAYS</div>
+      </div>
+    </div>
+    <div style="display: flex; gap: 11px; padding: 11px 16px; border-top: 1px solid #1A1D23; border-bottom: 1px solid #1A1D23; align-items: center">
+      <div style="width: 3px; height: 28px; background: #2A2E36; flex-shrink: 0; border-radius: 2px"></div>
+      <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 2px">
+        <div style="font-size: 14px; font-weight: 500; color: #98A0AC">Scout report on Zirkzee filed</div>
+        <div class="mono" style="font-size: 10px; color: #6B7280">BOLOGNA · £38M ASKING</div>
+      </div>
     </div>
   </div>
 
-  <!-- TILE GRID — the whole department state, every tile a tap target -->
-  <div style="padding: 14px 16px 4px; display: flex; flex-wrap: wrap; gap: 8px">
+  <!-- DEPARTMENTS — one chart, six tap targets, a quarter of the space a tile grid takes -->
+  <div style="padding: 16px 16px 0; flex-shrink: 0">
+    <div class="mono" style="font-size: 10px; color: #6B7280; letter-spacing: 0.12em; padding-bottom: 12px">YOUR ESTATE</div>
+    <div style="display: flex; align-items: flex-end; justify-content: space-between; height: 60px">
 
-    <div style="width: 108px; background: #101216; border: 1px solid #1A1D23; border-radius: 10px; padding: 10px 11px 9px; display: flex; flex-direction: column; gap: 6px">
-      <div style="font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.12em; color: #6B7280">SQUAD</div>
-      <div style="font-family: 'JetBrains Mono', monospace; font-size: 23px; font-weight: 700; line-height: 1; color: #DDE1E6">82</div>
-      <div style="height: 3px; border-radius: 2px; background: #22262E; overflow: hidden"><div style="width: 82%; height: 3px; background: #C8FF4D"></div></div>
-    </div>
-
-    <div style="width: 108px; background: #101216; border: 1px solid #1A1D23; border-radius: 10px; padding: 10px 11px 9px; display: flex; flex-direction: column; gap: 6px">
-      <div style="font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.12em; color: #6B7280">HEAD COACH</div>
-      <div style="font-family: 'JetBrains Mono', monospace; font-size: 23px; font-weight: 700; line-height: 1; color: #DDE1E6">74</div>
-      <div style="height: 3px; border-radius: 2px; background: #22262E; overflow: hidden"><div style="width: 74%; height: 3px; background: #C8FF4D"></div></div>
-    </div>
-
-    <div style="width: 108px; background: #101216; border: 1px solid #1A1D23; border-radius: 10px; padding: 10px 11px 9px; display: flex; flex-direction: column; gap: 6px">
-      <div style="font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.12em; color: #6B7280">ACADEMY</div>
-      <div style="font-family: 'JetBrains Mono', monospace; font-size: 23px; font-weight: 700; line-height: 1; color: #DDE1E6">68</div>
-      <div style="height: 3px; border-radius: 2px; background: #22262E; overflow: hidden"><div style="width: 68%; height: 3px; background: #C8FF4D"></div></div>
-    </div>
-
-    <div style="width: 108px; background: #101216; border: 1px solid #1A1D23; border-radius: 10px; padding: 10px 11px 9px; display: flex; flex-direction: column; gap: 6px">
-      <div style="font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.12em; color: #6B7280">FACILITIES</div>
-      <div style="font-family: 'JetBrains Mono', monospace; font-size: 23px; font-weight: 700; line-height: 1; color: #DDE1E6">61</div>
-      <div style="height: 3px; border-radius: 2px; background: #22262E; overflow: hidden"><div style="width: 61%; height: 3px; background: #C8FF4D"></div></div>
-    </div>
-
-    <div style="width: 108px; background: #101216; border: 1px solid #1A1D23; border-radius: 10px; padding: 10px 11px 9px; display: flex; flex-direction: column; gap: 6px">
-      <div style="font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.12em; color: #6B7280">SCOUTING</div>
-      <div style="font-family: 'JetBrains Mono', monospace; font-size: 23px; font-weight: 700; line-height: 1; color: #DDE1E6">55</div>
-      <div style="height: 3px; border-radius: 2px; background: #22262E; overflow: hidden"><div style="width: 55%; height: 3px; background: #FFB020"></div></div>
-    </div>
-
-    <div style="width: 108px; background: #101216; border: 1px solid #1A1D23; border-radius: 10px; padding: 10px 11px 9px; display: flex; flex-direction: column; gap: 6px">
-      <div style="font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.12em; color: #6B7280">DATA DEPT</div>
-      <div style="font-family: 'JetBrains Mono', monospace; font-size: 23px; font-weight: 700; line-height: 1; color: #DDE1E6">31</div>
-      <div style="height: 3px; border-radius: 2px; background: #22262E; overflow: hidden"><div style="width: 31%; height: 3px; background: #F85149"></div></div>
-    </div>
-
-    <!-- Wider tiles: the two moods that aren't ratings -->
-    <div style="width: 165px; background: #101216; border: 1px solid #1A1D23; border-radius: 10px; padding: 10px 12px 9px; display: flex; flex-direction: column; gap: 6px">
-      <div style="font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.12em; color: #6B7280">FANS · BOARD</div>
-      <div style="display: flex; align-items: baseline; gap: 10px">
-        <div style="font-family: 'JetBrains Mono', monospace; font-size: 23px; font-weight: 700; line-height: 1; color: #C8FF4D">74<span style="font-size: 13px; color: #6B7280">%</span></div>
-        <div style="font-family: 'JetBrains Mono', monospace; font-size: 23px; font-weight: 700; line-height: 1; color: #FFB020">58<span style="font-size: 13px; color: #6B7280">%</span></div>
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 6px; width: 52px">
+        <div class="mono" style="font-size: 12px; font-weight: 700; color: #DDE1E6">82</div>
+        <div style="width: 100%; height: 34px; background: #16191F; border-radius: 3px; display: flex; align-items: flex-end; overflow: hidden"><div style="width: 100%; height: 82%; background: #C8FF4D"></div></div>
       </div>
-      <div style="display: flex; gap: 6px">
-        <div style="flex-grow: 1; height: 3px; border-radius: 2px; background: #22262E; overflow: hidden"><div style="width: 74%; height: 3px; background: #C8FF4D"></div></div>
-        <div style="flex-grow: 1; height: 3px; border-radius: 2px; background: #22262E; overflow: hidden"><div style="width: 58%; height: 3px; background: #FFB020"></div></div>
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 6px; width: 52px">
+        <div class="mono" style="font-size: 12px; font-weight: 700; color: #DDE1E6">74</div>
+        <div style="width: 100%; height: 34px; background: #16191F; border-radius: 3px; display: flex; align-items: flex-end; overflow: hidden"><div style="width: 100%; height: 74%; background: #C8FF4D"></div></div>
       </div>
-    </div>
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 6px; width: 52px">
+        <div class="mono" style="font-size: 12px; font-weight: 700; color: #DDE1E6">68</div>
+        <div style="width: 100%; height: 34px; background: #16191F; border-radius: 3px; display: flex; align-items: flex-end; overflow: hidden"><div style="width: 100%; height: 68%; background: #C8FF4D"></div></div>
+      </div>
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 6px; width: 52px">
+        <div class="mono" style="font-size: 12px; font-weight: 700; color: #DDE1E6">61</div>
+        <div style="width: 100%; height: 34px; background: #16191F; border-radius: 3px; display: flex; align-items: flex-end; overflow: hidden"><div style="width: 100%; height: 61%; background: #C8FF4D"></div></div>
+      </div>
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 6px; width: 52px">
+        <div class="mono" style="font-size: 12px; font-weight: 700; color: #98A0AC">55</div>
+        <div style="width: 100%; height: 34px; background: #16191F; border-radius: 3px; display: flex; align-items: flex-end; overflow: hidden"><div style="width: 100%; height: 55%; background: #FFB020"></div></div>
+      </div>
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 6px; width: 52px">
+        <div class="mono" style="font-size: 12px; font-weight: 700; color: #98A0AC">31</div>
+        <div style="width: 100%; height: 34px; background: #16191F; border-radius: 3px; display: flex; align-items: flex-end; overflow: hidden"><div style="width: 100%; height: 31%; background: #F85149"></div></div>
+      </div>
 
-    <div style="width: 169px; background: #101216; border: 1px solid #1A1D23; border-radius: 10px; padding: 10px 12px 9px; display: flex; flex-direction: column; gap: 6px">
-      <div style="font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.12em; color: #6B7280">STADIUM</div>
-      <div style="font-family: 'JetBrains Mono', monospace; font-size: 23px; font-weight: 700; line-height: 1; color: #DDE1E6">74<span style="font-size: 13px; color: #6B7280">,140</span></div>
-      <div style="height: 3px; border-radius: 2px; background: #22262E; overflow: hidden"><div style="width: 93%; height: 3px; background: #C8FF4D"></div></div>
     </div>
-
-  </div>
-
-  <!-- DECISIONS — the loop, condensed to what's waiting -->
-  <div style="padding: 14px 16px 5px; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #6B7280; letter-spacing: 0.12em">DECISIONS [3]</div>
-  <div style="display: flex; flex-direction: column">
-    <div style="display: flex; gap: 11px; padding: 10px 16px; border-top: 1px solid #1A1D23; align-items: center">
-      <div style="width: 3px; height: 26px; background: #F85149; flex-shrink: 0; border-radius: 2px"></div>
-      <div style="flex-grow: 1; font-size: 14px; font-weight: 500">Bruno's deal expires in June</div>
-      <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #6B7280">18W</div>
-    </div>
-    <div style="display: flex; gap: 11px; padding: 10px 16px; border-top: 1px solid #1A1D23; align-items: center">
-      <div style="width: 3px; height: 26px; background: #FFB020; flex-shrink: 0; border-radius: 2px"></div>
-      <div style="flex-grow: 1; font-size: 14px; font-weight: 500">Newcastle bid £34m for Mainoo</div>
-      <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #6B7280">4D</div>
-    </div>
-    <div style="display: flex; gap: 11px; padding: 10px 16px; border-top: 1px solid #1A1D23; border-bottom: 1px solid #1A1D23; align-items: center">
-      <div style="width: 3px; height: 26px; background: #2A2E36; flex-shrink: 0; border-radius: 2px"></div>
-      <div style="flex-grow: 1; font-size: 14px; font-weight: 500; color: #98A0AC">Scout report on Zirkzee filed</div>
-      <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #6B7280">—</div>
+    <div class="mono" style="display: flex; justify-content: space-between; padding-top: 7px; font-size: 8px; letter-spacing: 0.06em; color: #4B5563">
+      <div style="width: 52px; text-align: center">SQUAD</div>
+      <div style="width: 52px; text-align: center">COACH</div>
+      <div style="width: 52px; text-align: center">ACADEMY</div>
+      <div style="width: 52px; text-align: center">GROUND</div>
+      <div style="width: 52px; text-align: center">SCOUTS</div>
+      <div style="width: 52px; text-align: center">DATA</div>
     </div>
   </div>
 
   <div style="flex-grow: 1"></div>
 
-  <!-- FLOODLIGHT BUTTON -->
-  <div style="padding: 12px 16px 12px">
-    <div style="height: 52px; border-radius: 26px; background: #C8FF4D; color: #10130A; display: flex; align-items: center; justify-content: center; gap: 9px; font-size: 16px; font-weight: 700; letter-spacing: -0.01em">
-      Advance to Week 23
+  <!-- ADVANCE — names the next real event, never a week number -->
+  <div style="padding: 12px 16px 12px; flex-shrink: 0">
+    <div style="height: 52px; border-radius: 26px; background: #C8FF4D; color: #10130A; display: flex; align-items: center; justify-content: center; gap: 9px; font-size: 16px; font-weight: 700; letter-spacing: -0.015em">
+      Advance to Chelsea
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#10130A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
     </div>
   </div>
 
-  <!-- FLOODLIGHT NAV -->
+  <!-- NAV -->
   <div style="height: 62px; border-top: 1px solid #1A1D23; display: flex; align-items: center; justify-content: space-around; padding: 0 8px; flex-shrink: 0">
     <div style="display: flex; flex-direction: column; align-items: center; gap: 5px">
       <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#C8FF4D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-7 9 7v10a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
