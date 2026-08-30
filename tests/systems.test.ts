@@ -48,7 +48,7 @@ import {
 import {
   assessClub, assessSquadCost, underEmbargo,
 } from '../src/engine/systems/regulation'
-import { accrueAmortisation } from '../src/engine/systems/finance'
+import { accrueAmortisation, processFinances, weeklyRevenue } from '../src/engine/systems/finance'
 import {
   createOwner, debtTolerance, impatienceFactor, lossCoverage, OWNER_LABELS, reserveRelease,
   wageBudgetShare,
@@ -62,6 +62,8 @@ import {
   SUMMER_DEADLINE_WEEK, WINTER_DEADLINE_WEEK,
 } from '../src/engine/systems/deadlineDay'
 import { isTransferWindowOpen } from '../src/engine/sim/schedule'
+import { churnCandidatesForTest } from '../src/engine/systems/transfers'
+import { SQUAD_LIMIT, U21_AGE } from '../src/engine/systems/registration'
 import {
   adjustRelationship, agentFee, agentWillingness, decayRelationships, introductions,
   RELATIONSHIP_EVENTS, STANDING_LABELS, STANDING_NOTES, standingFor,
@@ -1992,5 +1994,106 @@ describe('deadline day', () => {
     }
     expect(hoursRemaining(0, 5)).toBeGreaterThan(hoursRemaining(4, 5))
     expect(hoursRemaining(4, 5)).toBeGreaterThanOrEqual(1)
+  })
+})
+
+describe('transfer market volume', () => {
+  it('turns a squad over rather than only adding to it', () => {
+    // The market seized up at half a signing per club per season because
+    // clubs only ever bought: a wage budget leaves room for one or two
+    // additions and no more. Recruitment has to be churn.
+    const state = freshWorld('CHURN')
+    const club = Object.values(state.clubs).find(
+      (c) => c.id !== state.playerClubId && c.reputation > 55,
+    )!
+    const squad = seniorSquad(state, club)
+    expect(squad.length).toBeGreaterThan(20)
+
+    // Nobody is surplus and the squad is at a sensible size, so there is
+    // little to shed.
+    for (const p of squad) {
+      p.squadStatus = 'firstTeam'
+      p.listedForTransfer = false
+      p.transferRequested = false
+    }
+    const settled = churnCandidatesForTest(state, club)
+
+    // Mark the weakest few as surplus and the club should want to move them.
+    for (const p of squad.slice().sort((a, b) => a.currentAbility - b.currentAbility).slice(0, 4)) {
+      p.squadStatus = 'surplus'
+    }
+    const unsettled = churnCandidatesForTest(state, club)
+    expect(unsettled.length).toBeGreaterThanOrEqual(settled.length)
+  })
+
+  it('will not sell a squad down below a fieldable size', () => {
+    const state = freshWorld('CHURN-FLOOR')
+    const club = Object.values(state.clubs).find((c) => c.id !== state.playerClubId)!
+
+    // Strip the squad to the floor and mark everyone surplus: a club with
+    // nothing to spare has nothing to sell, however little it rates them.
+    const squad = seniorSquad(state, club)
+    for (const p of squad.slice(20)) {
+      club.squad = club.squad.filter((id) => id !== p.id)
+      p.clubId = null
+    }
+    for (const p of seniorSquad(state, club)) p.squadStatus = 'surplus'
+
+    expect(seniorSquad(state, club).length).toBeLessThanOrEqual(21)
+    expect(churnCandidatesForTest(state, club).length).toBe(0)
+  })
+
+  it('stops buying at the squad list rather than at a number', () => {
+    // The limit that holds as the world gets richer is made of places, not
+    // money: a 26th senior cannot be registered, so there is no point signing
+    // him. Under-21s sit outside the list and outside the count.
+    expect(SQUAD_LIMIT).toBe(25)
+    expect(U21_AGE).toBe(21)
+  })
+})
+
+describe('debt that cannot be repaid', () => {
+  it('gets settled rather than carried for ever', () => {
+    // A club whose borrowing has run several times past anything its revenue
+    // could service, with nothing to service it from, is not going to repay
+    // it. Without this, clubs sat in financial crisis for thirteen and fifteen
+    // seasons — a dead club occupying a division.
+    const state = freshWorld('WRITEOFF')
+    const club = state.clubs[state.playerClubId]
+    const revenue = weeklyRevenue(state, club)
+    const tolerated = revenue * debtTolerance(club.board.owner)
+
+    club.finances.debt = Math.round(tolerated * 6)
+    club.finances.balance = 0
+    club.finances.inCrisis = true
+
+    // Probabilistic, so run it until it lands rather than asserting on one roll.
+    let settled = false
+    for (let week = 0; week < 400 && !settled; week++) {
+      processFinances(state, club, new Rng(`writeoff:${week}`), null)
+      settled = !club.finances.inCrisis
+    }
+
+    expect(settled, 'a club never found a way out of unpayable debt').toBe(true)
+    expect(club.finances.debt).toBeLessThan(tolerated)
+  })
+
+  it('leaves a serviceable debt alone', () => {
+    const state = freshWorld('NO-WRITEOFF')
+    const club = state.clubs[state.playerClubId]
+    const tolerated = weeklyRevenue(state, club) * debtTolerance(club.board.owner)
+
+    // Over the line, but not by the multiple that makes it hopeless.
+    club.finances.debt = Math.round(tolerated * 1.4)
+    club.finances.balance = 0
+    club.finances.inCrisis = true
+    const before = club.finances.debt
+
+    for (let week = 0; week < 60; week++) {
+      processFinances(state, club, new Rng(`no:${week}`), null)
+    }
+    // It may be paid down, but it must never be written off.
+    expect(club.finances.debt).toBeGreaterThan(tolerated * 0.5)
+    expect(club.finances.debt).toBeLessThanOrEqual(before * 1.6)
   })
 })

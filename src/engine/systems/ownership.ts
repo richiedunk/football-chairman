@@ -225,9 +225,16 @@ export function requestReceptiveness(owner: Owner): number {
   return clamp(0.7 + (owner.wealth / 100) * 0.4 - (owner.interference / 100) * 0.15, 0.55, 1.2)
 }
 
-/** Debt the owner is relaxed about, as a multiple of weekly revenue. */
+/**
+ * Debt the owner is relaxed about, as a multiple of weekly revenue.
+ *
+ * The floor used to sit at twelve weeks, which is about four months of
+ * turnover — tight enough that one bad season put a cautious club into
+ * financial crisis, and crisis then lasted three seasons because getting back
+ * under so low a bar took years. Real clubs carry more than that routinely.
+ */
 export function debtTolerance(owner: Owner): number {
-  return 12 + (owner.leverage / 100) * 46
+  return 24 + (owner.leverage / 100) * 46
 }
 
 export function ownerSummary(owner: Owner): string {

@@ -152,6 +152,36 @@ export function processFinances(
     club.finances.inCrisis = false
   }
 
+  // --- Debt nobody is going to be paid -------------------------------------
+  //
+  // A club whose borrowing has run several times past anything its revenue
+  // could service, with nothing in the bank to service it from, is not going
+  // to repay it. In football that debt gets written down: creditors take a
+  // settlement because a settlement is worth more than a club that cannot pay
+  // at all, and lower-league clubs do this regularly.
+  //
+  // This is not administration, a forced sale or a winding-up — none of which
+  // belong in a game about the director of football. It is the quiet thing
+  // that happens instead, and without it clubs sat in financial crisis for
+  // thirteen and fifteen seasons: measured, one non-league side was carrying
+  // debt at five times what it could service with forty-eight thousand pounds
+  // in the bank, and no path back from either.
+  if (club.finances.inCrisis) {
+    const tolerated = weeklyRevenue(state, club) * debtTolerance(club.board.owner)
+    const unpayable = club.finances.debt > tolerated * 2.5
+    const noMeans = club.finances.balance < weeklyRevenue(state, club) * 3
+    if (unpayable && noMeans && rng.chance(0.012)) {
+      const settled = Math.round(tolerated * 0.45)
+      const written = club.finances.debt - settled
+      club.finances.debt = settled
+      club.finances.inCrisis = false
+      notes.push(
+        `The club's creditors have accepted a settlement, writing off ${written.toLocaleString()} `
+        + 'of debt it was never going to repay. The books are survivable again.',
+      )
+    }
+  }
+
   if (club.finances.inCrisis && !wasInCrisis) {
     notes.push(
       'The club can no longer cover its outgoings. The board has imposed a transfer embargo until the books balance.',

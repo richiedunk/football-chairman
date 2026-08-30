@@ -1,7 +1,7 @@
 import { clamp, Rng } from '../rng'
 import { IdFactory, ID_PREFIX } from '../ids'
 import { computeAskingPrice, computeValue, computeWageDemand, squadImportance, totalWageBill } from './valuation'
-import { canAfford } from './finance'
+import { canAfford, facilityUpkeep } from './finance'
 import { reactToDeparture, reactToSigning, refreshSquadStatuses } from './morale'
 import { ratingForPositionCached } from '../world/attributes'
 import { isTransferWindowOpen } from '../sim/schedule'
@@ -10,7 +10,7 @@ import {
 } from './agents'
 import { addInboxItem } from './inbox'
 import {
-  NON_HOMEGROWN_LIMIT, releaseRegistration, settleArrival, SQUAD_LIMIT,
+  NON_HOMEGROWN_LIMIT, releaseRegistration, settleArrival, SQUAD_LIMIT, U21_AGE,
 } from './registration'
 import type {
   Agent, Club, CompletedTransfer, Contract, GameState, ID, NegotiationLogEntry, Player,
@@ -720,6 +720,41 @@ export function executeTransfer(
  * occasionally act. Kept deliberately cheap — this runs for every club in the
  * world every week of a window, and the player only ever sees the results.
  */
+/**
+ * Where the AI's transfer attempts go, for calibration.
+ *
+ * Counting is off by default and costs nothing when it is: guessing which of
+ * five conditions is binding has been wrong twice, and a counter settles it in
+ * one run.
+ */
+export interface TransferAttemptStats {
+  buyAttempts: number
+  noTargetPosition: number
+  squadFull: number
+  noCandidates: number
+  dealRefused: number
+  bought: number
+  sellAttempts: number
+  noChurnCandidate: number
+  noBuyerForSale: number
+  sold: number
+}
+
+let stats: TransferAttemptStats | null = null
+
+export function collectTransferStats(): TransferAttemptStats {
+  stats = {
+    buyAttempts: 0, noTargetPosition: 0, squadFull: 0, noCandidates: 0,
+    dealRefused: 0, bought: 0, sellAttempts: 0, noChurnCandidate: 0,
+    noBuyerForSale: 0, sold: 0,
+  }
+  return stats
+}
+
+export function stopCollectingTransferStats(): void {
+  stats = null
+}
+
 export function processAiTransfers(state: GameState, ctx: TransferContext): void {
   if (!isTransferWindowOpen(state.date.week)) return
   const { rng } = ctx
@@ -746,34 +781,37 @@ export function processAiTransfers(state: GameState, ctx: TransferContext): void
       .map((id) => state.players[id])
       .filter((p): p is Player => Boolean(p) && !p.isAcademy)
 
-    // Sell, loan and buy are checked independently rather than as an
-    // exclusive chain. A club that has just sold someone is more likely to
-    // sign someone, not less, and the old `continue` after each branch meant
-    // a club could do at most one piece of business a week.
-    // Who the club would let go.
+    // Recruitment is churn, not accumulation.
     //
-    // Selling is what pays for buying: a club's wage budget leaves it room for
-    // one or two signings a season and no more, so without outgoings the
-    // market seizes up after August. Real clubs turn over a quarter of the
-    // squad a year in both directions. A club that has to raise money will
-    // listen to offers for anyone outside the spine.
-    const tightOnWages =
-      club.finances.wageBudget - totalWageBill(state, club) < club.finances.wageBudget * 0.06
-    const sellable = squad.filter(
-      (p) => p.listedForTransfer || p.transferRequested
-        || p.squadStatus === 'surplus'
-        || (squad.length > 24 && p.squadStatus === 'backup')
-        || (tightOnWages && (p.squadStatus === 'backup' || p.squadStatus === 'prospect'))
-        || (inCrisis && (p.squadStatus === 'backup' || p.squadStatus === 'rotation')),
-    )
-    if (sellable.length > 0 && rng.chance(inCrisis ? SELL_CHANCE * 2.5 : SELL_CHANCE)) {
-      const player = rng.pick(sellable)
-      const buyerPool = Object.values(state.clubs).filter(
-        (c) => c.id !== club.id && !c.finances.inCrisis && c.finances.transferBudget >= player.value,
-      )
-      if (buyerPool.length > 0) {
-        const buyer = rng.pick(buyerPool)
-        if (buyer.id !== state.playerClubId) aiCompleteDeal(state, ctx, player, club, buyer)
+    // A wage budget leaves room for one or two additions a season and no more,
+    // so a club that only ever buys stops buying in August and the market
+    // seizes up — which is exactly what was happening at half a signing per
+    // club per season. Real clubs replace roughly a quarter of the squad a
+    // year, and they do it by deciding who is leaving first. Selling is what
+    // pays for buying, in wages as much as in cash.
+    const moveOn = churnCandidates(state, club, squad, inCrisis)
+    const sellAttempts = inCrisis ? SELL_ATTEMPTS + 1 : SELL_ATTEMPTS
+    for (let attempt = 0; attempt < sellAttempts; attempt++) {
+      if (stats) stats.sellAttempts += 1
+      if (moveOn.length === 0) { if (stats) stats.noChurnCandidate += 1; break }
+      if (!rng.chance(inCrisis ? 0.55 : SELL_CHANCE)) continue
+      const player = moveOn.shift()
+      if (!player) break
+      // A buyer who actually wants him, not simply one who could pay.
+      //
+      // Picking at random from everyone with the money meant the deal was then
+      // refused almost every time — on the player's willingness, or on the
+      // buyer's wage bill, or on the real asking price. Twenty-seven sale
+      // attempts a season produced under three sales. Filtering for a club
+      // that has room, has the wages, and whom the player would actually join
+      // turns the same attempts into deals.
+      const buyerPool = suitableBuyers(state, player, club)
+      if (buyerPool.length === 0) { if (stats) stats.noBuyerForSale += 1; continue }
+      const buyer = rng.pick(buyerPool)
+      if (buyer.id !== state.playerClubId) {
+        const before = club.squad.length
+        aiCompleteDeal(state, ctx, player, club, buyer)
+        if (stats && club.squad.length < before) stats.sold += 1
       }
     }
 
@@ -813,40 +851,144 @@ export function processAiTransfers(state: GameState, ctx: TransferContext): void
       }
     }
 
-    // Buy: find the position where the club is weakest relative to its league.
+    // Buy. Two attempts a week, because a club that has just freed up wages
+    // and a squad place is in the market immediately, not next week.
     if (inCrisis) continue
-    if (squad.length >= 28) continue
-    if (!rng.chance(BUY_CHANCE)) continue
-    const targetPosition = weakestPosition(state, club, squad)
-    if (!targetPosition) continue
-
-    const wageRoom = club.finances.wageBudget - totalWageBill(state, club)
     const league = state.leagues[club.leagueId]
     const nation = state.nations[club.nationId]
 
-    const candidates: Player[] = []
-    for (const p of market.get(targetPosition) ?? []) {
-      // The list is sorted by ability, so once it drops below the club's
-      // standard there is nothing further down worth looking at.
-      if (p.currentAbility < club.reputation * 1.1) break
-      if (p.clubId === club.id) continue
-      const price = p.clubId ? p.value * 1.3 : 0
-      if (price > club.finances.transferBudget) continue
-      if (computeWageDemand(p, league, nation) > wageRoom) continue
-      candidates.push(p)
-      if (candidates.length >= 40) break
+    for (let attempt = 0; attempt < BUY_ATTEMPTS; attempt++) {
+      // Players actually available to the club, so a squad full of loanees
+      // out on loan does not read as full.
+      const current = club.squad
+        .map((id) => state.players[id])
+        .filter((p): p is Player => Boolean(p) && !p.isAcademy && !p.loanClubId)
+
+      // The brake that holds is the squad list, not a number picked to make
+      // the volume come out right. A club may register 25 seniors; a 26th
+      // cannot be named and therefore cannot be picked, so there is no point
+      // signing him. Under-21s sit outside the list and outside this count,
+      // which is exactly why clubs keep buying young players when they are
+      // otherwise full.
+      //
+      // It also holds as the world gets richer. Every rate in this file drifts
+      // upward over a long save as budgets grow; a limit made of places rather
+      // than money does not.
+      const seniors = current.filter((p) => p.age >= U21_AGE).length
+      if (seniors >= SQUAD_LIMIT || current.length >= SQUAD_CEILING) {
+        if (stats) stats.squadFull += 1
+        break
+      }
+      if (!rng.chance(BUY_CHANCE)) continue
+      if (stats) stats.buyAttempts += 1
+
+      const targetPosition = weakestPosition(state, club, current)
+      if (!targetPosition) { if (stats) stats.noTargetPosition += 1; break }
+
+      const wageRoom = club.finances.wageBudget - totalWageBill(state, club)
+      const candidates: Player[] = []
+      for (const p of market.get(targetPosition) ?? []) {
+        // The list is sorted by ability, so once it drops below the club's
+        // standard there is nothing further down worth looking at.
+        if (p.currentAbility < club.reputation * 1.1) break
+        if (p.clubId === club.id) continue
+
+        // Priced at what the seller would actually take, not at a flat markup
+        // on the valuation. The two are not the same — the asking price
+        // carries the seller's stance, the player's importance to them and the
+        // tax everybody charges a rich buyer — so a filter using the flat
+        // figure waved through candidates the club then could not afford, and
+        // roughly a third of all attempts died at the final step.
+        const seller = p.clubId ? state.clubs[p.clubId] ?? null : null
+        const price = seller ? Math.round(computeAskingPrice(state, p, seller, club) * 0.95) : 0
+        if (price > club.finances.transferBudget) continue
+        if (computeWageDemand(p, league, nation) > wageRoom) continue
+        candidates.push(p)
+        if (candidates.length >= 40) break
+      }
+
+      if (candidates.length === 0) { if (stats) stats.noCandidates += 1; break }
+      const target = rng.weighted(candidates, candidates.map((p) => p.currentAbility))
+      const sellerClub = target.clubId ? state.clubs[target.clubId] : null
+
+      // The human club's players are never sold out from under them — an
+      // approach becomes an offer the director gets to answer.
+      if (sellerClub?.id === state.playerClubId) continue
+
+      const squadBefore = club.squad.length
+      aiCompleteDeal(state, ctx, target, sellerClub, club)
+      if (stats) {
+        if (club.squad.length > squadBefore) stats.bought += 1
+        else stats.dealRefused += 1
+      }
     }
-
-    if (candidates.length === 0) continue
-    const target = rng.weighted(candidates, candidates.map((p) => p.currentAbility))
-    const sellerClub = target.clubId ? state.clubs[target.clubId] : null
-
-    // The human club's players are never sold out from under them — an
-    // approach becomes an offer the director gets to answer.
-    if (sellerClub?.id === state.playerClubId) continue
-
-    aiCompleteDeal(state, ctx, target, sellerClub, club)
   }
+}
+
+/**
+ * Who a club would move on, worst first.
+ *
+ * Ranked by what a recruitment department actually weighs: how far the player
+ * is below the division's standard, how much of a future he has, and whether
+ * his deal is running down anyway. A club always has candidates — every squad
+ * has a bottom — but it only acts on them when it has a reason to.
+ */
+/** Test seam: the churn list a club would draw up right now. */
+export function churnCandidatesForTest(state: GameState, club: Club): Player[] {
+  const squad = club.squad
+    .map((id) => state.players[id])
+    .filter((p): p is Player => Boolean(p) && !p.isAcademy)
+  return churnCandidates(state, club, squad, club.finances.inCrisis)
+}
+
+function churnCandidates(
+  state: GameState,
+  club: Club,
+  squad: Player[],
+  inCrisis: boolean,
+): Player[] {
+  const league = state.leagues[club.leagueId]
+  const standard = 45 + (league?.reputation ?? 40) * 1.3
+
+  const scored = squad
+    .filter((p) => !p.loanClubId)
+    .map((player) => {
+      // Below the standard is the main reason to move somebody on.
+      let keep = player.currentAbility - standard
+      // A young player with room to grow is worth keeping even when he is not
+      // good enough yet; that is what a squad place is for.
+      if (player.age <= 22) keep += (player.potentialAbility - player.currentAbility) * 0.5
+      // An ageing player on the way down is the obvious one to replace.
+      if (player.age >= 31) keep -= (player.age - 30) * 7
+      // A deal running down is worth cashing in before it is worth nothing.
+      const seasonsLeft = player.contract
+        ? player.contract.expiresSeason - state.date.season
+        : 0
+      if (seasonsLeft <= 1) keep -= 14
+      if (player.squadStatus === 'surplus') keep -= 40
+      if (player.listedForTransfer || player.transferRequested) keep -= 30
+      return { player, keep }
+    })
+    .sort((a, b) => a.keep - b.keep)
+
+  // How many the club is actually looking to replace.
+  //
+  // A club only sheds what it can replace. Letting every squad churn its
+  // bottom regardless of size stripped the lower divisions — non-league squads
+  // fell to fourteen players with no professional over 31 in them — because
+  // small clubs could always find someone to sell and never anyone to buy.
+  // Above the target size a club sheds freely; at or below it, only genuine
+  // surplus, and never below the floor needed to field a side with cover.
+  const available = squad.filter((p) => !p.loanClubId).length
+  const surplusSize = Math.max(0, available - 23)
+  const weak = scored.filter((e) => e.keep < 0).length
+  const headroom = Math.max(0, available - CHURN_FLOOR)
+
+  const appetite = inCrisis
+    ? Math.min(6, headroom)
+    : clamp(Math.round(surplusSize + weak * 0.35), 0, Math.min(6, headroom))
+
+  return scored.slice(0, appetite).map((e) => e.player)
 }
 
 /**
@@ -858,9 +1000,77 @@ export function processAiTransfers(state: GameState, ctx: TransferContext): void
  * signing per club per season across the entire world, which left the transfer
  * market inert and clubs sitting on money they had no way to spend.
  */
-const SELL_CHANCE = 0.34
+// Selling and buying feed each other: every sale puts a squad place and some
+// wages back into the market, which makes the next club's sale easier to
+// place. Cutting the number of attempts a week barely touched the total
+// because the loop simply converted a higher share of what was left — the
+// brake that works is on how often a club goes looking at all.
+const SELL_CHANCE = 0.3
 const LOAN_CHANCE = 0.14
-const BUY_CHANCE = 0.5
+const BUY_CHANCE = 0.45
+
+/**
+ * Pieces of business a club will attempt in a week of an open window.
+ *
+ * Tuned to land permanent transfers at six to eight a club a season, which is
+ * roughly what a real club does across two windows. Four attempts overshot to
+ * ten; three sits in the band.
+ */
+const SELL_ATTEMPTS = 3
+const BUY_ATTEMPTS = 3
+
+/** A club will not sell its way below this many available seniors. */
+const CHURN_FLOOR = 21
+
+/** Weeks of running costs a club keeps in the bank when it buys. */
+const TRANSFER_CASH_BUFFER_WEEKS = 6
+
+/** Wages plus upkeep for a week — what the club has to find whatever it does. */
+function weeklyRunningCost(state: GameState, club: Club): number {
+  return totalWageBill(state, club) + facilityUpkeep(state, club)
+}
+
+/**
+ * Where a club stops adding.
+ *
+ * Above the 25 a squad list can carry, plus room for the under-21s who sit
+ * outside it. The old figure of 27 was the single largest reason a buy attempt
+ * came to nothing — more than the wage budget and the transfer budget put
+ * together — because it broke the whole week's business rather than skipping
+ * one signing.
+ */
+const SQUAD_CEILING = 30
+
+/**
+ * Clubs that would take this player off his club's hands.
+ *
+ * The same conditions the deal itself will be judged against, applied before
+ * choosing rather than after, so a sale attempt is aimed rather than sprayed.
+ */
+function suitableBuyers(state: GameState, player: Player, seller: Club): Club[] {
+  const out: Club[] = []
+  for (const club of Object.values(state.clubs)) {
+    if (club.id === seller.id || club.id === state.playerClubId) continue
+    if (club.finances.inCrisis) continue
+
+    const squad = club.squad
+      .map((id) => state.players[id])
+      .filter((p): p is Player => Boolean(p) && !p.isAcademy && !p.loanClubId)
+    if (squad.length >= SQUAD_CEILING) continue
+    if (squad.filter((p) => p.age >= U21_AGE).length >= SQUAD_LIMIT) continue
+
+    const fee = Math.round(computeAskingPrice(state, player, seller, club) * 0.95)
+    if (fee > club.finances.transferBudget) continue
+
+    const wage = computeWageDemand(player, state.leagues[club.leagueId], state.nations[club.nationId])
+    if (totalWageBill(state, club) + wage > club.finances.wageBudget) continue
+    if (moveAppeal(state, player, club) < 0.45) continue
+
+    out.push(club)
+    if (out.length >= 12) break
+  }
+  return out
+}
 
 /** Transferable players by position, best first. */
 function buildMarketIndex(state: GameState): Map<Position, Player[]> {
@@ -890,6 +1100,14 @@ function aiCompleteDeal(
   if (fee > buyer.finances.transferBudget) return
   if (totalWageBill(state, buyer) + wage > buyer.finances.wageBudget) return
   if (moveAppeal(state, player, buyer) < 0.45) return
+
+  // A club does not sign its way into the red. The transfer budget already
+  // draws on the reserves, so spending it to the last penny leaves nothing to
+  // pay the wages with, and a fortnight later the shortfall is debt. Boards do
+  // not sanction that, and clubs kept walking into financial crisis a window
+  // after a busy one because nothing here stopped them.
+  const reserve = weeklyRunningCost(state, buyer) * TRANSFER_CASH_BUFFER_WEEKS
+  if (buyer.finances.balance - fee < reserve) return
 
   executeTransfer(state, ctx, {
     player,

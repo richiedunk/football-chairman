@@ -1,6 +1,6 @@
 import { clamp, Rng } from '../rng'
 import { IdFactory, ID_PREFIX } from '../ids'
-import { createOwner, OWNER_LABELS, ownerName } from './ownership'
+import { createOwner, debtTolerance, OWNER_LABELS, ownerName } from './ownership'
 import { recalculateBudgets, weeklyRevenue } from './finance'
 import { setSeasonExpectation, setSeasonMandates } from './board'
 import { addInboxItem, addNews } from './inbox'
@@ -54,6 +54,20 @@ function isTakeoverSeason(week: number): boolean {
  * looking for. Distress attracts a different sort of buyer but attracts them
  * just as strongly.
  */
+/**
+ * Roughly how long the club has been in financial trouble, in seasons.
+ *
+ * Derived from how far the debt has run past what the owner will tolerate,
+ * because the alternative is another field on the club recording something the
+ * numbers already say.
+ */
+function crisisSeasons(state: GameState, club: Club): number {
+  if (!club.finances.inCrisis) return 0
+  const tolerated = weeklyRevenue(state, club) * debtTolerance(club.board.owner)
+  if (tolerated <= 0) return 0
+  return clamp((club.finances.debt / tolerated - 1) * 2.5, 0, 6)
+}
+
 export function takeoverAppeal(state: GameState, club: Club): number {
   const league = state.leagues[club.leagueId]
   if (!league) return 0
@@ -67,14 +81,25 @@ export function takeoverAppeal(state: GameState, club: Club): number {
   // A rich division is worth buying into.
   appeal += (league.reputation / 100) * 0.35
   // Distress. A club that cannot pay its way is cheap, and somebody notices.
-  if (club.finances.inCrisis) appeal += 0.45
-  else if (club.finances.debt > weeklyRevenue(state, club) * 25) appeal += 0.2
-
-  // An owner who has had enough is the other half of it: no seller, no deal.
+  //
+  // The longer it goes on the louder it gets. A club in trouble for one season
+  // is a story; one in trouble for five is a club that will be sold, because
+  // in the end somebody always buys it. Without the escalation clubs sat in
+  // financial crisis for thirteen and fifteen seasons — a dead club occupying
+  // a division — which is the one outcome that is neither football nor a game.
   const owner = club.board.owner
   const tenure = state.date.season - owner.sinceSeason
+  if (club.finances.inCrisis) {
+    appeal += 0.45 + Math.min(1.2, crisisSeasons(state, club) * 0.35)
+  } else if (club.finances.debt > weeklyRevenue(state, club) * 25) {
+    appeal += 0.2
+  }
+
+  // An owner who has had enough is the other half of it: no seller, no deal.
   if (tenure < 3) appeal *= 0.25
-  if (owner.patience > 80) appeal *= 0.6
+  // Patience protects an owner from being bought out, but not indefinitely and
+  // not while the club is going under. Nobody sits through five years of it.
+  if (owner.patience > 80 && !club.finances.inCrisis) appeal *= 0.6
   if (club.board.confidence < 30) appeal += 0.15
 
   return clamp(appeal, 0, 2)
@@ -252,10 +277,26 @@ export function completeTakeover(
   incoming.sinceSeason = state.date.season
   club.board.owner = incoming
 
-  // A wealthy buyer clears the debt they have just bought. It is the cheapest
-  // way to make a club solvent and the first thing any fund does.
-  if (incoming.wealth >= 70 && club.finances.debt > 0) {
-    club.finances.debt = Math.round(club.finances.debt * (1 - (incoming.wealth - 70) / 40))
+  // The debt is part of what has been bought, and settling it is the condition
+  // of the sale.
+  //
+  // A wealthy buyer clears it outright. Anyone buying a club that was actually
+  // in crisis restructures it down to something the new owner can service,
+  // whatever their means, because otherwise there is no deal to do — nobody
+  // buys a business they cannot then run. Without this a rescue was not a
+  // rescue: a club bought by a modest owner stayed in crisis under him, and
+  // clubs sat in it for thirteen and fifteen seasons while being sold along
+  // the way.
+  if (club.finances.debt > 0) {
+    if (incoming.wealth >= 70) {
+      club.finances.debt = Math.round(club.finances.debt * (1 - (incoming.wealth - 70) / 40))
+    }
+    if (club.finances.inCrisis) {
+      const serviceable = Math.round(
+        weeklyRevenue(state, club) * debtTolerance(incoming) * 0.6,
+      )
+      club.finances.debt = Math.min(club.finances.debt, serviceable)
+    }
     club.finances.inCrisis = false
   }
 

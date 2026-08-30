@@ -234,26 +234,18 @@ anyone is listening.
 
 ## Known defects
 
-- **A handful of clubs get stuck in financial crisis for ever.** Measured over
-  fifteen seasons with `scripts/crisisduration.ts`: 19% of clubs pass through
-  crisis, and the median spell is 1.7 seasons, which is football. But three
-  clubs entered crisis in the first two seasons and were still in it at the
-  end — thirteen to fifteen seasons — and fifteen spells ran past three
-  seasons. Two of the permanent ones are top-flight clubs.
+None outstanding. The two that stood here — transfer volume and clubs stuck in
+financial crisis — are fixed and measured. Numbers worth holding the world to,
+all from `scripts/`:
 
-  The incidence is fine and the median is fine. The tail is the defect: a club
-  that cannot trade out over a decade is not a struggling club, it is a dead
-  club occupying a division. In reality that club gets rescued — bought by
-  somebody who clears the debt — and the takeover machinery already treats
-  distress as attractive, so the fix is to make prolonged crisis escalate that
-  appeal rather than to make crisis rarer.
-- **Permanent fee-paying transfers run at about two per club per season**
-  against a real six to eight. Total squad turnover is close to right at five
-  or six moves a club — the mix is still tilted towards free transfers and
-  loans. The ceiling is the wage budget: a club cannot carry six new salaries
-  a year without shedding six, and raising the budget further would break the
-  squad-cost calibration. The remaining gap is that AI clubs sell less than
-  real ones do.
+- Permanent transfers **6-8 a club a season**, plus roughly two frees and two
+  loans on top.
+- Mid-season squads **24-26**, no club below sixteen.
+- Financial crisis: **12% of clubs pass through it over fifteen seasons**,
+  median spell 2.3 seasons, **none permanent**.
+- Squad-cost ratio median **52-58%**, with seven to twelve clubs sanctioned a
+  season out of 238.
+- Wages **54-78% of revenue**, per-player pay realistic at every tier.
 
 ## Standing rules for this project
 

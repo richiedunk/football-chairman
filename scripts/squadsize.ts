@@ -42,6 +42,11 @@ for (let s = 1; s <= 10; s++) {
   line(`s${s} rollover`)
 }
 
+// Wind on to mid-season before the per-tier breakdown: week one is the trough
+// right after expiries and says nothing about whether a club can field a side
+// when it matters.
+for (let w = 0; w < 15; w++) advanceWeek(state, { ids: setup.ids, names: setup.names })
+
 // Where do the veterans end up? A world that works sends them downwards
 // before it retires them, rather than deleting them out of the top flight.
 const tiers = [1, 2, 3, 4, 5]

@@ -41,8 +41,13 @@ export const SQUAD_COST_LIMIT = 0.7
  * there, gets punished. Without the band, one club in eight was being fined
  * and embargoed every season, which is an order of magnitude more than
  * football actually sanctions.
+ *
+ * Widened once, from 80%, when a busier transfer market raised amortisation
+ * across the world and pushed the number of clubs punished back into double
+ * figures. The clubs were genuinely spending more; the band is what decides
+ * how much of that the authorities will live with.
  */
-export const SANCTION_THRESHOLD = 0.8
+export const SANCTION_THRESHOLD = 0.85
 
 /** Above this the breach is severe enough to skip a step. */
 export const SEVERE_BREACH = 0.95
