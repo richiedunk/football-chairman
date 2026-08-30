@@ -3,7 +3,9 @@ import { computed, onMounted, onUnmounted, provide, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useGameStore } from './stores/game'
 import AppTopBar from './ui/components/AppTopBar.vue'
+import AppStatusBar from './ui/components/AppStatusBar.vue'
 import AppTabBar from './ui/components/AppTabBar.vue'
+import AdvanceBar from './ui/components/AdvanceBar.vue'
 import { listSaves } from './storage/saves'
 import { bindAppStateChange, bindBackButton } from './platform/native'
 
@@ -33,6 +35,11 @@ const isSetupRoute = computed(() =>
   ['start', 'new-game', 'club-select', 'welcome'].includes(String(route.name)),
 )
 const showChrome = computed(() => store.loaded && !isSetupRoute.value)
+
+// The advance button belongs to the dashboard, but it lives in the shell so
+// it cannot move and is never inside a scrolling region. The primary action of
+// a game played one-handed should not need a scroll to reach.
+const showAdvance = computed(() => showChrome.value && route.name === 'home')
 
 const cleanups: (() => void)[] = []
 
@@ -66,6 +73,7 @@ onUnmounted(() => {
 <template>
   <div class="app-shell">
     <AppTopBar v-if="showChrome" />
+    <AppStatusBar v-if="showChrome" />
 
     <main class="content">
       <RouterView v-slot="{ Component }">
@@ -75,6 +83,7 @@ onUnmounted(() => {
       </RouterView>
     </main>
 
+    <AdvanceBar v-if="showAdvance" />
     <AppTabBar v-if="showChrome" />
 
     <Transition name="fade">

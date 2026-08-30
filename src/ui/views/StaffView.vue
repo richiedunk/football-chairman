@@ -10,6 +10,7 @@ import {
 } from '../../engine/systems/board'
 import { expectedWage, ROLE_LABELS, STYLE_LABELS, staffEffectiveness } from '../../engine/world/staffGen'
 import type { Staff, StaffRole } from '../../engine/types'
+import Chevron from '../components/Chevron.vue'
 
 const store = useGameStore()
 const toast = inject<(t: string, k?: 'info' | 'error' | 'success') => void>('toast')
@@ -128,7 +129,6 @@ function answer(requestId: string, accept: boolean) {
 
 <template>
   <div v-if="club">
-    <h1 class="mb">Staff</h1>
 
     <div v-if="coach?.coachProfile" class="card">
       <div class="card__head">
@@ -245,7 +245,9 @@ function answer(requestId: string, accept: boolean) {
             <div class="list__value">{{ staffEffectiveness(member) }}</div>
             <div class="list__sub">rating</div>
           </div>
-          <button class="btn btn--ghost btn--sm" aria-label="Dismiss" @click="dismiss(member)">✕</button>
+          <button class="btn btn--ghost btn--sm" aria-label="Dismiss" @click="dismiss(member)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12" /></svg>
+          </button>
         </div>
         <div v-if="!others.length" class="empty">No backroom staff.</div>
       </div>
@@ -269,7 +271,7 @@ function answer(requestId: string, accept: boolean) {
               </template>
             </div>
           </div>
-          <span class="faint">›</span>
+          <Chevron />
         </button>
       </div>
     </div>

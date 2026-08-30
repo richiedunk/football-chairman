@@ -105,7 +105,6 @@ function outletName(id: string) {
 
 <template>
   <div v-if="standing">
-    <h1 class="mb">Media</h1>
 
     <div class="card">
       <div class="card__body">

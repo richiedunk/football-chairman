@@ -1,22 +1,78 @@
 <script setup lang="ts">
-import { computed, inject } from 'vue'
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useGameStore } from '../../stores/game'
-import { formatMoney, formatWage } from '../../engine/systems/valuation'
-import { confidenceLabel, relationshipLabel } from '../../engine/systems/board'
 import { ordinal } from '../../engine/systems/career'
-import MeterBar from '../components/MeterBar.vue'
+import { headerBand } from '../colour'
+import { ratingForPositionCached } from '../../engine/world/attributes'
 import FormRun from '../components/FormRun.vue'
+import Chevron from '../components/Chevron.vue'
 
+/**
+ * The dashboard.
+ *
+ * Nothing here is the same size or shape as anything else, deliberately. The
+ * previous version was a stack of equally weighted cards, which is why the
+ * screen felt busy: with everything boxed and everything the same, the player
+ * has to read the whole page to find the one thing that changed.
+ *
+ * So: the standing is enormous because it is why the app gets opened, the
+ * match is a raised band because it is the one scheduled event, decisions read
+ * as an inbox because that is what they are, and the six departments are a
+ * small chart rather than six tiles. Everything is still a tap target.
+ */
 const store = useGameStore()
 const router = useRouter()
-const toast = inject<(t: string, k?: 'info' | 'error' | 'success') => void>('toast')
 
 const club = computed(() => store.club)
-
 const myRow = computed(() => store.table.find((r) => r.clubId === club.value?.id) ?? null)
 
-const nextOpponent = computed(() => {
+const position = computed(() => store.leaguePosition)
+const target = computed(() => club.value?.board.expectation.leaguePosition ?? 0)
+
+/** Points clear of, or short of, the club immediately below and above. */
+const gap = computed(() => {
+  const table = store.table
+  const i = table.findIndex((r) => r.clubId === club.value?.id)
+  if (i < 0) return null
+  const me = table[i]
+  // Before a ball is kicked everyone is level, so "+0 on 23rd" is noise
+  // dressed as information.
+  if (me.played === 0) return null
+  const below = table[i + 1]
+  // "+0 on 22nd" is a fact, but it is not information. Say it in words or not
+  // at all.
+  if (below) {
+    const lead = me.points - below.points
+    return lead === 0
+      ? `LEVEL WITH ${i + 2}${ordinal(i + 2).toUpperCase()}`
+      : `+${lead} ON ${i + 2}${ordinal(i + 2).toUpperCase()}`
+  }
+  const above = table[i - 1]
+  if (above) return `${me.points - above.points} ON ${i}${ordinal(i).toUpperCase()}`
+  return null
+})
+
+// The board's confidence sits with the standing rather than in its own card,
+// because position against the board's target is what actually moves it.
+//
+// Two signals, deliberately not merged. The bar is confidence, 0-100. The
+// text is whether the target is being met. An earlier version put a marker
+// for the target position on the confidence track, which looked informative
+// and meant nothing: a league place and a confidence score are not the same
+// scale, so the marker was somewhere arbitrary on a bar it did not belong to.
+const boardTone = computed(() => {
+  const c = club.value?.board.confidence ?? 0
+  return c >= 60 ? 'var(--accent)' : c >= 35 ? 'var(--warn)' : 'var(--danger)'
+})
+const targetTone = computed(() => {
+  const pos = position.value
+  if (!pos || !target.value) return 'var(--text-faint)'
+  if (pos <= target.value) return 'var(--accent)'
+  return pos <= target.value + 3 ? 'var(--warn)' : 'var(--danger)'
+})
+
+const nextMatch = computed(() => {
   const f = store.nextFixture
   const c = club.value
   const s = store.game
@@ -24,254 +80,296 @@ const nextOpponent = computed(() => {
   const isHome = f.homeClubId === c.id
   const opponent = store.clubById(isHome ? f.awayClubId : f.homeClubId)
   if (!opponent) return null
-
-  // Cup ties need naming, or a knockout round is indistinguishable from a
-  // league fixture on the one screen the player checks every week.
+  const rank = store.table.findIndex((r) => r.clubId === opponent.id) + 1
+  const row = rank > 0 ? store.table[rank - 1] : null
   const competition =
     f.competitionType === 'league'
-      ? store.league?.name ?? 'League'
+      ? store.leagueById(f.competitionId)?.name ?? 'League'
       : s.cups[f.competitionId]?.name ?? 'Cup'
   const round =
     f.competitionType === 'league'
       ? null
       : s.cups[f.competitionId]?.rounds.find((r) => r.round === f.round)?.name ?? null
-
-  return { opponent, isHome, week: f.week, competition, round }
+  return {
+    opponent,
+    isHome,
+    weeksAway: Math.max(0, f.week - s.date.week),
+    competition: round ?? competition,
+    standing: row ? `${rank}${ordinal(rank).toUpperCase()} · ${row.points} PTS` : null,
+    // The opponent's colour, put through the same readability rule so a white
+    // or yellow club is still visible against the raised band.
+    colour: headerBand(opponent.colors.primary, opponent.colors.secondary).strip,
+  }
 })
 
-const wageHeadroom = computed(() => {
-  const c = club.value
-  return c ? c.finances.wageBudget - store.wageBill : 0
+// Who genuinely cannot play: injured or suspended. Match sharpness is not a
+// fitness doubt — it is how long since someone played — and reading it as one
+// reported most of the squad as doubtful every September.
+const injured = computed(
+  () => store.squad.filter((p) => p.injury && p.injury.weeksRemaining > 0).length,
+)
+const suspended = computed(() => store.squad.filter((p) => p.suspendedWeeks > 0).length)
+const unavailable = computed(() => {
+  const bits: string[] = []
+  if (injured.value) bits.push(`${injured.value} OUT`)
+  if (suspended.value) bits.push(`${suspended.value} SUSPENDED`)
+  return bits.join(' · ')
 })
 
-const injured = computed(() => store.squad.filter((p) => p.injury).length)
-const unhappy = computed(() => store.squad.filter((p) => p.morale < 35).length)
-const expiring = computed(() => {
+/**
+ * What is actually waiting. Urgent items first, then unread decisions, then
+ * the standing hazards — expiring contracts and a room going sour — which are
+ * not inbox items but are the two things most worth acting on early.
+ */
+const waiting = computed(() => {
   const s = store.game
-  if (!s) return 0
-  return store.squad.filter((p) => p.contract && p.contract.expiresSeason <= s.date.season).length
+  const c = club.value
+  if (!s || !c) return []
+
+  const items: { key: string; title: string; detail: string; tone: string; to: string }[] = []
+
+  for (const item of store.inbox) {
+    if (!item.decision || item.decision.chosenId) continue
+    const expires = item.expiresWeek ? Math.max(0, item.expiresWeek - s.date.week) : null
+    items.push({
+      key: item.id,
+      title: item.subject,
+      detail: item.urgent
+        ? expires !== null
+          ? `${expires} WEEK${expires === 1 ? '' : 'S'} TO ANSWER`
+          : 'NEEDS AN ANSWER'
+        : item.from.toUpperCase(),
+      tone: item.urgent ? 'var(--danger)' : 'var(--warn)',
+      to: '/inbox',
+    })
+  }
+
+  // Deadline day itself is not a decision — the offers on it are, and they
+  // are gone at the end of the week. The advance button warns that the window
+  // is closing; this is the way in to do something about it.
+  if (store.isDeadline && store.deadlineOffers.length) {
+    items.push({
+      key: 'deadline',
+      title: `${store.deadlineOffers.length} deadline-day offer${store.deadlineOffers.length === 1 ? '' : 's'}`,
+      detail: 'GONE WHEN THE WINDOW SHUTS TONIGHT',
+      tone: 'var(--danger)',
+      to: '/deadline',
+    })
+  }
+
+  const expiring = store.squad.filter(
+    (p) => p.contract && p.contract.expiresSeason <= s.date.season,
+  ).length
+  if (expiring) {
+    items.push({
+      key: 'expiring',
+      title: `${expiring} contract${expiring === 1 ? '' : 's'} expiring`,
+      detail: 'THEY LEAVE FOR NOTHING IF NOTHING IS AGREED',
+      tone: 'var(--warn)',
+      to: '/squad',
+    })
+  }
+
+  const unhappy = store.squad.filter((p) => p.morale < 35).length
+  if (unhappy) {
+    items.push({
+      key: 'unhappy',
+      title: `${unhappy} unhappy player${unhappy === 1 ? '' : 's'}`,
+      detail: 'LOW MORALE DRAGS FORM AND INVITES THE PRESS',
+      tone: 'var(--text-fainter)',
+      to: '/squad',
+    })
+  }
+
+  return items.slice(0, 4)
 })
 
-async function advance() {
-  const result = await store.nextWeek()
-  if (!result.ok) {
-    toast?.(result.reason ?? 'Cannot advance.', 'error')
-    router.push('/inbox')
-    return
-  }
-  const tick = store.lastTick
-  if (tick?.sacked) {
-    toast?.('You have been dismissed.', 'error')
-    router.push('/career')
-    return
-  }
-  if (tick?.seasonEnded) {
-    toast?.('Season complete.', 'success')
-    router.push('/career')
-    return
-  }
-  if (tick?.playerFixtures.length) {
-    const first = tick.playerFixtures[0]
-    toast?.(first.result.summary, 'info')
-  }
+/**
+ * The estate: six things you invest in, as one chart rather than six tiles.
+ *
+ * Same numbers, a quarter of the height, and a weak department is visible
+ * without having to know that 31 out of 99 is bad. Squad and coach are derived
+ * rather than owned, because what you have built is not the same as what you
+ * have bought.
+ */
+const estate = computed(() => {
+  const c = club.value
+  if (!c) return []
+  const f = c.facilities
+
+  // Squad strength is the best eighteen fit players in their own positions,
+  // not a squad average: a bloated squad of reserves should not read as a
+  // strong one, and eighteen is what actually gets on a teamsheet.
+  const rated = store.squad
+    .filter((p) => !p.injury)
+    .map((p) => ratingForPositionCached(p.id, p.attributes, p.position))
+    .sort((a, b) => b - a)
+    .slice(0, 18)
+  const squadStrength = rated.length
+    ? Math.round(rated.reduce((sum, r) => sum + r, 0) / rated.length)
+    : 0
+
+  // A head coach's reputation is what the world thinks; his attributes are
+  // what you get. The dashboard shows what you get.
+  const coach = store.headCoach
+  const coachAttrs = coach ? Object.values(coach.attributes) : []
+  const coachRating = coachAttrs.length
+    ? Math.round(coachAttrs.reduce((sum, v) => sum + v, 0) / coachAttrs.length)
+    : 0
+
+  // Facility levels run 1-20; the chart runs 0-100, so they are scaled rather
+  // than shown raw. A player who has seen "Training 14" in the facilities
+  // screen should still recognise it here as roughly seventy.
+  const level = (n: number) => Math.round(Math.min(20, Math.max(0, n)) * 5)
+
+  return [
+    { key: 'squad', label: 'SQUAD', value: squadStrength, to: '/squad' },
+    { key: 'coach', label: 'COACH', value: coachRating, to: '/staff' },
+    { key: 'youth', label: 'YOUTH', value: level(f.youthFacilities), to: '/academy' },
+    { key: 'train', label: 'TRAIN', value: level(f.trainingGround), to: '/facilities' },
+    { key: 'scout', label: 'SCOUT', value: level(f.scoutingNetwork), to: '/scouting' },
+    { key: 'data', label: 'DATA', value: level(f.dataDepartment), to: '/facilities' },
+  ]
+})
+
+function barColour(value: number): string {
+  return value >= 60 ? 'var(--accent)' : value >= 40 ? 'var(--warn)' : 'var(--danger)'
 }
 </script>
 
 <template>
-  <div v-if="club">
-    <!-- Standing -->
-    <div class="card">
-      <div class="stat-grid stat-grid--3">
-        <div class="stat">
-          <div class="stat__label">Position</div>
-          <div class="stat__value">
-            {{ store.leaguePosition || '—' }}<span class="tiny faint">{{ store.leaguePosition ? ordinal(store.leaguePosition) : '' }}</span>
+  <div v-if="club" class="dash">
+    <!-- The standing. Nothing on the screen competes with it. -->
+    <section class="dash-standing">
+      <button class="dash-standing__top" @click="router.push('/league')">
+        <div class="row" style="gap: 14px; align-items: flex-start">
+          <div class="dash-standing__figure">
+            <span class="dash-standing__pos">{{ position || '—' }}</span>
+            <span v-if="position" class="dash-standing__ord">{{ ordinal(position) }}</span>
           </div>
-        </div>
-        <div class="stat">
-          <div class="stat__label">Points</div>
-          <div class="stat__value">{{ myRow?.points ?? 0 }}</div>
-        </div>
-        <div class="stat">
-          <div class="stat__label">Played</div>
-          <div class="stat__value">{{ myRow?.played ?? 0 }}</div>
-        </div>
-      </div>
-      <div class="card__body row row--between">
-        <div class="small muted">Board target: {{ club.board.expectation.leaguePosition }}{{ ordinal(club.board.expectation.leaguePosition) }}</div>
-        <FormRun :form="myRow?.form ?? []" />
-      </div>
-    </div>
-
-    <!-- Next match -->
-    <div class="card">
-      <div class="card__head"><span class="card__title">Next fixture</span></div>
-      <div class="card__body">
-        <template v-if="nextOpponent">
-          <div class="row row--between">
-            <div class="grow">
-              <div class="bold">
-                {{ nextOpponent.isHome ? 'vs' : 'away to' }} {{ nextOpponent.opponent.name }}
-              </div>
-              <div class="small muted">
-                Week {{ nextOpponent.week }} · {{ nextOpponent.round ?? nextOpponent.competition }}
-                · {{ nextOpponent.opponent.reputation > club.reputation ? 'Tougher opposition' : 'Winnable' }}
-              </div>
+          <div class="col" style="gap: 7px; padding-top: 4px">
+            <div class="dash-standing__meta">
+              {{ myRow?.points ?? 0 }} PTS<template v-if="gap"> · <span class="faint">{{ gap }}</span></template>
             </div>
-            <FormRun :form="store.table.find((r) => r.clubId === nextOpponent!.opponent.id)?.form ?? []" />
+            <FormRun :form="myRow?.form ?? []" />
           </div>
-        </template>
-        <div v-else class="small muted">No fixtures remaining this season.</div>
-      </div>
-    </div>
+        </div>
+        <Chevron style="margin-top: 5px" />
+      </button>
 
-    <!-- Things needing attention -->
-    <div class="section-title">Needs attention</div>
-    <div class="card">
-      <div class="list">
-        <button v-if="store.pendingDecisions > 0" class="list__row" @click="router.push('/inbox')">
-          <div class="list__main">
-            <div class="list__primary">{{ store.pendingDecisions }} decision{{ store.pendingDecisions === 1 ? '' : 's' }} outstanding</div>
-            <div class="list__secondary">The week cannot advance until urgent ones are answered</div>
-          </div>
-          <span class="chip chip--danger">Act</span>
-        </button>
-        <button v-if="expiring > 0" class="list__row" @click="router.push('/squad')">
-          <div class="list__main">
-            <div class="list__primary">{{ expiring }} contract{{ expiring === 1 ? '' : 's' }} expiring</div>
-            <div class="list__secondary">They leave for nothing if nothing is agreed</div>
-          </div>
-          <span class="chip chip--warn">Renew</span>
-        </button>
-        <button v-if="unhappy > 0" class="list__row" @click="router.push('/squad')">
-          <div class="list__main">
-            <div class="list__primary">{{ unhappy }} unhappy player{{ unhappy === 1 ? '' : 's' }}</div>
-            <div class="list__secondary">Low morale drags form down and invites press interest</div>
-          </div>
-          <span class="chip chip--warn">Review</span>
-        </button>
-        <div v-if="injured > 0" class="list__row list__row--static">
-          <div class="list__main">
-            <div class="list__primary">{{ injured }} injured</div>
-            <div class="list__secondary">Unavailable for selection</div>
-          </div>
-        </div>
-        <div
-          v-if="!store.pendingDecisions && !expiring && !unhappy && !injured"
-          class="empty"
-        >Nothing pressing. A rare week.</div>
-      </div>
-    </div>
-
-    <!-- Key numbers -->
-    <div class="section-title">The numbers</div>
-    <div class="card">
-      <div class="card__body stack">
-        <div class="row row--between">
-          <span class="small muted">Balance</span>
-          <span class="bold num" :class="club.finances.balance < 0 ? 'neg-val' : ''">
-            {{ formatMoney(club.finances.balance, store.currency) }}
-          </span>
-        </div>
-        <div>
-          <div class="row row--between" style="margin-bottom: 5px">
-            <span class="small muted">Wage bill</span>
-            <span class="small num">
-              {{ formatWage(store.wageBill, store.currency) }} of {{ formatWage(club.finances.wageBudget, store.currency) }}
-            </span>
-          </div>
-          <MeterBar :value="store.wageBill" :max="club.finances.wageBudget" invert />
-          <div class="tiny faint" style="margin-top: 4px">
-            {{ wageHeadroom >= 0 ? `${formatWage(wageHeadroom, store.currency)} of headroom` : `${formatWage(-wageHeadroom, store.currency)} over budget` }}
-          </div>
-        </div>
-        <div class="row row--between">
-          <span class="small muted">Transfer budget</span>
-          <span class="bold num">{{ formatMoney(club.finances.transferBudget, store.currency) }}</span>
-        </div>
-        <div v-if="club.finances.debt > 0" class="row row--between">
-          <span class="small muted">Debt</span>
-          <span class="bold num neg-val">{{ formatMoney(club.finances.debt, store.currency) }}</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Relationships -->
-    <div class="section-title">Standing</div>
-    <div class="card">
-      <div class="list">
-        <button class="list__row" @click="router.push('/board')">
-          <div class="list__main">
-            <div class="list__primary">Board</div>
-            <div class="list__secondary">{{ confidenceLabel(club.board.confidence) }}</div>
-          </div>
-          <div style="width: 74px"><MeterBar :value="club.board.confidence" /></div>
-        </button>
-        <button class="list__row" @click="router.push('/staff')">
-          <div class="list__main">
-            <div class="list__primary">Head coach</div>
-            <div class="list__secondary">
-              {{ store.headCoach?.knownAs ?? 'Vacant — appoint one' }}
-              <template v-if="store.headCoach?.coachProfile">
-                · {{ relationshipLabel(store.headCoach.coachProfile.dofRelationship) }}
-              </template>
-            </div>
-          </div>
-          <div style="width: 74px">
-            <MeterBar :value="store.headCoach?.coachProfile?.dofRelationship ?? 0" />
-          </div>
-        </button>
-        <button class="list__row" @click="router.push('/media')">
-          <div class="list__main">
-            <div class="list__primary">Press</div>
-            <div class="list__secondary">Credibility {{ Math.round(store.game?.mediaStanding.credibility ?? 0) }}</div>
-          </div>
-          <div style="width: 74px"><MeterBar :value="store.game?.mediaStanding.credibility ?? 0" /></div>
-        </button>
-        <div class="list__row list__row--static">
-          <div class="list__main">
-            <div class="list__primary">Supporters</div>
-            <div class="list__secondary">{{ club.fanMood >= 65 ? 'Behind you' : club.fanMood >= 40 ? 'Restless' : 'Turning' }}</div>
-          </div>
-          <div style="width: 74px"><MeterBar :value="club.fanMood" /></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Recent results -->
-    <template v-if="store.recentResults.length">
-      <div class="section-title">Recent results</div>
-      <div class="card">
-        <div class="list">
+      <div class="dash-board">
+        <span class="dash-board__label">BOARD</span>
+        <div class="dash-board__track">
           <div
-            v-for="entry in store.recentResults.slice(0, 5)"
-            :key="entry.fixture.id"
-            class="list__row list__row--static"
-          >
-            <div class="list__main">
-              <div class="list__primary">{{ entry.result.summary }}</div>
-              <div class="list__secondary">
-                Week {{ entry.fixture.week }} ·
-                {{ entry.fixture.competitionType === 'league'
-                  ? 'League'
-                  : store.game?.cups[entry.fixture.competitionId]?.name ?? 'Cup' }}
-                · {{ entry.result.attendance.toLocaleString() }} in
-              </div>
+            class="dash-board__fill"
+            :style="{ width: `${club.board.confidence}%`, background: boardTone }"
+          />
+        </div>
+        <span class="dash-board__value" :style="{ color: targetTone }">
+          TARGET {{ target }}{{ ordinal(target).toUpperCase() }}
+        </span>
+      </div>
+    </section>
+
+    <!-- The one scheduled event of the week, so it looks like an event. -->
+    <button v-if="nextMatch" class="dash-match" @click="router.push('/league')">
+      <span class="dash-match__colour" :style="{ background: nextMatch.colour }" />
+      <span class="grow">
+        <span class="dash-match__when">
+          {{ nextMatch.weeksAway <= 0 ? 'THIS WEEK' : nextMatch.weeksAway === 1 ? 'NEXT WEEK' : `IN ${nextMatch.weeksAway} WEEKS` }}
+          · {{ nextMatch.isHome ? 'HOME' : 'AWAY' }}
+        </span>
+        <span class="dash-match__who">{{ nextMatch.opponent.name }}</span>
+      </span>
+      <span class="dash-match__trail">
+        {{ nextMatch.standing ?? nextMatch.competition }}<br>
+        <span :style="{ color: unavailable ? 'var(--danger)' : 'var(--text-faint)' }">
+          {{ unavailable || 'FULLY FIT' }}
+        </span>
+      </span>
+      <Chevron />
+    </button>
+
+    <!-- Decisions, as an inbox rather than a grid. -->
+    <div class="card__head" style="padding-top: 16px">
+      <span class="card__title">Waiting on you</span>
+      <span class="card__title" :style="{ color: waiting.length ? 'var(--danger)' : undefined }">
+        {{ waiting.length }}
+      </span>
+    </div>
+    <button
+      v-for="item in waiting"
+      :key="item.key"
+      class="dash-item"
+      @click="router.push(item.to)"
+    >
+      <span class="dash-item__severity" :style="{ background: item.tone }" />
+      <span class="grow">
+        <span class="dash-item__title">{{ item.title }}</span>
+        <span class="dash-item__detail">{{ item.detail }}</span>
+      </span>
+      <Chevron :size="14" />
+    </button>
+    <div v-if="!waiting.length" class="dash-item" style="cursor: default">
+      <span class="dash-item__severity" style="background: var(--border-strong)" />
+      <span class="grow">
+        <span class="dash-item__title muted">Nothing pressing</span>
+        <span class="dash-item__detail">A RARE WEEK</span>
+      </span>
+    </div>
+
+    <!-- The estate: six departments as one chart, six tap targets. -->
+    <div class="card__head" style="padding-top: 18px">
+      <span class="card__title">Your estate</span>
+      <button class="card__title" style="background: none; border: 0; cursor: pointer" @click="router.push('/club')">
+        EVERYTHING ELSE
+      </button>
+    </div>
+    <div class="estate">
+      <button
+        v-for="d in estate"
+        :key="d.key"
+        class="estate__col"
+        :aria-label="`${d.label} ${d.value} out of 100`"
+        @click="router.push(d.to)"
+      >
+        <span class="estate__value" :style="{ color: d.value >= 60 ? 'var(--text)' : 'var(--text-dim)' }">
+          {{ d.value }}
+        </span>
+        <span class="estate__track">
+          <span
+            class="estate__fill"
+            :style="{ height: `${Math.max(3, d.value)}%`, background: barColour(d.value) }"
+          />
+        </span>
+        <span class="estate__label">{{ d.label }}</span>
+      </button>
+    </div>
+
+    <!-- Recent results, as a list of scorelines rather than a card of cards. -->
+    <template v-if="store.recentResults.length">
+      <div class="card__head" style="padding-top: 18px">
+        <span class="card__title">Recent</span>
+      </div>
+      <div class="list">
+        <div
+          v-for="entry in store.recentResults.slice(0, 4)"
+          :key="entry.fixture.id"
+          class="list__row list__row--static"
+        >
+          <div class="list__main">
+            <div class="list__primary">{{ entry.result.summary }}</div>
+            <div class="list__secondary">
+              W{{ entry.fixture.week }} ·
+              {{ entry.fixture.competitionType === 'league'
+                ? 'LEAGUE'
+                : (store.game?.cups[entry.fixture.competitionId]?.name ?? 'CUP').toUpperCase() }}
+              · {{ entry.result.attendance.toLocaleString() }} IN
             </div>
           </div>
         </div>
       </div>
     </template>
-
-    <div class="mt" style="padding-bottom: 8px">
-      <div class="btn-row">
-        <button class="btn btn--ghost" @click="store.advanceUntilNextMatch()">To next match</button>
-        <button class="btn btn--primary" :disabled="store.busy" @click="advance">Advance week</button>
-      </div>
-      <p v-if="store.blockers.length" class="tiny center mt" style="color: var(--warn)">
-        {{ store.blockers.length }} urgent decision{{ store.blockers.length === 1 ? '' : 's' }} must be answered first.
-      </p>
-    </div>
   </div>
   <div v-else class="empty">No club loaded.</div>
 </template>

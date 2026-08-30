@@ -42,13 +42,39 @@ function when(ts: number) {
 }
 </script>
 
+<style scoped>
+.title { padding: 34px 0 26px; }
+.title__rule {
+  width: 44px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--accent);
+  margin-bottom: 20px;
+}
+.title__name {
+  font-size: 2.4rem;
+  font-weight: 700;
+  line-height: 0.98;
+  letter-spacing: -0.045em;
+}
+.title__strap {
+  margin-top: 14px;
+  max-width: 22em;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+</style>
+
 <template>
   <div>
-    <div style="text-align: center; padding: 26px 0 22px">
-      <div style="font-size: 2.6rem; line-height: 1">⚽</div>
-      <h1 style="margin-top: 10px; font-size: 1.5rem">Director of Football</h1>
-      <p class="small muted" style="margin-top: 6px">
-        You run recruitment, contracts, the academy and the books.<br />
+    <!-- The wordmark is the mark. An emoji ball was a full-colour cartoon on
+         a screen that has no other colour, and it undersold the game. -->
+    <div class="title">
+      <div class="title__rule" />
+      <h1 class="title__name">Director<br />of Football</h1>
+      <p class="title__strap">
+        You run recruitment, contracts, the academy and the books.
         Someone else picks the team.
       </p>
     </div>
@@ -74,7 +100,9 @@ function when(ts: number) {
               </div>
               <div class="tiny faint">{{ slot.name }} · {{ when(slot.savedAt) }}</div>
             </button>
-            <button class="btn btn--ghost btn--sm" aria-label="Delete save" @click="remove(slot)">✕</button>
+            <button class="btn btn--ghost btn--sm" aria-label="Delete save" @click="remove(slot)">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12" /></svg>
+            </button>
           </div>
         </div>
       </div>

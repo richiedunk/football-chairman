@@ -151,7 +151,7 @@ function autoPick() {
                 :class="store.isHomegrown(p.id) ? 'chip--accent' : 'chip--info'"
               >{{ store.isHomegrown(p.id) ? 'Homegrown' : 'Abroad' }}</span>
             </div>
-            <div class="list__secondary">
+            <div class="list__secondary num">
               {{ p.age }} · {{ formatWage(p.contract?.wage ?? 0, store.currency) }}/wk
               <span v-if="tab === 'exempt'"> · eligible without a place</span>
             </div>

@@ -94,7 +94,6 @@ const gap = computed(() => {
 
 <template>
   <div v-if="club">
-    <h1 class="mb">The board</h1>
 
     <div class="card">
       <div class="card__body">

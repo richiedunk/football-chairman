@@ -27,7 +27,13 @@ const step = async (name, fn) => {
 
 await step('load title', async () => {
   await page.goto('http://127.0.0.1:4173/', { waitUntil: 'networkidle' })
-  await page.waitForSelector('text=Director of Football')
+  // The wordmark is set on two lines, so it is matched by its element rather
+  // than as one text node.
+  await page.waitForSelector('.title__name')
+  const mark = (await page.textContent('.title__name'))?.replace(/\s+/g, ' ').trim()
+  if (mark !== 'Directorof Football' && mark !== 'Director of Football') {
+    throw new Error(`unexpected wordmark: ${mark}`)
+  }
   await page.screenshot({ path: `${SHOT}/01-title.png` })
 })
 
@@ -92,8 +98,28 @@ await step('take a job', async () => {
 
   await page.click('.btn--primary:has-text("Get to work")')
   await page.waitForSelector('.tabbar', { timeout: 30000 })
-  await page.waitForSelector('text=Next fixture')
+  await page.waitForSelector('.dash-standing')
   await page.screenshot({ path: `${SHOT}/07-home.png` })
+})
+
+await step('the header carries the club colour, readably', async () => {
+  // The band is computed from the club's real primary at runtime, so this is
+  // the only place the rule gets exercised against whatever club the run
+  // happened to land at. A washed-out or unset band is a real bug.
+  const { band, ratio } = await page.evaluate(() => {
+    const el = document.querySelector('.topbar')
+    const bg = getComputedStyle(el).backgroundColor
+    const [r, g, b] = bg.match(/\d+/g).map(Number)
+    const chan = (n) => {
+      const c = n / 255
+      return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)
+    }
+    const lum = 0.2126 * chan(r) + 0.7152 * chan(g) + 0.0722 * chan(b)
+    return { band: bg, ratio: 1.05 / (lum + 0.05) }
+  })
+  if (ratio < 4.5) throw new Error(`header band ${band} only reaches ${ratio.toFixed(2)}:1`)
+  console.log(`   band ${band} at ${ratio.toFixed(1)}:1 against white`)
+  if (!(await page.locator('.topbar__strip').count())) throw new Error('no colour strip')
 })
 
 const clubName = await page.textContent('.topbar__club')
@@ -107,9 +133,9 @@ let decisionsAnswered = 0
 async function advanceOneWeek() {
   if (!page.url().includes('#/home')) {
     await page.goto('http://127.0.0.1:4173/#/home')
-    await page.waitForSelector('.btn--primary:has-text("Advance week")')
+    await page.waitForSelector('.advance')
   }
-  await page.click('.btn--primary:has-text("Advance week")')
+  await page.click('.advance')
   await page.waitForFunction(() => !document.querySelector('.overlay'), null, { timeout: 30000 })
   await page.waitForTimeout(150)
 
@@ -132,12 +158,23 @@ async function advanceOneWeek() {
       await page.waitForTimeout(200)
     }
     await page.goto('http://127.0.0.1:4173/#/home')
-    await page.waitForSelector('.btn--primary:has-text("Advance week")')
+    await page.waitForSelector('.advance')
+    // The blocked button opens the blocker rather than advancing, so a tick
+    // that hit one has not moved the clock yet. Take the week now that the
+    // way is clear, or the caller's count of weeks is a count of taps.
+    await page.click('.advance')
+    await page.waitForFunction(() => !document.querySelector('.overlay'), null, { timeout: 30000 })
+    await page.waitForTimeout(150)
   }
 }
 
 await step('advance 10 weeks', async () => {
   for (let i = 0; i < 10; i++) await advanceOneWeek()
+  // A tick can end on the inbox when it hit a blocker, so the dashboard shot
+  // is taken from the dashboard rather than from wherever the last tap left us.
+  await page.goto('http://127.0.0.1:4173/#/home')
+  await page.waitForSelector('.dash-standing')
+  await page.waitForTimeout(300)
   await page.screenshot({ path: `${SHOT}/07-home-after.png` })
   console.log(`   decisions answered: ${decisionsAnswered}`)
 })
@@ -307,10 +344,23 @@ await step('stadium and architect tender', async () => {
   const outcome = await page.textContent('.toast')
   console.log(`   ${outcome?.trim().slice(0, 90)}`)
 
-  // The card must appear without navigating away: a screen that only updates
-  // on remount is the signature of a broken reactivity chain.
-  await page.waitForSelector('text=Work in progress', { timeout: 10000 })
-  await page.screenshot({ path: `${SHOT}/26-works.png`, fullPage: true })
+  // Whether the award goes through is not this step's to decide: a club in
+  // financial crisis has its building work blocked, which is the rule doing
+  // its job. So the assertion branches on what actually happened rather than
+  // on what the step would have liked to happen.
+  const awarded = !/will not sanction|cannot|refus/i.test(outcome ?? '')
+  if (awarded) {
+    // The card must appear without navigating away: a screen that only updates
+    // on remount is the signature of a broken reactivity chain.
+    await page.waitForSelector('text=Work in progress', { timeout: 10000 })
+    await page.screenshot({ path: `${SHOT}/26-works.png`, fullPage: true })
+  } else {
+    // A refusal has to say why. A silent no is indistinguishable from a bug.
+    if (!outcome || outcome.trim().length < 15) {
+      throw new Error(`tender refused without a reason: ${outcome}`)
+    }
+    console.log('   award refused, and it said why — that is the rule working')
+  }
 })
 
 await step('squad registration', async () => {
@@ -391,9 +441,12 @@ await step('deadline day', async () => {
   // rather than against one this step assumed. An earlier version asserted the
   // out-of-window message unconditionally and failed the day a run happened to
   // arrive already inside a deadline week.
+  // The week moved out of the header and into the status strip, which is the
+  // one piece of chrome present on every screen — so this reads it from there
+  // rather than from a header whose subtitle changes with the route.
   const weekOf = async () => {
-    const label = await page.textContent('.topbar__meta')
-    return Number(/Week (\d+)/.exec(label ?? '')?.[1] ?? 0)
+    const label = await page.textContent('.statusbar')
+    return Number(/W(\d+)/.exec(label ?? '')?.[1] ?? 0)
   }
 
   await page.goto('http://127.0.0.1:4173/#/deadline')

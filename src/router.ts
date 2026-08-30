@@ -13,6 +13,14 @@ const routes: RouteRecordRaw[] = [
   { path: '/new/club', name: 'club-select', component: () => import('./ui/views/ClubSelectView.vue') },
 
   { path: '/welcome', name: 'welcome', component: () => import('./ui/views/WelcomeView.vue') },
+
+  /*
+   * Five tabs: home, squad, transfers, inbox, league. Everything else hangs
+   * off the home dashboard rather than off the bar — finance, facilities, the
+   * board, staff, the academy, the media, the career record. Fewer top-level
+   * places with a deeper drill-down is what stops a phone screen reading as a
+   * menu, so those routes carry `tab: 'home'` and keep the first tab lit.
+   */
   { path: '/home', name: 'home', component: () => import('./ui/views/HomeView.vue'), meta: { tab: 'home' } },
   { path: '/inbox', name: 'inbox', component: () => import('./ui/views/InboxView.vue'), meta: { tab: 'inbox' } },
   { path: '/squad', name: 'squad', component: () => import('./ui/views/SquadView.vue'), meta: { tab: 'squad' } },
@@ -23,20 +31,20 @@ const routes: RouteRecordRaw[] = [
   { path: '/agents', name: 'agents', component: () => import('./ui/views/AgentsView.vue'), meta: { tab: 'transfers' } },
   { path: '/scouting', name: 'scouting', component: () => import('./ui/views/ScoutingView.vue'), meta: { tab: 'transfers' } },
   { path: '/search', name: 'search', component: () => import('./ui/views/SearchView.vue'), meta: { tab: 'transfers' } },
-  { path: '/club', name: 'club', component: () => import('./ui/views/ClubView.vue'), meta: { tab: 'club' } },
-  { path: '/finance', name: 'finance', component: () => import('./ui/views/FinanceView.vue'), meta: { tab: 'club' } },
-  { path: '/facilities', name: 'facilities', component: () => import('./ui/views/FacilitiesView.vue'), meta: { tab: 'club' } },
-  { path: '/stadium', name: 'stadium', component: () => import('./ui/views/StadiumView.vue'), meta: { tab: 'club' } },
-  { path: '/staff', name: 'staff', component: () => import('./ui/views/StaffView.vue'), meta: { tab: 'club' } },
-  { path: '/academy', name: 'academy', component: () => import('./ui/views/AcademyView.vue'), meta: { tab: 'club' } },
-  { path: '/board', name: 'board', component: () => import('./ui/views/BoardView.vue'), meta: { tab: 'club' } },
-  { path: '/media', name: 'media', component: () => import('./ui/views/MediaView.vue'), meta: { tab: 'club' } },
+  { path: '/club', name: 'club', component: () => import('./ui/views/ClubView.vue'), meta: { tab: 'home' } },
+  { path: '/finance', name: 'finance', component: () => import('./ui/views/FinanceView.vue'), meta: { tab: 'home' } },
+  { path: '/facilities', name: 'facilities', component: () => import('./ui/views/FacilitiesView.vue'), meta: { tab: 'home' } },
+  { path: '/stadium', name: 'stadium', component: () => import('./ui/views/StadiumView.vue'), meta: { tab: 'home' } },
+  { path: '/staff', name: 'staff', component: () => import('./ui/views/StaffView.vue'), meta: { tab: 'home' } },
+  { path: '/academy', name: 'academy', component: () => import('./ui/views/AcademyView.vue'), meta: { tab: 'home' } },
+  { path: '/board', name: 'board', component: () => import('./ui/views/BoardView.vue'), meta: { tab: 'home' } },
+  { path: '/media', name: 'media', component: () => import('./ui/views/MediaView.vue'), meta: { tab: 'home' } },
   { path: '/league', name: 'league', component: () => import('./ui/views/LeagueView.vue'), meta: { tab: 'league' } },
   { path: '/league/:id', name: 'league-detail', component: () => import('./ui/views/LeagueView.vue'), meta: { tab: 'league' } },
-  { path: '/career', name: 'career', component: () => import('./ui/views/CareerView.vue'), meta: { tab: 'club' } },
-  { path: '/achievements', name: 'achievements', component: () => import('./ui/views/AchievementsView.vue'), meta: { tab: 'club' } },
-  { path: '/about', name: 'about', component: () => import('./ui/views/AboutView.vue'), meta: { tab: 'club' } },
-  { path: '/settings', name: 'settings', component: () => import('./ui/views/SettingsView.vue'), meta: { tab: 'club' } },
+  { path: '/career', name: 'career', component: () => import('./ui/views/CareerView.vue'), meta: { tab: 'home' } },
+  { path: '/achievements', name: 'achievements', component: () => import('./ui/views/AchievementsView.vue'), meta: { tab: 'home' } },
+  { path: '/about', name: 'about', component: () => import('./ui/views/AboutView.vue'), meta: { tab: 'home' } },
+  { path: '/settings', name: 'settings', component: () => import('./ui/views/SettingsView.vue'), meta: { tab: 'home' } },
   { path: '/:pathMatch(.*)*', redirect: '/' },
 ]
 

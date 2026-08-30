@@ -15,7 +15,6 @@ export const SCREEN_LABELS: Record<string, string> = {
   scouting: 'Scouting',
   agents: 'Agents',
   deadline: 'Deadline Day',
-  search: 'Player search',
   club: 'Club',
   finance: 'Finances',
   facilities: 'Facilities',
@@ -28,6 +27,8 @@ export const SCREEN_LABELS: Record<string, string> = {
   career: 'Career',
   achievements: 'Milestones',
   about: 'About',
+  settings: 'Settings',
+  search: 'Find players',
 }
 
 export function screenLabel(view: string): string {

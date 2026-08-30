@@ -81,7 +81,6 @@ const committed = computed(() => {
 
 <template>
   <div v-if="club && ledger">
-    <h1 class="mb">Finances</h1>
 
     <div class="card">
       <div class="stat-grid">

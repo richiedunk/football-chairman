@@ -5,6 +5,7 @@ import { useGameStore } from '../../stores/game'
 import FormRun from '../components/FormRun.vue'
 import { sortTable } from '../../engine/systems/board'
 import { survivorsOf, tieAggregate } from '../../engine/sim/cups'
+import Chevron from '../components/Chevron.vue'
 
 const store = useGameStore()
 const route = useRoute()
@@ -134,7 +135,7 @@ function short(clubId: string) {
           <tbody>
             <tr v-for="(row, i) in table" :key="row.clubId" :class="rowClass(i, row.clubId)">
               <td class="num">{{ i + 1 }}</td>
-              <td class="truncate" style="max-width: 108px">{{ short(row.clubId) }}</td>
+              <td class="name truncate" style="max-width: 112px">{{ short(row.clubId) }}</td>
               <td class="num">{{ row.played }}</td>
               <td class="num">{{ row.won }}</td>
               <td class="num">{{ row.drawn }}</td>
@@ -245,7 +246,7 @@ function short(clubId: string) {
               {{ store.game?.nations[l.nationId]?.name }} · tier {{ l.tier }} · {{ l.clubIds.length }} clubs
             </div>
           </div>
-          <span class="faint">›</span>
+          <Chevron />
         </button>
       </div>
     </div>

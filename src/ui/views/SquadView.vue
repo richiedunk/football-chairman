@@ -7,6 +7,7 @@ import MeterBar from '../components/MeterBar.vue'
 import { formatMoney, formatWage } from '../../engine/systems/valuation'
 import { auditSquadDepth } from '../../engine/sim/selection'
 import type { Player } from '../../engine/types'
+import Chevron from '../components/Chevron.vue'
 
 const store = useGameStore()
 const router = useRouter()
@@ -106,7 +107,7 @@ const registration = computed(() => store.registration)
               </template>
             </div>
           </div>
-          <span class="faint">›</span>
+          <Chevron />
         </div>
       </div>
     </button>

@@ -8,6 +8,7 @@ import {
   upgradeDuration,
 } from '../../engine/systems/facilities'
 import type { FacilityKind } from '../../engine/types'
+import Chevron from '../components/Chevron.vue'
 
 const store = useGameStore()
 const toast = inject<(t: string, k?: 'info' | 'error' | 'success') => void>('toast')
@@ -44,7 +45,6 @@ function upgrade(kind: FacilityKind) {
 
 <template>
   <div v-if="club">
-    <h1 class="mb">Facilities</h1>
     <p class="small muted mb">
       None of this helps you this season. That is rather the point — it is the part of the job
       nobody thanks you for and every successful club has done.
@@ -57,7 +57,7 @@ function upgrade(kind: FacilityKind) {
     >
       <div class="card__head">
         <span class="card__title">{{ club.facilities.stadium.name }}</span>
-        <span class="faint">›</span>
+        <Chevron />
       </div>
       <div class="card__body">
         <div class="row row--between mb">

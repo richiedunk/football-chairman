@@ -2,9 +2,9 @@
 import { computed, inject, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useGameStore } from '../../stores/game'
-import { CATEGORY_ICONS, CATEGORY_LABELS } from '../../engine/systems/inbox'
+import { CATEGORY_LABELS } from '../../engine/systems/inbox'
 import { linkLabel } from '../screens'
-import type { InboxCategory, InboxItem } from '../../engine/types'
+import type { InboxItem } from '../../engine/types'
 
 const store = useGameStore()
 const router = useRouter()
@@ -48,8 +48,16 @@ function buttonLabel(item: InboxItem): string {
   return linkLabel(view, subject)
 }
 
-function icon(category: InboxCategory) {
-  return CATEGORY_ICONS[category] ?? '•'
+/**
+ * The colour of an item's leading bar.
+ *
+ * Urgency, not category. Category is already spelled out in the line beneath,
+ * and colouring eleven categories would mean eleven colours competing on one
+ * screen — which is how the old build ended up with nothing standing out.
+ */
+function severity(item: InboxItem): string {
+  if (!item.decision || item.decision.chosenId) return 'var(--border-strong)'
+  return item.urgent ? 'var(--danger)' : 'var(--warn)'
 }
 </script>
 
@@ -78,12 +86,16 @@ function icon(category: InboxCategory) {
         :style="!item.read ? 'background: rgba(96,165,250,0.05)' : ''"
         @click="toggle(item)"
       >
-        <span style="font-size: 1.15rem" aria-hidden="true">{{ icon(item.category) }}</span>
+        <span
+          class="dash-item__severity"
+          :style="{ background: severity(item) }"
+          aria-hidden="true"
+        />
         <div class="list__main">
           <div class="list__primary">
             <span v-if="!item.read" style="color: var(--info)">● </span>{{ item.subject }}
           </div>
-          <div class="list__secondary">
+          <div class="list__secondary num">
             {{ item.from }} · {{ CATEGORY_LABELS[item.category] }} · wk {{ item.week }}
           </div>
         </div>

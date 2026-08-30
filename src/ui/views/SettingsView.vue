@@ -60,7 +60,6 @@ function mb(bytes: number) {
 
 <template>
   <div v-if="settings">
-    <h1 class="mb">Settings</h1>
 
     <div class="card">
       <div class="card__head"><span class="card__title">Game</span></div>
@@ -120,7 +119,9 @@ function mb(bytes: number) {
               · {{ mb(slot.size) }}
             </div>
           </button>
-          <button class="btn btn--ghost btn--sm" aria-label="Delete" @click="removeSlot(slot.id)">✕</button>
+          <button class="btn btn--ghost btn--sm" aria-label="Delete" @click="removeSlot(slot.id)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12" /></svg>
+          </button>
         </div>
       </div>
     </div>

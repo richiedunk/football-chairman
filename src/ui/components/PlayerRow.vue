@@ -76,7 +76,7 @@ function open() {
         {{ player.knownAs }}
         <span v-if="status" class="chip" :class="status.cls" :title="status.title">{{ status.label }}</span>
       </div>
-      <div class="list__secondary">
+      <div class="list__secondary num">
         {{ player.age }}y
         <template v-if="player.contract"> · {{ formatWage(player.contract.wage, store.currency) }}/wk</template>
         <template v-if="contractYears !== null">

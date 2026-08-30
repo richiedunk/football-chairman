@@ -43,7 +43,6 @@ function stars(n: number): string {
 
 <template>
   <div v-if="club">
-    <h1 class="mb">Academy</h1>
 
     <div class="card">
       <div class="card__body">
@@ -78,7 +77,7 @@ function stars(n: number): string {
             <PosBadge :position="entry.player.position" />
             <div class="list__main">
               <div class="list__primary">{{ entry.player.knownAs }}</div>
-              <div class="list__secondary">
+              <div class="list__secondary num">
                 {{ entry.player.age }}y · {{ entry.assessment.confidence }} confidence
               </div>
             </div>

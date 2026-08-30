@@ -147,16 +147,3 @@ export const CATEGORY_LABELS: Record<InboxCategory, string> = {
   league: 'League',
 }
 
-export const CATEGORY_ICONS: Record<InboxCategory, string> = {
-  board: '🏛',
-  coach: '📋',
-  player: '👥',
-  transfer: '🔁',
-  scouting: '🔍',
-  media: '📰',
-  finance: '💷',
-  facilities: '🏗',
-  academy: '🎓',
-  match: '⚽',
-  league: '🏆',
-}

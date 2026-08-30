@@ -6,6 +6,7 @@ import PlayerRow from '../components/PlayerRow.vue'
 import { formatMoney, formatWage } from '../../engine/systems/valuation'
 import { effectiveOfferValue } from '../../engine/systems/transfers'
 import type { TransferNegotiation } from '../../engine/types'
+import Chevron from '../components/Chevron.vue'
 
 const store = useGameStore()
 const router = useRouter()
@@ -114,7 +115,7 @@ function withdraw(negotiation: TransferNegotiation) {
               answering the phone.
             </div>
           </div>
-          <span class="faint">›</span>
+          <Chevron />
         </div>
       </div>
     </button>

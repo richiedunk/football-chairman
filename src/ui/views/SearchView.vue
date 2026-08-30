@@ -60,7 +60,6 @@ const results = computed<Player[]>(() => {
 
 <template>
   <div>
-    <h1 class="mb">Find players</h1>
 
     <div class="card">
       <div class="card__body">

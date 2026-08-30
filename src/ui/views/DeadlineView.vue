@@ -51,13 +51,12 @@ function player(id: string) {
 
 <template>
   <div v-if="store.isDeadline">
-    <div class="card" style="border-color: var(--warn); background: rgba(251,191,36,0.07)">
-      <div class="card__body" style="text-align: center">
-        <div class="tiny faint" style="text-transform: uppercase; letter-spacing: 0.12em">
+    <div class="card" style="background: var(--warn-wash)">
+      <div class="card__body">
+        <div style="font-size: 1.3rem; font-weight: 700; letter-spacing: -0.025em; color: var(--warn)">
           The window shuts tonight
         </div>
-        <div class="bold" style="font-size: 1.35rem; margin-top: 4px">Deadline Day</div>
-        <p class="small muted" style="margin: 8px 0 0">
+        <p class="small muted" style="margin: 7px 0 0">
           Everything here is take it or leave it. Nobody is negotiating and nobody is
           calling back.
         </p>
