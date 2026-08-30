@@ -1,0 +1,93 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap">
+  <style>
+    body { margin: 0; font-family: 'Inter', system-ui, sans-serif; }
+    .hd { padding: 14px 16px 12px; display: flex; align-items: flex-end; justify-content: space-between }
+    .nm { font-size: 19px; font-weight: 700; letter-spacing: -0.025em; color: #FFFFFF }
+    .sb { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.09em; color: rgba(255,255,255,0.62) }
+    .cap { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.1em; color: #4B5563; padding: 6px 16px 0 }
+  </style>
+</helmet>
+
+<div style="width: 390px; height: 844px; background: #08090B; color: #DDE1E6; display: flex; flex-direction: column; overflow: hidden">
+
+  <div style="padding: 20px 16px 6px">
+    <div style="font-size: 22px; font-weight: 700; letter-spacing: -0.03em">Club colour, six hard cases</div>
+    <div style="font-size: 12px; color: #6B7280; padding-top: 4px; line-height: 1.45">Band = the club primary in HSL, lightness clamped to 10–17% and chroma capped, so white text always clears 4.5:1. The 3px strip below is the untouched colour.</div>
+  </div>
+
+  <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 3px; padding-top: 10px">
+
+    <!-- Bright red: clamps cleanly -->
+    <div>
+      <div class="hd" style="background: #4A0F0A">
+        <div><div class="nm">Manchester United</div><div class="sb">THE PREM · W22</div></div>
+      </div>
+      <div style="height: 3px; background: #DA291C"></div>
+      <div class="cap">#DA291C &rarr; #4A0F0A · 12.6:1</div>
+    </div>
+
+    <!-- Near-black: clamping down would vanish, so lift instead -->
+    <div>
+      <div class="hd" style="background: #2B2830">
+        <div><div class="nm">Newcastle United</div><div class="sb">THE PREM · W22</div></div>
+      </div>
+      <div style="height: 3px; background: linear-gradient(90deg, #241F20 50%, #F0F0F0 50%)"></div>
+      <div class="cap">#241F20 TOO DARK &rarr; LIFTED #2B2830 · 13.4:1</div>
+    </div>
+
+    <!-- Yellow: the case that kills naive tinting -->
+    <div>
+      <div class="hd" style="background: #3B3500">
+        <div><div class="nm">Norwich City</div><div class="sb">THE CHAMPIONSHIP · W22</div></div>
+      </div>
+      <div style="height: 3px; background: #FFF200"></div>
+      <div class="cap">#FFF200 &rarr; #3B3500 · 11.9:1</div>
+    </div>
+
+    <!-- White primary: unusable, fall through to secondary -->
+    <div>
+      <div class="hd" style="background: #3D2D00">
+        <div><div class="nm">Real Madrid</div><div class="sb">LA LIGA · W22</div></div>
+      </div>
+      <div style="height: 3px; background: linear-gradient(90deg, #F5F5F5 50%, #FEBE10 50%)"></div>
+      <div class="cap">#FFFFFF UNUSABLE &rarr; SECONDARY #FEBE10 &rarr; #3D2D00</div>
+    </div>
+
+    <!-- Already dark blue: barely moves -->
+    <div>
+      <div class="hd" style="background: #06264F">
+        <div><div class="nm">Chelsea</div><div class="sb">THE PREM · W22</div></div>
+      </div>
+      <div style="height: 3px; background: #034694"></div>
+      <div class="cap">#034694 &rarr; #06264F · 13.8:1</div>
+    </div>
+
+    <!-- Gold: same family as Norwich, different hue -->
+    <div>
+      <div class="hd" style="background: #3C2A00">
+        <div><div class="nm">Wolverhampton</div><div class="sb">THE PREM · W22</div></div>
+      </div>
+      <div style="height: 3px; background: #FDB913"></div>
+      <div class="cap">#FDB913 &rarr; #3C2A00 · 12.2:1</div>
+    </div>
+
+  </div>
+
+  <div style="padding: 14px 16px 18px; border-top: 1px solid #1A1D23">
+    <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #6B7280; letter-spacing: 0.1em; padding-bottom: 6px">RULE</div>
+    <div style="font-size: 12px; color: #98A0AC; line-height: 1.5">One function, <span style="font-family: 'JetBrains Mono', monospace; color: #C8FF4D">headerBand(primary, secondary)</span>. Everything below the strip stays identical for all 540 clubs — the colour never touches text, tiles, buttons or nav.</div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

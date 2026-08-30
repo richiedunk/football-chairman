@@ -1,0 +1,133 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap">
+  <style>
+    body { margin: 0; font-family: 'Space Grotesk', system-ui, sans-serif; }
+  </style>
+</helmet>
+
+<div style="width: 390px; height: 844px; background: #0C0D10; color: #F2F3F5; display: flex; flex-direction: column; overflow: hidden">
+
+  <!-- Header: title and the one aggregate that matters -->
+  <div style="padding: 22px 20px 16px; display: flex; align-items: flex-end; justify-content: space-between">
+    <div style="display: flex; flex-direction: column; gap: 2px">
+      <div style="font-size: 27px; font-weight: 700; letter-spacing: -0.035em">Squad</div>
+      <div style="font-size: 13px; color: #74777E">24 senior · 16 of 17 non-homegrown</div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 7px; height: 32px; padding: 0 13px; border-radius: 16px; border: 1px solid #2A2D35; font-size: 13px; color: #A5A8B0">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#74777E" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M6 12h12M10 18h4"/></svg>
+      Rating
+    </div>
+  </div>
+
+  <!-- Position bands as typographic dividers, not cards -->
+  <div style="flex-grow: 1; overflow: hidden; display: flex; flex-direction: column">
+
+    <div style="padding: 0 20px; font-size: 11px; font-weight: 500; letter-spacing: 0.13em; color: #5A5D65; padding-bottom: 9px">GOALKEEPERS</div>
+
+    <div style="display: flex; align-items: center; gap: 13px; padding: 11px 20px; border-top: 1px solid #16181E">
+      <div style="width: 26px; font-size: 19px; font-weight: 700; color: #C8FF4D; letter-spacing: -0.03em">82</div>
+      <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 2px">
+        <div style="font-size: 15px; font-weight: 500; letter-spacing: -0.01em">A. Onana</div>
+        <div style="font-size: 12px; color: #74777E">27 · GK · £120k · 2028</div>
+      </div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 13px; padding: 11px 20px; border-top: 1px solid #16181E">
+      <div style="width: 26px; font-size: 19px; font-weight: 700; color: #A5A8B0; letter-spacing: -0.03em">64</div>
+      <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 2px">
+        <div style="font-size: 15px; font-weight: 500; letter-spacing: -0.01em">T. Heaton</div>
+        <div style="font-size: 12px; color: #74777E">38 · GK · £30k · <span style="color: #E5484D">expiring</span></div>
+      </div>
+    </div>
+
+    <div style="padding: 20px 20px 9px; font-size: 11px; font-weight: 500; letter-spacing: 0.13em; color: #5A5D65">DEFENDERS</div>
+
+    <div style="display: flex; align-items: center; gap: 13px; padding: 11px 20px; border-top: 1px solid #16181E">
+      <div style="width: 26px; font-size: 19px; font-weight: 700; color: #C8FF4D; letter-spacing: -0.03em">84</div>
+      <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 2px">
+        <div style="font-size: 15px; font-weight: 500; letter-spacing: -0.01em">L. Martínez</div>
+        <div style="font-size: 12px; color: #74777E">26 · CB · £180k · 2027</div>
+      </div>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#F5A524" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A4 4 0 0112 8a4 4 0 013.5 6.5"/><path d="M12 18h.01"/></svg>
+    </div>
+    <div style="display: flex; align-items: center; gap: 13px; padding: 11px 20px; border-top: 1px solid #16181E">
+      <div style="width: 26px; font-size: 19px; font-weight: 700; color: #A5A8B0; letter-spacing: -0.03em">79</div>
+      <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 2px">
+        <div style="font-size: 15px; font-weight: 500; letter-spacing: -0.01em">D. Dalot</div>
+        <div style="font-size: 12px; color: #74777E">25 · RB · £110k · 2028</div>
+      </div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 13px; padding: 11px 20px; border-top: 1px solid #16181E">
+      <div style="width: 26px; font-size: 19px; font-weight: 700; color: #A5A8B0; letter-spacing: -0.03em">77</div>
+      <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 2px">
+        <div style="font-size: 15px; font-weight: 500; letter-spacing: -0.01em">H. Maguire</div>
+        <div style="font-size: 12px; color: #74777E">31 · CB · £190k · 2026</div>
+      </div>
+      <div style="font-size: 11px; font-weight: 500; color: #F5A524; letter-spacing: 0.06em">BID</div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 13px; padding: 11px 20px; border-top: 1px solid #16181E">
+      <div style="width: 26px; font-size: 19px; font-weight: 700; color: #74777E; letter-spacing: -0.03em">68</div>
+      <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 2px">
+        <div style="font-size: 15px; font-weight: 500; letter-spacing: -0.01em">W. Fish</div>
+        <div style="font-size: 12px; color: #74777E">21 · CB · £14k · 2027</div>
+      </div>
+      <div style="font-size: 11px; font-weight: 500; color: #5A5D65; letter-spacing: 0.06em">HG</div>
+    </div>
+
+    <div style="padding: 20px 20px 9px; font-size: 11px; font-weight: 500; letter-spacing: 0.13em; color: #5A5D65">MIDFIELDERS</div>
+
+    <div style="display: flex; align-items: center; gap: 13px; padding: 11px 20px; border-top: 1px solid #16181E">
+      <div style="width: 26px; font-size: 19px; font-weight: 700; color: #C8FF4D; letter-spacing: -0.03em">86</div>
+      <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 2px">
+        <div style="font-size: 15px; font-weight: 500; letter-spacing: -0.01em">B. Fernandes</div>
+        <div style="font-size: 12px; color: #74777E">29 · AM · £240k · <span style="color: #E5484D">2026</span></div>
+      </div>
+      <div style="width: 7px; height: 7px; border-radius: 50%; background: #E5484D"></div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 13px; padding: 11px 20px; border-top: 1px solid #16181E">
+      <div style="width: 26px; font-size: 19px; font-weight: 700; color: #A5A8B0; letter-spacing: -0.03em">78</div>
+      <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 2px">
+        <div style="font-size: 15px; font-weight: 500; letter-spacing: -0.01em">K. Mainoo</div>
+        <div style="font-size: 12px; color: #74777E">19 · CM · £45k · 2029</div>
+      </div>
+      <div style="font-size: 11px; font-weight: 500; color: #5A5D65; letter-spacing: 0.06em">HG</div>
+    </div>
+
+  </div>
+
+  <!-- Nav -->
+  <div style="height: 62px; border-top: 1px solid #1E2027; display: flex; align-items: center; justify-content: space-around; padding: 0 8px; flex-shrink: 0">
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 5px">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#5A5D65" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-7 9 7v10a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+      <div style="font-size: 10px; color: #5A5D65">Club</div>
+    </div>
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 5px">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#F2F3F5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/></svg>
+      <div style="font-size: 10px; color: #F2F3F5">Squad</div>
+    </div>
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 5px">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#5A5D65" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5M21 3l-7 7M8 21H3v-5M3 21l7-7"/></svg>
+      <div style="font-size: 10px; color: #5A5D65">Market</div>
+    </div>
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 5px; position: relative">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#5A5D65" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"/><path d="M4 8l8 5 8-5"/></svg>
+      <div style="position: absolute; top: -3px; right: 4px; width: 15px; height: 15px; border-radius: 8px; background: #E5484D; color: #fff; font-size: 9px; font-weight: 700; display: flex; align-items: center; justify-content: center">3</div>
+      <div style="font-size: 10px; color: #5A5D65">Inbox</div>
+    </div>
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 5px">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#5A5D65" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 9l-5 5-3-3-4 4"/></svg>
+      <div style="font-size: 10px; color: #5A5D65">League</div>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

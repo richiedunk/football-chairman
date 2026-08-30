@@ -1,17 +1,22 @@
 {
   "artboards": [
-    { "file": "Main.dc.html",       "title": "Floodlight — Home",  "x": 0,    "y": 0,   "w": 390, "h": 844 },
-    { "file": "SquadC.dc.html",     "title": "Floodlight — Squad", "x": 0,    "y": 984, "w": 390, "h": 844 },
-    { "file": "DirectionA.dc.html", "title": "Broadsheet — Home",  "x": 490,  "y": 0,   "w": 390, "h": 844 },
-    { "file": "SquadA.dc.html",     "title": "Broadsheet — Squad", "x": 490,  "y": 984, "w": 390, "h": 844 },
-    { "file": "DirectionB.dc.html", "title": "Terminal — Home",    "x": 980,  "y": 0,   "w": 390, "h": 844 },
-    { "file": "SquadB.dc.html",     "title": "Terminal — Squad",   "x": 980,  "y": 984, "w": 390, "h": 844 }
+    { "file": "Main.dc.html",   "title": "Home",              "x": 0,    "y": 0,    "w": 390, "h": 844 },
+    { "file": "SquadC.dc.html", "title": "Squad",             "x": 490,  "y": 0,    "w": 390, "h": 844 },
+    { "file": "Header.dc.html", "title": "Club colour rule",  "x": 980,  "y": 0,    "w": 390, "h": 844 },
+
+    { "file": "FloodlightHome.dc.html",  "title": "Floodlight — Home",  "x": 0,    "y": 1160, "w": 390, "h": 844 },
+    { "file": "FloodlightSquad.dc.html", "title": "Floodlight — Squad", "x": 490,  "y": 1160, "w": 390, "h": 844 },
+    { "file": "DirectionB.dc.html",      "title": "Terminal — Home",    "x": 980,  "y": 1160, "w": 390, "h": 844 },
+    { "file": "SquadB.dc.html",          "title": "Terminal — Squad",   "x": 1470, "y": 1160, "w": 390, "h": 844 },
+    { "file": "DirectionA.dc.html",      "title": "Broadsheet — Home",  "x": 1960, "y": 1160, "w": 390, "h": 844 },
+    { "file": "SquadA.dc.html",          "title": "Broadsheet — Squad", "x": 2450, "y": 1160, "w": 390, "h": 844 }
   ],
   "annotations": [
-    { "id": "brief", "x": -420, "y": 0, "w": 340, "text": "Director of Football — three directions for the mobile UI.\n\nTop row is Home (the easy screen). Bottom row is the Squad list — the density test, because that is where the current build feels busiest.\n\nSame data in all three: Man United, 4th, week 22, three pending decisions, eight squad rows." },
-    { "id": "note-floodlight", "x": 0, "y": -190, "w": 390, "text": "FLOODLIGHT — recommended\n\nNear-black neutral #0C0D10, Space Grotesk, one saturated accent (#C8FF4D) and the club colour as the only identity mark. No cards, no panel borders — hairline rules and whitespace do the grouping. One primary action per screen." },
-    { "id": "note-broadsheet", "x": 490, "y": -190, "w": 390, "text": "BROADSHEET\n\nWarm paper #F6F2E9, Instrument Serif for numbers and names, Inter for data. Editorial: rules, a masthead, numbered desk items. Calm and distinctive; risks feeling slow, and light mode is worse for evening play." },
-    { "id": "note-terminal", "x": 980, "y": -190, "w": 390, "text": "TERMINAL\n\n#08090B, JetBrains Mono for everything numeric, amber accent. Fixed columns, a persistent status strip, labels shortened. Densest of the three and the fastest to scan — but it reads as a tool, not a game." }
+    { "id": "brief", "x": -430, "y": 0, "w": 350, "text": "DIRECTOR OF FOOTBALL — the agreed direction.\n\nTerminal's density and typography, Floodlight's pill button and icon nav, a club-coloured header, and the tappable overview grid from Football Chairman Pro.\n\nRow below: the three directions this came out of, kept for reference." },
+    { "id": "note-home", "x": 0, "y": -230, "w": 390, "text": "HOME\n\nTerminal skeleton: mono for every number, a status strip that never leaves screen (cash / wage ratio / FFP), fixed columns.\n\nFC Pro's contribution is the tile grid — eight tap targets, each a live value with a bar under it, so the whole department state reads in one glance without a word of prose. The bar is what the cartoon tiles were really doing: showing state, not just reporting it.\n\nFloodlight's contribution is the lime pill and the icon nav. One saturated colour, one primary action per screen." },
+    { "id": "note-squad", "x": 490, "y": -230, "w": 390, "text": "SQUAD — the density test\n\nSame header treatment, back chevron and filter in the club band. Status strip carries the constraints you'd otherwise have to go hunting for: registered 24/25, non-homegrown 16/17, wage ratio.\n\n13 rows visible without scrolling versus 8 in the card layouts, and nothing is boxed. Rating is the only coloured column; tags (KNK, BID, HG) are the only other ink." },
+    { "id": "note-header", "x": 980, "y": -230, "w": 390, "text": "CLUB COLOUR — readable, always\n\nPainting a header the raw club colour breaks on yellow, white and near-black. The rule: take the primary in HSL, clamp lightness into 10–17%, cap chroma, and keep an untouched 3px strip beneath so the real colour is still on screen.\n\nWhite primaries fall through to the secondary. Near-blacks lift instead of clamping. Six worst cases shown; every one clears 4.5:1 with white text.\n\nNothing below the strip is club-coloured." },
+    { "id": "note-explored", "x": 0, "y": 1010, "w": 700, "text": "EARLIER DIRECTIONS — kept for reference, not proposed." }
   ],
   "launch": { "view": "canvas" }
 }
