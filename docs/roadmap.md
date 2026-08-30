@@ -102,7 +102,7 @@ consequential:
 - Fees already exist in the transfer flow; they should become negotiable and
   relationship-dependent rather than a fixed percentage.
 
-### 4. Ownership takeovers — designed
+### 4. Ownership takeovers — built
 
 Built on modelling ownership from day one rather than as a special-case event.
 Every club gets an owner with wealth, patience, ambition, appetite for

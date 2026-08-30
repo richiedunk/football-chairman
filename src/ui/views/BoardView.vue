@@ -4,6 +4,18 @@ import { useGameStore } from '../../stores/game'
 import MeterBar from '../components/MeterBar.vue'
 import { assessFanMood, confidenceLabel, MANDATE_LABELS } from '../../engine/systems/board'
 import {
+  lossCoverage, OWNER_LABELS, ownerSummary, ownerTraits, wageBudgetShare,
+} from '../../engine/systems/ownership'
+import type { TakeoverStage } from '../../engine/types'
+
+const TAKEOVER_STAGE: Record<TakeoverStage, string> = {
+  interest: 'An approach has been made for the club',
+  dueDiligence: 'Prospective buyers are examining the books',
+  agreed: 'A sale has been agreed and is close to completing',
+  completed: 'The sale has completed',
+  collapsed: 'The sale collapsed',
+}
+import {
   availableRequests, makeRequest, RISK_LABELS, weeksUntilNextRequest,
   type BoardRequestKind, type BoardRequestOption,
 } from '../../engine/systems/boardRequests'
@@ -15,6 +27,15 @@ import { formatMoney } from '../../engine/systems/valuation'
 const store = useGameStore()
 const toast = inject<(t: string, k?: 'info' | 'error' | 'success') => void>('toast')
 const club = computed(() => store.club)
+
+const patienceLabel = computed(() => {
+  const p = store.owner?.patience ?? 50
+  if (p >= 80) return 'Very high'
+  if (p >= 60) return 'High'
+  if (p >= 40) return 'Average'
+  if (p >= 25) return 'Low'
+  return 'None at all'
+})
 
 const requests = computed(() => {
   const s = store.game
@@ -91,6 +112,78 @@ const gap = computed(() => {
         </div>
       </div>
     </div>
+
+    <div class="section-title">Who owns the club</div>
+    <div v-if="store.owner" class="card">
+      <div class="card__body">
+        <div class="row row--between">
+          <div class="grow">
+            <div class="bold">{{ store.owner.name }}</div>
+            <div class="small muted">{{ OWNER_LABELS[store.owner.kind] }}</div>
+          </div>
+          <div class="tiny faint num">
+            since {{ store.owner.sinceSeason }}<span v-if="store.owner.stake < 100"> · {{ store.owner.stake }}%</span>
+          </div>
+        </div>
+        <p class="small" style="margin: 8px 0 0">{{ ownerSummary(store.owner) }}</p>
+        <div class="mt">
+          <span
+            v-for="trait in ownerTraits(store.owner)"
+            :key="trait"
+            class="chip"
+            style="margin-right: 4px"
+          >{{ trait }}</span>
+        </div>
+      </div>
+      <div class="divider" />
+      <div class="card__body">
+        <div class="tiny faint bold mb" style="text-transform: uppercase; letter-spacing: 0.05em">
+          What that means for you
+        </div>
+        <div class="row row--between small" style="margin-bottom: 3px">
+          <span class="muted">Willingness to spend on wages</span>
+          <span class="num">{{ Math.round(wageBudgetShare(store.owner) * 100) }}%</span>
+        </div>
+        <div class="row row--between small" style="margin-bottom: 3px">
+          <span class="muted">Patience with a bad run</span>
+          <span class="num">{{ patienceLabel }}</span>
+        </div>
+        <div class="row row--between small">
+          <span class="muted">Losses they will absorb</span>
+          <span class="num">{{ Math.round(lossCoverage(store.owner) * 100) }}%</span>
+        </div>
+      </div>
+    </div>
+
+    <div
+      v-if="store.takeover"
+      class="card"
+      style="border-color: var(--warn); background: rgba(251,191,36,0.06)"
+    >
+      <div class="card__body">
+        <div class="bold small" style="color: var(--warn)">{{ TAKEOVER_STAGE[store.takeover.stage] }}</div>
+        <div class="tiny muted" style="white-space: normal">
+          {{ store.takeover.incoming.name }} — {{ OWNER_LABELS[store.takeover.incoming.kind] }}.
+          Nobody has asked your opinion, and nobody is going to until it is done.
+        </div>
+      </div>
+    </div>
+
+    <template v-if="store.worldTakeovers.length">
+      <div class="section-title">Elsewhere</div>
+      <div class="card">
+        <div class="list">
+          <div v-for="t in store.worldTakeovers" :key="t.id" class="list__row list__row--static">
+            <div class="list__main">
+              <div class="list__primary">{{ store.clubById(t.clubId)?.name }}</div>
+              <div class="list__secondary" style="white-space: normal">
+                {{ TAKEOVER_STAGE[t.stage] }} — {{ OWNER_LABELS[t.incoming.kind] }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </template>
 
     <div class="section-title">Ask the board</div>
     <div class="card">

@@ -1,5 +1,7 @@
 import { SAVE_VERSION, type GameState } from '../engine/types'
 import { autoRegister } from '../engine/systems/registration'
+import { createOwner, ownerName, startingOwnerKind } from '../engine/systems/ownership'
+import { Rng } from '../engine/rng'
 import { clearRatingCache } from '../engine/world/attributes'
 import { levelFor } from '../engine/systems/career'
 import { createStorageAdapter, type SaveSlotMeta, type StorageAdapter } from './adapter'
@@ -157,6 +159,30 @@ function migrate(state: GameState): GameState {
       }
     }
     state.version = 4
+  }
+
+  // v5: clubs have owners. An older save has boards with no explanation
+  // behind them, so each club is given an owner sampled from what a club of
+  // its standing would plausibly have, dated far enough back that nobody
+  // appears to have just arrived.
+  if (state.version < 5) {
+    for (const club of Object.values(state.clubs)) {
+      if (club.board.owner) continue
+      const rng = new Rng(`${state.seed}:owner:${club.id}`)
+      const kind = startingOwnerKind(rng, club.reputation)
+      club.board.owner = createOwner(
+        rng, kind, ownerName(rng, kind, 'The Board', { name: club.city, size: 50 }),
+        state.date.season - rng.int(2, 12),
+      )
+      club.board.graceUntilSeason = null
+    }
+    state.version = 5
+  }
+
+  // v6: takeovers in progress are carried on the state rather than derived.
+  if (state.version < 6) {
+    if (!Array.isArray(state.takeovers)) state.takeovers = []
+    state.version = 6
   }
 
   state.version = SAVE_VERSION

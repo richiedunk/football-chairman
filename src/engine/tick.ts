@@ -25,6 +25,7 @@ import {
   reconcileRegistration, squadRegistration, SQUAD_LIMIT, U21_AGE,
 } from './systems/registration'
 import { adjustForPlayer } from './systems/agents'
+import { processTakeovers } from './systems/takeovers'
 import { drawNextRoundIfDue, settleRound } from './sim/cups'
 import type {
   Club, Fixture, GameState, ID, MatchResult, Player, SeasonPhase,
@@ -309,6 +310,12 @@ export function advanceWeek(state: GameState, deps: TickDeps): TickResult {
   // frozen. Reconciling rather than rebuilding matters: the human's choices
   // survive, and only the empty places get filled.
   if (isRegistrationLockWeek(week)) lockSquadRegistrations(state, ids)
+
+  // --- 7b2. Ownership ------------------------------------------------------
+  // Approaches, due diligence and completions, everywhere in the world. A
+  // rival being bought changes the division underneath a plan you made in
+  // good faith, which is the point of running it worldwide.
+  processTakeovers(state, ids, rng.fork('takeovers'), names)
 
   // --- 7c. Agents notice who is not playing --------------------------------
   // Checked once, late enough in the season for "he is not playing" to mean

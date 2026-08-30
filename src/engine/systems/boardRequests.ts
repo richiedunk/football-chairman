@@ -3,6 +3,7 @@ import { weeklyRevenue } from './finance'
 import { totalWageBill, formatMoney } from './valuation'
 import { levelFor } from './career'
 import type { Club, GameState, BoardMandate } from '../types'
+import { requestReceptiveness } from './ownership'
 
 /**
  * Asking the board for things.
@@ -213,7 +214,8 @@ export function makeRequest(
   const fatigue = Math.max(0, club.board.requestsThisSeason - REQUESTS_BEFORE_IRRITATION) * 0.12
   const standing = (levelFor(state.director.xp).level - 1) * 0.02
   let willingness = clamp(
-    (club.board.confidence / 100) * 0.85 + standing - fatigue,
+    ((club.board.confidence / 100) * 0.85 + standing - fatigue)
+      * requestReceptiveness(club.board.owner),
     0.03,
     0.95,
   )

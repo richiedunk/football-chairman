@@ -7,6 +7,7 @@ import { acceptJobOffer } from '../season'
 import { addNews } from './inbox'
 import { clamp } from '../rng'
 import type { Club, GameState, InboxItem, Player } from '../types'
+import { resolveOwnerPitch, type PitchId } from './takeovers'
 
 /**
  * Resolving inbox decisions.
@@ -45,6 +46,11 @@ export function resolveDecision(
     case 'jobOffer':
       outcome = resolveJobOffer(state, item, optionId)
       break
+    case 'ownerPitch': {
+      const club = state.clubs[state.playerClubId]
+      outcome = club ? resolveOwnerPitch(club, optionId as PitchId) : 'The meeting never happened.'
+      break
+    }
     default:
       outcome = 'Noted.'
       break

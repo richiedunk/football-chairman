@@ -641,6 +641,31 @@ export const useGameStore = defineStore('game', () => {
     return ACHIEVEMENTS.map((entry) => ({ ...entry, earned: earned.has(entry.id) }))
   })
 
+  // --- Ownership ------------------------------------------------------------
+
+  const owner = computed(() => {
+    void revision.value
+    return club.value?.board.owner ?? null
+  })
+
+  /** A takeover of your club, if one is under way. */
+  const takeover = computed(() => {
+    void revision.value
+    const s = state.value
+    const c = club.value
+    if (!s || !c) return null
+    return s.takeovers.find((t) => t.clubId === c.id) ?? null
+  })
+
+  /** Takeovers elsewhere that the press know about. */
+  const worldTakeovers = computed(() => {
+    void revision.value
+    const s = state.value
+    const c = club.value
+    if (!s || !c) return []
+    return s.takeovers.filter((t) => t.public && t.clubId !== c.id).slice(0, 8)
+  })
+
   // --- Agents ---------------------------------------------------------------
 
   const agents = computed(() => {
@@ -751,6 +776,7 @@ export const useGameStore = defineStore('game', () => {
     registration, registrationOpen, register, unregister, autoPickSquad, isHomegrown,
     achievementProgress, newAchievements,
     agents, agentIntroductions, agentClients,
+    owner, takeover, worldTakeovers,
     idFactory, nameGenerator, reset,
   }
 })

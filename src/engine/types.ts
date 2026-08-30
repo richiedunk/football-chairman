@@ -484,6 +484,78 @@ export interface ClubStrategy {
 
 export type MediaStance = 'guarded' | 'balanced' | 'open' | 'combative'
 
+/**
+ * Who actually owns the club.
+ *
+ * Modelled from day one rather than appearing when somebody buys the place,
+ * because an owner explains behaviour the board already had. A tight budget at
+ * a well-supported club is not a rule of the game — it is a local builder who
+ * will not put money in, and saying so out loud makes every club read
+ * differently before a takeover ever happens.
+ *
+ * A takeover is then a change to this one object, propagating through budgets,
+ * expectations, mandates and patience, instead of a pile of special cases.
+ */
+export type OwnerKind =
+  | 'legacyFamily'
+  | 'localBusiness'
+  | 'foreignFund'
+  | 'celebrity'
+  | 'consortium'
+  | 'fanOwned'
+
+export interface Owner {
+  name: string
+  kind: OwnerKind
+  /** 0-100. How much of their own money they will actually put in. */
+  wealth: number
+  /** 0-100. How long they will wait. Drives how fast confidence falls. */
+  patience: number
+  /** 0-100. How much they demand, in league position and in silverware. */
+  ambition: number
+  /** 0-100. How much they involve themselves in decisions that are yours. */
+  interference: number
+  /** 0-100. Appetite for running the club on borrowed money. */
+  leverage: number
+  /** 0-100. Belief that the academy is the answer rather than the market. */
+  youthBelief: number
+  /** Season they took control. */
+  sinceSeason: number
+  /** Percentage held. Below 100 there are other shareholders to answer to. */
+  stake: number
+  /**
+   * 0-100, and only meaningful at the club the human runs: what this owner
+   * makes of the director they inherited. A takeover never costs you the job
+   * outright, but it can cost you every ounce of goodwill you had built.
+   */
+  faithInDirector: number
+}
+
+/**
+ * A takeover in progress.
+ *
+ * Deliberately a process rather than an event. Interest becomes due diligence
+ * becomes an agreed deal over a matter of weeks, it leaks to the press on the
+ * way, and it can fall through — which is what makes it something a director
+ * watches happen to him rather than a number that changes overnight.
+ */
+export type TakeoverStage = 'interest' | 'dueDiligence' | 'agreed' | 'completed' | 'collapsed'
+
+export interface Takeover {
+  id: ID
+  clubId: ID
+  stage: TakeoverStage
+  /** The prospective owner, already rolled so the terms are knowable. */
+  incoming: Owner
+  /** Absolute week (season * 52 + week) the current stage began. */
+  stageSince: number
+  season: number
+  /** Whether the press have it yet. */
+  public: boolean
+  /** Set when it collapses, for the news item. */
+  collapseReason: string | null
+}
+
 export interface BoardState {
   /** 0-100. Below ~25 you are one bad month from the sack. */
   confidence: number
@@ -499,6 +571,13 @@ export interface BoardState {
   lastRequestWeek: number
   /** Requests made this season. Boards tire of being asked. */
   requestsThisSeason: number
+  /** Who they answer to. */
+  owner: Owner
+  /**
+   * Set for the season following a takeover. A new owner always lets a
+   * director see out the campaign, however little they rate him.
+   */
+  graceUntilSeason: number | null
 }
 
 export interface BoardExpectation {
@@ -1195,6 +1274,8 @@ export interface GameState {
   shortlist: ID[]
   negotiations: TransferNegotiation[]
   completedTransfers: CompletedTransfer[]
+  /** Takeovers in progress anywhere in the world. */
+  takeovers: Takeover[]
 
   mediaStories: MediaStory[]
   mediaStanding: MediaStanding
@@ -1384,4 +1465,4 @@ export interface GameSettings {
   hapticsEnabled: boolean
 }
 
-export const SAVE_VERSION = 4
+export const SAVE_VERSION = 6

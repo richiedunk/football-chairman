@@ -40,4 +40,5 @@ export const ID_PREFIX = {
   cup: 'k',
   transfer: 't',
   sanction: 'x',
+  takeover: 'v',
 } as const

@@ -2,6 +2,9 @@ import { clamp, Rng } from '../rng'
 import { totalWageBill } from './valuation'
 import { emptyLedger } from '../world/worldGen'
 import { revenuePerHead } from './stadium'
+import {
+  debtTolerance, lossCoverage, reserveRelease, wageBudgetShare,
+} from './ownership'
 import type { Club, FinanceLedger, GameState, League, Player } from '../types'
 
 /**
@@ -121,14 +124,31 @@ export function processFinances(
   // --- Crisis handling ------------------------------------------------------
   const wasInCrisis = club.finances.inCrisis
   if (club.finances.balance < 0) {
+    // An owner with money behind them absorbs the loss rather than letting the
+    // club borrow against it. This is where wealth actually shows up: not as
+    // an income the club did not earn, but as the reason a well-backed club
+    // does not slide into debt after a bad season.
+    const coverage = lossCoverage(club.board.owner)
+    if (coverage > 0) {
+      const injection = Math.round(-club.finances.balance * coverage)
+      club.finances.balance += injection
+      ledger.otherIncome += injection
+    }
+  }
+
+  if (club.finances.balance < 0) {
     // An overdraft becomes debt, at a worse rate than planned borrowing.
     const shortfall = -club.finances.balance
     club.finances.debt += Math.round(shortfall * 1.05)
     club.finances.balance = 0
-    // Roughly nine months of revenue. Clubs carry debt routinely; crisis is
-    // for debt that cannot plausibly be serviced.
-    club.finances.inCrisis = club.finances.debt > weeklyRevenue(state, club) * 40
-  } else if (club.finances.debt < weeklyRevenue(state, club) * 20) {
+    // Crisis is for debt the club cannot plausibly service, and where that
+    // line sits is the owner's business: a fund is comfortable with borrowing
+    // that would frighten a supporters' trust.
+    club.finances.inCrisis =
+      club.finances.debt > weeklyRevenue(state, club) * debtTolerance(club.board.owner)
+  } else if (
+    club.finances.debt < weeklyRevenue(state, club) * debtTolerance(club.board.owner) * 0.5
+  ) {
     club.finances.inCrisis = false
   }
 
@@ -370,18 +390,6 @@ export function weeklyRevenue(state: GameState, club: Club): number {
 const WAGE_BUDGET_CEILING = 0.68
 
 /**
- * The share of what is left after running costs that a board puts on wages.
- *
- * The remainder is what the club has to trade with and to keep in reserve, so
- * this is also the number that decides whether transfer fees can move at all.
- * It is deliberately thin. Real clubs fund transfers mostly out of player
- * sales rather than out of profit, which is exactly why they run at about
- * break-even, and a share generous enough to leave a comfortable surplus
- * produced clubs sitting on three times their annual revenue in cash.
- */
-const WAGE_BUDGET_SHARE = 0.88
-
-/**
  * Board-set budgets, recalculated at the start of each season and when the
  * club changes division. The board is not generous: it allocates from
  * projected revenue, and it holds a reserve back.
@@ -413,8 +421,11 @@ export function recalculateBudgets(state: GameState, club: Club): void {
   // non-league sides were handed a budget they could never survive spending
   // and ten of twenty-two ended up in financial crisis.
   const runningCosts = facilityUpkeep(state, club) * 52
+  // What share of the money left over goes on wages is the owner's call, and
+  // it is the single number that most decides what kind of club this is to
+  // work for.
   const wageAllowance = Math.round(
-    (Math.max(0, revenue - runningCosts) * WAGE_BUDGET_SHARE * cautionFactor) / 52,
+    (Math.max(0, revenue - runningCosts) * wageBudgetShare(club.board.owner) * cautionFactor) / 52,
   )
   const ceiling = Math.round((weeklyRevenue(state, club)) * WAGE_BUDGET_CEILING)
   club.finances.wageBudget = Math.max(
@@ -426,7 +437,7 @@ export function recalculateBudgets(state: GameState, club: Club): void {
 
   // Transfer budget: what is left after wages, plus a slice of cash reserves.
   const projectedSurplus = revenue - currentWages - facilityUpkeep(state, club) * 52
-  const fromReserves = Math.max(0, club.finances.balance) * 0.35
+  const fromReserves = Math.max(0, club.finances.balance) * reserveRelease(club.board.owner)
   let transferBudget = Math.round(Math.max(0, projectedSurplus * 0.55 + fromReserves))
 
   if (club.finances.inCrisis) transferBudget = 0

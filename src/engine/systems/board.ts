@@ -5,6 +5,7 @@ import { positionalCompetence, ratingForPositionCached } from '../world/attribut
 import { auditSquadDepth } from '../sim/selection'
 import { ordinal } from './career'
 import { expectedWage } from '../world/staffGen'
+import { expectationLift, impatienceFactor } from './ownership'
 import type {
   BoardMandate, Club, GameState, ID, League, LeagueTableRow, Player, SquadRequest, Staff, StaffRole,
 } from '../types'
@@ -81,13 +82,25 @@ export function processBoard(
     .filter((p): p is Player => Boolean(p) && !p.isAcademy && p.age <= 21 && p.stats.appearances > 3)
   drift += clamp(graduates.length * 0.06, 0, 0.3) * youthWeight
 
+  // How fast a board loses faith is the owner's patience. A fund's board turns
+  // roughly three times as quickly as a supporters' trust does, which is the
+  // whole difference between the two jobs. Applied to bad news only: patience
+  // is a willingness to wait through a bad run, not a reluctance to be pleased
+  // by a good one.
+  if (drift < 0) drift *= impatienceFactor(club.board.owner)
+
   club.board.confidence = clamp(club.board.confidence + drift, 0, 100)
 
   // Warnings and the sack. Only ever fires for the human club, and only
   // after a formal warning — being dismissed without notice would be unfair
   // in a game where the board's expectations are visible.
   if (club.id === state.playerClubId) {
-    if (club.board.confidence < 18 && seasonProgress > 0.2) {
+    // A new owner always lets a director see out the season, however little
+    // they rate him. What a takeover costs you is goodwill, not the job.
+    const underGrace = club.board.graceUntilSeason !== null
+      && state.date.season <= club.board.graceUntilSeason
+
+    if (club.board.confidence < 18 && seasonProgress > 0.2 && !underGrace) {
       if (rng.chance(0.25)) {
         club.board.warnings += 1
         // Say what actually cost you the job. A board that dismisses a
@@ -712,7 +725,12 @@ export function setSeasonExpectation(state: GameState, club: Club, league: Leagu
   const lastSeason = club.history[club.history.length - 1]
   const lastPosition = lastSeason?.position ?? rank
 
-  const target = clamp(Math.round(rank * 0.6 + lastPosition * 0.4), 1, clubCount)
+  const natural = rank * 0.6 + lastPosition * 0.4
+  // The owner decides how far above its natural level the club is expected to
+  // finish. This is where a takeover bites hardest: the squad has not changed
+  // and the target has moved six places.
+  const lift = expectationLift(club.board.owner) * clubCount * 0.35
+  const target = clamp(Math.round(natural - lift), 1, clubCount)
 
   let description: string
   if (target === 1) description = 'Win the division'
@@ -723,10 +741,17 @@ export function setSeasonExpectation(state: GameState, club: Club, league: Leagu
   else if (target >= clubCount - (league.relegationPlaces + 2)) description = 'Stay in this division'
   else description = 'Consolidate in mid-table'
 
+  const owner = club.board.owner
   club.board.expectation = {
     ...club.board.expectation,
     leaguePosition: target,
     description,
+    // What the board actually cares about is the owner's temperament, not a
+    // club constant: a debt-averse local businessman weights the books, a
+    // fund weights the table, and a supporters' trust weights the academy.
+    financialImportance: clamp(Math.round(88 - owner.leverage * 0.55 - owner.ambition * 0.2), 15, 95),
+    youthImportance: clamp(Math.round(owner.youthBelief * 0.9 + 5), 5, 95),
+    cupImportance: clamp(Math.round(30 + owner.ambition * 0.4), 15, 85),
   }
 }
 
@@ -741,6 +766,11 @@ export function setSeasonMandates(state: GameState, club: Club): void {
   if (wageBill > club.finances.wageBudget * 0.95) mandates.push('reduceWageBill')
 
   if (club.board.expectation.youthImportance > 60) mandates.push('developYouth')
+  // An owner who does not believe in borrowing says so every season, not only
+  // when the club is already in trouble.
+  if (club.board.owner.leverage < 25 && club.finances.debt > 0 && !mandates.includes('balanceBooks')) {
+    mandates.push('balanceBooks')
+  }
   if (league && club.board.expectation.leaguePosition <= league.promotionPlaces) {
     mandates.push('winPromotion')
   }

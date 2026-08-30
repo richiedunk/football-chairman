@@ -379,6 +379,16 @@ await step('career and earnings', async () => {
   await page.screenshot({ path: `${SHOT}/15-career.png`, fullPage: true })
 })
 
+await step('who owns the club', async () => {
+  await page.goto('http://127.0.0.1:4173/#/board')
+  await page.waitForSelector('text=Who owns the club')
+  await page.waitForSelector('text=What that means for you')
+  const kind = await page.textContent('text=Who owns the club >> xpath=following::div[contains(@class,"small muted")][1]')
+  const patience = await page.textContent('.row:has-text("Patience with a bad run") .num')
+  console.log(`   ${kind?.trim()} · patience ${patience?.trim()}`)
+  await page.screenshot({ path: `${SHOT}/31-owner.png`, fullPage: true })
+})
+
 await step('agents', async () => {
   await page.goto('http://127.0.0.1:4173/#/agents')
   await page.waitForSelector('text=Agents you deal with')

@@ -50,6 +50,14 @@ import {
 } from '../src/engine/systems/regulation'
 import { accrueAmortisation } from '../src/engine/systems/finance'
 import {
+  createOwner, debtTolerance, impatienceFactor, lossCoverage, OWNER_LABELS, reserveRelease,
+  wageBudgetShare,
+} from '../src/engine/systems/ownership'
+import {
+  completeTakeover, pitchFit, resolveOwnerPitch, takeoverAppeal,
+} from '../src/engine/systems/takeovers'
+import { processBoard } from '../src/engine/systems/board'
+import {
   adjustRelationship, agentFee, agentWillingness, decayRelationships, introductions,
   RELATIONSHIP_EVENTS, STANDING_LABELS, STANDING_NOTES, standingFor,
 } from '../src/engine/systems/agents'
@@ -1770,5 +1778,129 @@ describe('agents', () => {
     for (const standing of Object.keys(STANDING_LABELS)) {
       expect(STANDING_NOTES[standing as keyof typeof STANDING_NOTES]).toBeTruthy()
     }
+  })
+})
+
+describe('ownership', () => {
+  it('gives every club an owner whose type explains the board', () => {
+    const state = freshWorld('OWN-A')
+    for (const club of Object.values(state.clubs)) {
+      const owner = club.board.owner
+      expect(owner.name).toBeTruthy()
+      expect(OWNER_LABELS[owner.kind]).toBeTruthy()
+      expect(owner.sinceSeason).toBeLessThanOrEqual(state.date.season)
+    }
+  })
+
+  it('separates what different owners will spend', () => {
+    const rng = new Rng('owners')
+    const fund = createOwner(rng, 'foreignFund', 'A Fund', 2025)
+    const trust = createOwner(rng, 'fanOwned', 'A Trust', 2025)
+
+    expect(wageBudgetShare(fund)).toBeGreaterThan(wageBudgetShare(trust))
+    expect(reserveRelease(fund)).toBeGreaterThan(reserveRelease(trust))
+    expect(debtTolerance(fund)).toBeGreaterThan(debtTolerance(trust))
+    // A fund's board turns far faster on a bad run.
+    expect(impatienceFactor(fund)).toBeGreaterThan(impatienceFactor(trust))
+    // And a fund absorbs losses a trust simply cannot.
+    expect(lossCoverage(fund)).toBeGreaterThan(lossCoverage(trust))
+    expect(lossCoverage(trust)).toBe(0)
+  })
+
+  it('hands the club over and resets what the director had built', () => {
+    const state = freshWorld('OWN-TAKE')
+    const club = state.clubs[state.playerClubId]
+    const ids = new IdFactory(state.nextId)
+    club.board.confidence = 90
+    club.board.warnings = 2
+    club.finances.debt = 5_000_000
+    const before = club.board.owner.name
+
+    const incoming = createOwner(new Rng('buyer'), 'foreignFund', 'Meridian Capital', state.date.season)
+    incoming.wealth = 95
+    completeTakeover(state, ids, club, {
+      id: 'v1', clubId: club.id, stage: 'agreed', incoming,
+      stageSince: 0, season: state.date.season, public: true, collapseReason: null,
+    })
+
+    expect(club.board.owner.name).toBe('Meridian Capital')
+    expect(club.board.owner.name).not.toBe(before)
+    // Goodwill does not transfer, and neither do the warnings.
+    expect(club.board.confidence).toBeLessThan(90)
+    expect(club.board.warnings).toBe(0)
+    // A season's grace, whatever they make of you.
+    expect(club.board.graceUntilSeason).toBe(state.date.season)
+    // A wealthy buyer clears the debt they have just bought.
+    expect(club.finances.debt).toBeLessThan(5_000_000)
+  })
+
+  it('never sacks the director in the season of a takeover', () => {
+    const state = freshWorld('OWN-GRACE')
+    const club = state.clubs[state.playerClubId]
+    club.board.graceUntilSeason = state.date.season
+    club.board.confidence = 2
+    club.board.warnings = 2
+    state.date.week = 30
+
+    for (let i = 0; i < 40; i++) {
+      const result = processBoard(state, club, new Rng(`grace:${i}`))
+      expect(result.sacked, 'sacked during the grace season').toBe(false)
+    }
+  })
+
+  it('rewards a pitch that reads the room and punishes one that does not', () => {
+    const rng = new Rng('pitch')
+    const fund = createOwner(rng, 'foreignFund', 'A Fund', 2025)
+    fund.ambition = 95
+    fund.patience = 10
+    fund.youthBelief = 15
+    const trust = createOwner(rng, 'fanOwned', 'A Trust', 2025)
+    trust.ambition = 30
+    trust.patience = 95
+    trust.youthBelief = 90
+
+    expect(pitchFit(fund, 'push')).toBeGreaterThan(pitchFit(fund, 'youth'))
+    expect(pitchFit(trust, 'youth')).toBeGreaterThan(pitchFit(trust, 'push'))
+    expect(pitchFit(fund, 'youth')).toBeLessThan(0)
+  })
+
+  it('turns a good pitch into backing and a bad one into a warning shot', () => {
+    const state = freshWorld('OWN-PITCH')
+    const club = state.clubs[state.playerClubId]
+    club.board.owner = createOwner(new Rng('p'), 'foreignFund', 'A Fund', state.date.season)
+    club.board.owner.ambition = 98
+    club.board.owner.patience = 5
+    club.board.owner.leverage = 90
+    club.board.confidence = 50
+    club.finances.transferBudget = 1_000_000
+
+    const good = resolveOwnerPitch(club, 'push')
+    expect(good).toContain('backing')
+    expect(club.board.owner.faithInDirector).toBeGreaterThan(70)
+    expect(club.finances.transferBudget).toBeGreaterThan(1_000_000)
+
+    club.board.confidence = 50
+    const bad = resolveOwnerPitch(club, 'youth')
+    expect(club.board.owner.faithInDirector).toBeLessThan(40)
+    expect(club.board.confidence).toBeLessThan(50)
+    expect(bad).toContain('wrong man')
+  })
+
+  it('only pursues clubs worth buying', () => {
+    const state = freshWorld('OWN-APPEAL')
+    const clubs = Object.values(state.clubs)
+    // Nobody buys a club whose owner arrived last year.
+    const fresh = clubs[0]
+    fresh.board.owner.sinceSeason = state.date.season
+    const settled = clubs[1]
+    settled.board.owner.sinceSeason = state.date.season - 10
+    settled.fanbase = 90
+    settled.reputation = 30
+
+    expect(takeoverAppeal(state, settled)).toBeGreaterThan(takeoverAppeal(state, fresh))
+    // Distress attracts a different buyer, but it attracts one.
+    const before = takeoverAppeal(state, settled)
+    settled.finances.inCrisis = true
+    expect(takeoverAppeal(state, settled)).toBeGreaterThan(before)
   })
 })

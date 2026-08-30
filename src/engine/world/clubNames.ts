@@ -188,6 +188,45 @@ const PATTERNS: Record<ClubNameStyle, NamePattern[]> = {
  * world football — it covers the combinations our city lists can actually
  * produce, which is what matters.
  */
+/**
+ * Places whose name, on its own, *is* a real club.
+ *
+ * The combination list below blocks "{city} United" and its like, but the
+ * bare "{city} FC" pattern slipped straight past it: the generator produced
+ * Liverpool FC, which is not a near miss, it is the club. Anywhere on this
+ * list, the plain forms are refused outright.
+ */
+const REAL_CLUB_CITIES = new Set<string>([
+  'liverpool', 'everton', 'chelsea', 'arsenal', 'tottenham', 'fulham', 'watford',
+  'burnley', 'reading', 'millwall', 'middlesbrough', 'sunderland', 'southampton',
+  'brentford', 'bournemouth', 'blackpool', 'barnsley', 'rochdale', 'walsall',
+  'gillingham', 'portsmouth', 'blackburn', 'bolton', 'wigan', 'brighton',
+  'chesterfield', 'barnet', 'salford', 'sutton', 'woking', 'dagenham',
+  'altrincham', 'aldershot', 'wrexham', 'wealdstone', 'ebbsfleet', 'hartlepool',
+  'barrow', 'morecambe', 'accrington', 'fleetwood', 'crawley', 'stevenage',
+  'harrogate', 'bromley', 'solihull', 'yeovil', 'torquay', 'eastleigh',
+  'dorking', 'braintree', 'maidenhead', 'maidstone', 'halifax', 'oldham',
+  'southport', 'scarborough', 'kidderminster', 'tamworth', 'gateshead',
+  'buxton', 'chorley', 'curzon', 'dartford', 'welling', 'hayes', 'staines',
+  'valencia', 'sevilla', 'villarreal', 'getafe', 'osasuna', 'elche', 'levante',
+  'porto', 'braga', 'benfica', 'guimaraes', 'setubal',
+  'genoa', 'bologna', 'parma', 'udinese', 'empoli', 'lecce', 'cagliari',
+  'monza', 'como', 'venezia', 'cremonese', 'salernitana', 'frosinone',
+  'hamburg', 'augsburg', 'freiburg', 'darmstadt', 'heidenheim', 'paderborn',
+  'ajax', 'feyenoord', 'twente', 'utrecht', 'groningen', 'heerenveen',
+  'brugge', 'genk', 'gent', 'anderlecht', 'antwerp', 'charleroi',
+  'nantes', 'lorient', 'metz', 'brest', 'angers', 'auxerre', 'toulouse',
+  'monaco', 'nice', 'lille', 'rennes', 'reims', 'montpellier',
+  'basel', 'lugano', 'sion', 'thun', 'lucerne',
+  'sturm', 'salzburg', 'rapid', 'austria',
+  'malmo', 'hammarby', 'brondby', 'midtjylland', 'rosenborg',
+])
+
+/**
+ * The bare forms a place name can take that would read as the real club.
+ */
+const BARE_CLUB_SUFFIXES = ['', ' fc', ' afc', ' cf', ' sc']
+
 const REAL_CLUB_COMBINATIONS = new Set<string>([
   // England
   'manchester united', 'manchester city', 'newcastle united', 'leeds united',
@@ -199,6 +238,16 @@ const REAL_CLUB_COMBINATIONS = new Set<string>([
   'ipswich town', 'luton town', 'northampton town', 'swindon town', 'huddersfield town',
   'grimsby town', 'shrewsbury town', 'mansfield town', 'cheltenham town',
   'blackburn rovers', 'bristol rovers', 'doncaster rovers', 'tranmere rovers',
+  'forest green rovers', 'raith rovers',
+  'crawley town', 'stafford rangers', 'hastings united', 'ebbsfleet united',
+  'boreham wood', 'stalybridge celtic', 'kidderminster harriers', 'accrington stanley',
+  'macclesfield town', 'nuneaton town', 'kettering town', 'chelmsford city',
+  'dagenham redbridge', 'aldershot town', 'boston united', 'gloucester city',
+  'weymouth fc', 'yeovil town', 'torquay united', 'barnet fc', 'sutton united',
+  'bromley fc', 'woking fc', 'eastleigh fc', 'dartford fc', 'welling united',
+  'solihull moors', 'notts forest', 'leyton orient', 'crystal palace',
+  'bradford city', 'burton albion', 'salford city', 'harrogate town',
+  'newport county', 'walsall fc', 'gillingham fc', 'rochdale afc',
   'wigan athletic', 'charlton athletic', 'oldham athletic',
   'bolton wanderers', 'wolverhampton wanderers', 'wycombe wanderers',
   'derby county', 'notts county', 'stockport county',
@@ -274,6 +323,36 @@ export interface GeneratedClubName {
  * Generate a club name for `city` in the given style, avoiding both real club
  * identities and names already used in this world.
  */
+/**
+ * True when a name would be read as a real club.
+ *
+ * Exported so the world-generation tests can hold every club in a generated
+ * world against the same rule the generator uses, rather than against a
+ * handful of names somebody remembered to type out. The first version of that
+ * test listed a dozen and caught Liverpool FC by luck.
+ */
+export function isRealClubIdentity(name: string): boolean {
+  const key = name.toLowerCase()
+  return REAL_CLUB_COMBINATIONS.has(key) || isBareRealClub(key)
+}
+
+/**
+ * True when a candidate is a real club's identity with nothing added to it.
+ *
+ * "Liverpool", "Liverpool FC" and "Liverpool AFC" are all the same club to
+ * anyone reading a fixture list; "Liverpool Albion" is not.
+ */
+function isBareRealClub(key: string): boolean {
+  for (const suffix of BARE_CLUB_SUFFIXES) {
+    if (!suffix) {
+      if (REAL_CLUB_CITIES.has(key)) return true
+      continue
+    }
+    if (key.endsWith(suffix) && REAL_CLUB_CITIES.has(key.slice(0, -suffix.length))) return true
+  }
+  return false
+}
+
 export function generateClubName(
   rng: Rng,
   city: string,
@@ -299,6 +378,7 @@ export function generateClubName(
       .replace('{n}', String(founded))
     const key = candidate.toLowerCase()
     if (REAL_CLUB_COMBINATIONS.has(key) || taken.has(key)) continue
+    if (isBareRealClub(key)) continue
     chosen = pattern
     name = candidate
     break
@@ -306,6 +386,8 @@ export function generateClubName(
 
   if (!name) {
     // Every pattern collided — fall back to a plainly unique construction.
+    // Carries a year, so it can never collide with a real identity however
+    // unlucky the draw was above.
     name = `${city} ${rng.int(earliestFounding + 12, Math.max(earliestFounding + 13, latestFounding))} FC`
     chosen = { template: name, weight: 1, short: city }
   }

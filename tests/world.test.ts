@@ -4,6 +4,7 @@ import { ratingForPosition, meanAttributeForAbility } from '../src/engine/world/
 import { computeValue } from '../src/engine/systems/valuation'
 import { minAgeForAbility } from '../src/engine/world/playerGen'
 import type { GameState } from '../src/engine/types'
+import { isRealClubIdentity } from '../src/engine/world/clubNames'
 
 let world: GameState
 
@@ -184,15 +185,21 @@ describe('world generation', () => {
   })
 
   it('avoids reproducing real club identities', () => {
-    const forbidden = new Set([
-      'manchester united', 'manchester city', 'newcastle united', 'leeds united',
-      'liverpool fc', 'arsenal fc', 'chelsea fc', 'real madrid', 'ac milan',
-      'ajax amsterdam', 'borussia dortmund', 'olympique marseille',
-    ])
-    for (const club of Object.values(world.clubs)) {
-      expect(forbidden.has(club.name.toLowerCase()), `generated ${club.name}`).toBe(false)
+    // Held against the generator's own rule rather than a list somebody
+    // remembered to type out, and across several seeds, because a name only
+    // has to be reachable to eventually be reached: an earlier version of this
+    // test named a dozen clubs and caught Liverpool FC by luck when an
+    // unrelated change shifted the random stream.
+    for (const seed of ['NAMES-A', 'NAMES-B', 'NAMES-C', 'NAMES-D']) {
+      const generated = generateWorld({
+        seed, season: 2025, size: 'compact', homeNationId: 'eng',
+        directorName: 'T', background: 'analyst',
+      })
+      for (const club of Object.values(generated.clubs)) {
+        expect(isRealClubIdentity(club.name), `${seed} generated ${club.name}`).toBe(false)
+      }
     }
-  })
+  }, 120_000)
 
   it('gives every club a distinct name', () => {
     const names = new Set<string>()

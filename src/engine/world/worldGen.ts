@@ -9,6 +9,7 @@ import { computeValue, computeWageDemand } from '../systems/valuation'
 import { scheduleLeague } from '../sim/schedule'
 import { generateArchitects } from '../systems/stadium'
 import { autoRegister } from '../systems/registration'
+import { createOwner, ownerName, startingOwnerKind } from '../systems/ownership'
 import { resetCup } from '../sim/cups'
 import { SAVE_VERSION } from '../types'
 import type {
@@ -97,6 +98,7 @@ export function generateWorld(options: WorldGenOptions): GameState {
     shortlist: [],
     negotiations: [],
     completedTransfers: [],
+    takeovers: [],
     mediaStories: [],
     mediaStanding: {
       credibility: 70,
@@ -209,6 +211,7 @@ export function generateWorld(options: WorldGenOptions): GameState {
 
         const club = createClub(
           rng, ids, nation, league, def, city.name, city.size, reputation, takenClubNames, season,
+          names,
         )
         state.clubs[club.id] = club
         league.clubIds.push(club.id)
@@ -337,8 +340,22 @@ function createClub(
   reputation: number,
   taken: Set<string>,
   season: number,
+  names: NameGenerator,
 ): Club {
   const naming = generateClubName(rng, city, def.clubNameStyle as ClubNameStyle, taken, season)
+
+  // Somebody owns the place, and who they are explains most of how the board
+  // behaves. Outside money concentrates at the top of the pyramid, which is
+  // what makes it worth having.
+  const ownerKind = startingOwnerKind(rng, reputation)
+  const ownerPerson = names.forNation(nation)
+  const owner = createOwner(
+    rng,
+    ownerKind,
+    ownerName(rng, ownerKind, `${ownerPerson.firstName} ${ownerPerson.lastName}`,
+      { name: city, size: citySize }),
+    season - rng.int(1, 14),
+  )
 
   // Stadium capacity is driven by both club standing and the size of the town
   // it sits in: a big club in a small city is capped by its catchment.
@@ -412,6 +429,8 @@ function createClub(
       warnings: 0,
       lastRequestWeek: -99,
       requestsThisSeason: 0,
+      owner,
+      graceUntilSeason: null,
     },
     history: [],
     fanbase: clamp(Math.round(reputation * 0.7 + citySize * 0.3), 4, 99),
