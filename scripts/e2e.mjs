@@ -114,16 +114,22 @@ async function advanceOneWeek() {
   await page.waitForTimeout(150)
 
   if (page.url().includes('#/inbox')) {
-    const decide = page.locator('.chip--danger:has-text("Urgent"), .chip--warn:has-text("Decide")').first()
-    if (await decide.count()) {
+    // Clear every outstanding decision, not just the first. A busy window
+    // stacks several — incoming offers, deadline bids, a regulation notice —
+    // and answering one still leaves the week blocked. The game is right to
+    // refuse; the helper was the thing being too timid, and it left the run
+    // stuck at week 28 with the clock apparently stopped.
+    for (let attempt = 0; attempt < 12; attempt++) {
+      const decide = page.locator('.chip--danger:has-text("Urgent"), .chip--warn:has-text("Decide")').first()
+      if (!(await decide.count())) break
       await decide.click()
       await page.waitForTimeout(200)
-      const option = page.locator('.card__body .btn--ghost, .card__body .btn--primary').first()
-      if (await option.count()) {
-        await option.click()
-        decisionsAnswered++
-        await page.waitForTimeout(200)
-      }
+      // The decision options are the block buttons under the prompt.
+      const option = page.locator('.col > .btn--block:not([disabled])').first()
+      if (!(await option.count())) break
+      await option.click()
+      decisionsAnswered++
+      await page.waitForTimeout(200)
     }
     await page.goto('http://127.0.0.1:4173/#/home')
     await page.waitForSelector('.btn--primary:has-text("Advance week")')
