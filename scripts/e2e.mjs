@@ -380,20 +380,29 @@ await step('career and earnings', async () => {
 })
 
 await step('deadline day', async () => {
-  // Outside a deadline week the screen must say so plainly rather than show an
-  // empty list that looks broken.
-  await page.goto('http://127.0.0.1:4173/#/deadline')
-  await page.waitForSelector('text=The window is not closing today')
-
-  // Then drive the clock to the winter deadline and check the real thing. The
-  // headline screen of a headline feature is worth the extra ticks.
+  // How far the earlier steps got is not fixed — a blocked tick can cost a
+  // week — so the screen is checked against the week the game is actually on
+  // rather than against one this step assumed. An earlier version asserted the
+  // out-of-window message unconditionally and failed the day a run happened to
+  // arrive already inside a deadline week.
   const weekOf = async () => {
     const label = await page.textContent('.topbar__meta')
     return Number(/Week (\d+)/.exec(label ?? '')?.[1] ?? 0)
   }
+
+  await page.goto('http://127.0.0.1:4173/#/deadline')
+  await page.waitForSelector('.card')
+  const deadlineWeeks = [5, 30]
+  if (!deadlineWeeks.includes(await weekOf())) {
+    // Outside a deadline week the screen must say so plainly rather than show
+    // an empty list that looks broken.
+    await page.waitForSelector('text=The window is not closing today')
+  }
   // Not every tick advances a week — an urgent decision can block one — so the
   // loop counts weeks gained rather than attempts made, and gives up only if
   // the clock genuinely stops.
+  // Then drive the clock to the winter deadline and check the real thing. The
+  // headline screen of a headline feature is worth the extra ticks.
   let guard = 0
   let stalled = 0
   let last = await weekOf()
