@@ -171,7 +171,7 @@ Mirroring how clubs actually change hands:
 A takeover should be able to invalidate a three-year plan. That is the point of
 it, and it is what makes a long save worth playing.
 
-### 5. Deadline day
+### 5. Deadline day — built
 
 A compressed sequence at the close of each window: offers arriving with hours
 rather than weeks to answer, rival clubs hijacking deals in progress, and

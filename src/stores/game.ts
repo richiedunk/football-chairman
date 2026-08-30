@@ -24,6 +24,11 @@ import {
 import { AUTOSAVE_SLOT, loadGame, saveGame } from '../storage/saves'
 import { addNews } from '../engine/systems/inbox'
 import { agentsInvolvedWith, clientsOf, introductions } from '../engine/systems/agents'
+import {
+  generateOpportunities, isDeadlineWeek, type DeadlineOpportunity,
+} from '../engine/systems/deadlineDay'
+import { executeTransfer } from '../engine/systems/transfers'
+import { canAfford } from '../engine/systems/finance'
 import { haptic } from '../platform/native'
 import { achievements } from '../platform/services'
 import {
@@ -641,6 +646,79 @@ export const useGameStore = defineStore('game', () => {
     return ACHIEVEMENTS.map((entry) => ({ ...entry, earned: earned.has(entry.id) }))
   })
 
+  // --- Deadline day ---------------------------------------------------------
+
+  const isDeadline = computed(() => {
+    void revision.value
+    const s = state.value
+    return s ? isDeadlineWeek(s.date.week) : false
+  })
+
+  /**
+   * What is on the desk in the last hours.
+   *
+   * Held rather than recomputed, because the whole point is that the offers
+   * are a fixed set with a clock on them: regenerating on every render would
+   * mean the one you were reading vanished as you reached for it.
+   */
+  const deadlineOffers = ref<DeadlineOpportunity[]>([])
+  const deadlineTaken = ref<Set<ID>>(new Set())
+
+  function refreshDeadline(): void {
+    const s = state.value
+    const c = club.value
+    if (!s || !c || !isDeadlineWeek(s.date.week)) {
+      deadlineOffers.value = []
+      deadlineTaken.value = new Set()
+      return
+    }
+    const seed = `${s.seed}:deadline:${s.date.season}:${s.date.week}`
+    deadlineOffers.value = generateOpportunities(s, c, new Rng(seed))
+  }
+
+  /** Take a deadline offer at the price on it. No haggling; that is the point. */
+  function takeDeadlineOffer(offer: DeadlineOpportunity): { ok: boolean; message: string } {
+    const s = state.value
+    const c = club.value
+    if (!s || !c) return { ok: false, message: 'No game loaded.' }
+    if (deadlineTaken.value.has(offer.playerId)) {
+      return { ok: false, message: 'That one has already gone.' }
+    }
+    const player = s.players[offer.playerId]
+    if (!player) return { ok: false, message: 'He has signed elsewhere.' }
+
+    const affordable = canAfford(s, c, offer.fee, offer.wage)
+    if (!affordable.ok) return { ok: false, message: affordable.reason ?? 'The club cannot do it.' }
+
+    executeTransfer(s, { rng: new Rng(`${s.seed}:deadlinedeal:${offer.playerId}`), ids }, {
+      player,
+      buyer: c,
+      seller: offer.clubId ? s.clubs[offer.clubId] ?? null : null,
+      fee: offer.fee,
+      kind: offer.clubId ? 'permanent' : 'free',
+      contract: {
+        wage: offer.wage,
+        expiresSeason: s.date.season + (player.age <= 24 ? 4 : 3),
+        signingBonus: 0,
+        releaseClause: null,
+        appearanceFee: 0,
+        goalBonus: 0,
+        loyaltyBonus: 0,
+        inNegotiation: false,
+        weeksSinceRenewalRequest: 0,
+      },
+      agentFee: Math.round(offer.wage * 52 * 0.08),
+      sellOnPercentage: 0,
+      wageContribution: 0,
+      loanUntilSeason: null,
+    })
+    deadlineTaken.value = new Set([...deadlineTaken.value, offer.playerId])
+    commit()
+    return { ok: true, message: `${offer.playerName} signs. ${
+      offer.kind === 'hijack' ? 'He was minutes from signing somewhere else.' : ''
+    }`.trim() }
+  }
+
   // --- Ownership ------------------------------------------------------------
 
   const owner = computed(() => {
@@ -777,6 +855,7 @@ export const useGameStore = defineStore('game', () => {
     achievementProgress, newAchievements,
     agents, agentIntroductions, agentClients,
     owner, takeover, worldTakeovers,
+    isDeadline, deadlineOffers, deadlineTaken, refreshDeadline, takeDeadlineOffer,
     idFactory, nameGenerator, reset,
   }
 })

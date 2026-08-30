@@ -58,6 +58,11 @@ import {
 } from '../src/engine/systems/takeovers'
 import { processBoard } from '../src/engine/systems/board'
 import {
+  deadlineDiscount, generateOpportunities, hoursRemaining, isDeadlineWeek,
+  SUMMER_DEADLINE_WEEK, WINTER_DEADLINE_WEEK,
+} from '../src/engine/systems/deadlineDay'
+import { isTransferWindowOpen } from '../src/engine/sim/schedule'
+import {
   adjustRelationship, agentFee, agentWillingness, decayRelationships, introductions,
   RELATIONSHIP_EVENTS, STANDING_LABELS, STANDING_NOTES, standingFor,
 } from '../src/engine/systems/agents'
@@ -1902,5 +1907,90 @@ describe('ownership', () => {
     const before = takeoverAppeal(state, settled)
     settled.finances.inCrisis = true
     expect(takeoverAppeal(state, settled)).toBeGreaterThan(before)
+  })
+})
+
+describe('deadline day', () => {
+  it('falls on the last week of each window and nowhere else', () => {
+    expect(isDeadlineWeek(SUMMER_DEADLINE_WEEK)).toBe(true)
+    expect(isDeadlineWeek(WINTER_DEADLINE_WEEK)).toBe(true)
+    for (const week of [1, 4, 6, 20, 29, 31, 45, 52]) {
+      expect(isDeadlineWeek(week), `week ${week}`).toBe(false)
+    }
+    // And every deadline week must actually be inside a window, or the day
+    // would arrive after business had already stopped.
+    expect(isTransferWindowOpen(SUMMER_DEADLINE_WEEK)).toBe(true)
+    expect(isTransferWindowOpen(WINTER_DEADLINE_WEEK)).toBe(true)
+    expect(isTransferWindowOpen(SUMMER_DEADLINE_WEEK + 1)).toBe(false)
+    expect(isTransferWindowOpen(WINTER_DEADLINE_WEEK + 1)).toBe(false)
+  })
+
+  it('discounts hardest where the contract is shortest', () => {
+    const state = freshWorld('DL-DISCOUNT')
+    const club = state.clubs[state.playerClubId]
+    const player = seniorSquad(state, club)[0]!
+    player.squadStatus = 'rotation'
+    player.transferRequested = false
+    player.listedForTransfer = false
+
+    player.contract!.expiresSeason = state.date.season + 4
+    const long = deadlineDiscount(state, player)
+    player.contract!.expiresSeason = state.date.season + 1
+    const short = deadlineDiscount(state, player)
+    player.contract!.expiresSeason = state.date.season
+    const expiring = deadlineDiscount(state, player)
+
+    expect(short).toBeGreaterThan(long)
+    expect(expiring).toBeGreaterThan(short)
+    // A club with a year left knows what he is worth in six months.
+    expect(expiring).toBeGreaterThan(0.4)
+  })
+
+  it('discounts a player his club has given up on', () => {
+    const state = freshWorld('DL-SURPLUS')
+    const club = state.clubs[state.playerClubId]
+    const player = seniorSquad(state, club)[0]!
+    player.contract!.expiresSeason = state.date.season + 3
+    player.squadStatus = 'rotation'
+    const wanted = deadlineDiscount(state, player)
+    player.squadStatus = 'surplus'
+    expect(deadlineDiscount(state, player)).toBeGreaterThan(wanted)
+  })
+
+  it('only offers players the club could actually sign', () => {
+    const state = freshWorld('DL-OFFERS')
+    const club = state.clubs[state.playerClubId]
+    state.date.week = SUMMER_DEADLINE_WEEK
+    club.finances.transferBudget = 8_000_000
+    club.finances.wageBudget = totalWageBill(state, club) + 40_000
+
+    const offers = generateOpportunities(state, club, new Rng('offers'))
+    for (const offer of offers) {
+      expect(offer.fee, `${offer.playerName} costs more than the budget`)
+        .toBeLessThanOrEqual(club.finances.transferBudget)
+      expect(offer.playerId).toBeTruthy()
+      expect(offer.note.length).toBeGreaterThan(10)
+      // Never one of our own.
+      expect(offer.clubId).not.toBe(club.id)
+    }
+  })
+
+  it('runs the clock down across the offers', () => {
+    const state = freshWorld('DL-CLOCK')
+    const club = state.clubs[state.playerClubId]
+    state.date.week = SUMMER_DEADLINE_WEEK
+    club.finances.transferBudget = 50_000_000
+    club.finances.wageBudget = totalWageBill(state, club) + 200_000
+
+    const offers = generateOpportunities(state, club, new Rng('clock'))
+    // The clock counts down the list, in order. Assigning it before sorting
+    // made the hours jump about, which reads as noise rather than as a day
+    // running out.
+    for (let i = 1; i < offers.length; i++) {
+      expect(offers[i].hours, `offer ${i} has more time left than offer ${i - 1}`)
+        .toBeLessThanOrEqual(offers[i - 1].hours)
+    }
+    expect(hoursRemaining(0, 5)).toBeGreaterThan(hoursRemaining(4, 5))
+    expect(hoursRemaining(4, 5)).toBeGreaterThanOrEqual(1)
   })
 })

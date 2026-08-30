@@ -26,6 +26,9 @@ import {
 } from './systems/registration'
 import { adjustForPlayer } from './systems/agents'
 import { processTakeovers } from './systems/takeovers'
+import {
+  generateDeadlineBids, isDeadlineWeek, runWorldDeadline,
+} from './systems/deadlineDay'
 import { drawNextRoundIfDue, settleRound } from './sim/cups'
 import type {
   Club, Fixture, GameState, ID, MatchResult, Player, SeasonPhase,
@@ -310,6 +313,30 @@ export function advanceWeek(state: GameState, deps: TickDeps): TickResult {
   // frozen. Reconciling rather than rebuilding matters: the human's choices
   // survive, and only the empty places get filled.
   if (isRegistrationLockWeek(week)) lockSquadRegistrations(state, ids)
+
+  // --- 7a2. Deadline day ---------------------------------------------------
+  // The last week of a window runs at a different speed: bids arrive with an
+  // answer wanted now, and the clubs that would not discuss a price in July
+  // become reasonable about it.
+  if (isDeadlineWeek(week)) {
+    const deadlineRng = rng.fork('deadline')
+    const playerClub = state.clubs[state.playerClubId]
+    if (playerClub) {
+      for (const notice of generateDeadlineBids(state, playerClub, ids, deadlineRng)) {
+        addNews(state, ids, 'transfer', notice, { view: 'transfers' })
+      }
+      addInboxItem(state, ids, {
+        category: 'transfer',
+        subject: 'Deadline day',
+        from: 'Recruitment',
+        body: 'The window shuts at the end of the week. Anyone still on the list is either '
+          + 'signed today or not at all, and the clubs who would not talk to us in the summer '
+          + 'are answering the phone.',
+        link: { view: 'transfers' },
+      })
+    }
+    runWorldDeadline(state, ids, deadlineRng)
+  }
 
   // --- 7b2. Ownership ------------------------------------------------------
   // Approaches, due diligence and completions, everywhere in the world. A

@@ -99,6 +99,26 @@ function withdraw(negotiation: TransferNegotiation) {
 
 <template>
   <div>
+    <button
+      v-if="store.isDeadline"
+      class="card"
+      style="width: 100%; text-align: left; cursor: pointer; border-color: var(--warn); background: rgba(251,191,36,0.08)"
+      @click="router.push('/deadline')"
+    >
+      <div class="card__body">
+        <div class="row row--between">
+          <div class="grow">
+            <div class="bold small" style="color: var(--warn)">Deadline day</div>
+            <div class="tiny muted">
+              The window shuts tonight. Clubs that would not talk to you in the summer are
+              answering the phone.
+            </div>
+          </div>
+          <span class="faint">›</span>
+        </div>
+      </div>
+    </button>
+
     <div class="card">
       <div class="card__body row row--between">
         <div>

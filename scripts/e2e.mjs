@@ -379,6 +379,45 @@ await step('career and earnings', async () => {
   await page.screenshot({ path: `${SHOT}/15-career.png`, fullPage: true })
 })
 
+await step('deadline day', async () => {
+  // Outside a deadline week the screen must say so plainly rather than show an
+  // empty list that looks broken.
+  await page.goto('http://127.0.0.1:4173/#/deadline')
+  await page.waitForSelector('text=The window is not closing today')
+
+  // Then drive the clock to the winter deadline and check the real thing. The
+  // headline screen of a headline feature is worth the extra ticks.
+  const weekOf = async () => {
+    const label = await page.textContent('.topbar__meta')
+    return Number(/Week (\d+)/.exec(label ?? '')?.[1] ?? 0)
+  }
+  // Not every tick advances a week — an urgent decision can block one — so the
+  // loop counts weeks gained rather than attempts made, and gives up only if
+  // the clock genuinely stops.
+  let guard = 0
+  let stalled = 0
+  let last = await weekOf()
+  while (last !== 30 && guard < 60 && stalled < 6) {
+    await advanceOneWeek()
+    const now = await weekOf()
+    stalled = now === last ? stalled + 1 : 0
+    last = now
+    guard += 1
+  }
+  if (last !== 30) throw new Error(`never reached deadline week (stuck at ${last} after ${guard} ticks)`)
+
+  await page.goto('http://127.0.0.1:4173/#/deadline')
+  await page.waitForSelector('text=The window shuts tonight')
+  await page.waitForSelector('text=On the desk')
+  const offers = await page.locator('.list__trail .btn--primary').count()
+  console.log(`   week 30 — ${offers} offers on the desk`)
+  await page.screenshot({ path: `${SHOT}/32-deadline.png`, fullPage: true })
+
+  // The transfers page must advertise it, or nobody finds the screen.
+  await page.goto('http://127.0.0.1:4173/#/transfers')
+  await page.waitForSelector('.card:has-text("Deadline day")')
+})
+
 await step('who owns the club', async () => {
   await page.goto('http://127.0.0.1:4173/#/board')
   await page.waitForSelector('text=Who owns the club')
