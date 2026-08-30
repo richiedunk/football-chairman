@@ -1452,11 +1452,36 @@ describe('financial regulation', () => {
     expect(booked.inBreach).toBe(true)
   })
 
+  it('punishes nothing in the first assessed season', () => {
+    // A new world is generated without reference to this rule, so it opens
+    // with a quarter of clubs outside it. Sanctioning a director in his first
+    // year for the squad he inherited is not a rule, it is an ambush.
+    const state = freshWorld('REG-GRACE')
+    const club = state.clubs[state.playerClubId]
+    const ids = new IdFactory(state.nextId)
+
+    // Far outside the limit — severe enough to skip straight to hard
+    // sanctions in any other season.
+    const outcome = assessClub(state, club, ledgerWith({
+      tvIncome: 1_000_000, wagesPaid: 1_400_000,
+    }), ids)
+
+    expect(outcome.assessment.inBreach).toBe(true)
+    expect(outcome.imposed.map((s) => s.kind)).toEqual(['warning'])
+    expect(underEmbargo(club)).toBe(false)
+    expect(club.finances.regulation.pointsDeducted).toBe(0)
+  })
+
   it('escalates warning, then embargo, then points', () => {
     const state = freshWorld('REG-ESC')
     const club = state.clubs[state.playerClubId]
     const ids = new IdFactory(state.nextId)
     const breaching = () => ledgerWith({ tvIncome: 1_000_000, wagesPaid: 800_000 })
+
+    // The first assessment of a save is a grace year whatever the figures,
+    // so escalation is measured from the season after it.
+    assessClub(state, club, breaching(), ids)
+    state.date.season += 1
 
     const first = assessClub(state, club, breaching(), ids)
     expect(first.imposed.map((s) => s.kind)).toEqual(['warning'])
@@ -1480,10 +1505,15 @@ describe('financial regulation', () => {
     const club = state.clubs[state.playerClubId]
     const ids = new IdFactory(state.nextId)
 
+    // The grace year is a baseline and does not count against the club, so a
+    // real breach season has to follow it.
+    assessClub(state, club, ledgerWith({ tvIncome: 1_000_000, wagesPaid: 900_000 }), ids)
+    expect(club.finances.regulation.breachSeasons).toBe(0)
+    state.date.season += 1
     assessClub(state, club, ledgerWith({ tvIncome: 1_000_000, wagesPaid: 900_000 }), ids)
     expect(club.finances.regulation.breachSeasons).toBe(1)
-
     state.date.season += 1
+
     const clean = assessClub(state, club, ledgerWith({ tvIncome: 1_000_000, wagesPaid: 400_000 }), ids)
     expect(clean.imposed).toEqual([])
     expect(club.finances.regulation.breachSeasons).toBe(0)
@@ -1499,9 +1529,12 @@ describe('financial regulation', () => {
     const existing = registrablePool(state, club).find((p) => p.age >= U21_AGE)!
     existing.joinedSeason = state.date.season - 2
 
-    // Two breaches: warning, then embargo.
+    // Grace year, warning, then embargo.
     const breaching = () => ledgerWith({ tvIncome: 1_000_000, wagesPaid: 900_000 })
     assessClub(state, club, breaching(), ids)
+    state.date.season += 1
+    assessClub(state, club, breaching(), ids)
+    state.date.season += 1
     assessClub(state, club, breaching(), ids)
     expect(underEmbargo(club)).toBe(true)
 

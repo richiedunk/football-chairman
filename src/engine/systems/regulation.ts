@@ -190,6 +190,19 @@ export function assessClub(
   const season = state.date.season
   const imposed: RegulationSanction[] = []
 
+  // The first season of a save is assessed but not punished beyond a warning.
+  //
+  // A new world is generated without reference to this rule, so it opens with
+  // roughly a quarter of clubs already outside it — sanctioned in their first
+  // year for a squad the director inherited and had no hand in assembling.
+  // Real regulations arrived the same way and came with the same grace: you
+  // are told where you stand, and you have a year to put it right. From the
+  // second season the world has adjusted and the breach rate settles around
+  // one club in eight, which is where it should be.
+  const firstAssessment = record.lastRatio === null
+    && record.breachSeasons === 0
+    && record.sanctions.length === 0
+
   // Sanctions already running tick down before anything new is added, so a
   // one-season embargo is one season and not two.
   for (const sanction of record.sanctions) {
@@ -224,6 +237,14 @@ export function assessClub(
   }
 
   const reason = `Squad costs were ${percent}% of relevant income against a limit of ${Math.round(SQUAD_COST_LIMIT * 100)}%.`
+
+  if (firstAssessment) {
+    // The baseline year does not count against the club either: escalation
+    // starts from the first season it was in a position to do anything about.
+    record.breachSeasons = 0
+    add('warning', 0, `${reason} No sanction applies in the first year of assessment.`)
+    return { assessment, imposed }
+  }
 
   if (record.breachSeasons === 1 && !severe) {
     add('warning', 0, reason)
