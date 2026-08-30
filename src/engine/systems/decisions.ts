@@ -8,6 +8,7 @@ import { addNews } from './inbox'
 import { clamp } from '../rng'
 import type { Club, GameState, InboxItem, Player } from '../types'
 import { resolveOwnerPitch, type PitchId } from './takeovers'
+import { playerClub } from '../playerClub'
 
 /**
  * Resolving inbox decisions.
@@ -47,7 +48,7 @@ export function resolveDecision(
       outcome = resolveJobOffer(state, item, optionId)
       break
     case 'ownerPitch': {
-      const club = state.clubs[state.playerClubId]
+      const club = playerClub(state)
       outcome = club ? resolveOwnerPitch(club, optionId as PitchId) : 'The meeting never happened.'
       break
     }
@@ -72,7 +73,7 @@ function resolveTransferOffer(
 
   const player = state.players[playerId]
   const buyer = state.clubs[buyerId]
-  const seller = state.clubs[state.playerClubId]
+  const seller = playerClub(state)
   if (!player || !buyer || !seller) return 'The offer has lapsed.'
 
   if (optionId === 'reject') {
@@ -109,7 +110,7 @@ function completeSale(
   fee: number,
   ctx: DecisionContext,
 ): void {
-  const seller = state.clubs[state.playerClubId]
+  const seller = playerClub(state)
   const league = state.leagues[buyer.leagueId]
   const nation = state.nations[buyer.nationId]
   const wage = computeWageDemand(player, league, nation)
@@ -139,7 +140,7 @@ function completeSale(
 }
 
 function resolveCoachRequest(state: GameState, item: InboxItem, optionId: string): string {
-  const club = state.clubs[state.playerClubId]
+  const club = playerClub(state)
   const requestId = String(item.payload?.requestId ?? '')
   if (!club) return ''
   return respondToRequest(state, club, requestId, optionId === 'accept')

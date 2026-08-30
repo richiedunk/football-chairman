@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { useGameStore } from '../../stores/game'
 import { CATEGORY_LABELS } from '../../engine/systems/inbox'
 import { linkLabel } from '../screens'
+import { followLink, resolveLink } from '../link'
 import type { InboxItem } from '../../engine/types'
 
 const store = useGameStore()
@@ -32,8 +33,9 @@ function choose(item: InboxItem, optionId: string) {
 
 function follow(item: InboxItem) {
   if (!item.link) return
-  const { view, id } = item.link
-  router.push(id ? `/${view}/${id}` : `/${view}`)
+  if (!followLink(router, item.link)) {
+    notify?.('That screen is no longer there.', 'error')
+  }
 }
 
 /**
@@ -46,6 +48,11 @@ function buttonLabel(item: InboxItem): string {
   const { view, id } = item.link
   const subject = view === 'player' && id ? store.player(id)?.knownAs : null
   return linkLabel(view, subject)
+}
+
+/** A link is only shown when it goes somewhere. */
+function hasDestination(item: InboxItem): boolean {
+  return !!item.link && resolveLink(router, item.link) !== null
 }
 
 /**
@@ -131,7 +138,7 @@ function severity(item: InboxItem): string {
           </div>
         </template>
 
-        <button v-if="item.link" class="btn btn--ghost btn--sm btn--block mt" @click="follow(item)">
+        <button v-if="hasDestination(item)" class="btn btn--ghost btn--sm btn--block mt" @click="follow(item)">
           {{ buttonLabel(item) }}
         </button>
       </div>

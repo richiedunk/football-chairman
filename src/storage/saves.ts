@@ -7,6 +7,7 @@ import { levelFor } from '../engine/systems/career'
 import { createStorageAdapter, type SaveSlotMeta, type StorageAdapter } from './adapter'
 import { compressAsync, decompressAsync } from './compression'
 import { RETIREMENT_AGE, STARTING_AGE } from '../engine/systems/directorCareer'
+import { playerClub } from '../engine/playerClub'
 
 /**
  * Save and load.
@@ -43,7 +44,7 @@ export async function saveGame(
   const json = JSON.stringify(state)
   const data = await compressAsync(json)
 
-  const club = state.clubs[state.playerClubId]
+  const club = playerClub(state)
   const league = club ? state.leagues[club.leagueId] : null
 
   const meta: SaveSlotMeta = {
@@ -90,7 +91,7 @@ export async function storageQuota(): Promise<{ used: number; available: number 
 }
 
 function defaultSaveName(state: GameState): string {
-  const club = state.clubs[state.playerClubId]
+  const club = playerClub(state)
   return club
     ? `${club.shortName} — ${state.date.season}/${String((state.date.season + 1) % 100).padStart(2, '0')}`
     : `${state.director.name} — unemployed`

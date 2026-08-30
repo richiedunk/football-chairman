@@ -1249,7 +1249,14 @@ export interface GameState {
   savedAt: number
   date: GameDate
   phase: SeasonPhase
-  playerClubId: ID
+  /**
+   * The club the director runs, or null while he is out of work and looking.
+   *
+   * Nullable because being sacked has to actually remove you: leaving this
+   * pointing at the club that dismissed you meant the board sacked you again
+   * the following week, and again, 169 times over one career.
+   */
+  playerClubId: ID | null
   /** The human's name and standing. */
   director: DirectorProfile
 
@@ -1427,6 +1434,15 @@ export interface JobOffer {
   expiresSeason: number
   /** Why they are interested — shown in the offer letter. */
   pitch: string
+  /**
+   * A post you can see and cannot have. The obvious one is the club that has
+   * just sacked you: their vacancy is real, it is public, and it is the first
+   * thing you would look at — but the board that dismissed you last week is not
+   * going to interview you this week.
+   */
+  barred?: boolean
+  /** Said plainly on the listing, because a greyed-out row explains nothing. */
+  barredReason?: string
 }
 
 export type DirectorBackground =

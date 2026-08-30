@@ -19,12 +19,26 @@
 import type { Player } from '../engine/types'
 
 /**
- * Characters that fit on one line of a squad row at the sizes this app uses,
- * before the badges and figures beside it start being pushed off. Deliberately
- * a character budget rather than a measurement: it is stable, it is testable,
- * and being one character out costs nothing.
+ * Characters that fit on one line of a name row at the sizes this app uses.
+ *
+ * Still a character budget rather than a live measurement — that is stable and
+ * testable, and a character either way costs nothing — but the number is now
+ * measured rather than guessed. `scripts/namefit` walked every list in the
+ * built app at 390x844 and measured the real box against the real font:
+ *
+ *   squad 288px · agents 291px · scouting 291px · academy 280px
+ *   registration 228px · staff 194px
+ *
+ * The narrowest row anywhere is the staff list at 194px, which holds 26
+ * characters of a realistic name. (Realistic matters: 26 capital Ms need
+ * 341px, but no one is called that.) So 26 is the budget that never clips on
+ * any screen.
+ *
+ * It was 22, set by eye, and it was abbreviating names with a hundred pixels
+ * of room left — "Gonzalo Montero Robledo" is 23 characters and 178px wide in
+ * a 288px box, and it was being shown as "G. Montero Robledo".
  */
-export const LIST_NAME_BUDGET = 22
+export const LIST_NAME_BUDGET = 26
 
 export function fullName(player: Pick<Player, 'firstName' | 'lastName'>): string {
   return `${player.firstName} ${player.lastName}`.trim()

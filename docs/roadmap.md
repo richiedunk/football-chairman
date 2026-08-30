@@ -580,9 +580,25 @@ chosen fresh each time, and the only moving part is a CSS transform, which is
 composited off the main thread and therefore keeps going while everything else
 is blocked.
 
+**It also has to stay up long enough to be read.** The first cut showed for
+exactly as long as the tick took, which is 275ms at the median — the screen
+appeared and vanished, and the reader registered that something had happened
+without ever seeing what it said, which is worse than no loading screen. It is
+now floored at 900ms once it is up: measured over ten weeks of the walkthrough,
+908–971ms, mean 922. Every piece of blocking work in the store goes through one
+`withLoading` helper that yields a frame so the screen paints before the thread
+blocks, then holds it to the floor.
+
+**And it belongs in the phone column.** It was `position: fixed`, so on a
+desktop-width window it escaped the 520px column everything else lives in and
+took over the whole browser. It stays fixed — an absolutely positioned overlay
+would be trapped by any ancestor that happened to be `position: relative` — and
+is pinned to the column instead. Measured at 1280px: the column runs 380–900px
+and the loading screen and sheet backdrop now run 380–900px with it.
+
 Making the tick itself faster is a separate job and not this one.
 
-## Out of work
+## Out of work — built
 
 Being sacked drops you onto a jobs board, not out of the game — and the board
 is the point.
@@ -603,8 +619,33 @@ unit for a job search, and it keeps the sixty-five-year-old clock ticking, so a
 long spell out genuinely costs you career.
 
 Your experience widens what is *eligible* — that already falls out of the level
-gate — and the sacking itself takes something off your reputation, so being
+gate — and the sacking itself takes four off your reputation, so being
 dismissed twice in three years shows.
+
+**Your own job is top of the board, and you cannot have it.** The club you ran
+on Friday is advertising for a director of football on Monday: the vacancy is
+real, it is public, and it is the first listing anybody in that position would
+look for. It is listed, with the reason spelled out — *they dismissed you, they
+will not be taking your application* — because leaving it off would be tidier
+and would say nothing. It comes off the board the same way any other listing
+does, when somebody else takes it.
+
+The door then stays shut. Any club whose spell ended in a dismissal is filtered
+out of every later draw, read straight off the career history rather than kept
+as a second list. Boards do occasionally re-hire; they do not re-hire the man
+they sacked eighteen months ago, and a door that quietly reopens costs the
+sacking its weight.
+
+**As built.** `dismissDirector` does what a sacking always should have: closes
+the career entry so the spell is a matter of record, takes the reputation hit,
+releases the club, and puts the first vacancies up. `playerClubId` is nullable
+now, which is what makes any of it possible — the fifty-odd places that indexed
+it blind go through `playerClub(state)`, and the shell keeps you on the jobs
+board while you have no club, because every other screen is about a club you do
+not have.
+
+A test reproduces the original bug directly: run a career until the board turns,
+and assert you cannot be dismissed twice from the same chair.
 
 ## The news feed
 
@@ -618,16 +659,16 @@ position.
 
 ## Known defects
 
-**Being sacked does not remove you from the job.** Found by the first long
-save. `paySeverance` clears the contract and the board's message lands, but
-nothing changes `state.playerClubId` and nothing closes the career entry — so
-the director is still sitting at the club the following week, with no contract,
-and the board sacks him again. Over a thirty-five-season run the counter read
-**169 sackings at one club**, and career earnings came to £30,600 because there
-was no contract to be paid under for most of it. The UI hides this by routing
-to the career screen on a sacking, but nothing stops a player navigating back
-and pressing Advance. `closeCareerEntry` exists and is only ever called when
-leaving *for another club*.
+Bugs found in play go in `docs/bugs.md` — this section is for the ones with a
+measurement behind them.
+
+**No set-piece coach.** The ask was for coaching posts you assign — youth, set
+pieces, goalkeeping. `academyDirector` and `goalkeepingCoach` exist and both
+do something: the academy director moves intake quality, the goalkeeping coach
+moves keeper development. There is nothing in the match engine for a set-piece
+coach to act on, so adding the post would be a job title with no consequence —
+a dial that does not turn. It waits on set pieces existing as a modelled part
+of a match. Named here so it is a deferral rather than an omission.
 
 **Squads thin at the season roll from season four onwards.** Mid-season sizes
 hold at the recorded 24-26 with no club below sixteen, but at rollover the

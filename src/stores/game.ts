@@ -22,6 +22,8 @@ import {
   unregisterPlayer, type RegistrationResult,
 } from '../engine/systems/registration'
 import { AUTOSAVE_SLOT, loadGame, saveGame } from '../storage/saves'
+import { playerClub } from '../engine/playerClub'
+import { SEARCH_STRIDE_WEEKS, advanceSearch } from '../engine/systems/jobSearch'
 import { addNews } from '../engine/systems/inbox'
 import { agentsInvolvedWith, clientsOf, introductions } from '../engine/systems/agents'
 import {
@@ -58,6 +60,44 @@ export const useGameStore = defineStore('game', () => {
   const busy = ref(false)
   const busyMessage = ref('')
 
+  /**
+   * How long the loading screen stays up once it is up.
+   *
+   * A week tick measures 275ms at the median and 342ms at the mean, which is
+   * long enough to be worth covering and far too short to read. The result was
+   * a screen that flashed — the reader registered that something had happened
+   * without ever seeing what it said, which is worse than no loading screen at
+   * all. So the work is floored: whatever the tick costs, the screen is up for
+   * long enough to read one line off it.
+   */
+  const MIN_LOADING_MS = 900
+
+  /**
+   * Run blocking work behind the loading screen.
+   *
+   * Two things have to be true and neither happens by itself. The screen must
+   * paint *before* the thread blocks — hence the frame yield, since the tick is
+   * one synchronous call and Vue would otherwise flush the DOM update after it
+   * had already finished. And it must still be up long enough to read.
+   */
+  async function withLoading<T>(message: string, work: () => T | Promise<T>): Promise<T> {
+    busy.value = true
+    busyMessage.value = message
+    const shownAt = Date.now()
+    try {
+      // `await` rather than `return work()`: a bare return hands the promise
+      // back before `finally` runs, so an asynchronous save would take the
+      // screen down while it was still writing.
+      await nextFrame()
+      return await work()
+    } finally {
+      const showing = Date.now() - shownAt
+      if (showing < MIN_LOADING_MS) await wait(MIN_LOADING_MS - showing)
+      busy.value = false
+      busyMessage.value = ''
+    }
+  }
+
   let ids = new IdFactory(1)
   let names = new NameGenerator(new Rng('names'))
 
@@ -82,8 +122,9 @@ export const useGameStore = defineStore('game', () => {
   function commit(): void {
     const current = state.value
     if (current) {
-      const club = current.clubs[current.playerClubId]
-      if (club) current.clubs[current.playerClubId] = { ...club }
+      const clubId = current.playerClubId
+      const club = clubId ? current.clubs[clubId] : null
+      if (clubId && club) current.clubs[clubId] = { ...club }
       state.value = { ...current }
     }
     revision.value++
@@ -134,7 +175,7 @@ export const useGameStore = defineStore('game', () => {
   const club = computed<Club | null>(() => {
     void revision.value
     const s = state.value
-    return s ? s.clubs[s.playerClubId] ?? null : null
+    return s ? playerClub(s) : null
   })
 
   const league = computed<League | null>(() => {
@@ -330,6 +371,40 @@ export const useGameStore = defineStore('game', () => {
       .map((f) => ({ fixture: f, result: f.result as MatchResult }))
   })
 
+  // --- Out of work ----------------------------------------------------------
+
+  /** True while the director has no club: sacked, and looking. */
+  const betweenJobs = computed(() => {
+    void revision.value
+    const s = state.value
+    return Boolean(s) && s!.playerClubId === null && s!.director.retiredAtSeason === undefined
+  })
+
+  /** The posts open right now. Sparse, and they change month to month. */
+  const vacancies = computed(() => {
+    void revision.value
+    return state.value?.director.jobOffers ?? []
+  })
+
+  /**
+   * Let a month go by. Some posts get filled by other people, one or two open
+   * up, and the world plays four weeks of football without you.
+   */
+  async function checkBackNextMonth(): Promise<{ filled: string[]; opened: string[] }> {
+    const s = state.value
+    if (!s || s.playerClubId !== null) return { filled: [], opened: [] }
+    return withLoading('A month goes by…', () => {
+      for (let week = 0; week < SEARCH_STRIDE_WEEKS; week++) {
+        lastTick.value = advanceWeek(s, { ids, names })
+        if (s.director.retiredAtSeason !== undefined) break
+      }
+      const rng = new Rng(`${s.seed}:search:${s.date.season}:${s.date.week}`)
+      const change = advanceSearch(s, idFactory(), rng)
+      commit()
+      return change
+    })
+  }
+
   // --- Match reports --------------------------------------------------------
 
   /**
@@ -395,11 +470,7 @@ export const useGameStore = defineStore('game', () => {
       }
     }
 
-    busy.value = true
-    busyMessage.value = 'Advancing…'
-    try {
-      // Yield a frame so the spinner paints before the tick blocks the thread.
-      await nextFrame()
+    return withLoading('Advancing…', () => {
       lastTick.value = advanceWeek(s, { ids, names })
       commit()
 
@@ -427,10 +498,7 @@ export const useGameStore = defineStore('game', () => {
         void autosave()
       }
       return { ok: true }
-    } finally {
-      busy.value = false
-      busyMessage.value = ''
-    }
+    })
   }
 
   /** Advance repeatedly until a fixture, a blocking decision, or `weeks`. */
@@ -460,29 +528,17 @@ export const useGameStore = defineStore('game', () => {
   async function save(slotId: string, name?: string): Promise<void> {
     const s = state.value
     if (!s) throw new Error('No game to save.')
-    busy.value = true
-    busyMessage.value = 'Saving…'
-    try {
-      s.nextId = ids.value
-      await saveGame(s, slotId, name)
-    } finally {
-      busy.value = false
-      busyMessage.value = ''
-    }
+    s.nextId = ids.value
+    await withLoading('Saving…', () => saveGame(s, slotId, name))
   }
 
   async function load(slotId: string): Promise<boolean> {
-    busy.value = true
-    busyMessage.value = 'Loading…'
-    try {
+    return withLoading('Loading…', async () => {
       const next = await loadGame(slotId)
       if (!next) return false
       attach(next)
       return true
-    } finally {
-      busy.value = false
-      busyMessage.value = ''
-    }
+    })
   }
 
   /** Answer an inbox decision. */
@@ -603,6 +659,7 @@ export const useGameStore = defineStore('game', () => {
     const s = state.value
     if (!s) return { ok: false, message: 'No game loaded.' }
     const rng = new Rng(`${s.seed}:bid:${playerId}:${s.date.week}`)
+    if (!s.playerClubId) return { ok: false, message: 'You have no club.' }
     const result = openNegotiation(s, { rng, ids }, playerId, s.playerClubId, kind, fee)
     commit()
     if ('error' in result) return { ok: false, message: result.error }
@@ -893,6 +950,7 @@ export const useGameStore = defineStore('game', () => {
     squad, academy, staff, headCoach, table, leaguePosition,
     inbox, unread, pendingDecisions, blockers, wageBill, career, retired, retire,
     matchQueue, queueMatchReports, dismissMatchReport, fixtureById,
+    betweenJobs, vacancies, checkBackNextMonth,
     upcomingFixtures, nextFixture, recentResults,
     // lookups
     player, clubById, leagueById, staffById,
@@ -916,4 +974,8 @@ function nextFrame(): Promise<void> {
     if (typeof requestAnimationFrame === 'function') requestAnimationFrame(() => resolve())
     else setTimeout(resolve, 0)
   })
+}
+
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }

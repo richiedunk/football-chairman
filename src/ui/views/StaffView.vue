@@ -9,6 +9,7 @@ import {
   respondToRequest,
 } from '../../engine/systems/board'
 import { expectedWage, ROLE_LABELS, STYLE_LABELS, staffEffectiveness } from '../../engine/world/staffGen'
+import { fullName } from '../playerName'
 import type { Staff, StaffRole } from '../../engine/types'
 import Chevron from '../components/Chevron.vue'
 
@@ -72,9 +73,6 @@ const roleCandidates = computed(() => {
   return availableStaff(s, c, hireRole.value)
 })
 
-function countOf(role: StaffRole): number {
-  return store.staff.filter((s) => s.role === role).length
-}
 
 function openRoleHire(role: StaffRole) {
   hireRole.value = role
@@ -103,10 +101,36 @@ function confirmStaffHire() {
   }
 }
 
+const confirmDismiss = ref<Staff | null>(null)
+
+/**
+ * What each post is for, in a line. A director hiring a fitness coach for the
+ * first time should not have to guess what one does.
+ */
+const ROLE_NOTES: Record<string, string> = {
+  scout: 'More scouts means more ground covered, and better reports.',
+  assistantCoach: 'Supports the head coach and takes training when he cannot.',
+  physio: 'Shortens injuries and gets players back sooner.',
+  analyst: 'Sharper reports, and more of the data department is worth having.',
+  academyDirector: 'Raises what the youth intake produces every year.',
+  fitnessCoach: 'Fewer soft-tissue injuries and better condition through a season.',
+  goalkeepingCoach: 'Develops keepers, who otherwise improve slowest of anyone.',
+}
+
+/** Every post, whether or not anyone holds it. */
+const roster = computed(() =>
+  HIREABLE_ROLES.map((role) => ({
+    role,
+    holders: others.value.filter((m) => m.role === role),
+    note: ROLE_NOTES[role] ?? '',
+  })),
+)
+
 function dismiss(member: Staff) {
   const s = store.game
   const c = club.value
   if (!s || !c) return
+  confirmDismiss.value = null
   const result = dismissStaff(s, c, member)
   store.commit()
   notify?.(
@@ -231,50 +255,64 @@ function answer(requestId: string, accept: boolean) {
       </div>
     </template>
 
+    <!-- One roster, by post. Two lists — everybody you employ, and separately
+         every job you could hire for — meant a vacancy was invisible: the only
+         way to notice you had no academy director was to count. -->
     <div class="section-title">Backroom</div>
-    <div class="card">
+    <template v-for="post in roster" :key="post.role">
+      <div class="card__head">
+        <span class="card__title">{{ ROLE_LABELS[post.role] }}</span>
+        <span class="card__title" :style="post.holders.length ? '' : 'color: var(--warn)'">
+          {{ post.holders.length ? `${post.holders.length}` : 'VACANT' }}
+        </span>
+      </div>
       <div class="list">
-        <div v-for="member in others" :key="member.id" class="list__row list__row--static">
+        <div v-for="member in post.holders" :key="member.id" class="list__row list__row--static">
           <div class="list__main">
-            <div class="list__primary">{{ member.knownAs }}</div>
-            <div class="list__secondary">
-              {{ ROLE_LABELS[member.role] }} · {{ formatWage(member.contract?.wage ?? 0, store.currency) }}/wk
+            <div class="list__primary">{{ fullName(member) }}</div>
+            <div class="list__secondary num">
+              {{ formatWage(member.contract?.wage ?? 0, store.currency) }}/WK ·
+              {{ member.age }}Y · {{ relationshipLabel(member.relationship).toUpperCase() }}
             </div>
           </div>
           <div class="list__trail">
             <div class="list__value">{{ staffEffectiveness(member) }}</div>
-            <div class="list__sub">rating</div>
+            <div class="list__sub">RATING</div>
           </div>
-          <button class="btn btn--ghost btn--sm" aria-label="Dismiss" @click="dismiss(member)">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12" /></svg>
-          </button>
+          <button
+            class="btn btn--danger btn--sm"
+            @click="confirmDismiss = member"
+          >Dismiss</button>
         </div>
-        <div v-if="!others.length" class="empty">No backroom staff.</div>
-      </div>
-    </div>
-
-    <div class="section-title">Hire</div>
-    <div class="card">
-      <div class="list">
-        <button
-          v-for="role in HIREABLE_ROLES"
-          :key="role"
-          class="list__row"
-          @click="openRoleHire(role)"
-        >
+        <button class="list__row" @click="openRoleHire(post.role)">
           <div class="list__main">
-            <div class="list__primary">{{ ROLE_LABELS[role] }}</div>
-            <div class="list__secondary">
-              {{ countOf(role) }} employed
-              <template v-if="role === 'scout' && countOf(role) < 2">
-                — more scouts means more ground covered
-              </template>
+            <div class="list__primary" :style="post.holders.length ? 'color: var(--text-dim)' : ''">
+              {{ post.holders.length ? `Hire another ${ROLE_LABELS[post.role].toLowerCase()}` : `Appoint a ${ROLE_LABELS[post.role].toLowerCase()}` }}
             </div>
+            <div class="list__secondary">{{ post.note }}</div>
           </div>
           <Chevron />
         </button>
       </div>
-    </div>
+    </template>
+
+    <AppSheet
+      v-if="confirmDismiss"
+      :title="`Dismiss ${fullName(confirmDismiss)}?`"
+      :subtitle="ROLE_LABELS[confirmDismiss.role]"
+      @close="confirmDismiss = null"
+    >
+      <p class="small muted">
+        His contract is paid up out of the club's money and the post falls
+        vacant. There is no undoing it.
+      </p>
+      <template #footer>
+        <div class="btn-row">
+          <button class="btn btn--ghost" @click="confirmDismiss = null">Keep him</button>
+          <button class="btn btn--danger" @click="dismiss(confirmDismiss!)">Dismiss</button>
+        </div>
+      </template>
+    </AppSheet>
 
     <button v-if="coach" class="btn btn--ghost btn--block mt" @click="hiringOpen = true">
       Replace the head coach

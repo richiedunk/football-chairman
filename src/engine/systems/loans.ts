@@ -7,6 +7,7 @@ import { squadImportance } from './valuation'
 import { ratingForPositionCached } from '../world/attributes'
 import { isTransferWindowOpen } from '../sim/schedule'
 import type { Club, GameState, ID, Player } from '../types'
+import { playerClub } from '../playerClub'
 
 /**
  * Loans.
@@ -187,7 +188,7 @@ export function proposeLoanIn(
 ): LoanOutcome {
   const player = state.players[playerId]
   const owner = player?.clubId ? state.clubs[player.clubId] : null
-  const club = state.clubs[state.playerClubId]
+  const club = playerClub(state)
   if (!player || !owner || !club) return { ok: false, message: 'That loan is not possible.' }
 
   if (!isTransferWindowOpen(state.date.week)) {

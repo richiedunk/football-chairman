@@ -9,6 +9,7 @@ import { survivorsOf, tieAggregate } from '../../engine/sim/cups'
 import Chevron from '../components/Chevron.vue'
 import { CATEGORY_LABELS } from '../../engine/systems/inbox'
 import { FIRST_MATCH_WEEK } from '../../engine/sim/schedule'
+import { followLink } from '../link'
 
 const store = useGameStore()
 const router = useRouter()
@@ -148,7 +149,7 @@ const notStarted = computed(() => table.value.every((row) => row.played === 0))
           :key="item.id"
           class="list__row"
           :disabled="!item.link"
-          @click="item.link && router.push(item.link.id ? `/${item.link.view}/${item.link.id}` : `/${item.link.view}`)"
+          @click="item.link && followLink(router, item.link)"
         >
           <div class="list__main">
             <div class="list__primary" style="white-space: normal">{{ item.text }}</div>

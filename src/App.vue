@@ -40,7 +40,23 @@ const hasSaves = ref(false)
 // it is a moment rather than a destination, and a back arrow on it would lead
 // to the club you have just stopped choosing between.
 const isSetupRoute = computed(() =>
-  ['start', 'new-game', 'club-select', 'welcome'].includes(String(route.name)),
+  ['start', 'new-game', 'club-select', 'welcome', 'looking'].includes(String(route.name)),
+)
+
+/**
+ * Out of work, every other screen is about a club you do not have — so being
+ * sacked lands on the jobs board and stays there until you take something.
+ */
+watch(
+  () => [store.betweenJobs, route.name] as const,
+  ([looking, name]) => {
+    if (looking && name !== 'looking' && name !== 'career' && name !== 'settings') {
+      router.replace('/looking')
+    } else if (!looking && name === 'looking' && store.loaded) {
+      router.replace('/home')
+    }
+  },
+  { immediate: true },
 )
 const showChrome = computed(() => store.loaded && !isSetupRoute.value)
 

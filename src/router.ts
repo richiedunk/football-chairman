@@ -1,4 +1,5 @@
 import { createRouter, createWebHashHistory, type RouteRecordRaw } from 'vue-router'
+import { useGameStore } from './stores/game'
 
 /**
  * Hash history, deliberately.
@@ -13,6 +14,7 @@ const routes: RouteRecordRaw[] = [
   { path: '/new/club', name: 'club-select', component: () => import('./ui/views/ClubSelectView.vue') },
 
   { path: '/welcome', name: 'welcome', component: () => import('./ui/views/WelcomeView.vue') },
+  { path: '/looking', name: 'looking', component: () => import('./ui/views/JobSearchView.vue') },
 
   /*
    * Five tabs: home, squad, transfers, inbox, league. Everything else hangs
@@ -46,7 +48,18 @@ const routes: RouteRecordRaw[] = [
   { path: '/achievements', name: 'achievements', component: () => import('./ui/views/AchievementsView.vue'), meta: { tab: 'home' } },
   { path: '/about', name: 'about', component: () => import('./ui/views/AboutView.vue'), meta: { tab: 'home' } },
   { path: '/settings', name: 'settings', component: () => import('./ui/views/SettingsView.vue'), meta: { tab: 'home' } },
-  { path: '/:pathMatch(.*)*', redirect: '/' },
+  // An unknown path lands on the dashboard when a career is loaded, and on the
+  // title screen only when there is nothing to go back to. Sending someone
+  // mid-career to "Start a new career" because a link was malformed looks
+  // exactly like having lost the save.
+  {
+    path: '/:pathMatch(.*)*',
+    // Named so that resolveLink() can tell a real destination from this one:
+    // router.resolve() does not fail on an unknown path, it matches the
+    // catch-all, and without a name there is nothing to test.
+    name: 'not-found',
+    redirect: () => (useGameStore().loaded ? '/home' : '/'),
+  },
 ]
 
 export const router = createRouter({

@@ -1,6 +1,7 @@
 import { clamp, Rng } from '../rng'
 import { IdFactory, ID_PREFIX } from '../ids'
 import { squadImportance } from './valuation'
+import { playerClub } from '../playerClub'
 import type {
   Club, GameState, ID, MediaBriefing, MediaEffect, MediaOutlet, MediaResponse, MediaStory,
   MediaStoryKind, Player,
@@ -142,7 +143,7 @@ export function issueBriefing(
   ctx: MediaContext,
   briefing: MediaBriefing,
 ): BriefingResult {
-  const club = state.clubs[state.playerClubId]
+  const club = playerClub(state)
   const outlet = state.outlets[briefing.outletId]
   if (!club || !outlet) return { story: null, message: 'Unknown outlet.', ok: false }
 
@@ -251,7 +252,7 @@ function applyStoryEffects(state: GameState, story: MediaStory, ctx: MediaContex
       if (!subject) break
       // Being linked away is unsettling, and more so if he was already restless
       // or if the interested club is a step up.
-      const club = state.clubs[state.playerClubId]
+      const club = playerClub(state)
       const stepUp = club && subjectClub ? clamp((club.reputation - subjectClub.reputation) / 40, -0.5, 1) : 0
       const moraleHit = -8 * magnitude * truthFactor * (1 + stepUp)
       subject.morale = clamp(subject.morale + moraleHit, 1, 100)
@@ -285,7 +286,7 @@ function applyStoryEffects(state: GameState, story: MediaStory, ctx: MediaContex
     }
 
     case 'boardBacking': {
-      const club = state.clubs[state.playerClubId]
+      const club = playerClub(state)
       if (!club) break
       club.fanMood = clamp(club.fanMood + 6 * magnitude, 1, 100)
       record('fans', club.id, 'mood', 6 * magnitude, 'The supporters are reassured.')
@@ -315,7 +316,7 @@ function applyStoryEffects(state: GameState, story: MediaStory, ctx: MediaContex
     }
 
     case 'academyHype': {
-      const club = state.clubs[state.playerClubId]
+      const club = playerClub(state)
       if (!club) break
       club.board.confidence = clamp(club.board.confidence + 3 * magnitude, 0, 100)
       record('board', club.id, 'confidence', 3 * magnitude, 'The board like to hear about the academy.')
@@ -398,7 +399,7 @@ export function checkForExposure(state: GameState, ctx: MediaContext): string[] 
     state.mediaStanding.goodwill = clamp(state.mediaStanding.goodwill - 12, 0, 100)
     outlet.relationship = clamp(outlet.relationship - 25, 0, 100)
 
-    const club = state.clubs[state.playerClubId]
+    const club = playerClub(state)
     if (club) {
       club.board.confidence = clamp(club.board.confidence - 8, 0, 100)
       club.fanMood = clamp(club.fanMood - 5, 1, 100)
@@ -430,7 +431,7 @@ export function checkForExposure(state: GameState, ctx: MediaContext): string[] 
  * some weeks you are the one being written about.
  */
 export function generateOrganicStories(state: GameState, ctx: MediaContext): MediaStory[] {
-  const club = state.clubs[state.playerClubId]
+  const club = playerClub(state)
   if (!club) return []
   const outlets = Object.values(state.outlets).filter((o) => o.nationId === club.nationId)
   if (outlets.length === 0) return []
@@ -545,7 +546,7 @@ export function respondToStory(
   response: MediaResponse,
   ctx: MediaContext,
 ): string {
-  const club = state.clubs[state.playerClubId]
+  const club = playerClub(state)
   if (!club) return ''
   story.response = response
 

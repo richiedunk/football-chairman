@@ -30,6 +30,8 @@ import {
   generateDeadlineBids, isDeadlineWeek, runWorldDeadline,
 } from './systems/deadlineDay'
 import { drawNextRoundIfDue, settleRound } from './sim/cups'
+import { playerClub as clubInCharge } from './playerClub'
+import { dismissDirector } from './systems/jobSearch'
 import type {
   Club, Fixture, GameState, ID, MatchResult, Player, SeasonPhase,
 } from './types'
@@ -166,10 +168,10 @@ export function advanceWeek(state: GameState, deps: TickDeps): TickResult {
         category: 'match',
         subject: `You have won the ${cup.name}`,
         from: 'Chairman',
-        body: `${state.clubs[state.playerClubId]?.name} are ${cup.name} winners. Nobody will forget this season.`,
+        body: `${clubInCharge(state)?.name} are ${cup.name} winners. Nobody will forget this season.`,
         link: { view: 'club' },
       })
-    } else if (settled.eliminated.includes(state.playerClubId)) {
+    } else if (state.playerClubId && settled.eliminated.includes(state.playerClubId)) {
       addNews(state, ids, 'match', `Knocked out of the ${cup.name} in the ${round.name.toLowerCase()}.`)
     }
   }
@@ -248,7 +250,7 @@ export function advanceWeek(state: GameState, deps: TickDeps): TickResult {
   }
 
   // --- 5. Morale and squad state -------------------------------------------
-  const playerClub = state.clubs[state.playerClubId]
+  const playerClub = clubInCharge(state)
   for (const club of allClubs) {
     // Squad harmony at clubs the player never looks at only needs to be
     // roughly right, so it is refreshed monthly rather than weekly.
@@ -320,7 +322,7 @@ export function advanceWeek(state: GameState, deps: TickDeps): TickResult {
   // become reasonable about it.
   if (isDeadlineWeek(week)) {
     const deadlineRng = rng.fork('deadline')
-    const playerClub = state.clubs[state.playerClubId]
+    const playerClub = clubInCharge(state)
     if (playerClub) {
       for (const notice of generateDeadlineBids(state, playerClub, ids, deadlineRng)) {
         addNews(state, ids, 'transfer', notice, { view: 'transfers' })
@@ -391,7 +393,9 @@ export function advanceWeek(state: GameState, deps: TickDeps): TickResult {
       subject: story.headline,
       from: state.outlets[story.outletId]?.name ?? 'The press',
       body: story.body,
-      link: { view: 'media', id: story.id },
+      // No id: the media screen is not addressable by story, and a link to
+      // a route that does not exist falls through to the catch-all.
+      link: { view: 'media' },
     })
   }
   for (const notice of checkForExposure(state, mediaCtx)) {
@@ -431,6 +435,10 @@ export function advanceWeek(state: GameState, deps: TickDeps): TickResult {
           link: { view: 'career' },
         })
       }
+      // And you actually leave. This used to be an announcement: the club
+      // stayed yours, so the same board dismissed you again the week after,
+      // and the week after that.
+      dismissDirector(state, ids, rng.fork('dismissal'))
     }
 
     const coachResult = processCoachRelations(state, playerClub, ids, rng.fork('coach'))
@@ -734,7 +742,7 @@ function runAcademyIntake(
 }
 
 function playerClubForPricing(state: GameState): Club | null {
-  return state.clubs[state.playerClubId] ?? null
+  return clubInCharge(state) ?? null
 }
 
 /** Sorted league table for a competition, exported for the UI. */
@@ -752,7 +760,7 @@ const FREEZE_OUT_REVIEW_WEEK = 36
  * into the next one. This is the quiet cost of hoarding a squad.
  */
 function reviewFrozenOutClients(state: GameState, ids: IdFactory): void {
-  const club = state.clubs[state.playerClubId]
+  const club = clubInCharge(state)
   if (!club) return
 
   const frozen: Player[] = []

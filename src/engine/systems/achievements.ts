@@ -1,6 +1,7 @@
 import { weeklyRevenue } from './finance'
 import { squadRegistration } from './registration'
 import type { GameState } from '../types'
+import { playerClub } from '../playerClub'
 
 /**
  * Career milestones.
@@ -150,7 +151,7 @@ export function earnedAchievements(state: GameState): Set<string> {
   const earned = new Set<string>()
   const director = state.director
   const history = director.careerHistory
-  const club = state.clubs[state.playerClubId] ?? null
+  const club = playerClub(state) ?? null
 
   if (history.length > 0) earned.add('first-job')
 

@@ -248,6 +248,23 @@ export function canTakeJobAt(director: DirectorProfile, club: Club): boolean {
 }
 
 /**
+ * Clubs that have sacked you, and will not have you back.
+ *
+ * Read off the career history rather than kept as its own list, because that
+ * is where the fact already lives — a spell that ended in a dismissal is a
+ * closed door, and nothing else needs to remember it. Boards do occasionally
+ * re-hire, but not the man they sacked eighteen months ago, and a door that
+ * quietly reopens costs the sacking its weight.
+ */
+export function sackedBy(director: DirectorProfile): Set<ID> {
+  const out = new Set<ID>()
+  for (const entry of director.careerHistory) {
+    if (entry.outcome === 'Sacked') out.add(entry.clubId)
+  }
+  return out
+}
+
+/**
  * The career level at which a club of this standing becomes reachable.
  *
  * Used by the jobs board to show *why* a job is closed to you and what it

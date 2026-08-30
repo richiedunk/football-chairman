@@ -9,6 +9,7 @@ import {
   adjustForPlayer, agentFee as computeAgentFee, agentFor, agentWillingness,
 } from './agents'
 import { addInboxItem } from './inbox'
+import { playerClub } from '../playerClub'
 import {
   NON_HOMEGROWN_LIMIT, releaseRegistration, settleArrival, SQUAD_LIMIT, U21_AGE,
 } from './registration'
@@ -1183,7 +1184,7 @@ export function generateIncomingOffers(
   ctx: TransferContext,
 ): { player: Player; buyer: Club; fee: number }[] {
   if (!isTransferWindowOpen(state.date.week)) return []
-  const club = state.clubs[state.playerClubId]
+  const club = playerClub(state)
   if (!club) return []
 
   const offers: { player: Player; buyer: Club; fee: number }[] = []

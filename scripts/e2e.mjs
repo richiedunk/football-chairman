@@ -200,6 +200,8 @@ async function clearMatchReports() {
   if (page.url().includes('#/match/')) throw new Error('could not get off the match report')
 }
 
+const loadingTimes = []
+
 async function advanceOneWeek() {
   // Anything still waiting to be read sits over the whole app, so it is cleared
   // before reaching for a button underneath it.
@@ -209,7 +211,13 @@ async function advanceOneWeek() {
     await page.waitForSelector('.advance-bar .advance')
   }
   await clickAdvance()
+  // Only time a tick that actually ran: a refused advance (a decision
+  // outstanding) never raises the loading screen at all, and counting those
+  // as a 2ms flash measures nothing.
+  const upAt = Date.now()
+  const ran = await page.locator('.loading').waitFor({ timeout: 1500 }).then(() => true, () => false)
   await page.waitForFunction(() => !document.querySelector('.loading'), null, { timeout: 30000 })
+  if (ran) loadingTimes.push(Date.now() - upAt)
   await page.waitForTimeout(300)
   await readNotice()
   await clearMatchReports()
@@ -248,6 +256,13 @@ async function advanceOneWeek() {
 
 await step('advance 10 weeks', async () => {
   for (let i = 0; i < 10; i++) await advanceOneWeek()
+  // The loading screen exists to be read. A tick is 275ms at the median, so
+  // without a floor it flashed: the reader registered that something happened
+  // without ever seeing what it said.
+  const shortest = Math.min(...loadingTimes)
+  if (shortest < 800) throw new Error(`loading screen flashed by in ${shortest}ms`)
+  const mean = Math.round(loadingTimes.reduce((a, b) => a + b, 0) / loadingTimes.length)
+  console.log(`   loading screen up for ${shortest}-${Math.max(...loadingTimes)}ms, mean ${mean}ms`)
   console.log(`   match reports shown: ${reportsSeen}`)
   if (reportsSeen === 0) throw new Error('ten weeks passed without a single match report')
   // A tick can end on the inbox when it hit a blocker, so the dashboard shot
@@ -306,12 +321,17 @@ await step('squad reads as a teamsheet, with real names', async () => {
     }
   }
 
-  // Nobody is listed as an initial unless his full name genuinely will not fit.
+  // The thing that actually matters: no name is cut off. Counting characters
+  // was a proxy for this, and a bad one — it failed a 23-character name that
+  // had a hundred pixels of room. Measure the rendered box instead.
+  const clipped = await page.evaluate(() => [...document.querySelectorAll('.list__primary')]
+    .filter((el) => el.scrollWidth > el.clientWidth + 1)
+    .map((el) => el.textContent.trim()))
+  if (clipped.length) throw new Error(`names clipped in the squad list: ${clipped.join(', ')}`)
+
   const names = await page.locator('.list__primary').allTextContents()
   const abbreviated = names.filter((n) => /^[A-Z]\.\s/.test(n.trim()))
-  for (const short of abbreviated) {
-    if (short.trim().length < 20) throw new Error(`needlessly abbreviated: ${short}`)
-  }
+  console.log(`   ${names.length} names, ${abbreviated.length} abbreviated, none clipped`)
   console.log(`   ${badges.length} in position order, ${abbreviated.length} abbreviated`)
 })
 
@@ -356,6 +376,45 @@ await step('league table', async () => {
   await page.goto('http://127.0.0.1:4173/#/league')
   await page.waitForSelector('.table')
   await page.screenshot({ path: `${SHOT}/10-league.png` })
+})
+
+await step('the jobs board is only for the jobless', async () => {
+  // Being sacked routes here and keeps you here. The reverse has to hold too:
+  // a screen headed "Out of work" shown to a director who has a club is worse
+  // than no screen at all.
+  await page.goto('http://127.0.0.1:4173/#/looking')
+  await page.waitForTimeout(500)
+  if (!page.url().includes('#/home')) {
+    throw new Error(`an employed director was left on ${page.url()}`)
+  }
+})
+
+await step('the staff roster shows vacancies', async () => {
+  // Two lists — everyone employed, and separately every job — meant a vacancy
+  // was invisible: the only way to notice you had no academy director was to
+  // count. Every post is listed whether or not anyone holds it.
+  await page.goto('http://127.0.0.1:4173/#/staff')
+  await page.waitForSelector('text=Backroom', { timeout: 15000 })
+  const posts = await page.locator('.card__title').allTextContents()
+  for (const role of ['Academy Director', 'Goalkeeping Coach', 'Physiotherapist']) {
+    if (!posts.some((p) => p.trim() === role)) throw new Error(`${role} is not on the roster`)
+  }
+  const vacant = posts.filter((p) => p.trim() === 'VACANT').length
+  console.log(`   ${posts.length} entries, ${vacant} vacant`)
+  await page.screenshot({ path: `${SHOT}/19b-roster.png`, fullPage: true })
+})
+
+await step('inbox links go where they say', async () => {
+  // A link to a route that does not exist used to fall through the router's
+  // catch-all onto the title screen, which looks exactly like losing the save.
+  await page.goto('http://127.0.0.1:4173/#/media')
+  await page.waitForTimeout(400)
+  if (page.url().includes('#/media') === false) throw new Error(`media went to ${page.url()}`)
+  await page.goto('http://127.0.0.1:4173/#/media/nonexistent-id')
+  await page.waitForTimeout(500)
+  if (page.url().includes('#/home') === false) {
+    throw new Error(`a bad link landed on ${page.url()} rather than the dashboard`)
+  }
 })
 
 await step('the club hub reaches the buried screens', async () => {
@@ -419,6 +478,51 @@ await step('inbox', async () => {
   if (rows > 0) await tap('.card .list__row >> nth=0')
   await page.waitForTimeout(250)
   await page.screenshot({ path: `${SHOT}/09-inbox.png` })
+})
+
+await step('every inbox link is followed and lands somewhere real', async () => {
+  // This used to count buttons on the inbox screen, which is 0, because the
+  // link button only exists on an *expanded* message. So it passed vacuously
+  // for as long as media links were broken. Open every message and follow
+  // every link instead.
+  await page.goto('http://127.0.0.1:4173/#/inbox')
+  await page.waitForSelector('.list__row, .empty')
+
+  const count = await page.locator('.card > .list__row').count()
+  if (count === 0) throw new Error('no inbox messages to check links on')
+
+  let links = 0
+  const landings = new Map()
+  for (let i = 0; i < count; i++) {
+    await page.goto('http://127.0.0.1:4173/#/inbox')
+    await page.waitForSelector('.card > .list__row')
+    await tap(`.card > .list__row >> nth=${i}`)
+
+    const button = page.locator('.btn--block:has-text("Open ")').first()
+    if (await button.count() === 0) continue
+    const label = (await button.textContent())?.trim()
+    if (label === 'Open') throw new Error('an inbox link still just says "Open"')
+
+    await button.click()
+    await page.waitForTimeout(400)
+    const landed = page.url().split('#')[1] ?? '/'
+    links++
+    landings.set(landed.split('/').slice(0, 2).join('/'), (landings.get(landed.split('/').slice(0, 2).join('/')) ?? 0) + 1)
+
+    // The catch-all sends an unroutable link to the dashboard, and the title
+    // screen when nothing is loaded. Neither is a destination a message names.
+    if (landed === '/home' || landed === '/') {
+      throw new Error(`"${label}" fell through to ${landed}`)
+    }
+    // And the screen it landed on has to have rendered something.
+    if (await page.locator('.content').count() === 0) {
+      throw new Error(`"${label}" landed on an empty screen at ${landed}`)
+    }
+  }
+
+  if (links === 0) throw new Error('no inbox message carried a link to follow')
+  console.log(`   ${links} links followed from ${count} messages`)
+  console.log(`   landed on: ${[...landings].map(([k, n]) => `${k} x${n}`).join(', ')}`)
 })
 
 await step('scouting', async () => {
@@ -761,15 +865,6 @@ await step('agents', async () => {
   const standing = await page.textContent('.list__primary .chip')
   console.log(`   ${rows} agents, first is ${standing?.trim()}`)
   await page.screenshot({ path: `${SHOT}/30-agents.png`, fullPage: true })
-})
-
-await step('inbox links name their destination', async () => {
-  await page.goto('http://127.0.0.1:4173/#/inbox')
-  await page.waitForSelector('.list__row, .empty')
-  const buttons = await page.locator('.btn--block:has-text("Open ")').count()
-  const bare = await page.locator('.btn--block').filter({ hasText: /^Open$/ }).count()
-  if (bare > 0) throw new Error(`${bare} inbox links still just say "Open"`)
-  console.log(`   ${buttons} links, all naming where they go`)
 })
 
 await step('milestones', async () => {

@@ -16,9 +16,16 @@ describe('listName', () => {
   })
 
   it('keeps a name that is exactly at the budget', () => {
-    const name = p('Aaaaaaaaaa', 'Bbbbbbbbbbb')
+    const name = p('Aaaaaaaaaaaa', 'Bbbbbbbbbbbbb')
     expect(fullName(name)).toHaveLength(LIST_NAME_BUDGET)
     expect(listName(name)).toBe(fullName(name))
+  })
+
+  it('leaves ordinary Iberian double surnames alone', () => {
+    // The budget was 22, which abbreviated this one — 23 characters and 178px
+    // in a 288px box. Measured, not guessed; see LIST_NAME_BUDGET.
+    expect(listName(p('Gonzalo', 'Montero Robledo'))).toBe('Gonzalo Montero Robledo')
+    expect(listName(p('Wladyslaw', 'Wojciechowski'))).toBe('Wladyslaw Wojciechowski')
   })
 
   it('never invents an initial from an empty forename', () => {

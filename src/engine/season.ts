@@ -24,6 +24,7 @@ import {
   contractTermsFor, paySeasonBonuses, signContract, type ContractOffer,
 } from './systems/directorContract'
 import type { Club, GameState, ID, JobOffer, League, Player, SeasonHistory } from './types'
+import { playerClub as clubInCharge } from './playerClub'
 
 /**
  * Season rollover.
@@ -96,7 +97,7 @@ export function runSeasonRollover(state: GameState, deps: RolloverDeps): void {
   // --- 2. Director XP -------------------------------------------------------
   // Awarded before promotion is applied, so the XP reflects the division the
   // work was actually done in.
-  const playerClub = state.clubs[state.playerClubId]
+  const playerClub = clubInCharge(state)
   if (playerClub) {
     const league = state.leagues[playerClub.leagueId]
     const position = finalPositions.get(playerClub.id) ?? 20
@@ -654,7 +655,7 @@ export function retirementProbability(player: Player): number {
  */
 function generateJobOffers(state: GameState, deps: RolloverDeps): JobOffer[] {
   const { rng, ids } = deps
-  const currentClub = state.clubs[state.playerClubId]
+  const currentClub = clubInCharge(state)
   if (!currentClub) return []
 
   const level = levelFor(state.director.xp)
@@ -772,10 +773,16 @@ export function acceptJobOffer(
 ): { ok: boolean; message: string } {
   const offer = state.director.jobOffers.find((o) => o.id === offerId)
   if (!offer) return { ok: false, message: 'That offer is no longer available.' }
+  // The UI does not offer a barred post, but the rule belongs here rather than
+  // in a template: a listing you cannot apply for must be un-takeable however
+  // the call arrives.
+  if (offer.barred) {
+    return { ok: false, message: offer.barredReason ?? 'They will not consider you.' }
+  }
   const newClub = state.clubs[offer.clubId]
   if (!newClub) return { ok: false, message: 'That club no longer exists.' }
 
-  const oldClub = state.clubs[state.playerClubId]
+  const oldClub = clubInCharge(state)
   if (oldClub) {
     oldClub.isPlayerClub = false
     closeCareerEntry(state.director, oldClub.id, state.date.season, 'Left for another club')

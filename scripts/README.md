@@ -15,4 +15,6 @@ running one of these rather than by reading code.
 | `npx tsx scripts/crisischeck.ts` | Runs three careers for a season and reports how much of the world ends up under a transfer embargo. |
 | `npx tsx scripts/attrcheck.ts` | Attribute means by division, and how far generated attributes drift from the ability they encode. |
 | `npx tsx scripts/staffcheck.ts` | How many unattached staff exist and how many each club can actually hire. |
+| `npx tsx scripts/linkcheck.ts` | Plays three seasons, collects every link an inbox message or news story carried, and checks each one against the real route table — both as written and again against the world as it stands, since an inbox item outlives the player it names. Found nothing after the media fix; the point is that it stays at nothing. |
+| `node scripts/namefit.mjs` | Walks every screen that lists names in the built app at 390x844 and measures the real name box against the real font. Set `LIST_NAME_BUDGET` from this, not by eye — the guessed 22 was abbreviating 23-character names in a 288px box. Needs the preview server. |
 | `node scripts/e2e.mjs` | Drives the built app in a real mobile-sized browser and screenshots every screen. Needs `npm run build && npx vite preview` first, and `SHOT=<dir>` for the screenshots. |
