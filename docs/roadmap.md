@@ -234,10 +234,19 @@ anyone is listening.
 
 ## Known defects
 
-- **Non-league clubs still fall into crisis more than they should** — around 5
-  of 22, against 0-2 of 24 in every other division. They run on margins of a
-  few percent and a bad season tips them into debt. Much better than it was,
-  and they can trade their way out now, but the rate is still high.
+- **A handful of clubs get stuck in financial crisis for ever.** Measured over
+  fifteen seasons with `scripts/crisisduration.ts`: 19% of clubs pass through
+  crisis, and the median spell is 1.7 seasons, which is football. But three
+  clubs entered crisis in the first two seasons and were still in it at the
+  end — thirteen to fifteen seasons — and fifteen spells ran past three
+  seasons. Two of the permanent ones are top-flight clubs.
+
+  The incidence is fine and the median is fine. The tail is the defect: a club
+  that cannot trade out over a decade is not a struggling club, it is a dead
+  club occupying a division. In reality that club gets rescued — bought by
+  somebody who clears the debt — and the takeover machinery already treats
+  distress as attractive, so the fix is to make prolonged crisis escalate that
+  appeal rather than to make crisis rarer.
 - **Permanent fee-paying transfers run at about two per club per season**
   against a real six to eight. Total squad turnover is close to right at five
   or six moves a club — the mix is still tilted towards free transfers and
