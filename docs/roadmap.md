@@ -657,6 +657,35 @@ week. On the league screen it is what it actually is: what has been happening
 in this division. A rival being taken over belongs next to that rival's league
 position.
 
+## How big a save gets
+
+Asked directly, and answered by running it rather than estimating.
+`scripts/savegrowth.ts` plays a full career to the age cap on a standard world
+(492 clubs, 15,283 players) and takes the size every five seasons — raw JSON,
+and gzipped, which is what IndexedDB actually holds.
+
+| | raw | stored |
+|---|---|---|
+| at creation | 27.8 MB | **2.78 MB** |
+| season 10 | 48.2 MB | 5.10 MB |
+| season 25 | 52.4 MB | 5.52 MB |
+| at retirement, season 35 | 52.1 MB | **5.49 MB** |
+
+1,820 weeks, 35 seasons, 7 sackings. A whole career less than doubles the save:
+raw x1.87, stored x1.97, about 79 KB of stored growth a season. It is flat from
+season 25 on.
+
+A finished career is 80% players and 12% clubs. The news feed and inbox are
+already pruned (250 and 150 items); `xpLog` is cleared at each season review,
+so it holds one season rather than a career. The only genuinely linear term is
+`club.history` — 492 clubs, one `SeasonHistory` row each per season, ~145 KB of
+raw JSON a year, which gzips to near nothing.
+
+**So storage is not a constraint and was never going to be.** Any argument for
+moving off IndexedDB has to be made on other grounds — surviving a data clear,
+moving a career between devices, migrating old saves eagerly rather than
+lazily, or verifying a leaderboard entry — and not on size.
+
 ## Known defects
 
 Bugs found in play go in `docs/bugs.md` — this section is for the ones with a

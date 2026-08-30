@@ -91,9 +91,11 @@ for (const [key, bytes] of breakdown(state).slice(0, 12)) {
   console.log(`  ${key.padEnd(18)} ${kb(bytes).padStart(8)}  ${((bytes / last.raw) * 100).toFixed(1)}%`)
 }
 
-// The unbounded ones are the lists nothing prunes. Count them rather than
-// guess which they are.
-console.log('\nlists that only ever grow:')
+// Which lists are capped and which are not. Counting beats guessing: the news
+// feed and inbox turned out to be pruned (250 and 150), and `xpLog` is not an
+// unbounded log at all — the season review clears it, so it holds one season.
+// The genuinely linear one is `club.history`, inside `clubs`.
+console.log('\nlist lengths at the end:')
 for (const [label, n] of [
   ['newsFeed', state.newsFeed.length],
   ['inbox', state.inbox.length],
