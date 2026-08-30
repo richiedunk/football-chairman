@@ -5,6 +5,9 @@ import { canAfford } from './finance'
 import { reactToDeparture, reactToSigning, refreshSquadStatuses } from './morale'
 import { ratingForPositionCached } from '../world/attributes'
 import { isTransferWindowOpen } from '../sim/schedule'
+import {
+  adjustForPlayer, agentFee as computeAgentFee, agentFor, agentWillingness,
+} from './agents'
 import { addInboxItem } from './inbox'
 import {
   NON_HOMEGROWN_LIMIT, releaseRegistration, settleArrival, SQUAD_LIMIT,
@@ -333,14 +336,18 @@ function respondToPlayerTerms(
   // count, weighted by the player's own personality.
   const appeal = moveAppeal(state, player, buyer)
   const moneyWeight = 0.45 + (player.ambitionVsMoney > 50 ? 0.2 : -0.1)
-  const satisfaction = wageRatio * moneyWeight + appeal * (1 - moneyWeight)
+  // An agent who does not rate you makes his client harder to sign without
+  // making the terms look any worse, which is exactly how it feels from the
+  // outside: the numbers are fine and the deal keeps not happening.
+  const satisfaction =
+    (wageRatio * moneyWeight + appeal * (1 - moneyWeight))
+    * agentWillingness(agentFor(state, player))
 
-  const agent: Agent | null = player.agentId ? state.agents[player.agentId] ?? null : null
+  const agent: Agent | null = agentFor(state, player)
   // The agent's cut. An aggressive agent representing a good player can make a
-  // deal collapse over his own fee, which is exactly what happens in reality.
-  const agentDemand = agent
-    ? Math.round(offered * 52 * (0.06 + (agent.aggression / 100) * 0.12))
-    : 0
+  // deal collapse over his own fee, which is exactly what happens in reality —
+  // and what he asks depends on how you have treated his clients before now.
+  const agentDemand = computeAgentFee(agent, offered * 52)
   negotiation.agentFee = agentDemand
 
   if (satisfaction >= 0.95) {
@@ -674,6 +681,9 @@ export function executeTransfer(
   settleArrivalRegistration(state, ctx, buyer, player)
 
   reactToSigning(state, buyer, player, ctx.rng)
+  adjustForPlayer(state, buyer.id, player, 'signedClient')
+  if (agentFee > 0) adjustForPlayer(state, buyer.id, player, 'paidFeeWithoutArgument')
+  if (seller) adjustForPlayer(state, seller.id, player, 'soldClient')
   refreshSquadStatuses(state, buyer)
 
   // Revalue in the new context.

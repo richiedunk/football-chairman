@@ -643,10 +643,11 @@ function assignAgents(
   names: NameGenerator,
   nations: Nation[],
 ): void {
-  // A modest number of agents, each with several clients, so that a
-  // relationship with one agent is worth cultivating and falling out with a
-  // powerful one has consequences across several deals.
-  const agentCount = Math.max(12, Math.round(Object.keys(state.players).length / 90))
+  // Enough agents that a typical one has a handful of clients, not a phone
+  // book. The first version gave every agent seventy-odd, which made them
+  // interchangeable — the point of a bloc is that some agents matter far more
+  // than others, and that only works if most of them do not.
+  const agentCount = Math.max(24, Math.round(Object.keys(state.players).length / 26))
   const agents: Agent[] = []
 
   for (let i = 0; i < agentCount; i++) {
@@ -670,9 +671,12 @@ function assignAgents(
     if (player.isAcademy && !rng.chance(0.25)) continue
     if (player.currentAbility < 55 && !rng.chance(0.4)) continue
 
+    // Suitability by standing, then weighted hard towards the well-connected.
+    // Without the second term every agent ends up with the same number of
+    // clients and there are no super-agents to fall out with.
     const suitability = agents.map((a) => {
       const gap = Math.abs(a.reputation - player.currentAbility / 2)
-      return Math.max(1, 60 - gap)
+      return Math.max(1, 60 - gap) * Math.pow(a.reputation / 50, 2.2)
     })
     const agent = rng.weighted(agents, suitability)
     player.agentId = agent.id

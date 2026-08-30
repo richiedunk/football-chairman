@@ -23,6 +23,7 @@ import {
 } from '../engine/systems/registration'
 import { AUTOSAVE_SLOT, loadGame, saveGame } from '../storage/saves'
 import { addNews } from '../engine/systems/inbox'
+import { agentsInvolvedWith, clientsOf, introductions } from '../engine/systems/agents'
 import { haptic } from '../platform/native'
 import { achievements } from '../platform/services'
 import {
@@ -640,6 +641,29 @@ export const useGameStore = defineStore('game', () => {
     return ACHIEVEMENTS.map((entry) => ({ ...entry, earned: earned.has(entry.id) }))
   })
 
+  // --- Agents ---------------------------------------------------------------
+
+  const agents = computed(() => {
+    void revision.value
+    const s = state.value
+    const c = club.value
+    return s && c ? agentsInvolvedWith(s, c) : []
+  })
+
+  const agentIntroductions = computed(() => {
+    void revision.value
+    const s = state.value
+    const c = club.value
+    return s && c ? introductions(s, c) : []
+  })
+
+  function agentClients(agentId: ID) {
+    void revision.value
+    const s = state.value
+    const agent = s?.agents[agentId]
+    return s && agent ? clientsOf(s, agent) : []
+  }
+
   // --- Squad registration ---------------------------------------------------
 
   const registration = computed(() => {
@@ -726,6 +750,7 @@ export const useGameStore = defineStore('game', () => {
     loanOut, loanIn, recall, loansOut, loansIn,
     registration, registrationOpen, register, unregister, autoPickSquad, isHomegrown,
     achievementProgress, newAchievements,
+    agents, agentIntroductions, agentClients,
     idFactory, nameGenerator, reset,
   }
 })

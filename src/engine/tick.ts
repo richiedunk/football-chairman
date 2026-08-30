@@ -21,7 +21,10 @@ import { computeValue } from './systems/valuation'
 import { payDirectorSalary, paySeverance } from './systems/directorContract'
 import { runSeasonRollover } from './season'
 import { produceIntake, INTAKE_WEEK } from './systems/academy'
-import { reconcileRegistration, squadRegistration, SQUAD_LIMIT } from './systems/registration'
+import {
+  reconcileRegistration, squadRegistration, SQUAD_LIMIT, U21_AGE,
+} from './systems/registration'
+import { adjustForPlayer } from './systems/agents'
 import { drawNextRoundIfDue, settleRound } from './sim/cups'
 import type {
   Club, Fixture, GameState, ID, MatchResult, Player, SeasonPhase,
@@ -306,6 +309,12 @@ export function advanceWeek(state: GameState, deps: TickDeps): TickResult {
   // frozen. Reconciling rather than rebuilding matters: the human's choices
   // survive, and only the empty places get filled.
   if (isRegistrationLockWeek(week)) lockSquadRegistrations(state, ids)
+
+  // --- 7c. Agents notice who is not playing --------------------------------
+  // Checked once, late enough in the season for "he is not playing" to mean
+  // something, and only for the human's club — nobody is keeping score of how
+  // two AI clubs treat each other's clients.
+  if (week === FREEZE_OUT_REVIEW_WEEK) reviewFrozenOutClients(state, ids)
 
   // --- 8. Scouting ----------------------------------------------------------
   if (playerClub) {
@@ -695,6 +704,55 @@ function playerClubForPricing(state: GameState): Club | null {
 }
 
 /** Sorted league table for a competition, exported for the UI. */
+/**
+ * Late enough in the season that a player with almost no minutes has genuinely
+ * been frozen out rather than merely started slowly.
+ */
+const FREEZE_OUT_REVIEW_WEEK = 36
+
+/**
+ * Agents take a view on clients who are not playing.
+ *
+ * A director who signs a player and then leaves him in the stands has not
+ * broken any rule, and the agent who put the deal together will price that
+ * into the next one. This is the quiet cost of hoarding a squad.
+ */
+function reviewFrozenOutClients(state: GameState, ids: IdFactory): void {
+  const club = state.clubs[state.playerClubId]
+  if (!club) return
+
+  const frozen: Player[] = []
+  for (const id of club.squad) {
+    const player = state.players[id]
+    if (!player || player.isAcademy || player.loanClubId) continue
+    if (player.age < U21_AGE) continue
+    if (player.stats.appearances > 4) continue
+    if (player.injury && player.injury.weeksRemaining > 0) continue
+    if (!player.agentId) continue
+    adjustForPlayer(state, club.id, player, 'clientFrozenOut')
+    frozen.push(player)
+  }
+
+  if (frozen.length < 2) return
+  const names = frozen
+    .slice()
+    .sort((a, b) => b.currentAbility - a.currentAbility)
+    .slice(0, 4)
+    .map((p) => p.knownAs)
+    .join(', ')
+
+  addInboxItem(state, ids, {
+    category: 'player',
+    subject: 'Agents are asking about their clients',
+    from: 'Your assistant',
+    body: `Several agents have been in touch about players who have barely featured this season — `
+      + `${names}${frozen.length > 4 ? ' among others' : ''}. `
+      + 'None of them is threatening anything. They are simply letting you know they have noticed, '
+      + 'and it will be priced into the next deal you do with them.',
+    link: { view: 'squad' },
+  })
+}
+
 /** The week each transfer window's registration deadline falls in. */
 function isRegistrationLockWeek(week: number): boolean {
   return week === 6 || week === 31

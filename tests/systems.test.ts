@@ -49,6 +49,10 @@ import {
   assessClub, assessSquadCost, underEmbargo,
 } from '../src/engine/systems/regulation'
 import { accrueAmortisation } from '../src/engine/systems/finance'
+import {
+  adjustRelationship, agentFee, agentWillingness, decayRelationships, introductions,
+  RELATIONSHIP_EVENTS, STANDING_LABELS, STANDING_NOTES, standingFor,
+} from '../src/engine/systems/agents'
 import { linkLabel, SCREEN_LABELS } from '../src/ui/screens'
 import type { FinanceLedger } from '../src/engine/types'
 import type { GameState } from '../src/engine/types'
@@ -1659,5 +1663,112 @@ describe('screen labels', () => {
 
   it('falls back rather than showing a bare route name', () => {
     expect(linkLabel('somewhere-new')).toBe('Open Somewhere-new')
+  })
+})
+
+describe('agents', () => {
+  it('prices its fee off the relationship', () => {
+    const state = freshWorld('AGENT-FEE')
+    const agent = Object.values(state.agents)[0]!
+    const annualWage = 20_000 * 52
+
+    agent.relationship = 90
+    const friendly = agentFee(agent, annualWage)
+    agent.relationship = 50
+    const neutral = agentFee(agent, annualWage)
+    agent.relationship = 5
+    const hostile = agentFee(agent, annualWage)
+
+    expect(friendly).toBeLessThan(neutral)
+    expect(hostile).toBeGreaterThan(neutral)
+    // The spread is worth caring about, not a rounding error.
+    expect(hostile / friendly).toBeGreaterThan(1.5)
+  })
+
+  it('makes a hostile agent an obstacle without changing the terms', () => {
+    const state = freshWorld('AGENT-WILL')
+    const agent = Object.values(state.agents)[0]!
+
+    agent.relationship = 95
+    const willing = agentWillingness(agent)
+    agent.relationship = 0
+    const obstructive = agentWillingness(agent)
+
+    expect(willing).toBeGreaterThan(1)
+    expect(obstructive).toBeLessThan(1)
+    expect(agentWillingness(null), 'a player without an agent is unaffected').toBe(1)
+  })
+
+  it('only remembers how the human club behaves', () => {
+    const state = freshWorld('AGENT-SCOPE')
+    const agent = Object.values(state.agents)[0]!
+    const other = Object.values(state.clubs).find((c) => c.id !== state.playerClubId)!
+    agent.relationship = 50
+
+    expect(adjustRelationship(state, other.id, agent, 'releasedClient')).toBe(0)
+    expect(agent.relationship).toBe(50)
+
+    expect(adjustRelationship(state, state.playerClubId, agent, 'releasedClient')).toBeLessThan(0)
+    expect(agent.relationship).toBeLessThan(50)
+  })
+
+  it('charges more for the things that cost nothing at the time', () => {
+    // Freezing a player out, haggling a fee down and letting a contract run
+    // down are all free on the day and expensive later. That ordering is the
+    // design, so it is worth pinning.
+    expect(RELATIONSHIP_EVENTS.clientRanDownContract).toBeLessThan(RELATIONSHIP_EVENTS.soldClient)
+    expect(RELATIONSHIP_EVENTS.hagglingRefused).toBeLessThan(RELATIONSHIP_EVENTS.hagglingAccepted)
+    expect(RELATIONSHIP_EVENTS.signedClient).toBeGreaterThan(0)
+    expect(RELATIONSHIP_EVENTS.releasedClient).toBeLessThan(0)
+  })
+
+  it('drifts back towards indifference, grudges more slowly than favours', () => {
+    const state = freshWorld('AGENT-DECAY')
+    const agents = Object.values(state.agents)
+    const friend = agents[0]!
+    const enemy = agents[1]!
+    friend.relationship = 90
+    enemy.relationship = 10
+
+    for (let season = 0; season < 5; season++) decayRelationships(state)
+
+    expect(friend.relationship).toBeLessThan(90)
+    expect(enemy.relationship).toBeGreaterThan(10)
+    // Both moved towards 50; the grudge moved less far.
+    expect(90 - friend.relationship).toBeGreaterThan(enemy.relationship - 10)
+  })
+
+  it('introduces clients only to a director an agent trusts', () => {
+    const state = freshWorld('AGENT-INTRO')
+    const club = state.clubs[state.playerClubId]
+    for (const agent of Object.values(state.agents)) agent.relationship = 50
+    expect(introductions(state, club)).toEqual([])
+
+    // A trusted agent with an unhappy client at another club.
+    const agent = Object.values(state.agents).find((a) => a.clientIds.length > 3)!
+    agent.relationship = 95
+    let seeded = false
+    for (const id of agent.clientIds) {
+      const player = state.players[id]
+      if (!player || player.clubId === club.id || player.isAcademy) continue
+      player.morale = 20
+      player.currentAbility = Math.min(player.currentAbility, Math.round(club.reputation * 1.5))
+      seeded = true
+      break
+    }
+    expect(seeded, 'no suitable client to seed the test with').toBe(true)
+
+    const offered = introductions(state, club)
+    expect(offered.length).toBeGreaterThan(0)
+    expect(offered[0].agent.id).toBe(agent.id)
+  })
+
+  it('bands the relationship into something a screen can say', () => {
+    expect(standingFor(95)).toBe('trusted')
+    expect(standingFor(50)).toBe('neutral')
+    expect(standingFor(5)).toBe('hostile')
+    for (const standing of Object.keys(STANDING_LABELS)) {
+      expect(STANDING_NOTES[standing as keyof typeof STANDING_NOTES]).toBeTruthy()
+    }
   })
 })

@@ -2,6 +2,7 @@ import { clamp, Rng } from '../rng'
 import { computeValue, computeWageDemand, squadImportance, totalWageBill } from './valuation'
 import { releaseRegistration } from './registration'
 import { writeOffBookValue } from './finance'
+import { adjustForPlayer } from './agents'
 import type { Club, Contract, GameState, Player, SquadStatus } from '../types'
 
 /**
@@ -127,6 +128,9 @@ export function applyRenewal(
   const league = state.leagues[club.leagueId]
   const nation = state.nations[club.nationId]
   player.value = computeValue(player, league, nation, state.date.season)
+
+  // His agent takes a view on how the club treats the people he represents.
+  adjustForPlayer(state, club.id, player, 'renewedClient')
 }
 
 /** A sensible opening offer, so the UI can pre-fill the renewal screen. */
@@ -265,6 +269,7 @@ export function releasePlayer(
 
   club.finances.balance -= cost
   club.finances.season.otherCosts += cost
+  adjustForPlayer(state, club.id, player, 'releasedClient')
   writeOffBookValue(state, player)
   club.squad = club.squad.filter((id) => id !== player.id)
   releaseRegistration(club, player.id)

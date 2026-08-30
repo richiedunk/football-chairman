@@ -13,6 +13,7 @@ import { emptyStats } from './world/playerGen'
 import { cupResultFor, resetCup } from './sim/cups'
 import { accrueTrainingYear, autoRegister, releaseRegistration } from './systems/registration'
 import { writeOffBookValue } from './systems/finance'
+import { adjustForPlayer, decayRelationships } from './systems/agents'
 import {
   applyPointsDeductions, assessClub, SANCTION_LABELS, SQUAD_COST_LIMIT,
   type RegulationOutcome,
@@ -145,6 +146,10 @@ export function runSeasonRollover(state: GameState, deps: RolloverDeps): void {
 
   // --- 4b. Academy churn ----------------------------------------------------
   releaseUnpromotedYouth(state, deps)
+
+  // Agents drift back towards indifference between seasons. Without it a
+  // single bad window follows a director for a whole career.
+  decayRelationships(state)
 
   // --- 4c. Squad registration ----------------------------------------------
   // Lists are rebuilt from scratch each summer. Promotion, relegation, expiry
@@ -394,6 +399,10 @@ function processPlayerYearEnd(state: GameState, deps: RolloverDeps): void {
       // exactly why letting one go for nothing costs nothing in the books
       // even though it costs everything on the pitch.
       writeOffBookValue(state, player)
+      // His agent notices, and remembers. Letting a client walk for nothing is
+      // the cheapest thing a director can do at the time and one of the
+      // dearest afterwards.
+      if (club) adjustForPlayer(state, club.id, player, 'clientRanDownContract')
       player.clubId = null
       player.contract = null
       player.loanClubId = null

@@ -379,6 +379,24 @@ await step('career and earnings', async () => {
   await page.screenshot({ path: `${SHOT}/15-career.png`, fullPage: true })
 })
 
+await step('agents', async () => {
+  await page.goto('http://127.0.0.1:4173/#/agents')
+  await page.waitForSelector('text=Agents you deal with')
+  // Agent rows are buttons; the introductions above them are static rows, so
+  // the tag is what separates the two.
+  const rows = await page.locator('button.list__row').count()
+  if (rows === 0) throw new Error('no agents listed')
+
+  // Opening one must show the standing, the relationship and what his cut
+  // would be — the whole point is that the number is visible.
+  await page.click('button.list__row >> nth=0')
+  await page.waitForSelector('text=Relationship')
+  await page.waitForSelector('text=/wk deal')
+  const standing = await page.textContent('.list__primary .chip')
+  console.log(`   ${rows} agents, first is ${standing?.trim()}`)
+  await page.screenshot({ path: `${SHOT}/30-agents.png`, fullPage: true })
+})
+
 await step('inbox links name their destination', async () => {
   await page.goto('http://127.0.0.1:4173/#/inbox')
   await page.waitForSelector('.list__row, .empty')

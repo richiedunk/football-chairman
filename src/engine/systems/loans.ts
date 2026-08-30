@@ -2,6 +2,7 @@ import { clamp, Rng } from '../rng'
 import { IdFactory } from '../ids'
 import { executeTransfer } from './transfers'
 import { releaseRegistration, settleArrival } from './registration'
+import { adjustForPlayer } from './agents'
 import { squadImportance } from './valuation'
 import { ratingForPositionCached } from '../world/attributes'
 import { isTransferWindowOpen } from '../sim/schedule'
@@ -158,6 +159,10 @@ export function proposeLoanOut(
     wageContribution: clamp(wageShare, 0, 1),
     loanUntilSeason: state.date.season + Math.max(0, seasons - 1),
   })
+
+  // Agents take a dim view of a client being sent away, though far less so
+  // than of one being sold — a loan that gets him playing is arguably a favour.
+  adjustForPlayer(state, parent.id, player, 'loanedClientOut')
 
   return {
     ok: true,

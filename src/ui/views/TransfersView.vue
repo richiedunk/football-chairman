@@ -284,5 +284,12 @@ function withdraw(negotiation: TransferNegotiation) {
         <div v-if="!recentWorldTransfers.length" class="empty">No transfers yet.</div>
       </div>
     </div>
+
+    <div class="btn-row mt" style="padding-bottom: 8px">
+      <button class="btn btn--ghost" @click="router.push('/agents')">
+        Agents<span v-if="store.agentIntroductions.length"> ({{ store.agentIntroductions.length }} offered)</span>
+      </button>
+      <button class="btn btn--ghost" @click="router.push('/scouting')">Scouting</button>
+    </div>
   </div>
 </template>

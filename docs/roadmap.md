@@ -89,7 +89,7 @@ length of the contract, and *every* financial rule above depends on that. This
 has to be built before regulation can be, and it changes the finance ledger,
 the season roll and the board's view of the books.
 
-### 3. Agents as characters
+### 3. Agents as recurring characters — built
 
 The `Agent` type already exists with reputation, aggression, a client list and
 a relationship value — and nothing surfaces any of it. Make agents visible and

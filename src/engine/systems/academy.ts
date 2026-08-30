@@ -5,6 +5,7 @@ import { computeValue, computeWageDemand } from './valuation'
 import type { Club, GameState, Player, Staff } from '../types'
 import type { IdFactory } from '../ids'
 import type { NameGenerator } from '../names/generator'
+import { adjustForPlayer } from './agents'
 
 /**
  * The academy.
@@ -104,6 +105,7 @@ export function promoteToSenior(
   player.isAcademy = false
   player.squadStatus = 'prospect'
   player.desiredStatus = 'prospect'
+  adjustForPlayer(state, club.id, player, 'promotedClientFromAcademy')
 
   // A promoted player expects a professional wage.
   const league = state.leagues[club.leagueId]
