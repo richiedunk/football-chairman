@@ -13,29 +13,39 @@ will break next.
 
 ## Open
 
-### The player table inflates, and senior squads thin as it does
+### The world loses contracted players, season after season
 Measured with `scripts/population.ts` on a standard world (492 clubs), twelve
 seasons, staying employed throughout:
 
-| | start | s1 | s3 | s5 | s6 |
-|---|---|---|---|---|---|
-| total players | 15,307 | 17,048 | 19,597 | 19,513 | 18,970 |
-| senior, contracted | 12,792 | 12,780 | 12,983 | 11,371 | **11,059** |
-| academy | 2,121 | 4,047 | 5,844 | 4,824 | 4,534 |
-| free agents | 394 | 221 | 770 | **3,318** | 3,377 |
+| season | total | senior, contracted | academy | free agents |
+|---|---|---|---|---|
+| start | 15,307 | **12,792** | 2,121 | 394 |
+| 3 | 19,597 | 12,983 | 5,844 | 770 |
+| 6 | 18,970 | 11,059 | 4,534 | 3,377 |
+| 9 | 18,077 | 10,760 | 4,249 | 3,068 |
+| 12 | 17,672 | **10,673** | 3,858 | 3,141 |
 
-Correction to an earlier note here: players are **not** never removed —
-`season.ts` deletes them on retirement. What happens is that generation
-outpaces absorption. Academy intakes nearly triple the academy population in
-three seasons, then those players wash out into a free-agent pool that grows
-eightfold and never drains, while the number of players actually under senior
-contract *falls* by 1,700. That last row is the "squads thin at the season
-roll" defect seen from the other side: it is not that squads are being emptied,
-it is that the world is producing players clubs do not sign.
+The total rises to a peak in season three and then falls back, so the table is
+not running away. The problem is the second column. Players under senior
+contract fall by 2,119 — seventeen per cent — and by season twelve are still
+drifting down rather than settling. Meanwhile the free-agent pool goes from 394
+to a steady ~3,100 at a median age of 21: young players nobody signs, sitting
+there for the rest of the save.
 
-Two costs. The tick walks the whole table every week, so 19,000 players instead
-of 15,300 is part of why a week is slow. And 3,377 free agents, median age 22,
-are mostly players no club will ever take.
+So the "squads thin at the season roll" defect is not squads being emptied at
+the roll. It is a world that puts more players out of contract each season than
+it puts back under one, and the roll is only where it shows. The academy tripling
+and then halving is the same story: intakes are produced faster than clubs
+absorb them, and the surplus washes into the free-agent pool.
+
+Correction to an earlier note here, and to how this was first described:
+players are **not** never removed — `season.ts` deletes them on retirement, and
+the totals confirm it. The fault is on the signing side, not the removal side.
+
+Two costs. The tick walks the whole table every week, so the ~3,100 permanently
+unsigned free agents are dead weight on every advance. And a league whose clubs
+carry seventeen per cent fewer professionals than they started with is a league
+slowly becoming less real.
 
 Separately and less urgently, the *per-player record* grows too — about 1.5 KB
 at creation, 2.2 KB by season fifteen — which is `careerStats`, one row per
