@@ -1,0 +1,84 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600&display=swap">
+  <style>
+    body { margin: 0; font-family: 'Inter', system-ui, sans-serif; }
+  </style>
+</helmet>
+
+<div style="width: 390px; height: 844px; background: #08090B; color: #DDE1E6; display: flex; flex-direction: column; overflow: hidden">
+
+  <!-- Status strip -->
+  <div style="height: 30px; background: #101216; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #6B7280; flex-shrink: 0">
+    <div>S2027/28 · W22</div>
+    <div style="display: flex; gap: 14px"><span style="color: #FFB020">£41.2m</span><span>WAGE 68%</span></div>
+  </div>
+
+  <!-- Club -->
+  <div style="padding: 18px 16px 16px; border-bottom: 1px solid #1A1D23">
+    <div style="font-size: 20px; font-weight: 600; letter-spacing: -0.02em">Manchester United</div>
+    <div style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #6B7280; padding-top: 3px">THE PREM</div>
+  </div>
+
+  <!-- Data block: the table you actually read -->
+  <div style="padding: 16px; border-bottom: 1px solid #1A1D23; font-family: 'JetBrains Mono', monospace; font-size: 13px; display: flex; flex-direction: column; gap: 7px">
+    <div style="display: flex; justify-content: space-between"><span style="color: #6B7280">POS</span><span><span style="color: #FFB020; font-weight: 700">4</span> / 20 · target 6</span></div>
+    <div style="display: flex; justify-content: space-between"><span style="color: #6B7280">PTS</span><span>44 <span style="color: #6B7280">(+3 on 5th)</span></span></div>
+    <div style="display: flex; justify-content: space-between"><span style="color: #6B7280">FORM</span><span style="letter-spacing: 0.22em"><span style="color: #3FB950">W</span><span style="color: #3FB950">W</span><span style="color: #6B7280">D</span><span style="color: #3FB950">W</span><span style="color: #F85149">L</span></span></div>
+    <div style="display: flex; justify-content: space-between"><span style="color: #6B7280">NEXT</span><span>SAT · CHE (A) · 3rd</span></div>
+    <div style="display: flex; justify-content: space-between"><span style="color: #6B7280">AVAIL</span><span>22 / 25 · <span style="color: #F85149">2 out</span> 1 dbt</span></div>
+  </div>
+
+  <!-- Queue -->
+  <div style="padding: 16px 16px 6px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #6B7280; letter-spacing: 0.1em">DECISIONS [3]</div>
+  <div style="display: flex; flex-direction: column">
+    <div style="display: flex; gap: 11px; padding: 12px 16px; border-top: 1px solid #1A1D23; align-items: center">
+      <div style="width: 3px; height: 30px; background: #F85149; flex-shrink: 0"></div>
+      <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 2px">
+        <div style="font-size: 14px; font-weight: 500">Bruno's deal expires in June</div>
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #6B7280">CONTRACT · 18 WEEKS LEFT</div>
+      </div>
+    </div>
+    <div style="display: flex; gap: 11px; padding: 12px 16px; border-top: 1px solid #1A1D23; align-items: center">
+      <div style="width: 3px; height: 30px; background: #FFB020; flex-shrink: 0"></div>
+      <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 2px">
+        <div style="font-size: 14px; font-weight: 500">Newcastle bid £34m for Mainoo</div>
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #6B7280">TRANSFER · VAL £41M · 4D</div>
+      </div>
+    </div>
+    <div style="display: flex; gap: 11px; padding: 12px 16px; border-top: 1px solid #1A1D23; border-bottom: 1px solid #1A1D23; align-items: center">
+      <div style="width: 3px; height: 30px; background: #2A2E36; flex-shrink: 0"></div>
+      <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 2px">
+        <div style="font-size: 14px; font-weight: 500; color: #98A0AC">Scout report on Zirkzee filed</div>
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #6B7280">SCOUTING · BOL · £38M ASK</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="flex-grow: 1"></div>
+
+  <div style="padding: 0 16px 12px">
+    <div style="height: 50px; background: #FFB020; color: #16120A; display: flex; align-items: center; justify-content: center; gap: 9px; font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 700; letter-spacing: 0.04em">
+      ADVANCE &rsaquo;&rsaquo; W23
+    </div>
+  </div>
+
+  <div style="height: 56px; border-top: 1px solid #1A1D23; display: flex; align-items: center; justify-content: space-around; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.06em; flex-shrink: 0">
+    <div style="color: #FFB020">CLUB</div>
+    <div style="color: #6B7280">SQUAD</div>
+    <div style="color: #6B7280">MARKET</div>
+    <div style="color: #6B7280">INBOX<span style="color: #F85149">·3</span></div>
+    <div style="color: #6B7280">TABLE</div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

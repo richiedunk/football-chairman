@@ -23,3 +23,6 @@ android/local.properties
 android/.idea/
 android/captures/
 *.iml
+
+# Seeded design canvas payload (2MB, regenerate with seed-canvas.mjs)
+design/director-of-football-ui.html
