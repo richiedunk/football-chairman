@@ -750,11 +750,20 @@ export function processAiTransfers(state: GameState, ctx: TransferContext): void
     // exclusive chain. A club that has just sold someone is more likely to
     // sign someone, not less, and the old `continue` after each branch meant
     // a club could do at most one piece of business a week.
-    // A club that has to raise money will listen to offers for anyone who is
-    // not part of the spine, not just the ones it has already given up on.
+    // Who the club would let go.
+    //
+    // Selling is what pays for buying: a club's wage budget leaves it room for
+    // one or two signings a season and no more, so without outgoings the
+    // market seizes up after August. Real clubs turn over a quarter of the
+    // squad a year in both directions. A club that has to raise money will
+    // listen to offers for anyone outside the spine.
+    const tightOnWages =
+      club.finances.wageBudget - totalWageBill(state, club) < club.finances.wageBudget * 0.06
     const sellable = squad.filter(
       (p) => p.listedForTransfer || p.transferRequested
-        || (squad.length > 26 && p.squadStatus === 'backup')
+        || p.squadStatus === 'surplus'
+        || (squad.length > 24 && p.squadStatus === 'backup')
+        || (tightOnWages && (p.squadStatus === 'backup' || p.squadStatus === 'prospect'))
         || (inCrisis && (p.squadStatus === 'backup' || p.squadStatus === 'rotation')),
     )
     if (sellable.length > 0 && rng.chance(inCrisis ? SELL_CHANCE * 2.5 : SELL_CHANCE)) {
@@ -849,9 +858,9 @@ export function processAiTransfers(state: GameState, ctx: TransferContext): void
  * signing per club per season across the entire world, which left the transfer
  * market inert and clubs sitting on money they had no way to spend.
  */
-const SELL_CHANCE = 0.2
+const SELL_CHANCE = 0.34
 const LOAN_CHANCE = 0.14
-const BUY_CHANCE = 0.42
+const BUY_CHANCE = 0.5
 
 /** Transferable players by position, best first. */
 function buildMarketIndex(state: GameState): Map<Position, Player[]> {
@@ -907,6 +916,19 @@ function aiCompleteDeal(
 }
 
 /** The position where a club is furthest below the standard of its division. */
+/**
+ * Where a club would most like to strengthen.
+ *
+ * This used to return nothing at all unless some position was more than
+ * twelve points below the division's standard, which meant a well-run club
+ * was never in the market: it had no weakness, so it never signed anybody.
+ * Clubs do not only sign players to patch holes — most transfers are an
+ * attempt to be better in a position that was already adequate.
+ *
+ * So there is always a target. Quality gaps come first, and where the squad
+ * is uniformly decent the thinnest position wins, because depth is the other
+ * reason clubs buy.
+ */
 function weakestPosition(state: GameState, club: Club, squad: Player[]): Player['position'] | null {
   const league = state.leagues[club.leagueId]
   if (!league) return null
@@ -914,20 +936,24 @@ function weakestPosition(state: GameState, club: Club, squad: Player[]): Player[
 
   const positions: Player['position'][] = ['GK', 'DC', 'DL', 'DR', 'DM', 'MC', 'ML', 'MR', 'AM', 'ST']
   let worst: Player['position'] | null = null
-  let worstGap = 0
+  let worstScore = -Infinity
 
   for (const position of positions) {
     const inPosition = squad.filter((p) => p.position === position)
     const best = inPosition.length
       ? Math.max(...inPosition.map((p) => p.currentAbility))
       : 0
-    const gap = standard - best
-    if (gap > worstGap) {
-      worstGap = gap
+    // A quality shortfall counts for more than a depth one, but a position
+    // with a single body in it is a problem whatever his rating.
+    const quality = standard - best
+    const thinness = Math.max(0, 2 - inPosition.length) * 9
+    const score = quality + thinness
+    if (score > worstScore) {
+      worstScore = score
       worst = position
     }
   }
-  return worstGap > 12 ? worst : null
+  return worst
 }
 
 /**

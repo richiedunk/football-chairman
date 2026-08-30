@@ -93,9 +93,20 @@ export function processFinances(
     const interest = Math.round(club.finances.debt * club.finances.weeklyInterestRate)
     club.finances.balance -= interest
     ledger.interestPaid += interest
-    // Clubs repay debt when they can afford to.
-    if (club.finances.balance > club.finances.debt * 0.3) {
-      const repayment = Math.round(Math.min(club.finances.debt, club.finances.balance * 0.04))
+
+    // Repay out of whatever is spare above a working-capital buffer.
+    //
+    // The old rule only repaid once the balance exceeded 30% of the debt,
+    // which is exactly backwards: the larger the debt, the more unreachable
+    // the condition, so a club that fell far enough behind could never begin
+    // repaying at all. Traced over four seasons, clubs were sitting on debts
+    // of a quarter to two thirds of a billion that did not move by a penny
+    // while they ran a healthy weekly surplus, because they would have needed
+    // £180m in the bank before the first repayment was allowed.
+    const buffer = weeklyRevenue(state, club) * DEBT_BUFFER_WEEKS
+    if (club.finances.balance > buffer) {
+      const spare = club.finances.balance - buffer
+      const repayment = Math.round(Math.min(club.finances.debt, spare * 0.25))
       club.finances.debt -= repayment
       club.finances.balance -= repayment
     }
@@ -471,6 +482,15 @@ export function annualAmortisation(state: GameState, club: Club): number {
   }
   return Math.round(total)
 }
+
+/**
+ * Weeks of turnover a club keeps in hand before paying down debt.
+ *
+ * Everything above it goes against the borrowing, which is both what a club
+ * with a bank covenant actually does and the thing that stops cash piling up
+ * with nowhere to go.
+ */
+const DEBT_BUFFER_WEEKS = 8
 
 /** Prize money and central payments awarded at the end of a season. */
 export function awardSeasonPrizeMoney(

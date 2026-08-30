@@ -33,6 +33,18 @@ export const TARGET_SENIOR_SQUAD = 24
 /** Below this a club is short enough to take what it can get. */
 export const THIN_SENIOR_SQUAD = 20
 
+/**
+ * The squad size a club will fill up to out of the free-agent pool.
+ *
+ * Deliberately below the target. Free agents are available every week of the
+ * year and cost no fee, so a club that used them to reach its full squad size
+ * arrived at every transfer window already full and with its wage budget
+ * spent — which is what kept fee-paying transfers down at one a season per
+ * club against a real six to eight. The gap between this and the target is
+ * the room a club keeps back for the window.
+ */
+export const FREE_AGENT_TARGET = 21
+
 /** Below this a club cannot field a side and hires whoever will come. */
 export const EMERGENCY_SQUAD = 16
 
@@ -277,9 +289,9 @@ function recruitOne(
   rng: Rng,
 ): Player | null {
   const squad = seniorSquad(state, club)
-  if (squad.length >= TARGET_SENIOR_SQUAD) return null
+  if (squad.length >= FREE_AGENT_TARGET) return null
 
-  const shortfall = TARGET_SENIOR_SQUAD - squad.length
+  const shortfall = FREE_AGENT_TARGET - squad.length
   const desperation = clamp(shortfall / 8, 0, 1)
   // Below the floor the club cannot put out a side with anyone left over, and
   // it stops shopping and starts hiring. Without this a club that fell behind

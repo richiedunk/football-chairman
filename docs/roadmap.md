@@ -164,18 +164,17 @@ anyone is listening.
 
 ## Known defects
 
-- **Non-league clubs still fall into financial crisis too often** — around 7 of
-  22, against 1-2 of 24 in every other division. They run on margins of a few
-  percent and any bad season tips them into debt they service slowly. They can
-  now trade their way out, which they could not before, but the rate is higher
-  than it should be.
-- **Cash still drifts upward at the top.** A top-flight club averages £189m
-  after eight seasons, against £306m before this work but still climbing.
-  Transfer fees cannot fix it — one club's fee is another's income, so they net
-  to zero worldwide — and the remaining gap is that permanent fee-paying deals
-  run at about one per club per season against a real six to eight. Total squad
-  turnover is close to right (roughly five moves a club a season across
-  permanent, free and loan); it is the mix that is wrong.
+- **Non-league clubs still fall into crisis more than they should** — around 5
+  of 22, against 0-2 of 24 in every other division. They run on margins of a
+  few percent and a bad season tips them into debt. Much better than it was,
+  and they can trade their way out now, but the rate is still high.
+- **Permanent fee-paying transfers run at about two per club per season**
+  against a real six to eight. Total squad turnover is close to right at five
+  or six moves a club — the mix is still tilted towards free transfers and
+  loans. The ceiling is the wage budget: a club cannot carry six new salaries
+  a year without shedding six, and raising the budget further would break the
+  squad-cost calibration. The remaining gap is that AI clubs sell less than
+  real ones do.
 
 ## Standing rules for this project
 
