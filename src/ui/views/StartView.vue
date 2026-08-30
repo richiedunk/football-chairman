@@ -83,5 +83,12 @@ function when(ts: number) {
     <p class="tiny faint center mt">
       Saves are stored on this device ({{ storageName() }}). Clearing site data removes them.
     </p>
+
+    <p class="tiny faint center" style="padding: 0 12px 10px; line-height: 1.5">
+      Club names are used only to identify the real clubs taking part. No club, competition
+      or individual endorses this game or is associated with it, and all third-party trade
+      marks belong to their owners. Every player, member of staff and ground in the game is
+      invented.
+    </p>
   </div>
 </template>

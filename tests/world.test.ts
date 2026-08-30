@@ -4,7 +4,7 @@ import { ratingForPosition, meanAttributeForAbility } from '../src/engine/world/
 import { computeValue } from '../src/engine/systems/valuation'
 import { minAgeForAbility } from '../src/engine/world/playerGen'
 import type { GameState } from '../src/engine/types'
-import { isRealClubIdentity } from '../src/engine/world/clubNames'
+import { REAL_CLUBS } from '../src/engine/world/realClubs'
 
 let world: GameState
 
@@ -184,22 +184,36 @@ describe('world generation', () => {
     }
   })
 
-  it('avoids reproducing real club identities', () => {
-    // Held against the generator's own rule rather than a list somebody
-    // remembered to type out, and across several seeds, because a name only
-    // has to be reachable to eventually be reached: an earlier version of this
-    // test named a dozen clubs and caught Liverpool FC by luck when an
-    // unrelated change shifted the random stream.
-    for (const seed of ['NAMES-A', 'NAMES-B', 'NAMES-C', 'NAMES-D']) {
-      const generated = generateWorld({
-        seed, season: 2025, size: 'compact', homeNationId: 'eng',
-        directorName: 'T', background: 'analyst',
+  it('places the real clubs in their real divisions', () => {
+    // The game ships with actual clubs and nothing else real. This holds the
+    // generated world against the data pack: every club the pack lists for a
+    // division has to be in that division, under that name.
+    for (const [nationId, tiers] of Object.entries(REAL_CLUBS)) {
+      const nation = world.nations[nationId]
+      if (!nation) continue
+      tiers.forEach((pack, index) => {
+        const league = nation.leagueIds
+          .map((id) => world.leagues[id])
+          .find((l) => l.tier === index + 1)
+        if (!league) return
+        const names = new Set(league.clubIds.map((id) => world.clubs[id].name))
+        for (const real of pack.slice(0, league.clubIds.length)) {
+          expect(names.has(real.name), `${real.name} missing from ${league.name}`).toBe(true)
+        }
       })
-      for (const club of Object.values(generated.clubs)) {
-        expect(isRealClubIdentity(club.name), `${seed} generated ${club.name}`).toBe(false)
-      }
     }
-  }, 120_000)
+  })
+
+  it('still generates a name where the pack runs short', () => {
+    // Divisions the pack does not cover have to fill themselves, and what they
+    // produce has to sit alongside the real thing without looking odd.
+    for (const club of Object.values(world.clubs)) {
+      // Two characters is the floor, not three: AZ is a real club.
+      expect(club.name.length, club.name).toBeGreaterThanOrEqual(2)
+      expect(club.shortName.length, club.name).toBeGreaterThanOrEqual(2)
+      expect(club.colors.primary).toMatch(/^#[0-9A-Fa-f]{6}$/)
+    }
+  })
 
   it('gives every club a distinct name', () => {
     const names = new Set<string>()

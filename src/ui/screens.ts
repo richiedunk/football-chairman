@@ -26,6 +26,7 @@ export const SCREEN_LABELS: Record<string, string> = {
   league: 'League table',
   career: 'Career',
   achievements: 'Milestones',
+  about: 'About',
 }
 
 export function screenLabel(view: string): string {

@@ -177,6 +177,23 @@ A compressed sequence at the close of each window: offers arriving with hours
 rather than weeks to answer, rival clubs hijacking deals in progress, and
 selling clubs suddenly reasonable about a price they would not discuss in July.
 
+## Real club names
+
+The game ships with the actual clubs, in the divisions they actually play in,
+and nothing else real. This follows the model the genre has long used: club
+names are used descriptively, to identify which club a thing happened to, and
+for no other purpose. Every player, coach, scout, agent, owner, architect and
+journalist is generated, no crest or kit design is reproduced, and no likeness
+of any real person appears anywhere.
+
+The notice lives on the title screen and in full on the About screen, and it is
+written for this game rather than copied from anyone else's.
+
+`src/engine/world/realClubs.ts` is a data pack keyed by nation and tier. Where
+it runs short, world generation makes up the rest, so the pack can be as
+complete or as partial as it is accurate — and a division nobody has filled in
+still works. Keeping it current is a data edit, not a code change.
+
 ## Platform integrations (store-side, not engine)
 
 None of this touches the simulation. It is shell work, it needs real developer

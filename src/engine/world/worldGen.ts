@@ -10,6 +10,7 @@ import { scheduleLeague } from '../sim/schedule'
 import { generateArchitects } from '../systems/stadium'
 import { autoRegister } from '../systems/registration'
 import { createOwner, ownerName, startingOwnerKind } from '../systems/ownership'
+import { realClubsFor, type RealClub } from './realClubs'
 import { resetCup } from '../sim/cups'
 import { SAVE_VERSION } from '../types'
 import type {
@@ -204,14 +205,23 @@ export function generateWorld(options: WorldGenOptions): GameState {
         reputations[b] = tmp
       }
 
+      // The real clubs for this division, where the pack has them. Laid out in
+      // the order the pack lists them against reputations already drawn, so the
+      // strongest slot gets the first entry. Where the pack runs short the
+      // remaining slots are generated, which means a partial pack is as usable
+      // as a complete one and nothing has to be invented to fill a gap.
+      const realForTier = realClubsFor(def.id, tierIdx + 1)
+
       for (let i = 0; i < tierDef.clubCount; i++) {
         const city = cityPool[cityIndex % cityPool.length]
         cityIndex++
         const reputation = reputations[i]
+        const real = realForTier[i] ?? null
 
         const club = createClub(
-          rng, ids, nation, league, def, city.name, city.size, reputation, takenClubNames, season,
-          names,
+          rng, ids, nation, league, def,
+          real?.city ?? city.name, city.size, reputation, takenClubNames, season,
+          names, real,
         )
         state.clubs[club.id] = club
         league.clubIds.push(club.id)
@@ -341,8 +351,20 @@ function createClub(
   taken: Set<string>,
   season: number,
   names: NameGenerator,
+  real: RealClub | null,
 ): Club {
-  const naming = generateClubName(rng, city, def.clubNameStyle as ClubNameStyle, taken, season)
+  // A real club brings its own identity; everything else about it — the squad,
+  // the staff, the owner, the ground — is generated like any other.
+  const naming = real
+    ? {
+        name: real.name,
+        shortName: real.shortName,
+        nickname: real.nickname || 'The Club',
+        colors: { primary: real.primary, secondary: real.secondary },
+        founded: real.founded,
+      }
+    : generateClubName(rng, city, def.clubNameStyle as ClubNameStyle, taken, season)
+  if (real) taken.add(real.name.toLowerCase())
 
   // Somebody owns the place, and who they are explains most of how the board
   // behaves. Outside money concentrates at the top of the pyramid, which is

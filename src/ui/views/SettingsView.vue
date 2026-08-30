@@ -143,6 +143,10 @@ function mb(bytes: number) {
       </div>
     </div>
 
+    <button class="btn btn--ghost btn--block mt" @click="router.push('/about')">
+      About and legal notice
+    </button>
+
     <button class="btn btn--danger btn--block mt" style="margin-bottom: 8px" @click="quit">
       Quit to title
     </button>
