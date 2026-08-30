@@ -10,19 +10,47 @@ moving on. Every calibration bug in this project so far has surfaced by
 simulating seasons and reading the numbers, never by inspecting code — so
 "measure after each" is a rule, not a nicety.
 
-1. **Squad registration** — self-contained, and it changes how everything
-   after it feels. Do it first so later systems are built against the
-   constraint rather than retrofitted to it.
-2. **Financial regulation** — builds on the same compliance mindset and can
-   share its UI.
-3. **Agents as characters** — independent of the other two; the data model
-   already exists and is unused.
-4. **Ownership takeovers** and **deadline day** — narrative layers over
-   systems that are stable by then.
+### Done
 
-**Deferred: continental competitions.** Qualification places are already
+1. **Squad registration** — self-contained, and it changes how everything
+   after it feels. Done first so later systems were built against the
+   constraint rather than retrofitted to it.
+2. **Financial regulation** — builds on the same compliance mindset and shares
+   its UI.
+3. **Agents as characters** — independent of the other two; the data model
+   already existed and was unused.
+4. **Ownership takeovers** and **deadline day** — narrative layers over
+   systems that were stable by then.
+
+### Now
+
+5. **The visual language** — first, because everything after it adds screens.
+   Doing it later means retrofitting six new views instead of building them
+   right. See "The visual language" below.
+
+### Next, in this order
+
+6. **Director age and career length.** You start at 30 and are gone at 65, no
+   exceptions. There is no age field on the director at all today.
+7. **The long save.** Never yet run. The 65 cap bounds a full career at about
+   thirty-five seasons, which makes it a finite, measurable thing rather than
+   an open-ended soak test.
+8. **Recruitment model.** Consolidates dials that already exist rather than
+   sitting beside them.
+9. **Buy-back clauses.** Small, self-contained, and it makes selling young
+   players a decision rather than a loss.
+10. **The data department.** Needs the recruitment model to sit on.
+11. **The dressing room.** Deliberately last of the new systems, because it is
+    the one that could pull the game out of its lane.
+12. **International football.** Largest of the new work, and it wants a stable
+    calendar underneath it.
+
+**Still deferred: continental competitions.** Qualification places are already
 modelled and clubs already qualify; the competition itself is not built. It is
-the largest remaining hole and the largest job. Not now.
+the largest remaining hole and the largest job. Either it gets built or the
+dangling `continentalPlaces` hooks get hidden — leaving leagues awarding
+qualification to a competition that does not exist is the worst of the three
+options. Decide after the long save, which will show how much it is missed.
 
 ## What each mirrors
 
@@ -176,6 +204,188 @@ it, and it is what makes a long save worth playing.
 A compressed sequence at the close of each window: offers arriving with hours
 rather than weeks to answer, rival clubs hijacking deals in progress, and
 selling clubs suddenly reasonable about a price they would not discuss in July.
+
+## The visual language
+
+The old UI had no source. It accreted panel by panel, and the result was
+card-in-card: every section a bordered box on the same dark ground, so nothing
+on a screen was louder than anything else. That is what read as busy. It was
+never the amount of information.
+
+Three directions were drawn, each on Home and on the squad list — the squad
+list being the real test, since it is twenty-five rows of nine attributes.
+`design/` holds the artboards.
+
+**The direction, settled:**
+
+- **Body: dense and typographic.** Near-black neutral `#08090B`, JetBrains
+  Mono for every number, Inter for names and prose, fixed columns, hairline
+  rules instead of borders. Thirteen squad rows fit without scrolling where the
+  card layouts fit eight, and nothing is boxed.
+- **Controls: one saturated accent.** Lime `#C8FF4D` for the single primary
+  action on a screen, and an icon-and-label bottom bar. A mono text nav reads
+  as a toolbar and gives no tap affordance.
+- **Club colour lives in the header only.** The band is the club primary
+  converted to HSL with lightness clamped into 10–17% and chroma capped, so
+  white text always clears 4.5:1; a 3px strip of the untouched colour sits
+  beneath it. White primaries fall through to the secondary; near-blacks lift
+  rather than clamp. Nothing below the strip is ever club-coloured, so no club
+  in the pack can break the palette. One function, `headerBand()`.
+- **Home is a dashboard with hierarchy, not a grid of tiles.** A uniform grid
+  of equal boxes is the exact fault being fixed; Football Chairman's version of
+  it is good at showing state and bad at saying what matters. So nothing on
+  Home is the same size or shape as anything else: the standing is 66px and
+  unchallenged, board confidence sits under it with a marker at the target
+  because position-against-target is what drives it, the next match gets a
+  raised band and the opponent's colour, decisions read as an inbox, and the
+  six departments are one small bar chart rather than six tiles — same numbers,
+  a quarter of the height, and a weak department legible without knowing the
+  scale. Everything stays tappable; it stops looking like a menu.
+
+**Five nav slots**: Club, Squad, Market, Inbox, League. Finance, Facilities,
+Board, Staff, Scouting, Agents, Registration, Achievements and the rest are
+reached from the dashboard. Fewer top-level places and deeper drill-down is the
+actual de-busying.
+
+### The advance button
+
+Weeks are an engine detail. "Advance to Week 23" leaks it, and nobody wants
+week 23. A bare "Advance" hides what it is about to set off, which matters in a
+game with weeks that are dangerous to step through.
+
+So: one button, one place, two lines — a verb phrase naming the next real
+event, and a mono line carrying what the week actually holds.
+
+    Advance to Chelsea        SAT · AWAY · 2 OUT
+    Advance a week            INTERNATIONAL BREAK · 6 CALLED UP
+    Deadline day              4 OFFERS OPEN · CLOSES 11PM
+    Continue                  CHELSEA 1 – 2 UNITED
+    Start the season          SQUAD REGISTERED · 24/25
+    2 things need you first   NEWCASTLE BID · BRUNO RENEWAL
+
+The last is the blocking state: same button, same place, amber, but it opens
+the first blocker instead of advancing. **It blocks only on things that expire
+if ignored** — an offer about to lapse, a contract inside its last six weeks.
+You can still refuse them. You cannot sleepwalk past them. It never blocks to
+make you read something, because that trains you to tap through without
+looking.
+
+One tap then runs the whole routine: clear blockers, run the week, play the
+match, show the result, return to the dashboard.
+
+## Director age and career length
+
+You start at **30** and you are finished at **65**, no exceptions. There is no
+age on the director today, and adding it changes the shape of a save from
+open-ended to a career with a horizon.
+
+Why it earns its place:
+
+- **It makes time cost something.** A three-year rebuild at 58 is a different
+  decision from the same rebuild at 34. Nothing else in the game currently
+  makes the player feel the clock.
+- **It bounds the long save.** Thirty-five seasons is a finite thing to
+  simulate and measure, and it is roughly a real career: a director appointed
+  at 30 who lasts is Txiki Begiristain, not a dynasty.
+- **It gives the ending a shape.** Retirement at 65 is a summary, not a
+  failure — trophies, clubs, players sold on, the youth graduates who made it.
+
+Starting at 30 is the other half. The jobs board already gates by experience;
+age gives that gate a reason. You are not starting at a non-league club because
+the game says so, you are starting there because you are thirty and nobody
+sensible hands a thirty-year-old a Premier League recruitment department.
+
+## Recruitment model
+
+Not a new set of dials. `ClubStrategy` already carries `youthEmphasis`,
+`systemFit`, `wageAggression`, `sellingClubStance`, `domesticBias`,
+`mediaStance` and `targetSquadSize`, and they are all market policy. The
+recruitment model **consolidates** them into a stated philosophy the club is
+known for, rather than adding a thirteenth slider next to twelve others.
+
+What a philosophy should do that loose dials do not:
+
+- **Be legible to everyone else.** Agents, players, the board and the media
+  should all know what kind of club you are, and price accordingly. A selling
+  club gets different offers from a hoarding one.
+- **Cost something to change.** Turning a youth project into a win-now push
+  mid-cycle should be a visible break with what the board signed off, not a
+  slider drag.
+- **Constrain the AI too**, so divisions contain clubs that recruit
+  differently and predictably, which is what makes a market feel real.
+
+The care needed: a philosophy must stay *market* policy. The moment it starts
+saying how the team plays, we are in the head coach's job.
+
+## Buy-back clauses
+
+Insert a buy-back price and a window when selling. It is a real and now very
+common mechanism, and it is squarely the director's instrument.
+
+What it buys the game: selling a 19-year-old stops being a pure loss. You can
+take the money, let someone else pay his wages and give him the football you
+could not, and keep the right to bring him back at a known price. When he
+becomes very good, the clause is worth more than the fee ever was — and when it
+lapses unexercised because you had no room in the 25, that is a real and
+self-inflicted regret.
+
+Needs: a price, a window, a decision point when the window opens, and AI clubs
+that both request and honour them. Selling clubs should resist a low buy-back
+the way they resist a low fee.
+
+## The data department
+
+An investable department, like the academy or scouting, whose output is an
+**edge rather than an answer**: a shortlist of players the model thinks are
+underpriced, each with a confidence figure, and both the list and the
+confidence get better the more you have put in.
+
+Why this and not a better scout: it is the single most real thing about the
+modern job. It is also the honest way to make an information advantage a
+purchase rather than a gift — a badly funded department produces a short list
+of low-confidence names, some of them wrong, which is exactly what a badly
+funded department produces.
+
+It sits on top of the recruitment model, which is why it comes after it: the
+edge should be expressed in the club's own terms.
+
+## The dressing room
+
+Agreed, and **it cuts both ways**. A strong positive character lifts a room —
+a senior professional who sets standards raises the players around him — as
+surely as a disruptive one poisons it. Both need to be visible, and both need
+tuning carefully, because a system where every signing is a risk and none is an
+upside is just a tax.
+
+**The line this system must not cross.** The dressing room is where this game
+would slip out of its lane. It gives **information and consequences, never
+man-management actions**. There are no team talks, no praising or fining
+players, no individual training focus, no promises about playing time made in a
+meeting. You learn that the room is turning, you see it in results and in
+renewal talks, and you act on it the way a director actually does: by selling
+someone, by not renewing someone, by signing a certain kind of professional, or
+by backing or dismissing the head coach.
+
+Every existing `ClubStrategy` dial is market policy and none is a tactic, and
+there is no team selection, formation, training or team talk anywhere in the
+game. That is the line, and the dressing room is built to respect it.
+
+## International football
+
+Consequences, not management. You do not pick a national side; you live with
+what it does to your players.
+
+- **Call-ups** take players out of your weeks, and the number of them is a
+  consequence of how you recruited — a squad built on South Americans empties
+  differently from one built at home.
+- **Caps and tournaments raise value and wages.** A player who has a good
+  summer costs more to keep and is worth more to sell, which is the single
+  most reliably real thing about the transfer market.
+- **Injuries on international duty** are the oldest grievance in the job.
+- **Tournament years reshape the calendar and the market**, and a good
+  tournament turns a squad player into a target.
+
+It wants a stable calendar underneath it, which is why it is last.
 
 ## Real club names
 
