@@ -17,7 +17,7 @@ import {
 
 const store = useGameStore()
 const router = useRouter()
-const toast = inject<(t: string, k?: 'info' | 'error' | 'success') => void>('toast')
+const notify = inject<(t: string, k?: 'info' | 'error' | 'success') => void>('notify')
 
 const director = computed(() => store.game?.director ?? null)
 const level = computed(() => levelFor(director.value?.xp ?? 0))
@@ -49,7 +49,7 @@ function agree(contract: ContractOffer) {
   const result = acceptJobOffer(s, offer.id, contract)
   store.commit()
   negotiating.value = null
-  toast?.(result.message, result.ok ? 'success' : 'error')
+  notify?.(result.message, result.ok ? 'success' : 'error')
   if (result.ok) router.push('/welcome')
 }
 
@@ -77,7 +77,7 @@ function decline(offerId: string) {
   if (!s) return
   s.director.jobOffers = s.director.jobOffers.filter((o) => o.id !== offerId)
   store.commit()
-  toast?.('Approach declined.')
+  notify?.('Approach declined.')
 }
 
 const seasonsLeft = computed(() => (director.value ? seasonsRemaining(director.value) : 0))

@@ -9,7 +9,7 @@ import { underEmbargo } from '../../engine/systems/regulation'
 import type { Player } from '../../engine/types'
 
 const store = useGameStore()
-const toast = inject<(t: string, k?: 'info' | 'error' | 'success') => void>('toast')
+const notify = inject<(t: string, k?: 'info' | 'error' | 'success') => void>('notify')
 
 const view = computed(() => store.registration)
 const open = computed(() => store.registrationOpen)
@@ -31,19 +31,18 @@ const embargoed = computed(() => (store.club ? underEmbargo(store.club) : false)
 
 function add(player: Player) {
   const result = store.register(player.id)
-  if (!result.ok) toast?.(result.message ?? 'He cannot be registered.', 'error')
-  else toast?.(`${player.knownAs} added to the squad list.`, 'success')
+  // Only the refusal needs saying. A successful registration shows itself:
+  // the player moves from one list to the other in front of you.
+  if (!result.ok) notify?.(result.message ?? 'He cannot be registered.', 'error')
 }
 
 function remove(player: Player) {
   const result = store.unregister(player.id)
-  if (!result.ok) toast?.(result.message ?? 'He cannot be removed.', 'error')
-  else toast?.(`${player.knownAs} taken off the squad list.`)
+  if (!result.ok) notify?.(result.message ?? 'He cannot be removed.', 'error')
 }
 
 function autoPick() {
   store.autoPickSquad()
-  toast?.('The secretary has filled in the form.', 'success')
 }
 </script>
 

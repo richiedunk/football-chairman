@@ -19,6 +19,58 @@ const errors = []
 page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()) })
 page.on('pageerror', (e) => errors.push(`PAGEERROR: ${e.message}`))
 
+/**
+ * Outcomes are shown on a screen that has to be dismissed, not a toast that
+ * takes itself away. So reading one means reading it AND clearing it, or the
+ * next step finds a full-screen panel sitting over whatever it wanted to tap.
+ */
+let noticeShot = false
+const readNotice = async () => {
+  if (!(await page.locator('.notice').count())) return null
+  const text = (await page.textContent('.notice__text'))?.trim() ?? null
+  // Photograph the first one, so the screen that replaced the toast is
+  // actually looked at rather than assumed.
+  if (!noticeShot) {
+    noticeShot = true
+    await page.screenshot({ path: `${SHOT}/00-notice.png` })
+  }
+  // Queued messages stack; clear the lot.
+  for (let i = 0; i < 8 && (await page.locator('.notice').count()); i++) {
+    await page.click('.notice .advance')
+    await page.waitForTimeout(150)
+  }
+  return text
+}
+
+/**
+ * Press the week button, coping with a message arriving as you reach for it.
+ *
+ * The notice mounts through a fade, so a check that runs a moment too early
+ * sees nothing and the click that follows is intercepted by a panel that was
+ * not there when we looked. Rather than tune a timeout until it stops failing,
+ * this treats interception as the ordinary case: clear whatever arrived and go
+ * again.
+ */
+const tap = async (target) => {
+  const locator = typeof target === 'string' ? page.locator(target) : target
+  for (let attempt = 0; attempt < 4; attempt++) {
+    await readNotice()
+    try {
+      await locator.click({ timeout: 6000 })
+      return
+    } catch (err) {
+      // Answering one thing produces a message about it, which then covers the
+      // next thing. That is the design working; the harness just has to read
+      // its post before reaching for the next button.
+      if (!(await page.locator('.notice').count())) throw err
+    }
+  }
+  const stuck = await page.textContent('.notice__text').catch(() => null)
+  throw new Error(`a notice would not clear: ${stuck ?? 'unknown'}`)
+}
+
+const clickAdvance = () => tap('.advance-bar .advance')
+
 const step = async (name, fn) => {
   process.stdout.write(`→ ${name} … `)
   try { await fn(); console.log('ok') }
@@ -38,16 +90,16 @@ await step('load title', async () => {
 })
 
 await step('open new career', async () => {
-  await page.click('text=Start a new career')
+  await tap('text=Start a new career')
   await page.waitForSelector('text=New career')
   await page.fill('#dof-name', 'Richie Dunk')
-  await page.click('text=Data Analyst')
-  await page.click('.segmented__item:has-text("Compact")')
+  await tap('text=Data Analyst')
+  await tap('.segmented__item:has-text("Compact")')
   await page.screenshot({ path: `${SHOT}/02-newgame.png` })
 })
 
 await step('generate world', async () => {
-  await page.click('text=Create world')
+  await tap('text=Create world')
   await page.waitForSelector('text=Jobs board', { timeout: 60000 })
   await page.screenshot({ path: `${SHOT}/03-jobs.png`, fullPage: false })
 })
@@ -60,10 +112,10 @@ await step('locked jobs are shown as targets', async () => {
 
 await step('take a job', async () => {
   // Open jobs carry a wage-budget line; locked ones carry an XP requirement.
-  await page.click('.list__row:has-text("/wk wages") >> nth=0')
+  await tap('.list__row:has-text("/wk wages") >> nth=0')
   await page.waitForSelector('.btn:has-text("Open contract talks")')
   await page.screenshot({ path: `${SHOT}/04-club-detail.png` })
-  await page.click('.btn:has-text("Open contract talks")')
+  await tap('.btn:has-text("Open contract talks")')
   await page.waitForSelector('text=Performance bonuses')
   await page.screenshot({ path: `${SHOT}/05-contract.png`, fullPage: true })
 
@@ -75,7 +127,7 @@ await step('take a job', async () => {
     const max = await sliders.nth(i).getAttribute('max')
     if (max) await sliders.nth(i).fill(max)
   }
-  await page.click('.btn--primary:has-text("Put it to them")')
+  await tap('.btn--primary:has-text("Put it to them")')
   await page.waitForTimeout(500)
 
   const refusal = await page.locator('.sheet').count()
@@ -84,7 +136,7 @@ await step('take a job', async () => {
   console.log(`   pushed too far: ${message?.trim()}`)
 
   // The counter is now pre-filled, so submitting again should land.
-  await page.click('.btn--primary:has-text("Try again")')
+  await tap('.btn--primary:has-text("Try again")')
 
   // Taking a job lands on the handover screen, not straight on the home
   // screen: what you have taken on, what they expect, and what state they
@@ -96,7 +148,7 @@ await step('take a job', async () => {
   await page.waitForTimeout(600)
   await page.screenshot({ path: `${SHOT}/06-welcome.png`, fullPage: true })
 
-  await page.click('.btn--primary:has-text("Get to work")')
+  await tap('.btn--primary:has-text("Get to work")')
   await page.waitForSelector('.tabbar', { timeout: 30000 })
   await page.waitForSelector('.dash-standing')
   await page.screenshot({ path: `${SHOT}/07-home.png` })
@@ -137,24 +189,29 @@ let decisionsAnswered = 0
 let reportsSeen = 0
 async function clearMatchReports() {
   for (let i = 0; i < 4 && page.url().includes('#/match/'); i++) {
+    await readNotice()
     if (!(await page.locator('.report-score__goals').count())) {
       throw new Error('match report rendered without a scoreline')
     }
     reportsSeen++
-    await page.click('.advance')
-    await page.waitForTimeout(250)
+    await clickAdvance()
+    await page.waitForTimeout(300)
   }
   if (page.url().includes('#/match/')) throw new Error('could not get off the match report')
 }
 
 async function advanceOneWeek() {
+  // Anything still waiting to be read sits over the whole app, so it is cleared
+  // before reaching for a button underneath it.
+  await readNotice()
   if (!page.url().includes('#/home')) {
     await page.goto('http://127.0.0.1:4173/#/home')
-    await page.waitForSelector('.advance')
+    await page.waitForSelector('.advance-bar .advance')
   }
-  await page.click('.advance')
+  await clickAdvance()
   await page.waitForFunction(() => !document.querySelector('.overlay'), null, { timeout: 30000 })
-  await page.waitForTimeout(150)
+  await page.waitForTimeout(300)
+  await readNotice()
   await clearMatchReports()
 
   if (page.url().includes('#/inbox')) {
@@ -164,25 +221,27 @@ async function advanceOneWeek() {
     // refuse; the helper was the thing being too timid, and it left the run
     // stuck at week 28 with the clock apparently stopped.
     for (let attempt = 0; attempt < 12; attempt++) {
+      await readNotice()
       const decide = page.locator('.chip--danger:has-text("Urgent"), .chip--warn:has-text("Decide")').first()
       if (!(await decide.count())) break
-      await decide.click()
+      await tap(decide)
       await page.waitForTimeout(200)
       // The decision options are the block buttons under the prompt.
       const option = page.locator('.col > .btn--block:not([disabled])').first()
       if (!(await option.count())) break
-      await option.click()
+      await tap(option)
       decisionsAnswered++
-      await page.waitForTimeout(200)
+      await page.waitForTimeout(250)
     }
     await page.goto('http://127.0.0.1:4173/#/home')
-    await page.waitForSelector('.advance')
+    await page.waitForSelector('.advance-bar .advance')
     // The blocked button opens the blocker rather than advancing, so a tick
     // that hit one has not moved the clock yet. Take the week now that the
     // way is clear, or the caller's count of weeks is a count of taps.
-    await page.click('.advance')
+    await clickAdvance()
     await page.waitForFunction(() => !document.querySelector('.overlay'), null, { timeout: 30000 })
-    await page.waitForTimeout(150)
+    await page.waitForTimeout(300)
+    await readNotice()
     await clearMatchReports()
   }
 }
@@ -208,7 +267,7 @@ await step('a match report can be reopened and reads in full', async () => {
   await page.waitForSelector('.dash-standing')
   const recent = page.locator('.list__row:has-text("W")').first()
   await page.locator('text=Recent').waitFor({ timeout: 15000 })
-  await recent.click()
+  await tap(recent)
   await page.waitForSelector('.report-score__goals', { timeout: 15000 })
 
   const score = (await page.textContent('.report-score__goals'))?.replace(/\s+/g, '')
@@ -227,19 +286,19 @@ await step('a match report can be reopened and reads in full', async () => {
   if (await page.locator('.advance').count()) {
     throw new Error('a reopened report is offering to advance the week')
   }
-  await page.click('.topbar__back')
+  await tap('.topbar__back')
   await page.waitForTimeout(300)
   if (page.url().includes('#/match/')) throw new Error('stuck on a reopened report')
 })
 
 await step('squad screen', async () => {
-  await page.click('.tabbar__item:has-text("Squad")')
+  await tap('.tabbar__item:has-text("Squad")')
   await page.waitForSelector('text=Sort by')
   await page.screenshot({ path: `${SHOT}/08-squad.png` })
 })
 
 await step('player profile', async () => {
-  await page.click('.list__row >> nth=0')
+  await tap('.list__row >> nth=0')
   await page.waitForSelector('text=Attributes', { timeout: 10000 })
   await page.screenshot({ path: `${SHOT}/09-player.png`, fullPage: true })
 })
@@ -251,10 +310,10 @@ await step('league table', async () => {
 })
 
 await step('inbox', async () => {
-  await page.click('.tabbar__item:has-text("Inbox")')
+  await tap('.tabbar__item:has-text("Inbox")')
   await page.waitForTimeout(400)
   const rows = await page.locator('.card .list__row').count()
-  if (rows > 0) await page.click('.card .list__row >> nth=0')
+  if (rows > 0) await tap('.card .list__row >> nth=0')
   await page.waitForTimeout(250)
   await page.screenshot({ path: `${SHOT}/09-inbox.png` })
 })
@@ -269,23 +328,21 @@ await step('hire a scout', async () => {
   await page.goto('http://127.0.0.1:4173/#/staff')
   await page.waitForSelector('text=Hire')
   const before = await page.locator('.list__row:has-text("Scout")').count()
-  await page.click('.list__row:has-text("Scout") >> nth=-1')
+  await tap('.list__row:has-text("Scout") >> nth=-1')
   await page.waitForSelector('.sheet')
   await page.screenshot({ path: `${SHOT}/17-hire-list.png` })
   const candidates = await page.locator('.sheet .list__row').count()
   if (candidates === 0) throw new Error('no hireable scouts offered')
-  await page.click('.sheet .list__row >> nth=0')
+  await tap('.sheet .list__row >> nth=0')
   await page.waitForSelector('.sheet .btn--primary:has-text("Hire")')
   await page.screenshot({ path: `${SHOT}/18-hire-offer.png` })
-  await page.click('.sheet .btn--primary:has-text("Hire")')
+  await tap('.sheet .btn--primary:has-text("Hire")')
   await page.waitForTimeout(700)
 
   // A refusal is a legitimate outcome — a club in financial crisis cannot take
   // on wages — so the test accepts either the hire landing or the game saying
   // clearly why it did not. Silence would be the bug.
-  const toastText = (await page.locator('.toast').count())
-    ? (await page.textContent('.toast'))?.trim()
-    : null
+  const toastText = await readNotice()
   const after = await page.locator('.list__row:has-text("Scout")').count()
   if (after <= before && !toastText) {
     throw new Error('hire neither succeeded nor reported a reason')
@@ -300,19 +357,19 @@ await step('ask the board for something', async () => {
   await page.screenshot({ path: `${SHOT}/20-board.png`, fullPage: true })
 
   const request = page.locator('.list__row:has-text("Ask for transfer funds")').first()
-  await request.click()
+  await tap(request)
   await page.waitForTimeout(400)
 
   if (await page.locator('.sheet').count()) {
     await page.screenshot({ path: `${SHOT}/21-board-request.png` })
-    await page.click('.sheet .btn--primary:has-text("Put it to the board")')
+    await tap('.sheet .btn--primary:has-text("Put it to the board")')
     await page.waitForTimeout(500)
-    const outcome = await page.textContent('.toast')
+    const outcome = await readNotice()
     console.log(`   board said: ${outcome?.trim().slice(0, 90)}`)
   } else {
     // Refused before opening — the option was unavailable, which the screen
     // must have explained.
-    const toastText = await page.textContent('.toast')
+    const toastText = await readNotice()
     if (!toastText) throw new Error('request neither opened nor explained itself')
     console.log(`   unavailable: ${toastText.trim().slice(0, 90)}`)
   }
@@ -328,7 +385,7 @@ await step('loan a player out', async () => {
   const rows = page.locator('.list__row:has(.pos)')
   const count = await rows.count()
   if (count === 0) throw new Error('no player rows on the squad screen')
-  await rows.nth(count - 1).click()
+  await tap(rows.nth(count - 1))
   await page.waitForSelector('text=Actions', { timeout: 15000 })
 
   const loanButton = page.locator('.btn:has-text("Send out on loan")')
@@ -336,7 +393,7 @@ await step('loan a player out', async () => {
     console.log('   window closed — loan button correctly hidden')
     return
   }
-  await loanButton.click()
+  await tap(loanButton)
   await page.waitForSelector('.sheet')
   await page.screenshot({ path: `${SHOT}/22-loan.png`, fullPage: true })
 
@@ -345,19 +402,19 @@ await step('loan a player out', async () => {
     console.log('   nobody wanted him, which the sheet said')
     return
   }
-  await page.click('.sheet .btn--primary:has-text("Agree the loan")')
+  await tap('.sheet .btn--primary:has-text("Agree the loan")')
   await page.waitForTimeout(600)
-  const outcome = await page.textContent('.toast')
+  const outcome = await readNotice()
   console.log(`   loan: ${outcome?.trim().slice(0, 90)}`)
 })
 
 await step('media briefing', async () => {
   await page.goto('http://127.0.0.1:4173/#/media')
   await page.waitForSelector('text=Brief a journalist')
-  await page.click('.btn--primary:has-text("Brief a journalist")')
+  await tap('.btn--primary:has-text("Brief a journalist")')
   await page.waitForSelector('.sheet')
   await page.screenshot({ path: `${SHOT}/11-media-brief.png` })
-  await page.click('.sheet .btn--primary:has-text("Make the call")')
+  await tap('.sheet .btn--primary:has-text("Make the call")')
   await page.waitForTimeout(500)
   await page.screenshot({ path: `${SHOT}/12-media-after.png` })
 })
@@ -378,10 +435,10 @@ await step('stadium and architect tender', async () => {
     console.log('   every stand in good order — nothing to repair')
     return
   }
-  await repair.click()
+  await tap(repair)
   await page.waitForSelector('.btn:has-text("Invite tenders")')
   await page.screenshot({ path: `${SHOT}/24-stadium-brief.png` })
-  await page.click('.btn:has-text("Invite tenders")')
+  await tap('.btn:has-text("Invite tenders")')
   await page.waitForSelector('text=Tenders received')
   await page.waitForTimeout(300)
   await page.screenshot({ path: `${SHOT}/25-tenders.png`, fullPage: true })
@@ -391,10 +448,10 @@ await step('stadium and architect tender', async () => {
   console.log(`   ${quotes} firms tendered`)
 
   // Borrowing, so the award does not depend on the club's cash position.
-  await page.click('.segmented__item:has-text("Borrow")')
-  await page.click('.sheet .list__row >> nth=0')
+  await tap('.segmented__item:has-text("Borrow")')
+  await tap('.sheet .list__row >> nth=0')
   await page.waitForTimeout(500)
-  const outcome = await page.textContent('.toast')
+  const outcome = await readNotice()
   console.log(`   ${outcome?.trim().slice(0, 90)}`)
 
   // Whether the award goes through is not this step's to decide: a club in
@@ -419,7 +476,7 @@ await step('stadium and architect tender', async () => {
 await step('squad registration', async () => {
   await page.goto('http://127.0.0.1:4173/#/squad')
   await page.waitForSelector('text=Squad list')
-  await page.click('text=Squad list')
+  await tap('text=Squad list')
   await page.waitForSelector('text=Trained abroad')
 
   const places = await page.textContent('.stat:has-text("Places") .stat__value')
@@ -445,15 +502,15 @@ await step('squad registration', async () => {
 
   // Taking a player off the list must show up immediately in the counters and
   // move him into the "left out" tab — the reactivity chain, again.
-  await page.click('.btn--ghost:has-text("Remove") >> nth=0')
+  await tap('.btn--ghost:has-text("Remove") >> nth=0')
   await page.waitForTimeout(400)
   const after = await page.textContent('.stat:has-text("Places") .stat__value')
   const now = Number((after ?? '0').trim().split('/')[0])
   if (now !== before - 1) throw new Error(`removing a player did not update the count: ${before} -> ${now}`)
 
-  await page.click('.segmented__item:has-text("Left out")')
+  await tap('.segmented__item:has-text("Left out")')
   await page.waitForSelector('.btn:has-text("Register")')
-  await page.click('.btn:has-text("Register") >> nth=0')
+  await tap('.btn:has-text("Register") >> nth=0')
   await page.waitForTimeout(400)
   const restored = await page.textContent('.stat:has-text("Places") .stat__value')
   if (Number((restored ?? '0').trim().split('/')[0]) !== before) {
@@ -595,7 +652,7 @@ await step('agents', async () => {
 
   // Opening one must show the standing, the relationship and what his cut
   // would be — the whole point is that the number is visible.
-  await page.click('button.list__row >> nth=0')
+  await tap('button.list__row >> nth=0')
   await page.waitForSelector('text=Relationship')
   await page.waitForSelector('text=/wk deal')
   const standing = await page.textContent('.list__primary .chip')
@@ -615,7 +672,7 @@ await step('inbox links name their destination', async () => {
 await step('milestones', async () => {
   await page.goto('http://127.0.0.1:4173/#/career')
   await page.waitForSelector('text=Milestones')
-  await page.click('.btn--ghost:has-text("Milestones")')
+  await tap('.btn--ghost:has-text("Milestones")')
   await page.waitForSelector('text=Silverware')
   const earned = await page.textContent('.stat:has-text("Earned") .stat__value')
   console.log(`   ${earned?.trim()} earned`)
@@ -625,11 +682,11 @@ await step('milestones', async () => {
 await step('save and reload', async () => {
   await page.goto('http://127.0.0.1:4173/#/settings')
   await page.waitForSelector('text=Saves')
-  await page.click('.btn--primary:has-text("Save")')
+  await tap('.btn--primary:has-text("Save")')
   await page.waitForTimeout(2500)
   await page.reload({ waitUntil: 'networkidle' })
   await page.waitForSelector('text=Continue', { timeout: 15000 })
-  await page.click('.list__main >> nth=0')
+  await tap('.list__main >> nth=0')
   await page.waitForSelector('.tabbar', { timeout: 30000 })
   await page.waitForTimeout(500)
   const reloaded = await page.textContent('.topbar__club')

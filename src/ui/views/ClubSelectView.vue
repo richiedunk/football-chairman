@@ -24,7 +24,7 @@ import type { ContractOffer } from '../../engine/systems/directorContract'
 const router = useRouter()
 const setup = useSetupStore()
 const store = useGameStore()
-const toast = inject<(t: string, k?: 'info' | 'error' | 'success') => void>('toast')
+const notify = inject<(t: string, k?: 'info' | 'error' | 'success') => void>('notify')
 
 const detail = ref<Club | null>(null)
 const negotiating = ref<Club | null>(null)
@@ -99,7 +99,7 @@ function summaryFor(club: Club) {
 
 function openDetail(club: Club) {
   if (!isOpen(club)) {
-    toast?.(lockNote(club))
+    notify?.(lockNote(club))
     return
   }
   detail.value = club
@@ -120,7 +120,7 @@ function agree(offer: ContractOffer) {
     void store.autosave()
     router.push('/welcome')
   } catch (e) {
-    toast?.(e instanceof Error ? e.message : 'Could not start that career.', 'error')
+    notify?.(e instanceof Error ? e.message : 'Could not start that career.', 'error')
   }
 }
 </script>

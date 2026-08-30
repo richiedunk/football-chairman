@@ -17,7 +17,7 @@ import type { AttributeKey, SquadStatus } from '../../engine/types'
 const route = useRoute()
 const router = useRouter()
 const store = useGameStore()
-const toast = inject<(t: string, k?: 'info' | 'error' | 'success') => void>('toast')
+const notify = inject<(t: string, k?: 'info' | 'error' | 'success') => void>('notify')
 
 const player = computed(() => store.player(String(route.params.id)))
 const isOurs = computed(() => player.value?.clubId === store.club?.id)
@@ -129,7 +129,7 @@ function submitRenewal() {
   const response = store.renew(p.id, offer.value)
   renewMessage.value = response.message
   if (response.accepted) {
-    toast?.(`${p.knownAs} has signed.`, 'success')
+    notify?.(`${p.knownAs} has signed.`, 'success')
     renewOpen.value = false
   } else if (response.counter) {
     offer.value = response.counter
@@ -167,7 +167,7 @@ function submitLoanOut() {
   const p = player.value
   if (!p || !chosenSuitor.value) return
   const result = store.loanOut(p.id, chosenSuitor.value, wageShare.value, loanSeasons.value)
-  toast?.(result.message, result.ok ? 'success' : 'error')
+  notify?.(result.message, result.ok ? 'success' : 'error')
   if (result.ok) loanOutOpen.value = false
 }
 
@@ -175,7 +175,7 @@ function submitLoanIn() {
   const p = player.value
   if (!p) return
   const result = store.loanIn(p.id, wageShare.value)
-  toast?.(result.message, result.ok ? 'success' : 'error')
+  notify?.(result.message, result.ok ? 'success' : 'error')
   if (result.ok) {
     loanInOpen.value = false
     router.push('/squad')
@@ -186,7 +186,7 @@ function doRecall() {
   const p = player.value
   if (!p) return
   const result = store.recall(p.id)
-  toast?.(result.message, result.ok ? 'success' : 'error')
+  notify?.(result.message, result.ok ? 'success' : 'error')
 }
 
 // --- Bid sheet -------------------------------------------------------------
@@ -205,7 +205,7 @@ function submitBid() {
   const p = player.value
   if (!p) return
   const result = store.bid(p.id, bidAmount.value)
-  toast?.(result.message, result.ok ? 'success' : 'error')
+  notify?.(result.message, result.ok ? 'success' : 'error')
   if (result.ok) {
     bidOpen.value = false
     router.push('/transfers')
@@ -218,14 +218,13 @@ function setStatus(status: SquadStatus) {
   const p = player.value
   if (!p) return
   store.setSquadStatus(p.id, status)
-  toast?.(`${p.knownAs} told he is a ${SQUAD_STATUS_LABELS[status].toLowerCase()}.`)
 }
 
 function doRelease() {
   const p = player.value
   if (!p) return
   const result = store.release(p.id)
-  toast?.(result.message, result.ok ? 'success' : 'error')
+  notify?.(result.message, result.ok ? 'success' : 'error')
   if (result.ok) router.back()
 }
 </script>

@@ -247,6 +247,31 @@ Board, Staff, Scouting, Agents, Registration, Achievements and the rest are
 reached from the dashboard. Fewer top-level places and deeper drill-down is the
 actual de-busying.
 
+### Outcomes get a screen, not a toast
+
+Toasts are a poor deal on a phone. They appear where the reader is not looking,
+sit on top of what they are reading, and take themselves away on a timer nobody
+set. That is survivable for "saved" and not survivable for "the board will not
+sanction building work while the club is in crisis" — a sentence with no other
+home in the game.
+
+So an outcome takes the whole screen and waits for a tap. The tap is the point:
+the message has been read, and the game knows it.
+
+Two things came out of building it. The toast **overwrote** rather than queued,
+resetting its own timer on every call — two messages in quick succession meant
+the first was destroyed without trace, which is silent data loss in the one
+channel whose entire job is telling you things. And a full-screen panel needs
+the app behind it to be `inert`, or every control it covers is still reachable
+by keyboard and screen reader, the week button included.
+
+**Not everything earns a screen.** Of the forty-five messages, eight were
+dropped entirely: registering a player, taking him off the list, withdrawing
+interest, setting a squad status, reassigning a scout, saving, loading. In each
+case the list in front of you already changed, and it says it better than a
+sentence can. What is left is refusals — which have no other home — and
+outcomes you cannot otherwise see.
+
 ### The advance button
 
 Weeks are an engine detail. "Advance to Week 23" leaks it, and nobody wants
@@ -486,7 +511,36 @@ question**, decided from GameState by pure code with no platform imports, and
 **reporting them is a platform question**. The engine never knows whether
 anyone is listening.
 
+## The first long save
+
+Thirty-five seasons, 1,820 weeks, one run. It did what it was built to do: the
+director started at thirty, aged a year at each roll, and retired at sixty-five
+having worked exactly thirty-five seasons. The clock is sound.
+
+It says almost nothing about career progression, and the reason is worth
+writing down. `scripts/careerlength.ts` never accepts a job offer — there is no
+AI player — so the run is one club for thirty-five years by construction, not
+by simulation. Reading "one club, no trophies, best finish 4th" as a verdict on
+the game would be reading the harness.
+
+What it did find is the sacking defect below, which nothing shorter would have
+surfaced: a counter reading 169.
+
+The next version of this run needs to accept offers when they come, which is
+the difference between measuring a career and measuring a chair.
+
 ## Known defects
+
+**Being sacked does not remove you from the job.** Found by the first long
+save. `paySeverance` clears the contract and the board's message lands, but
+nothing changes `state.playerClubId` and nothing closes the career entry — so
+the director is still sitting at the club the following week, with no contract,
+and the board sacks him again. Over a thirty-five-season run the counter read
+**169 sackings at one club**, and career earnings came to £30,600 because there
+was no contract to be paid under for most of it. The UI hides this by routing
+to the career screen on a sacking, but nothing stops a player navigating back
+and pressing Advance. `closeCareerEntry` exists and is only ever called when
+leaving *for another club*.
 
 **Squads thin at the season roll from season four onwards.** Mid-season sizes
 hold at the recorded 24-26 with no club below sixteen, but at rollover the

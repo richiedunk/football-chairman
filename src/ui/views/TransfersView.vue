@@ -10,7 +10,7 @@ import Chevron from '../components/Chevron.vue'
 
 const store = useGameStore()
 const router = useRouter()
-const toast = inject<(t: string, k?: 'info' | 'error' | 'success') => void>('toast')
+const notify = inject<(t: string, k?: 'info' | 'error' | 'success') => void>('notify')
 
 const active = computed(() =>
   (store.game?.negotiations ?? []).filter(
@@ -56,7 +56,7 @@ function improve(negotiation: TransferNegotiation) {
   const target = Math.round(negotiation.askingPrice)
   const club = store.club
   if (club && target > club.finances.transferBudget) {
-    toast?.('That exceeds your transfer budget.', 'error')
+    notify?.('That exceeds your transfer budget.', 'error')
     return
   }
   negotiation.offeredFee = target
@@ -68,7 +68,7 @@ function improve(negotiation: TransferNegotiation) {
     text: `Improved offer to ${formatMoney(target, s.settings.currency)}.`,
   })
   store.commit()
-  toast?.('Offer improved. They will respond next week.', 'success')
+  notify?.('Offer improved. They will respond next week.', 'success')
 }
 
 function offerTerms(negotiation: TransferNegotiation) {
@@ -88,13 +88,12 @@ function offerTerms(negotiation: TransferNegotiation) {
   }
   negotiation.respondsOnWeek = s.date.week
   store.commit()
-  toast?.(`Terms offered to ${player.knownAs}.`, 'success')
+  notify?.(`Terms offered to ${player.knownAs}.`, 'success')
 }
 
 function withdraw(negotiation: TransferNegotiation) {
   negotiation.stage = 'withdrawn'
   store.commit()
-  toast?.('Interest withdrawn.')
 }
 </script>
 

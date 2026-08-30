@@ -25,7 +25,7 @@ import { ordinal } from '../../engine/systems/career'
 import { formatMoney } from '../../engine/systems/valuation'
 
 const store = useGameStore()
-const toast = inject<(t: string, k?: 'info' | 'error' | 'success') => void>('toast')
+const notify = inject<(t: string, k?: 'info' | 'error' | 'success') => void>('notify')
 const club = computed(() => store.club)
 
 const patienceLabel = computed(() => {
@@ -61,7 +61,7 @@ const moodFactors = computed(() => {
 
 function openRequest(option: BoardRequestOption) {
   if (!option.available) {
-    toast?.(option.unavailableReason ?? 'Not possible right now.')
+    notify?.(option.unavailableReason ?? 'Not possible right now.')
     return
   }
   asking.value = option
@@ -80,7 +80,7 @@ function submit(kind: BoardRequestKind) {
   )
   store.commit()
   lastResponse.value = { outcome: response.outcome, message: response.message }
-  toast?.(response.message, response.outcome === 'refused' ? 'error' : 'success')
+  notify?.(response.message, response.outcome === 'refused' ? 'error' : 'success')
   asking.value = null
 }
 

@@ -6,6 +6,7 @@ import AppTopBar from './ui/components/AppTopBar.vue'
 import AppStatusBar from './ui/components/AppStatusBar.vue'
 import AppTabBar from './ui/components/AppTabBar.vue'
 import AdvanceBar from './ui/components/AdvanceBar.vue'
+import NoticeScreen, { type Notice } from './ui/components/NoticeScreen.vue'
 import { listSaves } from './storage/saves'
 import { bindAppStateChange, bindBackButton } from './platform/native'
 
@@ -14,18 +15,24 @@ const route = useRoute()
 const router = useRouter()
 
 /**
- * Toasts are provided from the shell rather than owned per-view, so that an
- * action which navigates away can still report its outcome.
+ * Outcomes are provided from the shell rather than owned per-view, so that an
+ * action which navigates away can still report what it did.
+ *
+ * A queue, not a slot. The toast this replaces overwrote whatever was showing
+ * and reset its own timer, so two messages in quick succession meant the first
+ * was destroyed without trace.
  */
-const toast = ref<{ text: string; kind: 'info' | 'error' | 'success' } | null>(null)
-let toastTimer: ReturnType<typeof setTimeout> | undefined
+const notices = ref<Notice[]>([])
+let noticeId = 0
 
-function showToast(text: string, kind: 'info' | 'error' | 'success' = 'info') {
-  toast.value = { text, kind }
-  clearTimeout(toastTimer)
-  toastTimer = setTimeout(() => (toast.value = null), 2600)
+function notify(text: string, kind: 'info' | 'error' | 'success' = 'info') {
+  if (!text) return
+  notices.value = [...notices.value, { id: ++noticeId, text, kind }]
 }
-provide('toast', showToast)
+function dismissNotice() {
+  notices.value = notices.value.slice(1)
+}
+provide('notify', notify)
 
 const hasSaves = ref(false)
 // Screens that own the whole display. The welcome handover is one of them:
@@ -61,8 +68,13 @@ onMounted(async () => {
   // Android's hardware back button, so back navigates rather than quitting.
   cleanups.push(
     await bindBackButton(
-      () => !['start', 'home'].includes(String(route.name)),
-      () => router.back(),
+      () => notices.value.length > 0 || !['start', 'home'].includes(String(route.name)),
+      () => {
+        // A message waiting to be read is what back dismisses first. Navigating
+        // out from under it would lose the thing it was trying to say.
+        if (notices.value.length > 0) dismissNotice()
+        else router.back()
+      },
     ),
   )
 
@@ -81,7 +93,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="app-shell">
+  <div class="app-shell" :inert="notices.length > 0 || undefined">
     <AppTopBar v-if="showChrome" />
     <AppStatusBar v-if="showChrome" />
 
@@ -105,16 +117,12 @@ onUnmounted(() => {
       </div>
     </Transition>
 
-    <Transition name="slide-up">
-      <div
-        v-if="toast"
-        class="toast"
-        :class="{ 'toast--error': toast.kind === 'error', 'toast--success': toast.kind === 'success' }"
-        role="status"
-        aria-live="polite"
-      >
-        {{ toast.text }}
-      </div>
-    </Transition>
+
   </div>
+
+  <!-- Outside the shell, so making the shell inert does not disable the very
+       button that dismisses the message. Deliberately not animated: a screen
+       that has to be acknowledged should be there the moment you look at it,
+       and fading it in leaves its own dismiss button briefly unclickable. -->
+  <NoticeScreen :queue="notices" @dismiss="dismissNotice" />
 </template>

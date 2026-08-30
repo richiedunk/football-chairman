@@ -8,7 +8,7 @@ import { facilityGrade } from '../../engine/systems/facilities'
 import { staffEffectiveness } from '../../engine/world/staffGen'
 
 const store = useGameStore()
-const toast = inject<(t: string, k?: 'info' | 'error' | 'success') => void>('toast')
+const notify = inject<(t: string, k?: 'info' | 'error' | 'success') => void>('notify')
 
 const club = computed(() => store.club)
 const director = computed(() => store.staff.find((s) => s.role === 'academyDirector') ?? null)
@@ -31,7 +31,7 @@ const weeksToIntake = computed(() => {
 
 function promote(playerId: string) {
   const result = store.promote(playerId)
-  toast?.(result.message, result.ok ? 'success' : 'error')
+  notify?.(result.message, result.ok ? 'success' : 'error')
 }
 
 function stars(n: number): string {

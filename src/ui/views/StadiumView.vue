@@ -12,7 +12,7 @@ import {
 import type { Stand, StadiumWorkKind, StandType } from '../../engine/types'
 
 const store = useGameStore()
-const toast = inject<(t: string, k?: 'info' | 'error' | 'success') => void>('toast')
+const notify = inject<(t: string, k?: 'info' | 'error' | 'success') => void>('notify')
 
 const club = computed(() => store.club)
 const stadium = computed(() => club.value?.facilities.stadium ?? null)
@@ -109,7 +109,7 @@ function award(architectId: string) {
   if (!s || !c) return
   const result = awardContract(s, c, store.idFactory(), spec.value, architectId, financing.value)
   store.commit()
-  toast?.(result.message, result.ok ? 'success' : 'error')
+  notify?.(result.message, result.ok ? 'success' : 'error')
   if (result.ok) tenderOpen.value = false
 }
 

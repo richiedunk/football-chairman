@@ -11,7 +11,7 @@ import { Rng } from '../../engine/rng'
 import type { MediaResponse, MediaStory, MediaStoryKind } from '../../engine/types'
 
 const store = useGameStore()
-const toast = inject<(t: string, k?: 'info' | 'error' | 'success') => void>('toast')
+const notify = inject<(t: string, k?: 'info' | 'error' | 'success') => void>('notify')
 
 const standing = computed(() => store.game?.mediaStanding ?? null)
 const stories = computed(() => (store.game?.mediaStories ?? []).slice(0, 25))
@@ -81,7 +81,7 @@ function submitBrief() {
     },
   )
   store.commit()
-  toast?.(result.message, result.ok ? 'success' : 'error')
+  notify?.(result.message, result.ok ? 'success' : 'error')
   if (result.ok) briefOpen.value = false
 }
 
@@ -93,7 +93,7 @@ function respond(story: MediaStory, response: MediaResponse) {
     { rng: new Rng(`${s.seed}:respond:${story.id}`), ids: store.idFactory() },
   )
   store.commit()
-  toast?.(message)
+  notify?.(message)
 }
 
 const RESPONSES: MediaResponse[] = ['noComment', 'deny', 'confirm', 'backPlayer', 'backCoach', 'criticise', 'deflect']

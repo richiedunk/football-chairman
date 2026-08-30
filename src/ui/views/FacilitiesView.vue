@@ -11,7 +11,7 @@ import type { FacilityKind } from '../../engine/types'
 import Chevron from '../components/Chevron.vue'
 
 const store = useGameStore()
-const toast = inject<(t: string, k?: 'info' | 'error' | 'success') => void>('toast')
+const notify = inject<(t: string, k?: 'info' | 'error' | 'success') => void>('notify')
 
 const club = computed(() => store.club)
 
@@ -37,8 +37,8 @@ function upgrade(kind: FacilityKind) {
   if (!c) return
   const result = startUpgrade(c, store.idFactory(), kind)
   store.commit()
-  if ('error' in result) toast?.(result.error, 'error')
-  else toast?.(`Work has begun on the ${FACILITY_LABELS[kind].toLowerCase()}.`, 'success')
+  if ('error' in result) notify?.(result.error, 'error')
+  else notify?.(`Work has begun on the ${FACILITY_LABELS[kind].toLowerCase()}.`, 'success')
 }
 
 </script>

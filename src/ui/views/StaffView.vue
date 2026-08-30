@@ -13,7 +13,7 @@ import type { Staff, StaffRole } from '../../engine/types'
 import Chevron from '../components/Chevron.vue'
 
 const store = useGameStore()
-const toast = inject<(t: string, k?: 'info' | 'error' | 'success') => void>('toast')
+const notify = inject<(t: string, k?: 'info' | 'error' | 'success') => void>('notify')
 
 const club = computed(() => store.club)
 const coach = computed(() => store.headCoach)
@@ -46,11 +46,11 @@ function confirmHire() {
   const result = hireCoach(s, c, candidate, offerWage.value, offerSeasons.value)
   store.commit()
   if (result.ok) {
-    toast?.(`${candidate.knownAs} appointed as head coach.`, 'success')
+    notify?.(`${candidate.knownAs} appointed as head coach.`, 'success')
     selectedCoach.value = null
     hiringOpen.value = false
   } else {
-    toast?.(result.error, 'error')
+    notify?.(result.error, 'error')
   }
 }
 
@@ -95,11 +95,11 @@ function confirmStaffHire() {
   const result = hireStaff(s, c, candidate, staffWage.value, staffSeasons.value)
   store.commit()
   if (result.ok) {
-    toast?.(`${candidate.knownAs} has joined as ${ROLE_LABELS[candidate.role].toLowerCase()}.`, 'success')
+    notify?.(`${candidate.knownAs} has joined as ${ROLE_LABELS[candidate.role].toLowerCase()}.`, 'success')
     hireRole.value = null
     selectedStaff.value = null
   } else {
-    toast?.(result.error, 'error')
+    notify?.(result.error, 'error')
   }
 }
 
@@ -109,7 +109,7 @@ function dismiss(member: Staff) {
   if (!s || !c) return
   const result = dismissStaff(s, c, member)
   store.commit()
-  toast?.(
+  notify?.(
     result.ok
       ? `${member.knownAs} has left. Settlement cost ${result.cost.toLocaleString()}.`
       : result.error,
@@ -123,7 +123,7 @@ function answer(requestId: string, accept: boolean) {
   if (!s || !c) return
   const message = respondToRequest(s, c, requestId, accept)
   store.commit()
-  if (message) toast?.(message)
+  if (message) notify?.(message)
 }
 </script>
 

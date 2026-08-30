@@ -16,7 +16,7 @@ import type { DeadlineOpportunity } from '../../engine/systems/deadlineDay'
  */
 const store = useGameStore()
 const router = useRouter()
-const toast = inject<(t: string, k?: 'info' | 'error' | 'success') => void>('toast')
+const notify = inject<(t: string, k?: 'info' | 'error' | 'success') => void>('notify')
 
 onMounted(() => store.refreshDeadline())
 
@@ -41,7 +41,7 @@ function take(offer: DeadlineOpportunity) {
   busy.value = offer.playerId
   const result = store.takeDeadlineOffer(offer)
   busy.value = null
-  toast?.(result.message, result.ok ? 'success' : 'error')
+  notify?.(result.message, result.ok ? 'success' : 'error')
 }
 
 function player(id: string) {

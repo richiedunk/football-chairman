@@ -76,9 +76,6 @@
   --topbar-h: 60px;
   --statusbar-h: 29px;
   --tabbar-h: 62px;
-  /* The advance bar's outside height, so anything that floats above the tab
-     bar can clear it too. Set to 0 on screens that do not show it. */
-  --advance-h: 0px;
   --pad: 16px;
 
   --shadow: 0 2px 12px rgba(0, 0, 0, 0.45);
@@ -509,9 +506,6 @@ button, input, select, textarea {
 .advance--deadline { background: var(--danger); color: #fff; }
 
 /* The bar the advance button sits in, above the tab bar. */
-/* Screens showing the advance bar tell the rest of the app how tall it is,
-   so a toast does not land on top of the only button that matters. */
-.app-shell:has(> .advance-bar) { --advance-h: 75px; }
 
 .advance-bar {
   flex: 0 0 auto;
@@ -1048,23 +1042,7 @@ button, input, select, textarea {
   background: var(--bg-raised);
 }
 
-.toast {
-  position: fixed;
-  left: 50%;
-  transform: translateX(-50%);
-  bottom: calc(var(--tabbar-h) + var(--advance-h) + env(safe-area-inset-bottom) + 14px);
-  max-width: calc(100% - 32px);
-  padding: 11px 16px;
-  border-radius: var(--radius);
-  background: var(--bg-raised-2);
-  border: 1px solid var(--border-strong);
-  box-shadow: var(--shadow-lg);
-  font-size: 0.86rem;
-  z-index: 200;
-  text-align: center;
-}
-.toast--error { border-color: var(--danger-dim); }
-.toast--success { border-color: var(--accent-dim); }
+
 
 /* ------------------------------------------------------------ animation - */
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, inject, ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useGameStore } from '../../stores/game'
 import AppSheet from '../components/AppSheet.vue'
 import MeterBar from '../components/MeterBar.vue'
@@ -10,7 +10,6 @@ import { facilityGrade } from '../../engine/systems/facilities'
 import type { Staff } from '../../engine/types'
 
 const store = useGameStore()
-const toast = inject<(t: string, k?: 'info' | 'error' | 'success') => void>('toast')
 
 const scouts = computed(() => store.staff.filter((s) => s.role === 'scout'))
 const editing = ref<Staff | null>(null)
@@ -54,7 +53,6 @@ function apply() {
     maxAge: maxAge.value,
   })
   store.commit()
-  toast?.(`${scout.knownAs} reassigned.`, 'success')
   editing.value = null
 }
 </script>

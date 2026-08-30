@@ -7,7 +7,7 @@ import type { SaveSlotMeta } from '../../storage/adapter'
 
 const store = useGameStore()
 const router = useRouter()
-const toast = inject<(t: string, k?: 'info' | 'error' | 'success') => void>('toast')
+const notify = inject<(t: string, k?: 'info' | 'error' | 'success') => void>('notify')
 
 const saves = ref<SaveSlotMeta[]>([])
 const quota = ref<{ used: number; available: number } | null>(null)
@@ -28,18 +28,16 @@ async function saveNow() {
     await store.save(slot, saveName.value.trim() || undefined)
     saveName.value = ''
     await refresh()
-    toast?.('Saved.', 'success')
   } catch (e) {
-    toast?.(e instanceof Error ? e.message : 'Save failed.', 'error')
+    notify?.(e instanceof Error ? e.message : 'Save failed.', 'error')
   }
 }
 
 async function loadSlot(id: string) {
   if (await store.load(id)) {
-    toast?.('Loaded.', 'success')
     router.push('/home')
   } else {
-    toast?.('That save could not be read.', 'error')
+    notify?.('That save could not be read.', 'error')
   }
 }
 

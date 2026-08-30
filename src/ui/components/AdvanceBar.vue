@@ -21,7 +21,7 @@ const openReport = computed(() => {
   const id = String(route.params.id ?? '')
   return store.matchQueue.includes(id) ? id : null
 })
-const toast = inject<(t: string, k?: 'info' | 'error' | 'success') => void>('toast')
+const notify = inject<(t: string, k?: 'info' | 'error' | 'success') => void>('notify')
 
 const intent = computed(() => {
   const s = store.game
@@ -82,19 +82,19 @@ async function press() {
 
   const result = await store.nextWeek()
   if (!result.ok) {
-    toast?.(result.reason ?? 'Cannot advance.', 'error')
+    notify?.(result.reason ?? 'Cannot advance.', 'error')
     router.push('/inbox')
     return
   }
 
   const tick = store.lastTick
   if (tick?.sacked) {
-    toast?.('You have been dismissed.', 'error')
+    notify?.('You have been dismissed.', 'error')
     router.push('/career')
     return
   }
   if (tick?.seasonEnded) {
-    toast?.('Season complete.', 'success')
+    notify?.('Season complete.', 'success')
     router.push('/career')
     return
   }

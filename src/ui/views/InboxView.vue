@@ -8,7 +8,7 @@ import type { InboxItem } from '../../engine/types'
 
 const store = useGameStore()
 const router = useRouter()
-const toast = inject<(t: string, k?: 'info' | 'error' | 'success') => void>('toast')
+const notify = inject<(t: string, k?: 'info' | 'error' | 'success') => void>('notify')
 
 const filter = ref<'all' | 'unread' | 'decisions'>('all')
 const openId = ref<string | null>(null)
@@ -27,7 +27,7 @@ function toggle(item: InboxItem) {
 
 function choose(item: InboxItem, optionId: string) {
   const outcome = store.decide(item.id, optionId)
-  if (outcome) toast?.(outcome, 'success')
+  if (outcome) notify?.(outcome, 'success')
 }
 
 function follow(item: InboxItem) {

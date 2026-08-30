@@ -5,7 +5,7 @@ import { achievements as achievementService, capabilities } from '../../platform
 import type { AchievementCategory } from '../../engine/systems/achievements'
 
 const store = useGameStore()
-const toast = inject<(t: string, k?: 'info' | 'error' | 'success') => void>('toast')
+const notify = inject<(t: string, k?: 'info' | 'error' | 'success') => void>('notify')
 
 const CATEGORY_LABELS: Record<AchievementCategory, string> = {
   career: 'Career',
@@ -34,7 +34,7 @@ async function openPlatform() {
   opening.value = true
   const shown = await achievementService.show()
   opening.value = false
-  if (!shown) toast?.('No platform achievements service is connected in this build.')
+  if (!shown) notify?.('No platform achievements service is connected in this build.')
 }
 </script>
 
