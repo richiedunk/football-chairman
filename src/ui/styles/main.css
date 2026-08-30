@@ -809,8 +809,17 @@ button, input, select, textarea {
   display: flex;
   align-items: center;
   gap: 11px;
-  margin-top: 16px;
+  margin-top: 12px;
+  width: 100%;
+  min-height: var(--tap);
+  padding: 0;
+  background: none;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
 }
+.dash-board:active { opacity: 0.6; }
 .dash-board__label {
   font-family: var(--font-num);
   font-size: 0.6rem;

@@ -47,11 +47,9 @@ export class NameGenerator {
     // Twelve collisions means the pool is saturated; disambiguate rather than
     // loop forever. Real squads do carry two players with the same surname.
     const fallback = this.fromPool(pool)
-    const initial = this.rng.pick('ABCDEFGHIJKLMNOPRSTVW'.split(''))
     const disambiguated: GeneratedName = {
       ...fallback,
-      lastName: `${fallback.lastName}`,
-      knownAs: `${initial}. ${fallback.lastName}`,
+      knownAs: `${fallback.firstName} ${fallback.lastName}`,
     }
     this.used.add(`${disambiguated.firstName} ${disambiguated.lastName}`.toLowerCase())
     return disambiguated
@@ -129,9 +127,9 @@ export class NameGenerator {
       if (short && this.rng.chance(0.4)) return `${short} ${lastName}`
     }
 
-    if (pool.conventions.includes('initialFirst') && this.rng.chance(0.08)) {
-      return `${firstName[0]}. ${lastName}`
-    }
+    // No initials. A player is known by a name — Rodri, Enzo, a diminutive,
+    // or his own — and an initial is how a newspaper abbreviates him when the
+    // column is narrow, which is a display problem and belongs in the UI.
 
     return `${firstName} ${lastName}`
   }

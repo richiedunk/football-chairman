@@ -90,6 +90,20 @@ const gap = computed(() => {
   if (!c || !pos) return 0
   return c.board.expectation.leaguePosition - pos
 })
+
+/**
+ * What the chip says.
+ *
+ * It used to read a bare "low" or "high", which invites exactly the wrong
+ * reading — that a high number means a good chance. It is the opposite: the
+ * bigger the ask, the less willing they are and the more it costs you when
+ * they say no. So the chip names the axis and the direction.
+ */
+const RISK_CHIP: Record<BoardRequestOption['risk'], string> = {
+  low: 'Easy ask',
+  medium: 'Big ask',
+  high: 'Costly if refused',
+}
 </script>
 
 <template>
@@ -185,6 +199,10 @@ const gap = computed(() => {
     </template>
 
     <div class="section-title">Ask the board</div>
+    <p class="tiny faint" style="margin: -2px 0 8px">
+      The bigger the ask, the less likely they are to grant it and the more it
+      costs you in their confidence when they refuse.
+    </p>
     <div class="card">
       <div v-if="cooldown > 0" class="card__body">
         <div class="chip chip--warn">
@@ -209,7 +227,8 @@ const gap = computed(() => {
             v-if="option.available"
             class="chip"
             :class="option.risk === 'high' ? 'chip--danger' : option.risk === 'medium' ? 'chip--warn' : ''"
-          >{{ option.risk }}</span>
+            :title="RISK_LABELS[option.risk]"
+          >{{ RISK_CHIP[option.risk] }}</span>
         </button>
       </div>
       <div class="card__body">

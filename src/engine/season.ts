@@ -87,7 +87,8 @@ export function runSeasonRollover(state: GameState, deps: RolloverDeps): void {
 
       if (club.id === state.playerClubId) {
         addNews(state, ids, 'league',
-          `Season ${season}/${(season + 1) % 100} finished ${position}${ordinal(position)} in ${league.name}. Prize money: ${prize.toLocaleString()}.`)
+          `Season ${season}/${(season + 1) % 100} finished ${position}${ordinal(position)} in ${league.name}. Prize money: ${prize.toLocaleString()}.`,
+          null, club.id)
       }
     })
   }
@@ -356,7 +357,10 @@ function moveClub(state: GameState, clubId: ID, toLeague: League): void {
 
   if (club.id === state.playerClubId && fromLeague) {
     const direction = toLeague.tier < fromLeague.tier ? 'promoted to' : 'relegated to'
-    addNews(state, new IdFactory(state.nextId), 'league', `${club.name} have been ${direction} ${toLeague.name}.`)
+    // Filed under the division they are joining: that is where a reader
+    // looking at next season's table wants to find it.
+    addNews(state, new IdFactory(state.nextId), 'league',
+      `${club.name} have been ${direction} ${toLeague.name}.`, null, club.id)
   }
 }
 

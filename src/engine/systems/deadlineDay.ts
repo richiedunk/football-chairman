@@ -232,15 +232,20 @@ function out(notices: string[]): boolean {
  * from your own desk.
  */
 export function runWorldDeadline(state: GameState, ids: IdFactory, rng: Rng): void {
-  const done: string[] = []
+  const done: { text: string; clubId: string }[] = []
   for (const club of Object.values(state.clubs)) {
     if (club.id === state.playerClubId) continue
     if (!rng.chance(0.04)) continue
     const squad = seniorSquad(state, club)
     const spare = squad.filter((p) => p.squadStatus === 'surplus' || p.listedForTransfer)
     if (spare.length === 0) continue
-    done.push(`${club.name} are trying to move ${rng.pick(spare).knownAs} before the window shuts.`)
+    done.push({
+      text: `${club.name} are trying to move ${rng.pick(spare).knownAs} before the window shuts.`,
+      clubId: club.id,
+    })
     if (done.length >= 3) break
   }
-  for (const line of done) addNews(state, ids, 'transfer', line, { view: 'transfers' })
+  for (const line of done) {
+    addNews(state, ids, 'transfer', line.text, { view: 'transfers' }, line.clubId)
+  }
 }

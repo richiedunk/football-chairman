@@ -199,7 +199,7 @@ function advanceExisting(state: GameState, ids: IdFactory, rng: Rng): void {
       } else {
         addNews(state, ids, 'board',
           `${takeover.incoming.name} are reported to be interested in buying ${club.name}.`,
-          { view: 'league' })
+          { view: 'league' }, club.id)
       }
     }
 

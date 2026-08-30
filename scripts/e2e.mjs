@@ -291,6 +291,55 @@ await step('a match report can be reopened and reads in full', async () => {
   if (page.url().includes('#/match/')) throw new Error('stuck on a reopened report')
 })
 
+await step('squad reads as a teamsheet, with real names', async () => {
+  await page.goto('http://127.0.0.1:4173/#/squad')
+  await page.waitForSelector('text=Sort by', { timeout: 15000 })
+
+  // Position order, best first within each — not one ranked list.
+  const badges = await page.locator('.list__row:has(.pos) .pos').allTextContents()
+  if (badges.length === 0) throw new Error('no player rows to check')
+  const ORDER = ['GK', 'DC', 'DL', 'DR', 'DM', 'MC', 'ML', 'MR', 'AM', 'ST']
+  const ranks = badges.map((b) => ORDER.indexOf(b.trim()))
+  for (let i = 1; i < ranks.length; i++) {
+    if (ranks[i] < ranks[i - 1]) {
+      throw new Error(`squad is not in position order: ${badges.slice(0, 8).join(' ')}`)
+    }
+  }
+
+  // Nobody is listed as an initial unless his full name genuinely will not fit.
+  const names = await page.locator('.list__primary').allTextContents()
+  const abbreviated = names.filter((n) => /^[A-Z]\.\s/.test(n.trim()))
+  for (const short of abbreviated) {
+    if (short.trim().length < 20) throw new Error(`needlessly abbreviated: ${short}`)
+  }
+  console.log(`   ${badges.length} in position order, ${abbreviated.length} abbreviated`)
+})
+
+await step('a page opens at the top', async () => {
+  // The router's own scrollBehavior moves the window, and this app scrolls
+  // inside .content — so it never did anything.
+  await page.goto('http://127.0.0.1:4173/#/squad')
+  await page.waitForSelector('text=Sort by', { timeout: 15000 })
+  await page.evaluate(() => document.querySelector('.content')?.scrollTo({ top: 600 }))
+  await page.waitForTimeout(150)
+  const scrolled = await page.evaluate(() => document.querySelector('.content')?.scrollTop ?? 0)
+  if (scrolled < 100) throw new Error('could not scroll the squad list to test it')
+  await tap(page.locator('.list__row:has(.pos)').first())
+  await page.waitForSelector('text=Actions', { timeout: 15000 })
+  await page.waitForTimeout(350)
+  const after = await page.evaluate(() => document.querySelector('.content')?.scrollTop ?? 0)
+  if (after > 8) throw new Error(`opened a page ${after}px down`)
+  console.log(`   scrolled ${scrolled}px, new page opened at ${after}px`)
+})
+
+await step('the boardroom is one tap from the dashboard', async () => {
+  await page.goto('http://127.0.0.1:4173/#/home')
+  await page.waitForSelector('.dash-board')
+  await tap('.dash-board')
+  await page.waitForSelector('text=Ask the board', { timeout: 15000 })
+  if (!page.url().includes('#/board')) throw new Error(`went to ${page.url()}`)
+})
+
 await step('squad screen', async () => {
   await tap('.tabbar__item:has-text("Squad")')
   await page.waitForSelector('text=Sort by')

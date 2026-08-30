@@ -1467,6 +1467,12 @@ export interface NewsItem {
   text: string
   /** Optional link to an entity for the UI. */
   link: { view: string; id?: ID } | null
+  /**
+   * The division the item belongs to, so the league screen can carry what
+   * happened in this one. Derived from whichever club the item is about.
+   * Absent on items from before the feed was surfaced anywhere.
+   */
+  leagueId?: ID
 }
 
 export interface GameSettings {

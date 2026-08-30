@@ -6,6 +6,7 @@ import { useGameStore } from '../../stores/game'
 import { formatMoney, formatWage } from '../../engine/systems/valuation'
 import { U21_AGE } from '../../engine/systems/registration'
 import type { Player } from '../../engine/types'
+import { listName } from '../playerName'
 
 const props = withDefaults(
   defineProps<{
@@ -73,7 +74,7 @@ function open() {
 
     <div class="list__main">
       <div class="list__primary">
-        {{ player.knownAs }}
+        {{ listName(player) }}
         <span v-if="status" class="chip" :class="status.cls" :title="status.title">{{ status.label }}</span>
       </div>
       <div class="list__secondary num">

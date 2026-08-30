@@ -252,7 +252,7 @@ function barColour(value: number): string {
         <Chevron style="margin-top: 5px" />
       </button>
 
-      <div class="dash-board">
+      <button class="dash-board" @click="router.push('/board')">
         <span class="dash-board__label">BOARD</span>
         <div class="dash-board__track">
           <div
@@ -263,7 +263,8 @@ function barColour(value: number): string {
         <span class="dash-board__value" :style="{ color: targetTone }">
           TARGET {{ target }}{{ ordinal(target).toUpperCase() }}
         </span>
-      </div>
+        <Chevron :size="13" />
+      </button>
     </section>
 
     <!-- The one scheduled event of the week, so it looks like an event. -->

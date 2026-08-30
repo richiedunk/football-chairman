@@ -13,6 +13,7 @@ import { suggestRenewal, type RenewalOffer } from '../../engine/systems/contract
 import { injuryDescription } from '../../engine/systems/injuries'
 import { loanSuitorsFor } from '../../engine/systems/loans'
 import type { AttributeKey, SquadStatus } from '../../engine/types'
+import { fullName, nickname } from '../playerName'
 
 const route = useRoute()
 const router = useRouter()
@@ -237,13 +238,12 @@ function doRelease() {
         <div class="row" style="gap: 12px">
           <PosBadge :position="player.position" />
           <div class="grow">
-            <h1 style="font-size: 1.2rem">{{ player.knownAs }}</h1>
+            <h1 style="font-size: 1.2rem">{{ fullName(player) }}</h1>
             <div class="small muted">
-              <!-- Most players are known by their full name, and printing it
-                   twice reads as a rendering bug rather than as detail. -->
-              <template v-if="`${player.firstName} ${player.lastName}` !== player.knownAs">
-                {{ player.firstName }} {{ player.lastName }} ·
-              </template>
+              <!-- The nickname only when it is a real one. A profile that
+                   solemnly reports Bruno Fernandes is known as "Bruno
+                   Fernandes" is noise wearing the clothes of detail. -->
+              <template v-if="nickname(player)">“{{ nickname(player) }}” · </template>
               {{ player.age }}y · {{ store.game?.nations[player.nationalityId]?.name }}
             </div>
             <div class="tiny faint">

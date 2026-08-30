@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, provide, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, provide, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useGameStore } from './stores/game'
 import AppTopBar from './ui/components/AppTopBar.vue'
@@ -42,6 +42,24 @@ const isSetupRoute = computed(() =>
   ['start', 'new-game', 'club-select', 'welcome'].includes(String(route.name)),
 )
 const showChrome = computed(() => store.loaded && !isSetupRoute.value)
+
+/**
+ * Every screen opens at the top.
+ *
+ * The router's own scrollBehavior scrolls the window, and this app does not
+ * scroll the window — `.content` does. So it has quietly done nothing, and
+ * opening a player from halfway down a squad list dropped you halfway down his
+ * profile.
+ */
+const content = ref<HTMLElement | null>(null)
+watch(
+  () => route.fullPath,
+  () => {
+    // After the route transition has swapped the component in, or the reset
+    // lands on the outgoing screen.
+    void nextTick(() => content.value?.scrollTo({ top: 0 }))
+  },
+)
 
 // The advance button belongs to the dashboard, but it lives in the shell so
 // it cannot move and is never inside a scrolling region. The primary action of
@@ -97,7 +115,7 @@ onUnmounted(() => {
     <AppTopBar v-if="showChrome" />
     <AppStatusBar v-if="showChrome" />
 
-    <main class="content">
+    <main ref="content" class="content">
       <RouterView v-slot="{ Component }">
         <Transition name="fade" mode="out-in">
           <component :is="Component" />

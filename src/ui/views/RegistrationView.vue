@@ -7,6 +7,7 @@ import { formatWage } from '../../engine/systems/valuation'
 import { NON_HOMEGROWN_LIMIT, SQUAD_LIMIT } from '../../engine/systems/registration'
 import { underEmbargo } from '../../engine/systems/regulation'
 import type { Player } from '../../engine/types'
+import { listName } from '../playerName'
 
 const store = useGameStore()
 const notify = inject<(t: string, k?: 'info' | 'error' | 'success') => void>('notify')
@@ -143,7 +144,7 @@ function autoPick() {
           <PosBadge :position="p.position" />
           <div class="list__main">
             <div class="list__primary">
-              {{ p.knownAs }}
+              {{ listName(p) }}
               <span
                 v-if="tab !== 'exempt'"
                 class="chip"

@@ -52,7 +52,7 @@ const routes: RouteRecordRaw[] = [
 export const router = createRouter({
   history: createWebHashHistory(),
   routes,
-  scrollBehavior() {
-    return { top: 0 }
-  },
+  // No scrollBehavior: the window never scrolls in this app, `.content` does,
+  // so resetting the window's position achieved nothing. App.vue scrolls the
+  // real container on every route change.
 })

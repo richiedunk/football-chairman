@@ -6,17 +6,28 @@ import PlayerRow from '../components/PlayerRow.vue'
 import MeterBar from '../components/MeterBar.vue'
 import { formatMoney, formatWage } from '../../engine/systems/valuation'
 import { auditSquadDepth } from '../../engine/sim/selection'
-import type { Player } from '../../engine/types'
+import type { Player, Position } from '../../engine/types'
 import Chevron from '../components/Chevron.vue'
 
 const store = useGameStore()
 const router = useRouter()
 
-type SortKey = 'ability' | 'age' | 'value' | 'wage' | 'form' | 'morale' | 'contract' | 'apps'
-const sort = ref<SortKey>('ability')
+type SortKey = 'position' | 'ability' | 'age' | 'value' | 'wage' | 'form' | 'morale' | 'contract' | 'apps'
+const sort = ref<SortKey>('position')
 const showDepth = ref(false)
 
+// Goalkeepers, defenders, midfield, forwards — the order a teamsheet is read
+// in — and the best man first within each. Ranking a whole squad by ability
+// alone puts your third-choice keeper between two centre halves.
+const POSITION_ORDER: Position[] = ['GK', 'DC', 'DL', 'DR', 'DM', 'MC', 'ML', 'MR', 'AM', 'ST']
+const positionRank = (p: Player) => {
+  const i = POSITION_ORDER.indexOf(p.position)
+  return i < 0 ? POSITION_ORDER.length : i
+}
+
 const sorters: Record<SortKey, (a: Player, b: Player) => number> = {
+  position: (a, b) =>
+    positionRank(a) - positionRank(b) || b.currentAbility - a.currentAbility,
   ability: (a, b) => b.currentAbility - a.currentAbility,
   age: (a, b) => a.age - b.age,
   value: (a, b) => b.value - a.value,
@@ -28,6 +39,7 @@ const sorters: Record<SortKey, (a: Player, b: Player) => number> = {
 }
 
 const trailFor: Record<SortKey, 'value' | 'wage' | 'ability' | 'stats'> = {
+  position: 'ability',
   ability: 'ability', age: 'ability', value: 'value', wage: 'wage',
   form: 'value', morale: 'value', contract: 'wage', apps: 'stats',
 }
@@ -151,9 +163,9 @@ const registration = computed(() => store.registration)
 
     <div class="section-title">Sort by</div>
     <div class="table__scroll mb">
-      <div class="segmented" style="min-width: 560px">
+      <div class="segmented" style="min-width: 640px">
         <button
-          v-for="key in (['ability','age','value','wage','form','morale','contract','apps'] as SortKey[])"
+          v-for="key in (['position','ability','age','value','wage','form','morale','contract','apps'] as SortKey[])"
           :key="key"
           class="segmented__item"
           :class="{ 'is-active': sort === key }"

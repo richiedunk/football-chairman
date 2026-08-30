@@ -76,6 +76,8 @@ export function addNews(
   category: InboxCategory,
   text: string,
   link: { view: string; id?: ID } | null = null,
+  /** The club the item concerns, if any. Its division files the item. */
+  clubId?: ID,
 ): NewsItem {
   const item: NewsItem = {
     id: ids.next(ID_PREFIX.news),
@@ -84,6 +86,7 @@ export function addNews(
     category,
     text,
     link,
+    leagueId: clubId ? state.clubs[clubId]?.leagueId : undefined,
   }
   state.newsFeed.unshift(item)
   if (state.newsFeed.length > 250) state.newsFeed.length = 250

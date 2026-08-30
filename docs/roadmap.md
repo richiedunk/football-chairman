@@ -529,6 +529,40 @@ surfaced: a counter reading 169.
 The next version of this run needs to accept offers when they come, which is
 the difference between measuring a career and measuring a chair.
 
+## Out of work
+
+Being sacked drops you onto a jobs board, not out of the game — and the board
+is the point.
+
+**It is far sparser than the one at the start.** A new career is offered the
+whole bottom of the pyramid because nobody has an opinion about you yet. A
+sacked director is offered what happens to be vacant, which is not much.
+
+**Time moves in months, not weeks.** There is a "check back next month" that
+skips four weeks, and the listings shift when it does: some clubs are still
+looking, some have filled the post, one or two new ones come up. That is what
+being out of work actually feels like — not a menu you pick from, a wait you
+sit through while the thing you want may or may not appear.
+
+It also solves the calendar question honestly. Weeks passing one at a time with
+no club and nothing to do would be dead time; a month at a stride is a real
+unit for a job search, and it keeps the sixty-five-year-old clock ticking, so a
+long spell out genuinely costs you career.
+
+Your experience widens what is *eligible* — that already falls out of the level
+gate — and the sacking itself takes something off your reputation, so being
+dismissed twice in three years shows.
+
+## The news feed
+
+It lives on the league screen, sorted by league.
+
+That is a better home than the inbox, which is for things addressed to you, and
+better than a screen of its own, which nobody would open for half an item a
+week. On the league screen it is what it actually is: what has been happening
+in this division. A rival being taken over belongs next to that rival's league
+position.
+
 ## Known defects
 
 **Being sacked does not remove you from the job.** Found by the first long
