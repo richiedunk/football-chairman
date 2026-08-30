@@ -1,6 +1,12 @@
+import fs from 'node:fs'
+import os from 'node:os'
 import { chromium } from 'playwright'
 
-const SHOT = process.env.SHOT
+// Screenshots go somewhere outside the repo unless told otherwise. Reading an
+// unset variable straight into a path wrote every shot into a directory
+// literally called "undefined" in the project root.
+const SHOT = process.env.SHOT ?? `${os.tmpdir()}/dof-e2e-shots`
+fs.mkdirSync(SHOT, { recursive: true })
 const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' })
 const page = await browser.newPage({
   viewport: { width: 390, height: 844 },   // iPhone 14 portrait
@@ -73,9 +79,21 @@ await step('take a job', async () => {
 
   // The counter is now pre-filled, so submitting again should land.
   await page.click('.btn--primary:has-text("Try again")')
+
+  // Taking a job lands on the handover screen, not straight on the home
+  // screen: what you have taken on, what they expect, and what state they
+  // left the place in.
+  await page.waitForSelector('text=Welcome to', { timeout: 30000 })
+  await page.waitForSelector('text=What the board expect')
+  // The contract sheet fades out over this; without the wait the screenshot
+  // catches the transition rather than the screen.
+  await page.waitForTimeout(600)
+  await page.screenshot({ path: `${SHOT}/06-welcome.png`, fullPage: true })
+
+  await page.click('.btn--primary:has-text("Get to work")')
   await page.waitForSelector('.tabbar', { timeout: 30000 })
   await page.waitForSelector('text=Next fixture')
-  await page.screenshot({ path: `${SHOT}/06-home.png` })
+  await page.screenshot({ path: `${SHOT}/07-home.png` })
 })
 
 const clubName = await page.textContent('.topbar__club')
@@ -359,6 +377,15 @@ await step('career and earnings', async () => {
   }
   console.log(`   career earnings: ${earnings.trim()}`)
   await page.screenshot({ path: `${SHOT}/15-career.png`, fullPage: true })
+})
+
+await step('inbox links name their destination', async () => {
+  await page.goto('http://127.0.0.1:4173/#/inbox')
+  await page.waitForSelector('.list__row, .empty')
+  const buttons = await page.locator('.btn--block:has-text("Open ")').count()
+  const bare = await page.locator('.btn--block').filter({ hasText: /^Open$/ }).count()
+  if (bare > 0) throw new Error(`${bare} inbox links still just say "Open"`)
+  console.log(`   ${buttons} links, all naming where they go`)
 })
 
 await step('milestones', async () => {

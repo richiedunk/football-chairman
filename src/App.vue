@@ -26,8 +26,11 @@ function showToast(text: string, kind: 'info' | 'error' | 'success' = 'info') {
 provide('toast', showToast)
 
 const hasSaves = ref(false)
+// Screens that own the whole display. The welcome handover is one of them:
+// it is a moment rather than a destination, and a back arrow on it would lead
+// to the club you have just stopped choosing between.
 const isSetupRoute = computed(() =>
-  ['start', 'new-game', 'club-select'].includes(String(route.name)),
+  ['start', 'new-game', 'club-select', 'welcome'].includes(String(route.name)),
 )
 const showChrome = computed(() => store.loaded && !isSetupRoute.value)
 

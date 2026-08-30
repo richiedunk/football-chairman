@@ -29,10 +29,13 @@ for (let season = 1; season <= 6; season++) {
   const fined = clubs.filter((c) =>
     c.finances.regulation.sanctions.some((s) => s.kind === 'fine' && s.season === state.date.season - 1)).length
   const pct = (p: number) => ratios.length ? (ratios[Math.floor(ratios.length * p)] * 100).toFixed(0) : '—'
+  const over = (t: number) => assessed.filter((e) => e.a!.ratio > t).length
 
   console.log(
     `season ${season}  ratio p10 ${pct(0.1)}% p50 ${pct(0.5)}% p90 ${pct(0.9)}%  `
-    + `breaching ${breaching}/${assessed.length}  fined ${fined}  embargo ${embargoed}  docked ${docked}`,
+    + `breaching ${breaching}/${assessed.length}  `
+    + `>75% ${over(0.75)}  >80% ${over(0.8)}  >90% ${over(0.9)}  `
+    + `| fined ${fined}  embargo ${embargoed}  docked ${docked}`,
   )
 }
 

@@ -47,7 +47,7 @@ function agree(contract: ContractOffer) {
   store.commit()
   negotiating.value = null
   toast?.(result.message, result.ok ? 'success' : 'error')
-  if (result.ok) router.push('/home')
+  if (result.ok) router.push('/welcome')
 }
 
 /** Money earned, grouped by where it came from. */

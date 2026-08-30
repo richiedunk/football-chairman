@@ -12,6 +12,7 @@ const routes: RouteRecordRaw[] = [
   { path: '/new', name: 'new-game', component: () => import('./ui/views/NewGameView.vue') },
   { path: '/new/club', name: 'club-select', component: () => import('./ui/views/ClubSelectView.vue') },
 
+  { path: '/welcome', name: 'welcome', component: () => import('./ui/views/WelcomeView.vue') },
   { path: '/home', name: 'home', component: () => import('./ui/views/HomeView.vue'), meta: { tab: 'home' } },
   { path: '/inbox', name: 'inbox', component: () => import('./ui/views/InboxView.vue'), meta: { tab: 'inbox' } },
   { path: '/squad', name: 'squad', component: () => import('./ui/views/SquadView.vue'), meta: { tab: 'squad' } },

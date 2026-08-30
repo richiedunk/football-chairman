@@ -3,6 +3,7 @@ import { computed, inject, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useGameStore } from '../../stores/game'
 import { CATEGORY_ICONS, CATEGORY_LABELS } from '../../engine/systems/inbox'
+import { linkLabel } from '../screens'
 import type { InboxCategory, InboxItem } from '../../engine/types'
 
 const store = useGameStore()
@@ -33,6 +34,18 @@ function follow(item: InboxItem) {
   if (!item.link) return
   const { view, id } = item.link
   router.push(id ? `/${view}/${id}` : `/${view}`)
+}
+
+/**
+ * What the button says. Naming the destination — and the player, where the
+ * link is to a player — is the difference between a message you can act on
+ * from the list and one you have to open to understand.
+ */
+function buttonLabel(item: InboxItem): string {
+  if (!item.link) return 'Open'
+  const { view, id } = item.link
+  const subject = view === 'player' && id ? store.player(id)?.knownAs : null
+  return linkLabel(view, subject)
 }
 
 function icon(category: InboxCategory) {
@@ -107,7 +120,7 @@ function icon(category: InboxCategory) {
         </template>
 
         <button v-if="item.link" class="btn btn--ghost btn--sm btn--block mt" @click="follow(item)">
-          Open
+          {{ buttonLabel(item) }}
         </button>
       </div>
     </div>

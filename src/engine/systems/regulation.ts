@@ -32,8 +32,20 @@ import type {
 /** Share of revenue a club may spend on its squad. */
 export const SQUAD_COST_LIMIT = 0.7
 
-/** Above this the breach is severe enough to skip straight to hard sanctions. */
-export const SEVERE_BREACH = 0.9
+/**
+ * Above the limit, but inside what the authorities will live with.
+ *
+ * Every real regime has one of these — UEFA calls it acceptable deviation —
+ * and it is the difference between a rule and a trap. A club a little over
+ * agrees a plan and is monitored; only a club a long way over, and staying
+ * there, gets punished. Without the band, one club in eight was being fined
+ * and embargoed every season, which is an order of magnitude more than
+ * football actually sanctions.
+ */
+export const SANCTION_THRESHOLD = 0.8
+
+/** Above this the breach is severe enough to skip a step. */
+export const SEVERE_BREACH = 0.95
 
 export interface SquadCostAssessment {
   /** Wages, amortisation and agent fees. */
@@ -221,6 +233,7 @@ export function assessClub(
 
   record.breachSeasons += 1
   const severe = assessment.ratio > SEVERE_BREACH
+  const beyondDeviation = assessment.ratio > SANCTION_THRESHOLD
   const percent = Math.round(assessment.ratio * 100)
 
   const add = (kind: SanctionKind, amount: number, reason: string, seasons = 0) => {
@@ -246,6 +259,12 @@ export function assessClub(
     return { assessment, imposed }
   }
 
+  // Inside the acceptable deviation, or a first year over: the club is told
+  // where it stands and monitored. This is where most breaches end.
+  if (!beyondDeviation) {
+    add('warning', 0, `${reason} Within the margin the authorities will accept, for now.`)
+    return { assessment, imposed }
+  }
   if (record.breachSeasons === 1 && !severe) {
     add('warning', 0, reason)
     return { assessment, imposed }
@@ -262,11 +281,11 @@ export function assessClub(
     add('fine', fine, reason)
   }
 
-  if (record.breachSeasons >= 2 || severe) {
+  if (record.breachSeasons >= 3 || severe) {
     add('registrationEmbargo', 0, reason, 1)
   }
 
-  if (record.breachSeasons >= 3 || (severe && record.breachSeasons >= 2)) {
+  if (record.breachSeasons >= 4 || (severe && record.breachSeasons >= 2)) {
     // Scaled by how far over, so a club a fraction outside is not treated the
     // same as one at double the limit.
     const points = clamp(Math.round(3 + (assessment.ratio - SQUAD_COST_LIMIT) * 12), 3, 12)

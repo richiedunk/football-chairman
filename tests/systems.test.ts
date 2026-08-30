@@ -49,6 +49,7 @@ import {
   assessClub, assessSquadCost, underEmbargo,
 } from '../src/engine/systems/regulation'
 import { accrueAmortisation } from '../src/engine/systems/finance'
+import { linkLabel, SCREEN_LABELS } from '../src/ui/screens'
 import type { FinanceLedger } from '../src/engine/types'
 import type { GameState } from '../src/engine/types'
 
@@ -1472,11 +1473,31 @@ describe('financial regulation', () => {
     expect(club.finances.regulation.pointsDeducted).toBe(0)
   })
 
-  it('escalates warning, then embargo, then points', () => {
+  it('monitors a marginal overspend rather than punishing it', () => {
+    const state = freshWorld('REG-MARGIN')
+    const club = state.clubs[state.playerClubId]
+    const ids = new IdFactory(state.nextId)
+    // 74% — over the limit, inside what the authorities will accept.
+    const marginal = () => ledgerWith({ tvIncome: 1_000_000, wagesPaid: 740_000 })
+
+    assessClub(state, club, marginal(), ids) // grace year
+    for (let season = 0; season < 5; season++) {
+      state.date.season += 1
+      const outcome = assessClub(state, club, marginal(), ids)
+      expect(outcome.assessment.inBreach).toBe(true)
+      expect(outcome.imposed.map((s) => s.kind), 'a marginal overspend was punished')
+        .toEqual(['warning'])
+    }
+    expect(underEmbargo(club)).toBe(false)
+    expect(club.finances.regulation.pointsDeducted).toBe(0)
+  })
+
+  it('escalates warning, then fine, then embargo, then points', () => {
     const state = freshWorld('REG-ESC')
     const club = state.clubs[state.playerClubId]
     const ids = new IdFactory(state.nextId)
-    const breaching = () => ledgerWith({ tvIncome: 1_000_000, wagesPaid: 800_000 })
+    // Beyond the acceptable deviation, or nothing escalates at all.
+    const breaching = () => ledgerWith({ tvIncome: 1_000_000, wagesPaid: 880_000 })
 
     // The first assessment of a save is a grace year whatever the figures,
     // so escalation is measured from the season after it.
@@ -1489,13 +1510,18 @@ describe('financial regulation', () => {
 
     state.date.season += 1
     const second = assessClub(state, club, breaching(), ids)
-    expect(second.imposed.some((s) => s.kind === 'registrationEmbargo')).toBe(true)
-    expect(underEmbargo(club)).toBe(true)
+    expect(second.imposed.some((s) => s.kind === 'fine')).toBe(true)
+    expect(underEmbargo(club), 'a second year is a fine, not yet an embargo').toBe(false)
 
     state.date.season += 1
     const third = assessClub(state, club, breaching(), ids)
-    const deduction = third.imposed.find((s) => s.kind === 'pointsDeduction')
-    expect(deduction, 'a third breach must cost points').toBeTruthy()
+    expect(third.imposed.some((s) => s.kind === 'registrationEmbargo')).toBe(true)
+    expect(underEmbargo(club)).toBe(true)
+
+    state.date.season += 1
+    const fourth = assessClub(state, club, breaching(), ids)
+    const deduction = fourth.imposed.find((s) => s.kind === 'pointsDeduction')
+    expect(deduction, 'persisting for four years must cost points').toBeTruthy()
     expect(deduction!.amount).toBeGreaterThanOrEqual(3)
     expect(club.finances.regulation.pointsDeducted).toBe(deduction!.amount)
   })
@@ -1529,8 +1555,8 @@ describe('financial regulation', () => {
     const existing = registrablePool(state, club).find((p) => p.age >= U21_AGE)!
     existing.joinedSeason = state.date.season - 2
 
-    // Grace year, warning, then embargo.
-    const breaching = () => ledgerWith({ tvIncome: 1_000_000, wagesPaid: 900_000 })
+    // Severe enough to skip a step: grace year, warning, then embargo.
+    const breaching = () => ledgerWith({ tvIncome: 1_000_000, wagesPaid: 1_000_000 })
     assessClub(state, club, breaching(), ids)
     state.date.season += 1
     assessClub(state, club, breaching(), ids)
@@ -1610,5 +1636,28 @@ describe('financial regulation', () => {
     })
 
     expect(seller.finances.season.playerTradingProfit).toBe(8_000_000)
+  })
+})
+
+describe('screen labels', () => {
+  it('names the destination on every link an inbox item can carry', () => {
+    // Every view the engine links to must have a human name, or the button
+    // falls back to a route slug and the message reads worse than "Open".
+    const linked = ['academy', 'board', 'career', 'club', 'finance', 'league',
+      'media', 'player', 'squad', 'stadium', 'staff', 'transfers', 'registration',
+      'achievements']
+    for (const view of linked) {
+      expect(SCREEN_LABELS[view], `${view} has no label`).toBeTruthy()
+      expect(linkLabel(view)).toBe(`Open ${SCREEN_LABELS[view]}`)
+    }
+  })
+
+  it('names the player when the link is to one', () => {
+    expect(linkLabel('player', 'Danny Mills')).toBe("Open Danny Mills's profile")
+    expect(linkLabel('player', null)).toBe('Open Player profile')
+  })
+
+  it('falls back rather than showing a bare route name', () => {
+    expect(linkLabel('somewhere-new')).toBe('Open Somewhere-new')
   })
 })

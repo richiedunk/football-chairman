@@ -118,7 +118,7 @@ function agree(offer: ContractOffer) {
     store.attachWithFactories(next, s.ids, s.names)
     setup.clear()
     void store.autosave()
-    router.push('/home')
+    router.push('/welcome')
   } catch (e) {
     toast?.(e instanceof Error ? e.message : 'Could not start that career.', 'error')
   }
