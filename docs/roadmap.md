@@ -444,7 +444,18 @@ anyone is listening.
 
 ## Known defects
 
-None outstanding. The two that stood here — transfer volume and clubs stuck in
+**Squads thin at the season roll from season four onwards.** Mid-season sizes
+hold at the recorded 24-26 with no club below sixteen, but at rollover the
+average drops to 21-22 and the smallest club can be as low as seven for a few
+weeks before renewals and free-agent signings catch up. Registered squads drift
+down with it, from 21 named in season two to 17 by season seven, and free
+agents accumulate — 190 at the start, around 2,000 by season five. `squadsize.ts`
+shows it, and it is stable rather than worsening. Not urgent, since the
+fieldable mid-season world is right, but it is the next thing to measure
+properly: either renewals are firing too late in the roll, or the AI is letting
+too many contracts run down at once.
+
+Nothing else outstanding. The two that stood here — transfer volume and clubs stuck in
 financial crisis — are fixed and measured. Numbers worth holding the world to,
 all from `scripts/`:
 

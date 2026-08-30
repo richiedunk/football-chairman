@@ -88,7 +88,7 @@ export function generatePlayer(ctx: PlayerGenContext, opts: PlayerGenOptions): P
   const { rng, ids, names, season } = ctx
 
   const nationality = pickNationality(ctx, opts)
-  const age = opts.age ?? generateAge(rng, opts.currentAbility)
+  const age = opts.age ?? generateAge(rng, opts.currentAbility, opts.isAcademy ?? false)
 
   // Potential. Young players carry real headroom; by 27 potential and current
   // have converged, which is exactly why the market prices 27-year-olds on
@@ -269,7 +269,9 @@ export function generateSquad(
         // The tail of the squad is deliberately young — these are the fringe
         // players and academy graduates a director of football is meant to
         // either develop, loan out, or move on.
-        age: i >= 22 ? rng.int(Math.max(17, minAgeForAbility(Math.round(ability))), 21) : undefined,
+        age: i >= 22
+          ? rng.int(Math.max(MIN_SENIOR_AGE, minAgeForAbility(Math.round(ability))), 21)
+          : undefined,
       }),
     )
   }
@@ -383,18 +385,36 @@ export function maxAbilityForAge(age: number): number {
   return 70 + (age - 15) * 17
 }
 
+/**
+ * Youngest age at which a *senior professional* may exist.
+ *
+ * Seventeen, because that is when a professional contract can first be signed
+ * in the countries this game models — a fifteen-year-old is a scholar, and
+ * belongs in the academy where the game already puts them. World generation
+ * used to allow fifteen straight into a first-team squad, which produced
+ * fourteen of them across a compact world, one rated 84 and his club's
+ * fourth-best player.
+ */
+export const MIN_SENIOR_AGE = 17
+
 /** Youngest age at which `ability` is credible. Inverse of maxAbilityForAge. */
 export function minAgeForAbility(ability: number): number {
   if (ability <= 70) return 15
   return clamp(Math.ceil(15 + (ability - 70) / 17), 15, 23)
 }
 
-function generateAge(rng: Rng, ability: number): number {
+function generateAge(rng: Rng, ability: number, isAcademy: boolean): number {
   // Better players skew slightly older because ability takes time to accrue,
   // but the distribution stays wide enough for genuine young stars to exist.
   const base = rng.normal(25.5, 4.2)
   const abilityShift = (ability - 100) / 60
-  const floor = minAgeForAbility(ability)
+  // Two floors, not one. The ability curve says how young someone *could* be
+  // and still be that good; the professional-age rule says how young a senior
+  // squad member may be at all. A schoolboy prodigy is generated into the
+  // academy, and reaches the first team by being promoted.
+  const floor = isAcademy
+    ? minAgeForAbility(ability)
+    : Math.max(MIN_SENIOR_AGE, minAgeForAbility(ability))
   return clamp(Math.round(base + abilityShift), floor, 38)
 }
 

@@ -240,8 +240,12 @@ function doRelease() {
           <div class="grow">
             <h1 style="font-size: 1.2rem">{{ player.knownAs }}</h1>
             <div class="small muted">
-              {{ player.firstName }} {{ player.lastName }} · {{ player.age }}y ·
-              {{ store.game?.nations[player.nationalityId]?.name }}
+              <!-- Most players are known by their full name, and printing it
+                   twice reads as a rendering bug rather than as detail. -->
+              <template v-if="`${player.firstName} ${player.lastName}` !== player.knownAs">
+                {{ player.firstName }} {{ player.lastName }} ·
+              </template>
+              {{ player.age }}y · {{ store.game?.nations[player.nationalityId]?.name }}
             </div>
             <div class="tiny faint">
               {{ currentClub?.name ?? 'Free agent' }}

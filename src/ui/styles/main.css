@@ -606,6 +606,8 @@ button, input, select, textarea {
 .stat {
   background: var(--bg);
   padding: 11px var(--pad);
+  display: flex;
+  flex-direction: column;
 }
 .stat__label {
   font-family: var(--font-num);
@@ -620,7 +622,10 @@ button, input, select, textarea {
   font-size: 1.15rem;
   font-weight: 700;
   letter-spacing: -0.02em;
-  margin-top: 3px;
+  /* Pinned to the bottom so a label that wraps to two lines does not push its
+     own figure out of line with the ones beside it. */
+  margin-top: auto;
+  padding-top: 3px;
 }
 .stat__value--sm { font-size: 0.92rem; }
 

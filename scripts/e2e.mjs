@@ -482,8 +482,28 @@ await step('deadline day', async () => {
   await page.screenshot({ path: `${SHOT}/32-deadline.png`, fullPage: true })
 
   // The transfers page must advertise it, or nobody finds the screen.
+  //
+  // Wait for something only the transfers page has before asserting. This
+  // check used to pass without ever leaving the deadline screen, because that
+  // screen's own heading also read "Deadline day" — so it was testing the
+  // page it had just come from. It only surfaced when that heading was
+  // reworded, which is the whole problem with asserting on a string two
+  // screens share.
   await page.goto('http://127.0.0.1:4173/#/transfers')
-  await page.waitForSelector('.card:has-text("Deadline day")')
+  await page.waitForSelector('.section-title:has-text("Around the world")', { timeout: 15000 })
+  const banner = page.locator('.card:has-text("Deadline day")')
+  if (!(await banner.count())) {
+    // A failure here used to say only that a selector never appeared, which
+    // is the least useful thing it could say. Report the state the page was
+    // actually in.
+    const week = await weekOf()
+    const url = page.url()
+    const text = (await page.locator('.content').innerText()).replace(/\s+/g, ' ').slice(0, 400)
+    throw new Error(
+      `no deadline banner at week ${week}, url ${url}\n  page said: ${text}`,
+    )
+  }
+  await banner.first().waitFor({ state: 'visible' })
 })
 
 await step('who owns the club', async () => {

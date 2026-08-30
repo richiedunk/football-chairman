@@ -63,7 +63,11 @@ async function openPlatform() {
             class="list__row list__row--static"
             :style="item.earned ? '' : 'opacity: 0.55'"
           >
-            <div class="pos" style="width: 30px">{{ item.earned ? '★' : '·' }}</div>
+            <div
+              class="pos"
+              style="width: 30px"
+              :style="item.earned ? 'background: var(--accent-wash); color: var(--accent)' : ''"
+            >{{ item.earned ? '★' : '·' }}</div>
             <div class="list__main">
               <div class="list__primary">
                 {{ item.name }}
