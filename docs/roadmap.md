@@ -102,7 +102,60 @@ consequential:
 - Fees already exist in the transfer flow; they should become negotiable and
   relationship-dependent rather than a fixed percentage.
 
-### 4. Ownership takeovers
+### 4. Ownership takeovers — designed
+
+Built on modelling ownership from day one rather than as a special-case event.
+Every club gets an owner with wealth, patience, ambition, appetite for
+interference, tolerance for debt and belief in youth. That pays for itself
+before any takeover happens: it explains behaviour the board already has —
+*why* is this board so tight? because the owner is a local builder who will not
+put money in — and it makes clubs feel different rather than reskinned. A
+takeover then becomes a change to one object that propagates everywhere,
+instead of a pile of special cases.
+
+**The owner reaches deep into the board.** Wage-budget share, transfer budget
+drawn from reserves, tolerance for debt, season expectations and mandates,
+willingness to fund stadium and facility work, how fast confidence falls when
+results go badly, and how a board hears a request — all of it keys off the
+owner. This is the largest part of the work and the part that makes the rest
+worth having.
+
+**Four-and-a-bit kinds of owner:**
+
+- **Foreign investment fund** — enormous money, almost no patience,
+  expectations jump the moment they arrive, debt often cleared on completion.
+- **Celebrity or angel owner** — modest money, real patience, but the fanbase
+  and commercial revenue jump far more than the transfer budget does.
+- **Local business owner** — little money, long patience, no tolerance for
+  debt, a real preference for the academy.
+- **Consortium** — middling everything, and slower, because decisions go
+  through a committee.
+- **Legacy family and fan ownership** as the two incumbent flavours, which is
+  what most clubs start as.
+
+**A takeover is a process, not a flash.** Interest, due diligence, a bid, then
+completion, over weeks — leaking to the media as it goes, which is what makes
+the media system matter here. Triggered by financial distress, relegation, a
+club underperforming the size of its city and support, or an owner's patience
+simply running out.
+
+**It happens everywhere, not just to you.** Rivals get taken over, suddenly
+outspend you, and the shape of the division changes underneath a plan you made
+in good faith. That is the point of it.
+
+**You are never sacked by the takeover itself.** A new owner always lets you
+see out the season. What changes, and changes hard, is your standing with the
+board: who has bought the club and how they did it moves the relationship
+enormously, and a director who does not fit the new regime spends that season
+knowing it.
+
+**You get one meeting.** On completion you pitch a plan — a youth project, an
+immediate push, financial consolidation. Reading the new owner correctly keeps
+you in the job and can win a budget with it; misjudging them costs you the
+season's goodwill. One decision, high stakes, and squarely the job of a
+director of football rather than of a chairman.
+
+
 
 Mirroring how clubs actually change hands:
 
