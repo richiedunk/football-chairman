@@ -22,25 +22,24 @@ simulating seasons and reading the numbers, never by inspecting code — so
 4. **Ownership takeovers** and **deadline day** — narrative layers over
    systems that were stable by then.
 
-### Now
-
-5. **The visual language** — first, because everything after it adds screens.
-   Doing it later means retrofitting six new views instead of building them
-   right. See "The visual language" below.
-
-### Next, in this order
-
-6. **Director age and career length.** You start at 30 and are gone at 65, no
-   exceptions. There is no age field on the director at all today.
-7. **The long save.** Never yet run. The 65 cap bounds a full career at about
-   thirty-five seasons, which makes it a finite, measurable thing rather than
-   an open-ended soak test.
+5. ~~**The visual language.**~~ Built — see below. Done before the new screens
+   rather than after, so six views were built right instead of retrofitted.
+6. ~~**Director age and career length.**~~ Built — see below.
+7. ~~**The long save.**~~ Run — thirty-five seasons, 1,820 weeks. See "The
+   first long save" for what it proved and what it could not.
 8. ~~**Recruitment model.**~~ Built — see below.
 9. ~~**Buy-back clauses.**~~ Built — see below.
 10. ~~**The data department.**~~ Built — see below.
 11. ~~**The dressing room.**~~ Built — see below.
-12. **International football.** Largest of the new work, and it wants a stable
-    calendar underneath it.
+12. ~~**International football.**~~ Built — see below. Largest of the new work,
+    and it wanted a stable calendar underneath it, which is why it was last.
+
+**Every numbered item is done.** What remains is not a queue: the two deferrals
+under "Known defects" (a set-piece coach that would be a job title with no
+engine behind it, and squads thinning at the season roll), the bugs in
+`docs/bugs.md` that need a design decision rather than a fix, and the head
+coach who talks — which is a new piece of work rather than a leftover, and
+needs a backend before it needs a design.
 
 **Continental competitions are built.** They were deferred pending the long
 save, the long save has been run, and they are done — see "Continental
@@ -594,7 +593,7 @@ summary also named nobody when one disruptive senior sat in an otherwise level
 squad, because the tone is a mean and a mean hides the person; it now names the
 strongest voice whether or not the average looks unremarkable.
 
-## International football
+## International football — built
 
 Consequences, not management. You do not pick a national side; you live with
 what it does to your players. Built last because it wanted a stable calendar
