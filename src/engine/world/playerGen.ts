@@ -176,6 +176,7 @@ export function generatePlayer(ctx: PlayerGenContext, opts: PlayerGenOptions): P
     tournamentStock: 0,
     academyRelease: null,
     gotAwayReported: false,
+    wageDiscount: 1,
     developmentRate: rng.float(0.7, 1.35),
     trainingYears: seedTrainingYears(rng, nationality, opts, age),
     weeksUnattached: 0,

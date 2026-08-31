@@ -221,6 +221,7 @@ export function signEmergencyFreeAgent(
   target.clubId = club.id
   target.loanClubId = null
   target.weeksUnattached = 0
+  target.wageDiscount = 1
   target.joinedSeason = state.date.season
   target.squadStatus = 'backup'
   target.desiredStatus = 'backup'

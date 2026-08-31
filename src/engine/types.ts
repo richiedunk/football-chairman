@@ -773,6 +773,20 @@ export interface Player {
   academyRelease?: { clubId: ID; season: number } | null
   /** Set once the world has noticed what he became, so it is said once. */
   gotAwayReported?: boolean
+  /**
+   * How far he has come down on wages while nobody has called, 0.45-1.
+   *
+   * A multiplier rather than a figure, and that distinction is the whole
+   * point. Storing the softened number let a released academy boy carry the
+   * wage he was on at sixteen into the free market, so the budget filter that
+   * decides who a club can afford waved teenagers through and kept rejecting
+   * professionals — the opposite of what softening is for. A multiplier is
+   * always applied to a freshly computed market wage, so it cannot inherit a
+   * stale figure from a life the player has left behind.
+   *
+   * It only falls while he is unattached, and it resets the day he signs.
+   */
+  wageDiscount?: number
   /** True for academy players not yet promoted to the senior squad. */
   isAcademy: boolean
   /** Season they joined the club, for loyalty and testimonials. */
@@ -1609,4 +1623,4 @@ export interface GameSettings {
   hapticsEnabled: boolean
 }
 
-export const SAVE_VERSION = 14
+export const SAVE_VERSION = 15

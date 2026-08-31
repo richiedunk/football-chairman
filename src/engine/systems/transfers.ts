@@ -687,6 +687,8 @@ export function executeTransfer(
   player.clubId = buyer.id
   player.contract = contract
   player.weeksUnattached = 0
+  // He has a club again, so he stops discounting himself.
+  player.wageDiscount = 1
   player.purchaseFee = upfront
   // The fee is written down over the contract signed with it, which is what
   // makes a long contract a financial instrument rather than just a longer

@@ -37,6 +37,11 @@ beforeAll(() => {
 function stripToVersion(state: GameState, version: number): GameState {
   const s = JSON.parse(JSON.stringify(state)) as GameState
 
+  if (version < 15) {
+    for (const player of Object.values(s.players)) {
+      delete (player as { wageDiscount?: number }).wageDiscount
+    }
+  }
   if (version < 14) {
     for (const player of Object.values(s.players)) {
       delete (player as { academyRelease?: unknown }).academyRelease
@@ -124,7 +129,7 @@ async function loadFrom(version: number, slotId: string): Promise<GameState> {
   return loaded!
 }
 
-const HISTORICAL = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
+const HISTORICAL = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
 
 describe('every historical format still loads', () => {
   for (const version of HISTORICAL) {
@@ -170,6 +175,7 @@ describe('every historical format still loads', () => {
     // against clubs that never made the decision.
     expect(player.academyRelease, 'v14: release record left undefined').toBeNull()
     expect(player.gotAwayReported, 'v14: got-away flag left undefined').toBe(false)
+    expect(player.wageDiscount, 'v15: no wage discount').toBe(1)
     await deleteSave('mig-all')
   }, 60_000)
 

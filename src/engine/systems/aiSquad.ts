@@ -100,9 +100,19 @@ export function runAiSquadManagement(state: GameState, ctx: AiSquadContext): voi
     if (player.clubId || player.isAcademy) continue
     player.weeksUnattached += 1
     // Demands soften the longer nobody calls. This is the mechanism that lets
-    // a player released by a second-tier club end up playing non-league.
+    // a player released by a second-tier club end up playing non-league — and
+    // it was being written into `wageDemand` every four weeks and read by
+    // nobody, because the one place that decides whether a club can afford him
+    // recomputed the market figure instead.
+    //
+    // Held as a multiplier now, applied to a market wage computed fresh, so a
+    // released academy boy cannot carry a sixteen-year-old's terms into the
+    // adult market and undercut every professional in the queue.
     if (player.weeksUnattached % 4 === 0) {
-      player.wageDemand = Math.max(90, Math.round(player.wageDemand * 0.93))
+      const discount = Math.max(minWageDiscount(player), (player.wageDiscount ?? 1) * 0.93)
+      player.wageDiscount = discount
+      const nation = state.nations[player.nationalityId] ?? null
+      player.wageDemand = Math.max(90, Math.round(computeWageDemand(player, null, nation) * discount))
     }
     freeAgents.push(player)
   }
@@ -140,6 +150,29 @@ export function runAiSquadManagement(state: GameState, ctx: AiSquadContext): voi
     promoteFromAcademy(state, club, clubRng)
     recruitFreeAgents(state, ctx, club, freeAgents, clubRng)
   }
+}
+
+/**
+ * How far a player will come down, and no further.
+ *
+ * The guard rail, and it matters more than the decay does. Without a floor a
+ * twenty-two-year-old released by a top-flight club would keep halving his
+ * demands until a fourth-tier side could afford him, and eighteen months after
+ * being in the Premier League he is in Division Two because a number ran down
+ * — which is not what happens to good young players. Someone wants them, and
+ * they know it.
+ *
+ * So the floor rises with quality and with youth. A good twenty-two-year-old
+ * will take a pay cut of a fifth and then stop; a thirty-four-year-old
+ * journeyman will go to nearly half. The ability ceiling in `recruitOne` is
+ * the other half of the same guard rail — it already stops a Division Two club
+ * signing a Premier League player at any price — and the two together mean a
+ * fallen prospect lands at a level that makes sense rather than at the bottom.
+ */
+export function minWageDiscount(player: Player): number {
+  const young = player.age <= 24 ? 0.2 : player.age <= 28 ? 0.1 : 0
+  const quality = clamp((player.currentAbility - 80) / 120, 0, 0.25)
+  return clamp(0.45 + young + quality, 0.45, 0.9)
 }
 
 /** Weeks in which AI clubs work through their expiring contracts. */
@@ -414,7 +447,13 @@ function recruitOne(
     if (player.currentAbility > ceiling * 1.02) continue
     if (player.currentAbility < floor) break // the list is sorted, so we are done
 
-    const wage = Math.max(90, Math.round(computeWageDemand(player, league, nation)))
+    // What he is asking, which is the market rate less however far he has come
+    // down while nobody called. Computed fresh from who he is now and then
+    // discounted, never carried forward as a figure.
+    const wage = Math.max(
+      90,
+      Math.round(computeWageDemand(player, league, nation) * (player.wageDiscount ?? 1)),
+    )
 
     // Below the floor the wage budget stops applying. A club that cannot
     // fulfil its fixtures signs players and answers for the overspend later —
