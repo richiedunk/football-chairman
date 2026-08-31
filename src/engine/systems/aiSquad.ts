@@ -414,7 +414,16 @@ function recruitOne(
     if (player.currentAbility > ceiling * 1.02) continue
     if (player.currentAbility < floor) break // the list is sorted, so we are done
 
-    const wage = Math.max(90, Math.round(computeWageDemand(player, league, nation)))
+    // What he is actually asking, not what the market says he is worth.
+    //
+    // These are two different numbers and only one of them is his. A player
+    // nobody has called for a year drops his demands — `runAiSquadManagement`
+    // softens `wageDemand` by 7% every four weeks, and that is the mechanism
+    // that lets a man released by a second-tier club end up playing non-league.
+    // This line recomputed the market figure instead, so the softening was
+    // written every month and read by nothing, and an unemployed professional
+    // asked full price for ever.
+    const wage = Math.max(90, Math.round(player.wageDemand))
 
     // Below the floor the wage budget stops applying. A club that cannot
     // fulfil its fixtures signs players and answers for the overspend later —

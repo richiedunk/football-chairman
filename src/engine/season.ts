@@ -567,7 +567,17 @@ function processPlayerYearEnd(state: GameState, deps: RolloverDeps): void {
     const league = club ? state.leagues[club.leagueId] : null
     const nation = club ? state.nations[club.nationId] : state.nations[player.nationalityId]
     player.value = computeValue(player, league, nation ?? null, season + 1)
-    player.wageDemand = computeWageDemand(player, league, nation ?? null)
+
+    // A free agent's asking price only ever falls.
+    //
+    // Recomputing it wiped out a year of softening every summer, so a man
+    // unemployed for five seasons asked exactly what he asked the day he was
+    // released. Between that and the buyer reading the market figure rather
+    // than his, released professionals were unsignable by construction: the
+    // pool held 1,145 of them while clubs shed 1.5 players aged 21 and over a
+    // season and signed back 1.0.
+    const asking = computeWageDemand(player, league, nation ?? null)
+    player.wageDemand = player.clubId ? asking : Math.min(player.wageDemand, asking)
   }
 
   for (const player of retiring) {
