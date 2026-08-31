@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createRouter, createMemoryHistory } from 'vue-router'
 import { readFileSync } from 'node:fs'
-import { resolveLink } from '../src/ui/link'
+import { followLink, resolveLink } from '../src/ui/link'
 import { SCREEN_LABELS } from '../src/ui/screens'
 
 /**
@@ -67,6 +67,36 @@ describe('message links', () => {
   it('gives up rather than landing on the catch-all', () => {
     expect(resolveLink(router, { view: 'dressingRoom' })).toBeNull()
     expect(resolveLink(router, { view: 'nowhere', id: 'x' })).toBeNull()
+  })
+})
+
+describe('following a link', () => {
+  // resolveLink was tested thoroughly and followLink, which is the half the
+  // UI actually calls, was not tested at all.
+  const spy = () => {
+    const pushed: string[] = []
+    const stub = { ...router, push: (to: string) => { pushed.push(to); return Promise.resolve() } }
+    return { pushed, router: stub as unknown as typeof router }
+  }
+
+  it('goes where the link resolves to, and says it went', () => {
+    const { pushed, router: r } = spy()
+    expect(followLink(r, { view: 'player', id: 'plr_9' })).toBe(true)
+    expect(pushed).toEqual(['/player/plr_9'])
+  })
+
+  it('follows the fallback when the id has nowhere to go', () => {
+    const { pushed, router: r } = spy()
+    expect(followLink(r, { view: 'media', id: 'nws_12' })).toBe(true)
+    expect(pushed).toEqual(['/media'])
+  })
+
+  it('stays put rather than navigating nowhere', () => {
+    // The false is what hides the button. Navigating anyway would drop the
+    // reader on the catch-all, which is the bug this file exists for.
+    const { pushed, router: r } = spy()
+    expect(followLink(r, { view: 'nowhere', id: 'x' })).toBe(false)
+    expect(pushed).toEqual([])
   })
 
   it('names a screen for every route the game links to', () => {
