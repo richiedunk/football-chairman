@@ -184,7 +184,7 @@ not a code change.
 ## Testing
 
 ```bash
-npm test                    # 58 engine tests
+npm test                    # 344 engine tests
 node scripts/e2e.mjs        # drives the built app in a real browser
 ```
 
@@ -201,3 +201,9 @@ every screen, plant a media story, then reload the page and confirm it resumes a
 club.
 
 Both found real bugs. Measuring three simulated seasons found four more.
+
+Mutation testing is configured but has never been run, so there is no score to quote. It
+breaks the engine on purpose and checks whether any test notices, which is a different and
+harder question than whether a line was covered. It is scoped to the rule layer and it is
+an overnight job — `docs/mutation-testing.md` explains the scope, the cost and how to run
+something smaller.
