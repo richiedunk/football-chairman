@@ -206,17 +206,31 @@ export function computeAskingPrice(
  * for how badly morale drops if he is sold, and for media interest.
  */
 export function squadImportance(state: GameState, player: Player, club: Club): number {
-  const squad = club.squad
-    .map((id) => state.players[id])
-    .filter((p): p is Player => Boolean(p) && !p.isAcademy)
-  if (squad.length === 0) return 0.5
+  // Counted rather than sorted.
+  //
+  // This built an array of the squad, filtered it, copied it and sorted it on
+  // every call, and it is called for every candidate in every transfer the AI
+  // considers — 16% of the entire tick between the sort and its comparator.
+  // A player's rank is just how many team-mates are better than him, which is
+  // one pass and no allocation at all. The answer is identical except among
+  // equal abilities, where counting gives the better rank rather than whichever
+  // one the sort happened to leave first.
+  let better = 0
+  let size = 0
+  let present = false
+  for (const id of club.squad) {
+    const other = state.players[id]
+    if (!other || other.isAcademy) continue
+    size += 1
+    if (other.id === player.id) present = true
+    else if (other.currentAbility > player.currentAbility) better += 1
+  }
 
-  const sorted = squad.slice().sort((a, b) => b.currentAbility - a.currentAbility)
-  const rank = sorted.findIndex((p) => p.id === player.id)
-  if (rank < 0) return 0.2
+  if (size === 0) return 0.5
+  if (!present) return 0.2
 
   // Top of the squad is 1.0, falling away through the first team.
-  return clamp(1 - rank / Math.max(11, sorted.length * 0.7), 0, 1)
+  return clamp(1 - better / Math.max(11, size * 0.7), 0, 1)
 }
 
 /** Total weekly wage bill for a club, including staff. */
