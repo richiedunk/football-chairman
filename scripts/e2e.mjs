@@ -498,6 +498,28 @@ await step('the data department says how wrong it might be', async () => {
   console.log(`   ${rows} name${rows === 1 ? '' : 's'} on the list, error band stated`)
 })
 
+await step('the dressing room reads the room and names names', async () => {
+  await page.goto('http://127.0.0.1:4173/#/room')
+  await page.waitForSelector('.section-title:has-text("The room")', { timeout: 15000 })
+
+  const reading = (await page.textContent('.card__body'))?.replace(/\s+/g, ' ') ?? ''
+  if (!/Excellent|Good|Ordinary|Poor|Toxic/.test(reading)) {
+    throw new Error(`no atmosphere reading: ${reading.slice(0, 120)}`)
+  }
+
+  // The lane: information and consequences, never man-management. Nothing on
+  // this screen may be a thing you say to a player.
+  const buttons = await page.locator('button').allTextContents()
+  const forbidden = buttons.filter((b) => /praise|fine |criticise|team talk|motivate|promise/i.test(b))
+  if (forbidden.length) {
+    throw new Error(`man-management action on the dressing room screen: ${forbidden.join(', ')}`)
+  }
+
+  const named = await page.locator('.list__row').count()
+  await page.screenshot({ path: `${SHOT}/33-room.png` })
+  console.log(`   ${reading.match(/Excellent|Good|Ordinary|Poor|Toxic/)?.[0]} room, ${named} named`)
+})
+
 await step('the club states a recruitment policy', async () => {
   await page.goto('http://127.0.0.1:4173/#/recruitment')
   await page.waitForSelector('.section-title:has-text("What kind of club we are")', { timeout: 15000 })

@@ -1,5 +1,6 @@
 import { clamp, Rng } from '../rng'
 import { squadImportance } from './valuation'
+import { grievanceDamping, influenceOf, readRoom } from './dressingRoom'
 import type { Club, GameState, Player, SquadStatus } from '../types'
 
 /**
@@ -44,6 +45,11 @@ export function processMorale(
 ): { player: Player; reason: string; severity: 'low' | 'medium' | 'high' }[] {
   const grievances: { player: Player; reason: string; severity: 'low' | 'medium' | 'high' }[] = []
   const season = state.date.season
+
+  // Read once for the whole squad: the room is a property of the group, and
+  // recomputing it per player would let the first name in the list be judged
+  // against a different room from the last.
+  const room = readRoom(state, club)
 
   for (const id of club.squad) {
     const player = state.players[id]
@@ -121,11 +127,29 @@ export function processMorale(
     // 5. Team results lift or depress everyone.
     drift += (club.fanMood - 55) / 40
 
-    // 6. Personality.
-    if (player.traits.includes('professional')) drift += 0.6
-    if (player.traits.includes('disruptive')) drift -= 0.8
+    // 6. The room, and his own place in it.
+    //
+    // The traits used to affect nobody but the man carrying them, which is
+    // precisely not how a dressing room works: a senior professional lifts the
+    // players around him and a disruptive one drags them down. The room term
+    // is what everyone in the squad feels; the personal terms below are what
+    // he feels regardless of anybody else.
+    //
+    // His own influence is taken back out of what he feels, so a leader is not
+    // paid for his own leadership and a disruptive player does not sit in a
+    // pool of his own making — each man is lifted or dragged by the others.
+    // A bad room is felt directly — it is the thing making everyone miserable.
+    // A good one works the other way about: rather than making contented
+    // players more contented, against a ceiling they are already near, it
+    // absorbs part of whatever is going wrong. That is what a senior
+    // professional actually does, and it is applied below once the grievances
+    // for this player are known.
+    const roomTone = room.tone - influenceOf(state, player, club) / 6
+    if (roomTone < 0) drift += roomTone * 0.55
+    else if (drift < 0) drift *= grievanceDamping(roomTone)
+
     if (player.traits.includes('homesick') && player.nationalityId !== club.nationId) drift -= 0.7
-    if (player.traits.includes('loyal')) drift += 0.4
+    if (player.traits.includes('inconsistent')) drift -= 0.1
 
     // Morale reverts toward a personal baseline rather than drifting forever.
     const baseline = 55 + (player.loyalty - 50) * 0.15

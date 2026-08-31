@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useGameStore } from '../../stores/game'
 import { philosophyOf } from '../../engine/systems/recruitment'
+import { readRoom, roomLabel } from '../../engine/systems/dressingRoom'
 import { formatMoney } from '../../engine/systems/valuation'
 import { confidenceLabel } from '../../engine/systems/board'
 import { credibilityLabel } from '../../engine/systems/media'
@@ -46,6 +47,13 @@ const earnedMilestones = computed(
   () => store.achievementProgress.filter((a) => a.earned).length,
 )
 
+/** The room, for the hub row — a reading, not a number. */
+const room = computed(() => {
+  const s = store.game
+  const c = club.value
+  return s && c ? roomLabel(readRoom(s, c).tone) : ''
+})
+
 const sections = computed(() => [
   { to: '/board', icon: 'board', label: 'Board', detail: club.value ? confidenceLabel(club.value.board.confidence) : '' },
   { to: '/finance', icon: 'finance', label: 'Finances', detail: formatMoney(club.value?.finances.balance ?? 0, store.currency) },
@@ -54,6 +62,7 @@ const sections = computed(() => [
   { to: '/staff', icon: 'staff', label: 'Staff', detail: store.headCoach?.knownAs ?? 'No head coach' },
   { to: '/recruitment', icon: 'agents', label: 'Recruitment policy', detail: club.value ? philosophyOf(club.value).name : '' },
   { to: '/data', icon: 'scouting', label: 'Data department', detail: `${store.game?.dataFindings?.length ?? 0} name${(store.game?.dataFindings?.length ?? 0) === 1 ? '' : 's'} on the list` },
+  { to: '/room', icon: 'squad', label: 'Dressing room', detail: room.value },
   { to: '/academy', icon: 'academy', label: 'Academy', detail: `${store.academy.length} in the setup` },
   { to: '/registration', icon: 'registration', label: 'Squad registration', detail: `${registered.value} named` },
   { to: '/agents', icon: 'agents', label: 'Agents', detail: `${store.agents.length} on the circuit` },

@@ -1,4 +1,5 @@
 import { clamp, Rng } from '../rng'
+import { readRoom, renewalAppetite } from './dressingRoom'
 import { computeValue, computeWageDemand, squadImportance, totalWageBill } from './valuation'
 import { releaseRegistration } from './registration'
 import { writeOffBookValue } from './finance'
@@ -74,7 +75,16 @@ export function evaluateRenewal(
     + (offer.loyaltyBonus / Math.max(1, marketWage * 52)) * 0.1
     + (offer.releaseClause !== null && offer.releaseClause < player.value * 1.4 ? 0.08 : 0)
 
-  const satisfaction = wageRatio + statusBonus + extras + rng.float(-0.04, 0.04)
+  // The room he would be signing up to another three years of.
+  //
+  // The consequence that costs a director most and is hardest to see coming: a
+  // squad nobody wants to be in becomes a squad nobody re-signs for, and no
+  // amount of money quite closes the gap. It works the other way too — a good
+  // room is worth a few per cent off everybody's demands, which is the upside
+  // half of the trade.
+  const room = renewalAppetite(readRoom(state, club).tone)
+
+  const satisfaction = wageRatio * room + statusBonus + extras + rng.float(-0.04, 0.04)
 
   if (satisfaction >= 1) {
     return { accepted: true, message: `${player.knownAs} is happy to sign.` }

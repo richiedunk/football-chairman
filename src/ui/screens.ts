@@ -9,6 +9,7 @@ export const SCREEN_LABELS: Record<string, string> = {
   home: 'Home',
   inbox: 'Inbox',
   squad: 'Squad',
+  room: 'Dressing room',
   registration: 'Squad list',
   player: 'Player profile',
   transfers: 'Transfers',

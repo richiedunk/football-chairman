@@ -38,8 +38,7 @@ simulating seasons and reading the numbers, never by inspecting code — so
 8. ~~**Recruitment model.**~~ Built — see below.
 9. ~~**Buy-back clauses.**~~ Built — see below.
 10. ~~**The data department.**~~ Built — see below.
-11. **The dressing room.** Deliberately last of the new systems, because it is
-    the one that could pull the game out of its lane.
+11. ~~**The dressing room.**~~ Built — see below.
 12. **International football.** Largest of the new work, and it wants a stable
     calendar underneath it.
 
@@ -522,9 +521,9 @@ It sits on the recruitment model: the model only spends its time on players the
 club's stated policy would actually sign, so a develop-and-sell club is not
 shown twenty-nine-year-olds who are ready now.
 
-## The dressing room
+## The dressing room — built
 
-Agreed, and **it cuts both ways**. A strong positive character lifts a room —
+**It cuts both ways**, and proving that was most of the work. A strong positive character lifts a room —
 a senior professional who sets standards raises the players around him — as
 surely as a disruptive one poisons it. Both need to be visible, and both need
 tuning carefully, because a system where every signing is a risk and none is an
@@ -542,6 +541,58 @@ by backing or dismissing the head coach.
 Every existing `ClubStrategy` dial is market policy and none is a tactic, and
 there is no team selection, formation, training or team talk anywhere in the
 game. That is the line, and the dressing room is built to respect it.
+
+**As built.** The traits had been in the game since the world was first
+generated and only ever affected the man carrying them — `professional` gave
+its owner +0.6 of weekly drift, `disruptive` −0.8, and a leader lifted nobody.
+Now each player contributes to a room reading weighted by how far his voice
+carries: standing in the squad and seniority, so a disruptive star does far
+more damage than a disruptive back-up and a leader nobody picks sets no tone.
+The room feeds every squad member's morale, and a player's own contribution is
+taken back out of what he feels — nobody is paid for his own leadership.
+
+**Two things the measurement changed.** The first design added positive drift
+for a good room, and measured out at +1.34 morale against −5.42 for a bad one.
+Morale reverts to a baseline near 55 and sits below it most of the time, so
+there is no headroom above, while the downside compounds through form and
+results. A risk five times the size of the reward is exactly the tax the
+warning above is about. So a good room now **absorbs grievances instead of
+inventing cheer** — which is also a better model of what a senior professional
+does. He does not make contented players more contented; he stops an unhappy
+one becoming a problem.
+
+| one senior player's traits | tone | squad morale |
+|---|---|---|
+| leader | 0.85 | **+1.27** |
+| professional | 0.71 | +1.21 |
+| nothing | 0.52 | — |
+| disruptive | 0.10 | **−1.69** |
+
+Measured over ten seeds, one season each. The first attempt at this measured
+three seasons and compared league points, which measured nothing: the runs
+promote and relegate away from each other, so by season three the points are
+scored against different opposition. It reported that a squad with no leader
+outscored one with a leader.
+
+The effect is **modest and roughly symmetrical**, which is the right shape.
+Swapping one man in twenty-five moves a group property a little; it should not
+transform it. `leader` and `professional` come out within noise of each other
+for the same reason.
+
+**Consequences, not actions.** A bad room makes players harder to re-sign — a
+squad nobody wants to be in is a squad nobody re-signs for, and the wage
+demanded moves up to 6% either way with the tone. The screen names who is
+setting the standard and who is dragging it down, and says plainly at the
+bottom that nothing on it is something you say to a player: what you can do
+about a room is sell someone, decline to renew someone, sign a different kind
+of professional, or deal with the head coach.
+
+**A display bug the tests caught.** The tone bands were written for a ±10 scale
+the mechanism never reaches — every real squad read "Ordinary" and the label
+was decoration. They are now set from the range it actually reaches. The
+summary also named nobody when one disruptive senior sat in an otherwise level
+squad, because the tone is a mean and a mean hides the person; it now names the
+strongest voice whether or not the average looks unremarkable.
 
 ## International football
 
