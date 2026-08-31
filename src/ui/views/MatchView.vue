@@ -72,10 +72,13 @@ const report = computed(() => {
     lineup,
     ourGoals: isHome ? result.homeGoals : result.awayGoals,
     theirGoals: isHome ? result.awayGoals : result.homeGoals,
-    ourShots: isHome ? result.shots.home : result.shots.away,
-    theirShots: isHome ? result.shots.away : result.shots.home,
-    ourOnTarget: isHome ? result.shotsOnTarget.home : result.shotsOnTarget.away,
-    ourPossession: isHome ? result.possession : 100 - result.possession,
+    // The trimmings only exist on a match the player can open, which is every
+    // match that reaches this screen. The fallbacks are for a save written
+    // before the trim, where a reopened old fixture may have lost them.
+    ourShots: isHome ? (result.shots?.home ?? 0) : (result.shots?.away ?? 0),
+    theirShots: isHome ? (result.shots?.away ?? 0) : (result.shots?.home ?? 0),
+    ourOnTarget: isHome ? (result.shotsOnTarget?.home ?? 0) : (result.shotsOnTarget?.away ?? 0),
+    ourPossession: isHome ? (result.possession ?? 50) : 100 - (result.possession ?? 50),
     ourColour: headerBand(club.colors.primary, club.colors.secondary).strip,
     theirColour: headerBand(opponent.colors.primary, opponent.colors.secondary).strip,
   }
@@ -151,7 +154,7 @@ function ratingTone(rating: number): string {
         <div class="report-stats__label">SHOTS</div>
       </div>
       <div class="report-stats__cell">
-        <div class="report-stats__value">{{ report.result.attendance.toLocaleString() }}</div>
+        <div class="report-stats__value">{{ (report.result.attendance ?? 0).toLocaleString() }}</div>
         <div class="report-stats__label">ATTENDANCE</div>
       </div>
     </div>

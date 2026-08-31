@@ -444,7 +444,7 @@ const hub = computed(() => {
               {{ entry.fixture.competitionType === 'league'
                 ? 'LEAGUE'
                 : (store.game?.cups[entry.fixture.competitionId]?.name ?? 'CUP').toUpperCase() }}
-              · {{ entry.result.attendance.toLocaleString() }} IN
+              · {{ (entry.result.attendance ?? 0).toLocaleString() }} IN
             </div>
           </div>
           <Chevron :size="14" />

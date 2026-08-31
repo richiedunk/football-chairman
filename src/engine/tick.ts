@@ -204,11 +204,13 @@ export function advanceWeek(state: GameState, deps: TickDeps): TickResult {
     // ratings for each of them was several megabytes of save file describing
     // matches nobody will ever open. Everything the simulation needs from a
     // result has already been applied to tables, stats and form by this point.
-    if (!detailed) slimResult(matchResult)
-
     playedClubs.add(home.id)
     playedClubs.add(away.id)
-    homeClubs.set(home.id, matchResult.attendance)
+    homeClubs.set(home.id, matchResult.attendance ?? 0)
+
+    // Trimmed after the week has taken what it needs, not before: the gate
+    // receipts above are the last reader of a match nobody will open.
+    if (!detailed) slimResult(matchResult)
 
     if (home.id === state.playerClubId || away.id === state.playerClubId) {
       result.playerFixtures.push({ fixture, result: matchResult })
@@ -873,6 +875,14 @@ function slimResult(result: MatchResult): void {
   result.ratings = {}
   result.homeLineup = []
   result.awayLineup = []
+  // Deleted rather than emptied: a key set to zero still costs its name in the
+  // save, and nine thousand fixtures a season pay it. The score and any
+  // shootout stay, because tables and cup progression read them.
+  delete result.possession
+  delete result.shots
+  delete result.shotsOnTarget
+  delete result.attendance
+  delete result.summary
 }
 
 function pushForm(form: ('W' | 'D' | 'L')[], outcome: 'W' | 'D' | 'L'): void {

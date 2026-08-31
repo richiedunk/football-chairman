@@ -69,6 +69,7 @@ import {
   RELATIONSHIP_EVENTS, STANDING_LABELS, STANDING_NOTES, standingFor,
 } from '../src/engine/systems/agents'
 import { linkLabel, SCREEN_LABELS } from '../src/ui/screens'
+import { simulatedWorld } from './support/simulated'
 import type { FinanceLedger } from '../src/engine/types'
 import type { GameState } from '../src/engine/types'
 
@@ -1304,18 +1305,27 @@ describe('AI squad management', () => {
     // to 12.2 by season four and 2.6 by season six, while thousands of free
     // agents waited to be asked. Slow, and the only test that would have
     // caught it — nothing shorter than a multi-season run shows the drain.
-    const setup = prepareNewGame({
-      seed: 'DECAY', directorName: 'T', background: 'scout',
-      worldSize: 'compact', homeNationId: 'eng', startingSeason: 2025,
+    // Six seasons is 138 seconds, and it was most of the suite's total. The
+    // result is a pure function of the engine and the seed, so it is cached
+    // against a hash of every file under src/engine: change the engine and
+    // this simulates for real, change anything else and it loads a world it
+    // has already paid for. The assertions below run either way.
+    clearRatingCache()
+    const state = simulatedWorld('decay-six-seasons', () => {
+      const setup = prepareNewGame({
+        seed: 'DECAY', directorName: 'T', background: 'scout',
+        worldSize: 'compact', homeNationId: 'eng', startingSeason: 2025,
+      })
+      const world = startCareerAt(setup, setup.candidates[0].id)
+
+      for (let season = 0; season < 6; season++) {
+        for (let w = 0; w < 52; w++) advanceWeek(world, { ids: setup.ids, names: setup.names })
+      }
+
+      // Measured mid-season, when a thin squad would actually cost points.
+      for (let w = 0; w < 14; w++) advanceWeek(world, { ids: setup.ids, names: setup.names })
+      return world
     })
-    const state = startCareerAt(setup, setup.candidates[0].id)
-
-    for (let season = 0; season < 6; season++) {
-      for (let w = 0; w < 52; w++) advanceWeek(state, { ids: setup.ids, names: setup.names })
-    }
-
-    // Measured mid-season, when a thin squad would actually cost points.
-    for (let w = 0; w < 14; w++) advanceWeek(state, { ids: setup.ids, names: setup.names })
 
     const ai = Object.values(state.clubs).filter((c) => c.id !== state.playerClubId)
     const sizes = ai.map((c) => seniorSquad(state, c).length)

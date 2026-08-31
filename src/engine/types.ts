@@ -126,6 +126,18 @@ export interface Fixture {
   legOf?: { tieId: ID; leg: 1 | 2 }
 }
 
+/**
+ * What a match leaves behind.
+ *
+ * Only the score and the shootout are kept for every fixture in the world:
+ * those decide tables and who goes through, and nothing else about a match in
+ * another country is ever read again. Everything below them is detail for a
+ * match the player can actually open — his own, or one involving somebody he
+ * is tracking — and is absent rather than empty on the rest.
+ *
+ * A season is roughly nine thousand fixtures. Carrying the trimmings on all of
+ * them cost 0.66MB of a 19.5MB save for numbers no screen could reach.
+ */
 export interface MatchResult {
   homeGoals: number
   awayGoals: number
@@ -136,12 +148,13 @@ export interface MatchResult {
   ratings: Record<ID, number>
   homeLineup: ID[]
   awayLineup: ID[]
-  possession: number // home share, 0-100
-  shots: { home: number; away: number }
-  shotsOnTarget: { home: number; away: number }
-  attendance: number
-  /** One-line verdict used in the results feed. */
-  summary: string
+  /** Home share, 0-100. Detailed matches only. */
+  possession?: number
+  shots?: { home: number; away: number }
+  shotsOnTarget?: { home: number; away: number }
+  attendance?: number
+  /** One-line verdict used in the results feed. Detailed matches only. */
+  summary?: string
 }
 
 export type MatchEventType =
