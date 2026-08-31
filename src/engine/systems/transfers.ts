@@ -1093,11 +1093,22 @@ function suitableBuyers(state: GameState, player: Player, seller: Club): Club[] 
     if (club.id === seller.id || club.id === state.playerClubId) continue
     if (club.finances.inCrisis) continue
 
-    const squad = club.squad
-      .map((id) => state.players[id])
-      .filter((p): p is Player => Boolean(p) && !p.isAcademy && !p.loanClubId)
-    if (squad.length >= SQUAD_CEILING) continue
-    if (squad.filter((p) => p.age >= U21_AGE).length >= SQUAD_LIMIT) continue
+    // Counted, not collected.
+    //
+    // This ran for every club in the world for every player being shopped, and
+    // built three arrays each time to answer two questions about size. One
+    // pass, no allocation, and the cheap test now happens before any of the
+    // expensive ones below it.
+    let available = 0
+    let seniors = 0
+    for (const id of club.squad) {
+      const p = state.players[id]
+      if (!p || p.isAcademy || p.loanClubId) continue
+      available += 1
+      if (p.age >= U21_AGE) seniors += 1
+    }
+    if (available >= SQUAD_CEILING) continue
+    if (seniors >= SQUAD_LIMIT) continue
 
     // How hard this club competes. `wageAggression` was generated for every
     // club in the world and read by nothing, so a club that would break its
@@ -1214,15 +1225,28 @@ function weakestPosition(state: GameState, club: Club, squad: Player[]): Player[
   let worst: Player['position'] | null = null
   let worstScore = -Infinity
 
+  // One pass for all ten positions.
+  //
+  // This filtered the squad once per position, mapped each result and spread it
+  // into Math.max — thirty allocations and ten scans to answer a question about
+  // one squad, on every buy attempt by every club. The spread was also a
+  // standing hazard: Math.max(...xs) on a long enough array overflows the call
+  // stack, and nothing here bounded the squad.
+  const bestAt = new Map<Player['position'], number>()
+  const countAt = new Map<Player['position'], number>()
+  for (const p of squad) {
+    countAt.set(p.position, (countAt.get(p.position) ?? 0) + 1)
+    const best = bestAt.get(p.position) ?? 0
+    if (p.currentAbility > best) bestAt.set(p.position, p.currentAbility)
+  }
+
   for (const position of positions) {
-    const inPosition = squad.filter((p) => p.position === position)
-    const best = inPosition.length
-      ? Math.max(...inPosition.map((p) => p.currentAbility))
-      : 0
+    const inPositionCount = countAt.get(position) ?? 0
+    const best = bestAt.get(position) ?? 0
     // A quality shortfall counts for more than a depth one, but a position
     // with a single body in it is a problem whatever his rating.
     const quality = standard - best
-    const thinness = Math.max(0, 2 - inPosition.length) * 9
+    const thinness = Math.max(0, 2 - inPositionCount) * 9
     const score = quality + thinness
     if (score > worstScore) {
       worstScore = score
