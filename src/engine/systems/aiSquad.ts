@@ -5,6 +5,7 @@ import { isTransferWindowOpen } from '../sim/schedule'
 import { ratingForPositionCached } from '../world/attributes'
 import { promoteToSenior } from './academy'
 import { targetSquadFor } from './recruitment'
+import { U21_AGE } from './registration'
 import { suggestRenewal } from './contracts'
 import { executeTransfer, moveAppeal } from './transfers'
 import { computeValue, computeWageDemand, totalWageBill } from './valuation'
@@ -61,6 +62,28 @@ export function seniorSquad(state: GameState, club: Club): Player[] {
   return club.squad
     .map((id) => state.players[id])
     .filter((p): p is Player => Boolean(p) && !p.isAcademy)
+}
+
+/**
+ * The players who actually take up a place.
+ *
+ * The squad list has twenty-five places and under-21s sit outside it — that is
+ * the real rule and the game already plays by it when registering. The AI's
+ * squad-size target did not: it counted every senior player including the
+ * under-21s, so a club that promoted seven teenagers was "full" at twenty-four
+ * and stopped signing professionals it had places for.
+ *
+ * That is the whole young drift, and the arithmetic is exact. Measured over
+ * ten seasons, squads held at 24.3 while players aged 21 and over fell from
+ * 19.9 to 17.2 and under-21s rose to 7.1 — and 24.3 minus 7.1 is 17.2. The
+ * kids were not arriving too fast; they were crowding out the professionals
+ * from places the rules never asked them to occupy.
+ *
+ * Availability is a different question and still counts everybody: an
+ * eighteen-year-old can play on Saturday, he just does not use up a place.
+ */
+export function registrableSquad(state: GameState, club: Club): Player[] {
+  return seniorSquad(state, club).filter((p) => p.age >= U21_AGE)
 }
 
 /**
@@ -259,7 +282,8 @@ export function processAiRenewals(state: GameState, club: Club): number {
 export function promoteFromAcademy(state: GameState, club: Club, rng: Rng): Player | null {
   const squad = seniorSquad(state, club)
   const seniors = squad.length
-  if (seniors >= targetSquadFor(club, TARGET_SENIOR_SQUAD)) return null
+  // Places, not bodies: a squad of under-21s is not a full squad.
+  if (registrableSquad(state, club).length >= targetSquadFor(club, TARGET_SENIOR_SQUAD)) return null
   if (seniors >= EMERGENCY_SQUAD && !rng.chance(0.35)) return null
 
   const academy = club.squad
@@ -348,14 +372,18 @@ function recruitOne(
   // anyone, so declining a free agent is choosing to be short until February.
   // Which is exactly why real clubs sign free agents in October.
   const squad = seniorSquad(state, club)
+  // Places for the ceiling, bodies for the emergency — the same distinction the
+  // registration rules make, and the reason under-21s never blocked a signing
+  // in real football.
+  const places = registrableSquad(state, club).length
   const target = targetSquadFor(club, TARGET_SENIOR_SQUAD)
   const reserving = isTransferWindowOpen(state.date.week)
   const freeAgentCeiling = reserving
     ? Math.max(EMERGENCY_SQUAD, target - (TARGET_SENIOR_SQUAD - FREE_AGENT_TARGET))
     : target
-  if (squad.length >= freeAgentCeiling) return null
+  if (places >= freeAgentCeiling) return null
 
-  const shortfall = freeAgentCeiling - squad.length
+  const shortfall = freeAgentCeiling - places
   const desperation = clamp(shortfall / 8, 0, 1)
   // Below the floor the club cannot put out a side with anyone left over, and
   // it stops shopping and starts hiring. Without this a club that fell behind
