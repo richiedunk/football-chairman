@@ -809,7 +809,7 @@ export type PlayerTrait =
   | 'inconsistent'
   | 'ambitious'
   | 'homesick'
-  | 'clubhouseCancer'
+  | 'disruptive'
   | 'versatile'
 
 export type SquadStatus =
@@ -1575,4 +1575,4 @@ export interface GameSettings {
   hapticsEnabled: boolean
 }
 
-export const SAVE_VERSION = 11
+export const SAVE_VERSION = 12

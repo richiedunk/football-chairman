@@ -55,7 +55,7 @@ const TRAIT_POOL: { trait: PlayerTrait; weight: number }[] = [
   { trait: 'inconsistent', weight: 9 },
   { trait: 'ambitious', weight: 10 },
   { trait: 'homesick', weight: 4 },
-  { trait: 'clubhouseCancer', weight: 3 },
+  { trait: 'disruptive', weight: 3 },
   { trait: 'versatile', weight: 7 },
 ]
 

@@ -161,3 +161,63 @@ describe('the list itself', () => {
     expect(pruneFindings(owned as GameState, club)).toHaveLength(0)
   })
 })
+
+describe('a department is never worse than not having one', () => {
+  it('clears chance at every level, including the smallest', () => {
+    // The first version filtered on a noisy estimate, which selects for
+    // whoever drew the largest upward error — the winner's curse — and made a
+    // level-1 department right one time in ten. A tool that is reliably wrong
+    // is not a cheap tool, it is a trap.
+    for (const level of [1, 5, 10, 15, 20]) {
+      club.facilities.dataDepartment = level
+      let right = 0
+      let wrong = 0
+      for (let run = 0; run < 12; run++) {
+        for (const finding of runModel(state, club, new Rng(`chance:${level}:${run}`))) {
+          const player = state.players[finding.playerId]
+          if (!player) continue
+          if (modelValuation(state, player, club) - player.value > 0) right++
+          else wrong++
+        }
+      }
+      const total = right + wrong
+      if (total === 0) continue
+      // Comfortably above chance, not marginally: the point is that the
+      // department is worth consulting at any size, not that it scrapes past.
+      expect(right / total, `level ${level} is right ${right} of ${total}`).toBeGreaterThan(0.6)
+    }
+  })
+
+  it('is never silent either — a department that says nothing is no use', () => {
+    // The first fix overcorrected and levels 1 to 3 produced nothing at all.
+    club.facilities.dataDepartment = 1
+    let names = 0
+    for (let run = 0; run < 12; run++) names += runModel(state, club, new Rng(`quiet:${run}`)).length
+    expect(names, 'the smallest department never says anything').toBeGreaterThan(0)
+  })
+
+  it('says less rather than guessing when it cannot see clearly', () => {
+    // What a small department buys is silence, not confident nonsense.
+    const count = (level: number) => {
+      club.facilities.dataDepartment = level
+      let names = 0
+      for (let run = 0; run < 12; run++) names += runModel(state, club, new Rng(`vol:${level}:${run}`)).length
+      return names / 12
+    }
+    expect(count(1)).toBeLessThan(count(20))
+  })
+})
+
+describe('the disruptive trait', () => {
+  it('is not named after a disease', () => {
+    // It was `clubhouseCancer`. Naming a person after an illness is a nasty
+    // way to describe a footballer who is hard work.
+    const source = Object.keys(state.players).slice(0, 1)
+    expect(source.length).toBeGreaterThan(0)
+    for (const player of Object.values(state.players)) {
+      for (const trait of player.traits) {
+        expect(String(trait)).not.toMatch(/cancer/i)
+      }
+    }
+  })
+})

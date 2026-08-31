@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 import { useGameStore } from '../../stores/game'
 import { formatMoney } from '../../engine/systems/valuation'
 import {
-  DATA_REFRESH_WEEKS, modelNoise, shortlistSize,
+  DATA_REFRESH_WEEKS, modelNoise, requiredEdgeFraction, shortlistSize,
 } from '../../engine/systems/dataDepartment'
 import { philosophyOf } from '../../engine/systems/recruitment'
 import MeterBar from '../components/MeterBar.vue'
@@ -41,6 +41,8 @@ const findings = computed(() =>
 
 /** How wrong a department this size can be, said plainly. */
 const errorBand = computed(() => Math.round(modelNoise(level.value) * 100))
+/** The bar it has to clear before it will name anybody, at this size. */
+const requiredEdge = computed(() => Math.round(requiredEdgeFraction(level.value) * 100))
 
 function tone(confidence: number): string {
   if (confidence >= 0.6) return 'var(--accent)'
@@ -61,9 +63,11 @@ function tone(confidence: number): string {
         <MeterBar :value="level" :max="20" />
         <p class="small muted" style="margin: 0">
           It runs every {{ DATA_REFRESH_WEEKS }} weeks and can carry
-          {{ shortlistSize(level) }} names. At this size its valuations are out by
-          about {{ errorBand }}% either way, so some of what follows is wrong —
-          that is what the confidence figure is for.
+          {{ shortlistSize(level) }} names. Its valuations are out by about
+          {{ errorBand }}% either way at this size, so it only speaks up when it
+          sees an edge of {{ requiredEdge }}% or more — a smaller department says
+          less rather than guessing. What it does say is usually right; what
+          money buys is how much it sees.
         </p>
         <p class="small muted" style="margin: 0">
           It looks for players your policy would actually sign:

@@ -465,27 +465,44 @@ investment removes that — it only makes the department better at saying how
 uncertain it is, which is why the output carries a confidence figure and not a
 recommendation.
 
-**A badly funded department is not a quiet one. It is a wrong one.** Measured
-by running the same model over the same world 40 times at each level and
-checking each finding against the valuation the model cannot see:
+**A badly funded department is a quiet one, not a wrong one.** The first
+version had this backwards, and it was a real mistake rather than a tuning
+choice. It added symmetric noise to the estimate and then filtered on the noisy
+value, which selects for whoever happened to draw the largest upward error —
+the winner's curse. A level-1 department came out right one time in ten: worse
+than chance, and so worse than not having one at all. A tool that is reliably
+wrong is not a cheap tool, it is a trap.
 
-| level | error band | names | accuracy | stated confidence |
+Two fixes, both what an honest estimator does rather than tuning. The model
+**shrinks its estimate toward the market price** by how unreliable it knows
+itself to be — a model out by 40% does not report a 40% edge as though it were
+real. And the **bar it has to clear scales with its own noise**: 39% at level
+one, 20% at level twenty. That is a signal-to-noise test, and it is what makes
+a small department say less rather than guess.
+
+Measured by running the same model over the same world 40 times at each level
+and checking every finding against the valuation the model cannot see, on two
+different worlds:
+
+| level | error band | bar it clears | names per run | accuracy |
 |---|---|---|---|---|
-| 1 | 42% | 3 | **10%** | 21% |
-| 5 | 34% | 5 | 28% | 31% |
-| 12 | 20% | 9 | 53% | 50% |
-| 20 | 4% | 14 | **100%** | 76% |
+| 1 | 42% | 39% | 2.8 | **85%** |
+| 8 | 28% | 32% | 5.6 | 79% |
+| 12 | 20% | 28% | 7.8 | 87% |
+| 20 | 4% | 20% | 14 | **100%** |
 
-A level-1 department is wrong nine times out of ten and says so on the screen —
-"out by about 42% either way, so some of what follows is wrong". That is the
-whole point: the investment buys accuracy, not volume, and hiding the
-inaccuracy would make the spending pointless.
+So **what money buys is how much the department sees, not whether it is worth
+listening to**. The smallest one names two or three players it is right about
+five times in six — the blindingly obvious, which you might have found anyway.
+The largest names fourteen, including the ones you would not have. Accuracy
+never falls below about four in five at any level, and the screen states both
+the error band and the bar it holds itself to.
 
-The two right-hand columns measure different things and the gap is honest. The
-accuracy column asks whether the *price* was right; the confidence figure also
-carries whether he will settle after the move, which nothing here can measure.
-So a top department is under-confident about valuations it gets right, which is
-the correct way round for it to be wrong.
+The confidence figure shown against each name is deliberately lower than that
+accuracy, and the gap is honest. Accuracy asks whether the *price* was right;
+confidence also carries whether he will settle after the move, which nothing
+here can measure. So the department is under-confident about valuations it gets
+right, which is the correct way round for it to be wrong.
 
 It sits on the recruitment model: the model only spends its time on players the
 club's stated policy would actually sign, so a develop-and-sell club is not

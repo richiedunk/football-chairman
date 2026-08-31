@@ -337,7 +337,7 @@ function writeVerdict(
   // an unreliable one does real damage.
   if (knowledge >= 60) {
     if (player.traits.includes('professional')) parts.push('Trains impeccably.')
-    else if (player.traits.includes('clubhouseCancer')) parts.push('Warning: he is trouble in a dressing room.')
+    else if (player.traits.includes('disruptive')) parts.push('Warning: he is trouble in a dressing room.')
     else if (player.traits.includes('hothead')) parts.push('Discipline is a concern.')
     else if (player.traits.includes('injuryProne')) parts.push('Worrying injury history.')
     else if (player.traits.includes('leader')) parts.push('A natural leader.')

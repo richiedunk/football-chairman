@@ -476,6 +476,11 @@ await step('the data department says how wrong it might be', async () => {
   if (!/out by about \d+%/.test(preamble)) {
     throw new Error(`the model does not state its error band: ${preamble.slice(0, 120)}`)
   }
+  // And the bar it holds itself to — the thing that keeps a small department
+  // quiet rather than wrong.
+  if (!/edge of \d+% or more/.test(preamble)) {
+    throw new Error(`the model does not state the bar it clears: ${preamble.slice(0, 160)}`)
+  }
   if (!/policy would actually sign/i.test(preamble)) {
     throw new Error('the model does not say it works in the club\'s own terms')
   }

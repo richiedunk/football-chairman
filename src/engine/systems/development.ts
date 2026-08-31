@@ -70,7 +70,7 @@ export function developPlayer(
   // identical attributes and identical minutes.
   const personality = (player.attributes.determination / 20) * 0.7 + 0.5
   const professionalism = player.traits.includes('professional') ? 1.15
-    : player.traits.includes('clubhouseCancer') ? 0.85 : 1
+    : player.traits.includes('disruptive') ? 0.85 : 1
 
   if (player.age <= GROWTH_END_AGE) {
     const headroom = player.potentialAbility - player.currentAbility

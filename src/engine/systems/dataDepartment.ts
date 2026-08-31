@@ -26,11 +26,20 @@ import type { Club, DataFinding, GameState, Player } from '../types'
  * uncertain it is. That is why the output carries a confidence figure rather
  * than a recommendation.
  *
- * **A badly funded department is not a quiet one. It is a wrong one.** At low
- * levels the model's estimate carries noise large enough to surface players
- * whose edge is negative — it says a man is underpriced when he is not. That
- * is precisely what a badly funded department produces, and hiding it would
- * make the investment pointless.
+ * **A badly funded department is a quiet one, not a wrong one.** The first
+ * version had this backwards and it was a real mistake rather than a tuning
+ * choice: it added symmetric noise to the estimate and then filtered on the
+ * noisy value, which selects for whoever happened to draw the largest upward
+ * error. That is the winner's curse, and it made a level-1 department right
+ * one time in ten — worse than chance, and so worse than having no department
+ * at all. A tool that is reliably wrong is not a cheap tool, it is a trap.
+ *
+ * What a poor estimator actually does is shrink toward the prior. The model
+ * knows how unreliable it is, so it discounts its own signal by that much and
+ * keeps only what survives; a small department therefore produces **few**
+ * findings rather than confident nonsense, and every level clears chance. What
+ * money buys is the volume of the list and the confidence attached to it, not
+ * the difference between useful and harmful.
  */
 
 /** Weeks between refreshes. A model is re-run, not consulted continuously. */
@@ -38,6 +47,23 @@ export const DATA_REFRESH_WEEKS = 4
 
 /** The smallest edge worth putting in front of anybody, as a fraction. */
 const MIN_EDGE_FRACTION = 0.18
+
+/**
+ * How large an edge has to look before a department of this quality believes it.
+ *
+ * A fixed threshold is the other half of the winner's curse. However far the
+ * estimate is shrunk, filtering a noisy quantity at a fixed bar still lets
+ * through whoever drew the largest error, and at middling department levels
+ * that was enough to drag accuracy below chance — 44% at level 10, measured.
+ *
+ * So the bar rises with the noise. A model out by 40% has to see a 55% edge
+ * before it will say anything; one out by 4% will speak up at 20%. This is
+ * just a signal-to-noise test, and it is what makes a poor department quiet
+ * rather than wrong.
+ */
+export function requiredEdgeFraction(level: number): number {
+  return MIN_EDGE_FRACTION + modelNoise(level) * 0.5
+}
 
 /**
  * What the model thinks a player is worth to *this* club.
@@ -138,11 +164,19 @@ export function runModel(state: GameState, club: Club, rng: Rng): DataFinding[] 
 
     const worth = modelValuation(state, player, club)
     const trueEdge = worth - market
-    // The estimate the department actually produces, wrong in proportion to
-    // how little has been spent on it.
-    const estimated = worth * (1 + rng.normal(0, noise))
+
+    // The raw signal, wrong in proportion to how little has been spent.
+    const raw = worth * (1 + rng.normal(0, noise))
+
+    // Shrink it toward the market price by how unreliable it is. A model that
+    // knows it is out by 40% does not report a 40% edge as though it were
+    // real, and one that does will surface the players it happened to
+    // over-estimate rather than the players who are cheap. Filtering on the
+    // shrunk figure is what keeps a small department quiet instead of wrong.
+    const trust = 1 - clamp(noise / 0.7, 0, 0.8)
+    const estimated = market + (raw - market) * trust
     const seenEdge = estimated - market
-    if (seenEdge < market * MIN_EDGE_FRACTION) continue
+    if (seenEdge < market * requiredEdgeFraction(level)) continue
 
     const confidence = clamp(
       moveConfidence(state, player, club) * (0.35 + (level / 20) * 0.65),

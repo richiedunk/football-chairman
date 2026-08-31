@@ -123,7 +123,7 @@ export function processMorale(
 
     // 6. Personality.
     if (player.traits.includes('professional')) drift += 0.6
-    if (player.traits.includes('clubhouseCancer')) drift -= 0.8
+    if (player.traits.includes('disruptive')) drift -= 0.8
     if (player.traits.includes('homesick') && player.nationalityId !== club.nationId) drift -= 0.7
     if (player.traits.includes('loyal')) drift += 0.4
 

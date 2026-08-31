@@ -1,4 +1,4 @@
-import { SAVE_VERSION, type GameState } from '../engine/types'
+import { SAVE_VERSION, type GameState, type PlayerTrait } from '../engine/types'
 import { autoRegister } from '../engine/systems/registration'
 import { createOwner, ownerName, startingOwnerKind } from '../engine/systems/ownership'
 import { Rng } from '../engine/rng'
@@ -375,6 +375,19 @@ function migrate(state: GameState): GameState {
   if (state.version < 11) {
     if (!Array.isArray(state.dataFindings)) state.dataFindings = []
     state.version = 11
+  }
+
+  // v12: the `clubhouseCancer` trait is now `disruptive`. Naming a person after
+  // a disease is a nasty way to describe a footballer who is hard work, and the
+  // trait is on real saves, so it is renamed in place rather than left to sit
+  // there because changing it is inconvenient.
+  if (state.version < 12) {
+    for (const player of Object.values(state.players)) {
+      if (!Array.isArray(player.traits)) continue
+      const at = player.traits.indexOf('clubhouseCancer' as PlayerTrait)
+      if (at >= 0) player.traits[at] = 'disruptive'
+    }
+    state.version = 12
   }
 
   state.version = SAVE_VERSION
