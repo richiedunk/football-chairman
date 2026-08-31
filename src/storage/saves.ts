@@ -12,6 +12,7 @@ import { IdFactory } from '../engine/ids'
 import {
   createContinentalCups, refreshContinentalEntrants, stripUnplayablePlaces,
 } from '../engine/systems/continental'
+import { inferPhilosophy } from '../engine/systems/recruitment'
 
 /**
  * Save and load.
@@ -344,6 +345,19 @@ function migrate(state: GameState): GameState {
       state.nextId = Math.max(state.nextId, highestId(state) + 1)
     }
     state.version = 8
+  }
+
+  // v9: recruitment policy. Every club states one, inferred from the dials it
+  // already carries rather than assigned at random — a club generated to sign
+  // young and sell has been a develop-and-sell club all along, and telling it
+  // otherwise on load would rewrite a squad the player knows.
+  if (state.version < 9) {
+    for (const club of Object.values(state.clubs)) {
+      if (club.strategy.philosophy) continue
+      club.strategy.philosophy = inferPhilosophy(club)
+      club.strategy.philosophySince = 0
+    }
+    state.version = 9
   }
 
   state.version = SAVE_VERSION

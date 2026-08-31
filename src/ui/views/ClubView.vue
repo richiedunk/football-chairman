@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useGameStore } from '../../stores/game'
+import { philosophyOf } from '../../engine/systems/recruitment'
 import { formatMoney } from '../../engine/systems/valuation'
 import { confidenceLabel } from '../../engine/systems/board'
 import { credibilityLabel } from '../../engine/systems/media'
@@ -51,6 +52,7 @@ const sections = computed(() => [
   { to: '/stadium', icon: 'stadium', label: 'Stadium', detail: club.value?.facilities.stadiumProject?.description ?? `${club.value?.facilities.stadium.capacity.toLocaleString()} places` },
   { to: '/facilities', icon: 'facilities', label: 'Facilities', detail: `${club.value?.facilities.projects.length ?? 0} project${club.value?.facilities.projects.length === 1 ? '' : 's'} under way` },
   { to: '/staff', icon: 'staff', label: 'Staff', detail: store.headCoach?.knownAs ?? 'No head coach' },
+  { to: '/recruitment', icon: 'agents', label: 'Recruitment policy', detail: club.value ? philosophyOf(club.value).name : '' },
   { to: '/academy', icon: 'academy', label: 'Academy', detail: `${store.academy.length} in the setup` },
   { to: '/registration', icon: 'registration', label: 'Squad registration', detail: `${registered.value} named` },
   { to: '/agents', icon: 'agents', label: 'Agents', detail: `${store.agents.length} on the circuit` },

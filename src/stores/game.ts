@@ -23,6 +23,9 @@ import {
 } from '../engine/systems/registration'
 import { AUTOSAVE_SLOT, loadGame, saveGame } from '../storage/saves'
 import { playerClub } from '../engine/playerClub'
+import {
+  canChangePhilosophy, philosophyById, setPhilosophy, type PhilosophyId,
+} from '../engine/systems/recruitment'
 import { SEARCH_STRIDE_WEEKS, advanceSearch } from '../engine/systems/jobSearch'
 import { addNews } from '../engine/systems/inbox'
 import { agentsInvolvedWith, clientsOf, introductions } from '../engine/systems/agents'
@@ -406,6 +409,37 @@ export const useGameStore = defineStore('game', () => {
       commit()
       return change
     })
+  }
+
+  /**
+   * State a recruitment policy, and take what it costs.
+   *
+   * The cost is board confidence, applied here rather than in the view so the
+   * rule holds however the call arrives — a policy you can change for nothing
+   * by going the long way round is not a policy.
+   */
+  function statePhilosophy(to: PhilosophyId): { ok: boolean; message: string } {
+    const s = state.value
+    const c = playerClub(s!)
+    if (!s || !c) return { ok: false, message: 'No club.' }
+
+    const verdict = canChangePhilosophy(s, c, to)
+    if (!verdict.ok) return { ok: false, message: verdict.reason }
+
+    setPhilosophy(s, c, to)
+    if (verdict.confidenceCost > 0) {
+      c.board.confidence = Math.max(0, c.board.confidence - verdict.confidenceCost)
+    }
+    addNews(s, ids, 'board',
+      `${c.name} state their recruitment policy: ${philosophyById(to).name.toLowerCase()}.`,
+      { view: 'recruitment' }, c.id)
+    commit()
+    return {
+      ok: true,
+      message: verdict.confidenceCost > 0
+        ? `Policy stated. The board have taken ${verdict.confidenceCost} off your confidence for it.`
+        : 'Policy stated. Everyone now knows what kind of club this is.',
+    }
   }
 
   // --- Match reports --------------------------------------------------------
@@ -968,6 +1002,7 @@ export const useGameStore = defineStore('game', () => {
     agents, agentIntroductions, agentClients,
     owner, takeover, worldTakeovers,
     isDeadline, deadlineOffers, deadlineTaken, refreshDeadline, takeDeadlineOffer,
+    statePhilosophy,
     idFactory, nameGenerator, reset,
   }
 })

@@ -13,6 +13,19 @@ will break next.
 
 ## Open
 
+### Every squad becomes half-foreign within four seasons
+Measured while checking whether recruitment policies bite: squads start at
+26-34% players from outside the club's nation and reach 47-58% after four
+seasons, whatever policy the club recruits under. The policy spread is eleven
+points; the drift is twenty-plus for everyone, so it swamps it.
+
+Likely the same root as the free-agent pool findings above — academies produce
+domestic players who wash out into a global pool that every club then signs
+from, with nothing weighting a club toward its own country strongly enough to
+matter. A fourth-tier English club with half its squad foreign is not a
+recruitment policy, it is a missing constraint. Worth measuring before tuning:
+the honest fix may be work-permit rules rather than a bigger nudge.
+
 
 ### A club short of players starts the match with ten
 `selection.ts` fills one slot per available player and stops when it runs out

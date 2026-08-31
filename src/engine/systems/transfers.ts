@@ -1,4 +1,5 @@
 import { clamp, Rng } from '../rng'
+import { philosophyAppeal } from './recruitment'
 import { IdFactory, ID_PREFIX } from '../ids'
 import { computeAskingPrice, computeValue, computeWageDemand, squadImportance, totalWageBill } from './valuation'
 import { canAfford, facilityUpkeep } from './finance'
@@ -413,6 +414,11 @@ export function moveAppeal(state: GameState, player: Player, buyer: Club): numbe
   if (player.traits.includes('ambitious') && repGap > 10) appeal += 0.15
   if (player.traits.includes('homesick') && buyer.nationId !== player.nationalityId) appeal -= 0.25
   if (player.nationalityId === buyer.nationId) appeal += 0.06
+
+  // What kind of club this is, and whether it is the kind that would play him.
+  // A twenty-year-old knows a develop-and-sell club will; a twenty-nine-year-
+  // old knows it will not sign him at all.
+  appeal += philosophyAppeal(buyer, player)
 
   // The director's own standing opens doors that a club's reputation alone
   // would not — the reason career progression matters beyond job offers.
@@ -1060,11 +1066,22 @@ function suitableBuyers(state: GameState, player: Player, seller: Club): Club[] 
     if (squad.length >= SQUAD_CEILING) continue
     if (squad.filter((p) => p.age >= U21_AGE).length >= SQUAD_LIMIT) continue
 
-    const fee = Math.round(computeAskingPrice(state, player, seller, club) * 0.95)
+    // How hard this club competes. `wageAggression` was generated for every
+    // club in the world and read by nothing, so a club that would break its
+    // structure for a signing and one that would not behaved identically.
+    // High aggression means bidding above the asking price and stretching the
+    // wage bill; low means walking away from the same player.
+    const aggression = (club.strategy.wageAggression ?? 50) / 100
+    const fee = Math.round(
+      computeAskingPrice(state, player, seller, club) * (0.86 + aggression * 0.24),
+    )
     if (fee > club.finances.transferBudget) continue
 
     const wage = computeWageDemand(player, state.leagues[club.leagueId], state.nations[club.nationId])
-    if (totalWageBill(state, club) + wage > club.finances.wageBudget) continue
+    // A club that pays over the odds will run its wage bill closer to the
+    // line, and past it by a little when it wants somebody badly.
+    const wageRoom = club.finances.wageBudget * (0.94 + aggression * 0.14)
+    if (totalWageBill(state, club) + wage > wageRoom) continue
     if (moveAppeal(state, player, club) < 0.45) continue
 
     out.push(club)

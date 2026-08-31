@@ -336,13 +336,56 @@ already spent, and the seasons left, which turns amber at eight and red at
 three. An age held in state that nothing surfaces would cost nothing, and so
 would change nothing.
 
-## Recruitment model
+## Recruitment model — built
 
-Not a new set of dials. `ClubStrategy` already carries `youthEmphasis`,
+Not a new set of dials. `ClubStrategy` already carried `youthEmphasis`,
 `systemFit`, `wageAggression`, `sellingClubStance`, `domesticBias`,
-`mediaStance` and `targetSquadSize`, and they are all market policy. The
-recruitment model **consolidates** them into a stated philosophy the club is
-known for, rather than adding a thirteenth slider next to twelve others.
+`mediaStance` and `targetSquadSize`. The recruitment model **consolidates**
+them into a stated policy the club is known for, rather than adding a
+thirteenth slider next to twelve others.
+
+**Reading the code first changed the job.** Of the seven dials,
+`wageAggression`, `domesticBias`, `targetSquadSize` and `mediaStance` were
+generated for every club in the world and read by **nothing**. `systemFit` was
+read in exactly one place, and that place is team selection, which is the head
+coach's job. Only `youthEmphasis` and `sellingClubStance` did any market work
+at all. So this was never a presentation layer over working dials — it is the
+thing that makes four dead numbers do something.
+
+Six policies, each with a stated trade-off, because a choice that gives nothing
+up is not a choice: develop and sell, win now, value hunting, homegrown, star
+names, and no stated policy. Changing one costs nine points of board confidence
+and is locked for sixty weeks after it is stated — a policy you can change for
+nothing is not a policy, and the board's complaint is precisely that the last
+one has not been given time to work. Stating a first policy is free; the board
+have been waiting to be told.
+
+**What the dials now drive.** `targetSquadSize` sets the squad each club works
+to, where the AI previously worked to one constant so every club in the world
+wanted the same number of players. `wageAggression` decides how far above the
+asking price a club bids and how close to its wage ceiling it will run.
+`domesticBias` steers both the human's scouting shortlist and — the higher
+volume channel by far — which free agents an AI club prefers.
+
+**Measured over four seasons across 678 clubs**, squads that started identical
+(26.0 players, mean age 24.1-24.4, 26-34% foreign) diverged:
+
+| policy | squad | mean age | foreign |
+|---|---|---|---|
+| Develop and sell | 25.4 | **25.8** | 53% |
+| Value hunting | 24.4 | 26.4 | 53% |
+| Homegrown | 24.1 | 26.4 | **47%** |
+| Win now | **23.7** | **26.8** | 49% |
+| Star names | 24.7 | 26.8 | **58%** |
+
+The divergence is real and in the right direction, and it is **modest**: a one
+-year spread in age, eleven points in foreign share, 1.7 players in squad size.
+Two honest caveats. Squad size ends up ordered by *youth emphasis* rather than
+by the nominal target — clubs that promote heavily sit above their free-agent
+ceiling and clubs that do not sit on it — which is a fair outcome but not the
+one the dial nominally sets. And every squad drifts from ~28% to ~50% foreign
+within four seasons whatever its policy, which swamps the effect and is a
+separate world behaviour worth its own look.
 
 What a philosophy should do that loose dials do not:
 

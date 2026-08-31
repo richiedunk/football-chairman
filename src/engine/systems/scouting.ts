@@ -381,6 +381,14 @@ function computeRecommendation(
   if (club.strategy.youthEmphasis > 60 && player.age >= 30) score -= 15
   if (potential - ability > 35 && club.strategy.youthEmphasis > 50) score += 10
 
+  // Where the club looks. `domesticBias` was generated for every club in the
+  // world and read by nothing, so a club that scouted globally and one that
+  // never left the county produced identical shortlists. A homegrown club
+  // should not be handed a name it was never going to sign.
+  const home = player.nationalityId === club.nationId
+  const bias = club.strategy.domesticBias ?? 50
+  score += home ? (bias - 50) * 0.24 : (50 - bias) * 0.24
+
   // Is he affordable? A recommendation the club cannot act on is worth little.
   const league = state.leagues[club.leagueId]
   const nation = state.nations[club.nationId]

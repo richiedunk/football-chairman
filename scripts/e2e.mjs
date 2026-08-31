@@ -462,6 +462,34 @@ await step('a bad address from cold does not look like a lost save', async () =>
   }
 })
 
+await step('the club states a recruitment policy', async () => {
+  await page.goto('http://127.0.0.1:4173/#/recruitment')
+  await page.waitForSelector('.section-title:has-text("What kind of club we are")', { timeout: 15000 })
+
+  const stated = (await page.textContent('.card .bold'))?.trim()
+  if (!stated) throw new Error('no policy stated at all')
+
+  // Every policy has to say what it gives up, or it is a free choice.
+  const tradeOff = await page.locator('[style*="--warn"]').first().textContent()
+  if (!tradeOff?.trim()) throw new Error(`"${stated}" gives nothing up`)
+
+  // The division's shape: more than one way of recruiting, or the market is flat.
+  const kinds = await page.locator('.section-title:has-text("How this division recruits") + .card .list__row').count()
+  if (kinds < 2) throw new Error(`division recruits ${kinds} way(s) — the market has no shape`)
+
+  // Changing it must be a decision with a stated cost, not a slider drag.
+  const choices = page.locator('.section-title:has-text("Change the policy") + .card .list__row:not([disabled])')
+  if (await choices.count() === 0) throw new Error('no alternative policy offered')
+  await choices.first().click()
+  await page.waitForSelector('.sheet', { timeout: 10000 })
+  const sheet = (await page.textContent('.sheet'))?.replace(/\s+/g, ' ') ?? ''
+  if (!/board/i.test(sheet)) throw new Error('changing policy does not mention the board')
+  await page.screenshot({ path: `${SHOT}/31-recruitment.png` })
+  await tap('.btn--ghost:has-text("Leave it")')
+
+  console.log(`   stated: ${stated} · ${kinds} policies in this division`)
+})
+
 await step('the club hub reaches the buried screens', async () => {
   // The recurring complaint was that everything below the five tabs was hard
   // to find. Each of these must be one tap from the dashboard.

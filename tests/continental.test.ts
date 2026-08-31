@@ -9,7 +9,7 @@ import {
   confederationsPresent, defFor, qualifiersFor,
 } from '../src/engine/systems/continental'
 import { CONTINENTAL_WEEKS } from '../src/engine/sim/schedule'
-import type { GameState } from '../src/engine/types'
+import { SAVE_VERSION, type GameState } from '../src/engine/types'
 
 /**
  * Continental competition.
@@ -196,7 +196,10 @@ describe('the v8 migration', () => {
     const file = new File([JSON.stringify(old)], 'save.json', { type: 'application/json' })
     const migrated = await importSave(file)
 
-    expect(migrated.version).toBe(8)
+    // SAVE_VERSION, not the literal 8: the point of this test is that an old
+    // save is brought up to date, and pinning the number meant it broke the
+    // next time a version was added rather than when migration broke.
+    expect(migrated.version).toBe(SAVE_VERSION)
     const created = Object.values(migrated.cups).filter((c) => c.type === 'continental')
     expect(created.length, 'migration created no competitions').toBeGreaterThan(0)
     expect(Object.keys(migrated.cups).length).toBe(before + created.length)

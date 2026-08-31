@@ -20,6 +20,7 @@ export const SCREEN_LABELS: Record<string, string> = {
   facilities: 'Facilities',
   stadium: 'Stadium',
   staff: 'Staff',
+  recruitment: 'Recruitment policy',
   academy: 'Academy',
   board: 'Boardroom',
   media: 'Media Centre',

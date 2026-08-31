@@ -3,6 +3,7 @@ import { IdFactory } from '../ids'
 import { abilityCeilingFor } from '../world/playerGen'
 import { ratingForPositionCached } from '../world/attributes'
 import { promoteToSenior } from './academy'
+import { targetSquadFor } from './recruitment'
 import { addInboxItem } from './inbox'
 import { suggestRenewal } from './contracts'
 import { executeTransfer, moveAppeal } from './transfers'
@@ -240,7 +241,7 @@ export function processAiRenewals(state: GameState, club: Club): number {
  */
 export function promoteFromAcademy(state: GameState, club: Club, rng: Rng): Player | null {
   const seniors = seniorSquad(state, club).length
-  if (seniors >= TARGET_SENIOR_SQUAD) return null
+  if (seniors >= targetSquadFor(club, TARGET_SENIOR_SQUAD)) return null
   if (seniors >= EMERGENCY_SQUAD && !rng.chance(0.35)) return null
 
   const candidate = club.squad
@@ -288,10 +289,16 @@ function recruitOne(
   pool: Player[],
   rng: Rng,
 ): Player | null {
+  // The free-agent ceiling sits three below whatever this club is working to,
+  // which is the gap it keeps back for the window. It used to sit three below
+  // a constant every club in the world shared, because `targetSquadSize` was
+  // generated for each club and read by nothing.
   const squad = seniorSquad(state, club)
-  if (squad.length >= FREE_AGENT_TARGET) return null
+  const target = targetSquadFor(club, TARGET_SENIOR_SQUAD)
+  const freeAgentCeiling = Math.max(EMERGENCY_SQUAD, target - (TARGET_SENIOR_SQUAD - FREE_AGENT_TARGET))
+  if (squad.length >= freeAgentCeiling) return null
 
-  const shortfall = FREE_AGENT_TARGET - squad.length
+  const shortfall = freeAgentCeiling - squad.length
   const desperation = clamp(shortfall / 8, 0, 1)
   // Below the floor the club cannot put out a side with anyone left over, and
   // it stops shopping and starts hiring. Without this a club that fell behind
@@ -344,11 +351,20 @@ function recruitOne(
     // instead of ending it.
     const ageWeight = clamp(club.reputation / 55, 0.15, 1.6)
     const veteranValue = player.age >= 30 && club.reputation < 40 ? 8 : 0
+    // Where this club looks for players. `domesticBias` reached only the
+    // human's scouting shortlist, so every AI club in the world recruited as
+    // though nationality were no object and a stated homegrown policy changed
+    // nothing about who a club actually signed. Free agents are the highest
+    // volume channel in the game, so this is where saying so has to bite.
+    const bias = (club.strategy.domesticBias ?? 50) - 50
+    const home = player.nationalityId === club.nationId
+    const domesticPull = emergency ? 0 : (home ? bias : -bias) * 0.22
     const score = emergency
       ? -wage
       : player.currentAbility
         - (player.age > 31 ? (player.age - 31) * 6 * ageWeight : 0)
         + veteranValue
+        + domesticPull
     if (score > bestScore) {
       best = player
       bestScore = score

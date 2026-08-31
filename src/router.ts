@@ -37,6 +37,7 @@ const routes: RouteRecordRaw[] = [
   { path: '/facilities', name: 'facilities', component: () => import('./ui/views/FacilitiesView.vue'), meta: { tab: 'home' } },
   { path: '/stadium', name: 'stadium', component: () => import('./ui/views/StadiumView.vue'), meta: { tab: 'home' } },
   { path: '/staff', name: 'staff', component: () => import('./ui/views/StaffView.vue'), meta: { tab: 'home' } },
+  { path: '/recruitment', name: 'recruitment', component: () => import('./ui/views/RecruitmentView.vue'), meta: { tab: 'home', title: 'Recruitment policy' } },
   { path: '/academy', name: 'academy', component: () => import('./ui/views/AcademyView.vue'), meta: { tab: 'home' } },
   { path: '/board', name: 'board', component: () => import('./ui/views/BoardView.vue'), meta: { tab: 'home' } },
   { path: '/media', name: 'media', component: () => import('./ui/views/MediaView.vue'), meta: { tab: 'home' } },

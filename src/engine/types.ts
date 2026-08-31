@@ -482,9 +482,25 @@ export interface ClubStrategy {
   mediaStance: MediaStance
   /** Squad size target the coach is briefed to work with. */
   targetSquadSize: number
+  /**
+   * The club's stated recruitment policy — what kind of club this is in the
+   * market, as everyone else understands it. Sets the dials above rather than
+   * sitting beside them.
+   */
+  philosophy?: PhilosophyId
+  /** Absolute week it was stated, so changing direction can have a cost. */
+  philosophySince?: number
 }
 
 export type MediaStance = 'guarded' | 'balanced' | 'open' | 'combative'
+
+export type PhilosophyId =
+  | 'developAndSell'
+  | 'winNow'
+  | 'valueHunting'
+  | 'homegrown'
+  | 'starNames'
+  | 'unstated'
 
 /**
  * Who actually owns the club.
@@ -1510,4 +1526,4 @@ export interface GameSettings {
   hapticsEnabled: boolean
 }
 
-export const SAVE_VERSION = 8
+export const SAVE_VERSION = 9

@@ -15,6 +15,7 @@ import { resetCup } from '../sim/cups'
 import {
   createContinentalCups, refreshContinentalEntrants, stripUnplayablePlaces,
 } from '../systems/continental'
+import { philosophyForAi, setPhilosophy } from '../systems/recruitment'
 import { SAVE_VERSION } from '../types'
 import { STARTING_AGE } from '../systems/directorCareer'
 import type {
@@ -347,6 +348,18 @@ export function generateWorld(options: WorldGenOptions): GameState {
   stripUnplayablePlaces(state)
   createContinentalCups(state, ids)
   refreshContinentalEntrants(state)
+
+  // --- Recruitment policy ---------------------------------------------------
+  //
+  // Stated after the clubs exist, because what an AI club states depends on
+  // its standing and its books. A division where every club recruits the same
+  // way is a division whose market has no shape.
+  for (const club of Object.values(state.clubs)) {
+    setPhilosophy(state, club, philosophyForAi(rng.fork(`philosophy:${club.id}`), club))
+    // Stated before the save began, so nobody is inside the lock window on
+    // day one and the player's own club is not stuck with what it inherited.
+    club.strategy.philosophySince = 0
+  }
 
   // Cup entrants and the round calendar are derived, so they are established
   // the same way at world creation as at every subsequent season roll.
