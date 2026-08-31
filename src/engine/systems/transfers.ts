@@ -933,7 +933,22 @@ export function processAiTransfers(state: GameState, ctx: TransferContext): void
       }
 
       if (candidates.length === 0) { if (stats) stats.noCandidates += 1; break }
-      const target = rng.weighted(candidates, candidates.map((p) => p.currentAbility))
+
+      // Where this club looks. `domesticBias` had reached free agents and the
+      // human's scouting shortlist but never the AI's own buying, which is
+      // the channel that actually rebuilds a squad — so every club in the
+      // world bought nationality-blind and every stated policy converged on
+      // the same squad. Measured over four seasons, all six policies landed
+      // between 44% and 49% foreign, homegrown included.
+      //
+      // A weight rather than a filter: a homegrown club will still sign the
+      // foreign player who is plainly better, which is what clubs do. It just
+      // has to be plainly better.
+      const bias = ((club.strategy.domesticBias ?? 50) - 50) / 50
+      const target = rng.weighted(candidates, candidates.map((p) => {
+        const home = p.nationalityId === club.nationId
+        return p.currentAbility * Math.pow(2.4, home ? bias : -bias)
+      }))
       const sellerClub = target.clubId ? state.clubs[target.clubId] : null
 
       // The human club's players are never sold out from under them — an

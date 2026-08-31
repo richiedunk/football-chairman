@@ -242,8 +242,18 @@ export function generateWorld(options: WorldGenOptions): GameState {
         league.clubIds.push(club.id)
 
         // Squad. Foreign-player share rises with league wealth — a Premier
-        // division is cosmopolitan, a fourth tier is overwhelmingly local.
-        const foreignChance = clamp(Math.pow(league.reputation / 100, 1.2) * 0.72 - 0.03, 0.02, 0.68)
+        // division is cosmopolitan, a fourth tier is overwhelmingly local —
+        // and falls with how far this particular club looks for players.
+        //
+        // The league term alone made the club's own `domesticBias` invisible
+        // at kick-off, so a club generated to recruit at home began with more
+        // foreigners than one generated to sell abroad: measured across a
+        // world, homegrown clubs started at 38% foreign against develop-and-
+        // sell's 26%, which is the stated policy backwards before a ball is
+        // kicked.
+        const leagueShare = clamp(Math.pow(league.reputation / 100, 1.2) * 0.72 - 0.03, 0.02, 0.68)
+        const lookAbroad = 1 - ((club.strategy.domesticBias - 50) / 50) * 0.75
+        const foreignChance = clamp(leagueShare * lookAbroad, 0.01, 0.75)
         const squad = generateSquad(playerCtx, club.id, reputation, nation, foreignChance)
         for (const player of squad) {
           state.players[player.id] = player

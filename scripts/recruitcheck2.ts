@@ -7,7 +7,7 @@
  * clubs recruiting under different policies end up with visibly different
  * squads and different business — not whether the screen renders.
  *
- * Run: `npx tsx scripts/recruitcheck2.ts` (SEASONS, SEED)
+ * Run: `npx tsx scripts/recruitcheck2.ts` (SEASONS, SEED, SIZE)
  */
 import { prepareNewGame, startCareerAt } from '../src/engine/newGame'
 import { advanceWeek } from '../src/engine/tick'
@@ -18,9 +18,12 @@ import { seniorSquad } from '../src/engine/systems/aiSquad'
 import type { GameState } from '../src/engine/types'
 
 const SEASONS = Number(process.env.SEASONS ?? 4)
+// Standard by default so the recorded figures stay comparable; compact when
+// iterating on a change, because a standard world is twenty minutes a run.
+const SIZE = (process.env.SIZE ?? 'standard') as 'compact' | 'standard' | 'large'
 const setup = prepareNewGame({
   seed: process.env.SEED ?? 'RC2', directorName: 'R', background: 'scout',
-  worldSize: 'standard', homeNationId: 'eng', startingSeason: 2025,
+  worldSize: SIZE, homeNationId: 'eng', startingSeason: 2025,
 })
 const state = startCareerAt(setup, startingClubCandidates(setup.state)[0].id)
 const deps = { ids: setup.ids, names: setup.names }

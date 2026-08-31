@@ -1,4 +1,4 @@
-import { clamp, Rng } from '../rng'
+import { clamp, hashString, Rng } from '../rng'
 import { readRoom, renewalAppetite } from './dressingRoom'
 import { computeValue, computeWageDemand, squadImportance, totalWageBill } from './valuation'
 import { releaseRegistration } from './registration'
@@ -159,11 +159,23 @@ export function suggestRenewal(
   // gets a year at a time, which is both how it works and what keeps a squad
   // from silently ageing into a retirement home on the back of three-year
   // deals signed when everyone was thirty.
-  const seasons = player.age <= 23 ? 5
+  const band = player.age <= 23 ? 5
     : player.age <= 27 ? 4
     : player.age <= 30 ? 3
     : player.age <= 32 ? 2
     : 1
+
+  // A season either side of the band, settled per player rather than rolled,
+  // so asking twice does not produce two different offers.
+  //
+  // The band alone re-synchronises the whole world. Every 24-year-old signs
+  // for exactly four years, ages in lockstep at the roll, and expires in
+  // lockstep four summers later — which is what produced the season-four
+  // cliff: squads held at 26 for three seasons, then dropped to 21.8 with
+  // 1,835 free agents in one summer. Real contracts vary because real
+  // negotiations do, and the variance is what keeps expiries spread.
+  const jitter = (hashString(`${player.id}:${player.contract?.expiresSeason ?? 0}:len`) % 3) - 1
+  const seasons = Math.max(1, band + (band >= 3 ? jitter : 0))
 
   return {
     wage: Math.round(marketWage / 50) * 50,

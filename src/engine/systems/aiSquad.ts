@@ -167,7 +167,21 @@ export function processAiRenewals(state: GameState, club: Club): number {
   let wageBill = totalWageBill(state, club)
 
   for (const player of seniors) {
-    if (!player.contract || player.contract.expiresSeason > season) continue
+    if (!player.contract) continue
+    // A deal is fixed in its final year, not on the day it runs out.
+    //
+    // Renewing only in the expiry season let the whole world reach expiry
+    // together: contract lengths are set by age band, players age in lockstep
+    // at the roll, and a cohort signed for four years all comes due four
+    // summers later. Measured, that is the season-four cliff — squads held at
+    // 26.1 for three seasons, then 21.8 with 1,835 free agents in one roll.
+    // Clubs really do renew a year out, and for exactly the reason the game
+    // already models: a player in his last year is worth a fraction of a
+    // player with three to run, so waiting is how a club destroys its own
+    // asset.
+    const seasonsLeft = player.contract.expiresSeason - season
+    if (seasonsLeft > 1) continue
+    const early = seasonsLeft === 1
 
     // Keepers last longer than outfielders, and a thin squad is less fussy.
     const ageLimit = player.position === 'GK' ? 37 : 35
@@ -193,13 +207,17 @@ export function processAiRenewals(state: GameState, club: Club): number {
       : player.age <= 31 ? 15 + veteranAllowance
       : 8 + veteranAllowance
     const position = rank.get(player.id) ?? 99
-    const wanted = position < threshold
-      || (seniors.length <= THIN_SENIOR_SQUAD && position < threshold + 6)
+    // A year out, a club only moves for the players it is sure about. The ones
+    // it is unsure about it lets run, which is where the free market comes
+    // from — the point is to spread the decisions, not to abolish them.
+    const bar = early ? Math.round(threshold * 0.6) : threshold
+    const wanted = position < bar
+      || (seniors.length <= THIN_SENIOR_SQUAD && position < bar + 6)
     if (!wanted) continue
 
     // Some talks break down however much both sides want it to work — the
     // reason a free-transfer market exists at all.
-    if (!settledChance(`${player.id}:${season}:renew`, 0.86)) continue
+    if (!settledChance(`${player.id}:${season}:${early ? 'early' : 'renew'}`, 0.86)) continue
 
     // An ambitious player at a club going nowhere would rather take his
     // chances, which is how good players reach the free market.

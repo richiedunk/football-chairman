@@ -295,6 +295,14 @@ export function generateYouthIntake(
   youthFacilityLevel: number,
   academyDirectorSkill: number,
   count: number,
+  /**
+   * How far this club's academy recruits, from its `domesticBias`. An academy
+   * is the most local thing a club has — a club that looks at home barely has
+   * a foreign teenager on the books, and one that scouts the world has a few.
+   * Held to a flat one-in-eight everywhere, the academy quietly imported the
+   * same share of foreigners into a homegrown club as into a global one.
+   */
+  foreignChance = 0.12,
 ): Player[] {
   const { rng } = ctx
   const out: Player[] = []
@@ -340,7 +348,7 @@ export function generateYouthIntake(
       position,
       currentAbility,
       homeNation,
-      foreignChance: 0.12,
+      foreignChance,
       clubId,
       age,
       isAcademy: true,

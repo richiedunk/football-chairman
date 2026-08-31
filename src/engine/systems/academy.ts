@@ -53,6 +53,9 @@ export function produceIntake(
     club.facilities.youthFacilities,
     directorSkill,
     count,
+    // An academy is the most local thing a club has, so a stated policy shows
+    // up here first and most plainly.
+    clamp(0.12 * (1 - ((club.strategy.domesticBias ?? 50) - 50) / 50 * 0.8), 0.01, 0.3),
   )
 
   const league = state.leagues[club.leagueId]
