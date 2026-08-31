@@ -110,11 +110,17 @@ function ceilingBite(s: GameState) {
 
 console.log(`world: ${SIZE} — ${Object.keys(state.clubs).length} clubs`)
 console.log(`caps: emergency ${EMERGENCY_SQUAD}, free-agent ${FREE_AGENT_TARGET}, target ${TARGET_SENIOR_SQUAD}\n`)
-console.log('        IN                        OUT                     squad')
-console.log('season  intake  promo  free-in  transf  expire  retire  free-out  acad-out   mean')
+// Sampled twice a year, and the pair is the point. `processPlayerYearEnd`
+// empties every expiring contract on one afternoon at the roll, so a squad
+// measured at week 1 is a squad caught at the worst moment of its year, before
+// renewals and free-agent signings have had a single week to work. Measuring
+// only there reports a permanent decline that is really an annual trough.
+console.log('        IN                        OUT                       squad mean')
+console.log('season  intake  promo  free-in  transf  expire  retire  free-out  acad-out   midsn   roll')
 
 for (let n = 1; n <= SEASONS; n++) {
   season = blank()
+  let midSeason = '—'
   for (let week = 0; week < 52; week++) {
     advanceWeek(state, deps)
     if (state.playerClubId === null) {
@@ -122,6 +128,9 @@ for (let n = 1; n <= SEASONS; n++) {
       if (offer) acceptJobOffer(state, offer.id)
     }
     diff(snapshot(state))
+    // Deep mid-season: the window is shut, the roll is far away, and what a
+    // club has now is what it actually plays with.
+    if (state.date.week === 26) midSeason = ceilingBite(state).mean
     if (state.director.retiredAtSeason !== undefined) break
   }
   const bite = ceilingBite(state)
@@ -131,13 +140,13 @@ for (let n = 1; n <= SEASONS; n++) {
     + String(season.signedFree).padStart(9) + String(season.transferred).padStart(8)
     + String(season.expired).padStart(8) + String(season.retiredSenior).padStart(8)
     + String(season.leftFree).padStart(10) + String(season.leftAcademy).padStart(10)
-    + bite.mean.padStart(7),
+    + midSeason.padStart(8) + bite.mean.padStart(7),
   )
   if (state.director.retiredAtSeason !== undefined) break
 }
 
 const bite = ceilingBite(state)
-console.log(`\nwhere ${bite.clubs} AI clubs sit at the end:`)
+console.log(`\nwhere ${bite.clubs} AI clubs sit at the end (week ${state.date.week}):`)
 console.log(`  below emergency (<${EMERGENCY_SQUAD})        ${bite.belowEmergency}`)
 console.log(`  at the free-agent cap (${FREE_AGENT_TARGET}-${FREE_AGENT_TARGET + 1})    ${bite.atFreeCap}`)
 console.log(`  in the reserved gap (${FREE_AGENT_TARGET + 1}-${TARGET_SENIOR_SQUAD - 1})     ${bite.inTheGap}`)

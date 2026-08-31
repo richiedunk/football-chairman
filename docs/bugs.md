@@ -13,44 +13,63 @@ will break next.
 
 ## Open
 
-### The world loses contracted players, season after season
-Measured with `scripts/population.ts` on a standard world (492 clubs), twelve
-seasons, staying employed throughout:
+### The season roll digs a hole the world takes longer and longer to climb out of
+Measured with `scripts/churn.ts`, standard world, 492 clubs, twelve seasons,
+sampling squad size twice a year — deep mid-season at week 26, and at the roll.
 
-| season | total | senior, contracted | academy | free agents |
+| season | mid-season | at the roll | gap | expiries |
 |---|---|---|---|---|
-| start | 15,307 | **12,792** | 2,121 | 394 |
-| 3 | 19,597 | 12,983 | 5,844 | 770 |
-| 6 | 18,970 | 11,059 | 4,534 | 3,377 |
-| 9 | 18,077 | 10,760 | 4,249 | 3,068 |
-| 12 | 17,672 | **10,673** | 3,858 | 3,141 |
+| 1 | 26.2 | 25.9 | 0.3 | 175 |
+| 3 | 26.7 | 26.3 | 0.4 | 670 |
+| 4 | 26.9 | 24.1 | **2.8** | **2,019** |
+| 8 | 25.0 | 22.7 | 2.3 | 1,424 |
+| 12 | **24.4** | **21.3** | **3.1** | 1,647 |
 
-The total rises to a peak in season three and then falls back, so the table is
-not running away. The problem is the second column. Players under senior
-contract fall by 2,119 — seventeen per cent — and by season twelve are still
-drifting down rather than settling. Meanwhile the free-agent pool goes from 394
-to a steady ~3,100 at a median age of 21: young players nobody signs, sitting
-there for the rest of the save.
+**Correction, because this was reported wrong twice.** The "seventeen per cent
+decline in contracted players" was measured entirely at week 1, immediately
+after `processPlayerYearEnd` empties every expiring contract on one afternoon.
+That is the worst moment of the year to count a squad, before renewals or a
+single free-agent signing have had a week to work. The roadmap already said as
+much and the measurement re-derived it without noticing.
 
-So the "squads thin at the season roll" defect is not squads being emptied at
-the roll. It is a world that puts more players out of contract each season than
-it puts back under one, and the roll is only where it shows. The academy tripling
-and then halving is the same story: intakes are produced faster than clubs
-absorb them, and the surplus washes into the free-agent pool.
+What is actually true is smaller and different:
 
-Correction to an earlier note here, and to how this was first described:
-players are **not** never removed — `season.ts` deletes them on retirement, and
-the totals confirm it. The fault is on the signing side, not the removal side.
+- **Mid-season squads decline from 26.2 to 24.4 over twelve seasons** — about
+  seven per cent, not seventeen — and are still drifting down at season twelve
+  rather than settling.
+- **The rollover trough deepens, and that is the more interesting number.** The
+  gap between mid-season and the roll goes from 0.3 players to 3.1. The world
+  is taking longer to recover from each roll than it did from the last one.
+- **A synchronised expiry wave in season four** — 670 expiries to 2,019, with
+  academy releases going 998 to 2,197 in the same season — is where it starts.
+  That is the founding cohort's contracts running out together, because
+  generation hands out contract lengths without spreading the years.
 
-Two costs. The tick walks the whole table every week, so the ~3,100 permanently
-unsigned free agents are dead weight on every advance. And a league whose clubs
-carry seventeen per cent fewer professionals than they started with is a league
-slowly becoming less real.
+Everything below the table in a week-1 sample is a trough figure and should be
+read as such: the 30 clubs "below the emergency floor" are 30 clubs below it in
+the week after the roll, which matches the roadmap's note that the smallest
+club can be as low as seven for a few weeks before signings catch up.
 
-Separately and less urgently, the *per-player record* grows too — about 1.5 KB
-at creation, 2.2 KB by season fifteen — which is `careerStats`, one row per
-player per season. That is deliberate history, linear and modest, and the same
-shape as `club.history`. Not a bug; noted so it is not mistaken for one later.
+**Two hypotheses tested and disproved, so nobody retests them:**
+
+1. *`FREE_AGENT_TARGET` (21) is capping squads below `TARGET_SENIOR_SQUAD`
+   (24).* No. Clubs exceed 21 routinely — at season twelve, 135 are at or above
+   24 and 105 sit in the gap between the two constants. Academy promotion and
+   fee transfers fill it, which is what the gap was for. Transfers run at 8.7 a
+   club a season against a 6-8 target, so the volume that cap protects is
+   healthy; raising it would have cost that for nothing.
+2. *Starving clubs cannot sign because `recruitOne` keeps the ability ceiling
+   in an emergency, and the free-agent pool is fed by better clubs.* No.
+   `scripts/stuckclubs.ts`: of 30 clubs below the floor, **zero** have nobody
+   under their ceiling, and the median has 1,119 signable free agents. Cardiff
+   City sit on eleven players with 2,720 available.
+
+**What is worth measuring next**, before anything is changed: why recovery from
+the roll is getting slower. The candidates are the bunching of contract lengths
+at generation, the renewal pass (weeks 26-46) letting ~1,600 players a season
+reach expiry at all, and the per-week limits on free-agent recruitment. Nothing
+should be tuned until one of those is shown to be the cause — two confident
+diagnoses have already been wrong here.
 
 ### Save export and import are written but unreachable
 `exportSave` and `importSave` exist in `src/storage/saves.ts` and nothing in
