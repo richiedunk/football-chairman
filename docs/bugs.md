@@ -94,6 +94,51 @@ registration limit. What is really happening is that the world **drifts
 young** — 21+ players 19.9 to 17.2, homegrown 13.4 to 8.1 — which is a
 different defect and is recorded in the roadmap under Known defects.
 
+### The world drifts young, and five fixes have failed
+
+`driftcheck.ts` counts the flows across the line that matters. Per club per
+season, into and out of the 21-and-over pool: **1.4 age in, 1.0 signed in, 2.7
+leave.** Net minus 0.3 a season, which over twenty seasons takes a club from
+20.8 professionals to 14.2 while under-21s rise from 6.0 to 9.4 and every adult
+band collapses — 25-28 worst, 7.9 down to 4.1. Retirement accounts for only 1.2
+of the 2.7 leaving.
+
+**Five attempts, all reverted or shown not to bite:**
+
+1. *Contract-length jitter and renewing a year early.* Kept — correct on its
+   own terms — but moved the number by a third of a player.
+2. *A readiness bar on academy promotion.* Regression: promotions fell up to
+   38% but blocking one did not produce a signing, so clubs ended up shorter.
+   Clubs below the emergency floor went 34 to 54. Also the wrong idea —
+   there is nothing wrong with a recruit being the worst player in the squad,
+   and `development.ts` improves him from there.
+3. *Under-21s not counting against the squad target.* The arithmetic was exact
+   — 24.3 squad minus 7.1 under-21s is 17.2 — and the fix was still worth only
+   +0.4 at season ten, with homegrown slightly worse. Kept for the rule, not
+   the result. Its first form was a plain error that made things worse by
+   removing the only brake on promotion.
+4. *Reading the softened wage demand.* Clear regression, 14.2 to 9.5, because a
+   released academy boy's stored demand is a sixteen-year-old's, so the budget
+   filter waved teenagers through and kept rejecting professionals.
+5. *A wage discount multiplier with a quality-scaled floor.* Signings did rise
+   — 1.02 to 1.37 a club a season, and 1.5-1.9 in the middle years — and
+   releases rose with them, 2.66 to 2.87. Net worse: 12.9 against 14.2.
+
+**What attempt five actually revealed, and the hypothesis to test next.** Every
+attempt to raise the inflow has been met by a matching rise in the outflow.
+That is the signature of a *budget* constraint rather than a supply or
+willingness one: a club can afford about twenty-four players' wages, so cheap
+free agents coming in force existing professionals out at renewal, and the age
+composition drifts young because young players are cheap. The 21-and-over
+decline may simply be the wage bill finding its level.
+
+If that is right the fix is not in recruiting at all, and nothing in
+`aiSquad.ts` will ever move it. The things to measure are whether wage budgets
+keep pace with revenue across a long save, and whether the squad-cost ratio
+pushes clubs toward youth by construction. **Nothing should be changed in
+recruitment until one of those is measured** — five confident diagnoses have
+already been wrong here, which is more than any other entry in this file.
+
 **What is worth measuring next**, before anything is changed: why recovery from
 the roll is getting slower. The candidates are the bunching of contract lengths
 at generation, the renewal pass (weeks 26-46) letting ~1,600 players a season
