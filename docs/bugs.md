@@ -13,19 +13,6 @@ will break next.
 
 ## Open
 
-### Every squad becomes half-foreign within four seasons
-Measured while checking whether recruitment policies bite: squads start at
-26-34% players from outside the club's nation and reach 47-58% after four
-seasons, whatever policy the club recruits under. The policy spread is eleven
-points; the drift is twenty-plus for everyone, so it swamps it.
-
-Likely the same root as the free-agent pool findings above — academies produce
-domestic players who wash out into a global pool that every club then signs
-from, with nothing weighting a club toward its own country strongly enough to
-matter. A fourth-tier English club with half its squad foreign is not a
-recruitment policy, it is a missing constraint. Worth measuring before tuning:
-the honest fix may be work-permit rules rather than a bigger nudge.
-
 
 ### A club short of players starts the match with ten
 `selection.ts` fills one slot per available player and stops when it runs out
@@ -109,6 +96,35 @@ should be tuned until one of those is shown to be the cause — two confident
 diagnoses have already been wrong here.
 
 ## Fixed
+
+### Every squad becomes half-foreign within four seasons
+`domesticBias` had reached free-agent recruiting and the human's scouting
+shortlist, and three channels ignored it entirely: world generation set squad
+nationality from league reputation alone, AI transfer targeting picked purely
+by ability, and academy intake was a flat one-in-eight everywhere. Transfers
+are the channel that rebuilds a squad, so every club in the world bought
+nationality-blind and every stated policy converged.
+
+Measured after four seasons, before and after:
+
+| policy | before | after |
+|---|---|---|
+| Homegrown | 45% | **34%** |
+| Develop and sell | 36% | 39% |
+| Value hunting | 45% | 47% |
+| Win now | 49% | 53% |
+| Star names | 47% | **57%** |
+
+The spread goes from thirteen points with homegrown mid-pack to twenty-three
+with homegrown lowest and star names highest — the policies now order the way
+they read. Homegrown also holds 33% to 34% across the four seasons rather than
+drifting, which is the part that matters: a stated policy keeps its shape.
+
+The transfer term is a weight rather than a filter, so a homegrown club will
+still sign the foreigner who is plainly better. He just has to be plainly
+better. If 34% still reads as too cosmopolitan for a club whose policy says
+"from this country", the tilt is one constant.
+
 
 ### A pre-v4 save could not be loaded at all
 Found the moment the migration tests existed. `migrate()` walks the version

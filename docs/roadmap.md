@@ -1073,16 +1073,55 @@ coach to act on, so adding the post would be a job title with no consequence —
 a dial that does not turn. It waits on set pieces existing as a modelled part
 of a match. Named here so it is a deferral rather than an omission.
 
-**Squads thin at the season roll from season four onwards.** Mid-season sizes
-hold at the recorded 24-26 with no club below sixteen, but at rollover the
-average drops to 21-22 and the smallest club can be as low as seven for a few
-weeks before renewals and free-agent signings catch up. Registered squads drift
-down with it, from 21 named in season two to 17 by season seven, and free
-agents accumulate — 190 at the start, around 2,000 by season five. `squadsize.ts`
-shows it, and it is stable rather than worsening. Not urgent, since the
-fieldable mid-season world is right, but it is the next thing to measure
-properly: either renewals are firing too late in the roll, or the AI is letting
-too many contracts run down at once.
+**Squads do not thin. The world drifts young.** ~~Squads thin at the season
+roll from season four onwards.~~ Measured properly, that entry was wrong, and
+so were two fixes written against it.
+
+Mid-season squads settle at **24.3**, which is `TARGET_SENIOR_SQUAD`. The
+system does what it is asked. The rollover figure this project kept reading as
+a collapse — 20.9, smallest club nine — is sampled at **week one**: five weeks
+before the first fixture, before recruiting has run a single time. By week
+fifteen the smallest club in the world is at sixteen, the emergency floor, and
+no club is ever unable to field a side.
+
+The registered count was the other half of the false alarm. `namedcheck.ts`
+counts which limit actually binds, club by club: `named` tracks the number of
+players aged 21 and over almost exactly, all the way from 19.9/19.9 at kick-off
+to 17.2/17.2 at season ten. Of 238 clubs, at worst 37 hit the 25-place list and
+25 hit the 17 non-homegrown places. **The registration rules are not what stops
+a club naming a squad** — it simply has fewer players who need naming, because
+under-21s sit outside the list and can be picked freely.
+
+What is genuinely happening, across ten seasons:
+
+| | start | s10 |
+|---|---|---|
+| senior squad, mid-season | 26.0 | 24.3 |
+| aged 21 and over | 19.9 | 17.2 |
+| homegrown (3 years in the nation before 21) | 13.4 | 8.1 |
+| foreign nationals | 35% | 48% |
+
+Squad size holds; the composition moves. Roughly seven of every twenty-four are
+under 21 by season ten, against maybe three in real football, because academy
+promotion is the cheapest supply and the free-agent market — older, and around
+1,700 deep — is barely used. The homegrown count halving is the same story seen
+from the other end.
+
+That is the thing worth fixing, and it is a different fix from the one this
+entry used to ask for. Named here rather than guessed at again: three passes
+were written against the wrong diagnosis before `churn.ts` and `namedcheck.ts`
+were pointed at it, and each moved the number by less than half a player.
+
+Three changes made along the way are kept because they are right on their own
+terms, not because they fixed this: contract lengths carry a per-player jitter
+so the world stops re-synchronising its expiries; clubs renew a year early, as
+real clubs do to protect an asset; the keep-or-release threshold is a slope
+rather than a staircase in age, so a world that ages in lockstep does not fall
+off a cliff edge together in season four; the free-agent reserve gap applies
+only while a window is open, since outside one a short club cannot buy anybody;
+and a club below the emergency floor ignores its ability ceiling, because a
+club that cannot field eleven signs anyone and a professional without a club
+drops a division rather than not play.
 
 Nothing else outstanding. The two that stood here — transfer volume and clubs stuck in
 financial crisis — are fixed and measured. Numbers worth holding the world to,
