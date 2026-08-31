@@ -1051,6 +1051,20 @@ export interface TransferNegotiation {
   deadlineWeek: number
 }
 
+export interface DataFinding {
+  playerId: ID
+  /** What the model thinks he is worth to this club. */
+  modelValue: number
+  /** What the market is asking, at the time the finding was made. */
+  marketValue: number
+  /** 0-1. How far the department stands behind it. Low is honest, not shy. */
+  confidence: number
+  /** One line on where the edge is said to be. */
+  rationale: string
+  week: number
+  season: number
+}
+
 export interface BuyBackClause {
   /** The club that sold him and kept the right. */
   clubId: ID
@@ -1326,6 +1340,12 @@ export interface GameState {
   scoutReports: Record<ID, ScoutReport>
   /** Players the DoF is tracking. */
   shortlist: ID[]
+  /**
+   * What the data department last put in front of you: players its model
+   * believes are underpriced, with how much it stands behind each. Re-run on a
+   * cadence rather than kept live, because a model is consulted, not watched.
+   */
+  dataFindings?: DataFinding[]
   negotiations: TransferNegotiation[]
   completedTransfers: CompletedTransfer[]
   /** Takeovers in progress anywhere in the world. */
@@ -1555,4 +1575,4 @@ export interface GameSettings {
   hapticsEnabled: boolean
 }
 
-export const SAVE_VERSION = 10
+export const SAVE_VERSION = 11

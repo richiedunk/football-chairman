@@ -370,6 +370,13 @@ function migrate(state: GameState): GameState {
     state.version = 10
   }
 
+  // v11: the data department produces findings. An older save has none; the
+  // model runs on its own cadence and will fill the list within a month.
+  if (state.version < 11) {
+    if (!Array.isArray(state.dataFindings)) state.dataFindings = []
+    state.version = 11
+  }
+
   state.version = SAVE_VERSION
   return state
 }

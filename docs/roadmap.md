@@ -37,7 +37,7 @@ simulating seasons and reading the numbers, never by inspecting code — so
    an open-ended soak test.
 8. ~~**Recruitment model.**~~ Built — see below.
 9. ~~**Buy-back clauses.**~~ Built — see below.
-10. **The data department.** Needs the recruitment model to sit on.
+10. ~~**The data department.**~~ Built — see below.
 11. **The dressing room.** Deliberately last of the new systems, because it is
     the one that could pull the game out of its lane.
 12. **International football.** Largest of the new work, and it wants a stable
@@ -446,21 +446,50 @@ a young player, a sale, and a season roll, which a ten-week run does not reach
 been caught by once. The logic is unit-tested and the world behaviour measured
 above.
 
-## The data department
+## The data department — built
 
-An investable department, like the academy or scouting, whose output is an
-**edge rather than an answer**: a shortlist of players the model thinks are
+An edge rather than an answer: a shortlist of players the model believes are
 underpriced, each with a confidence figure, and both the list and the
 confidence get better the more you have put in.
 
-Why this and not a better scout: it is the single most real thing about the
-modern job. It is also the honest way to make an information advantage a
-purchase rather than a gift — a badly funded department produces a short list
-of low-confidence names, some of them wrong, which is exactly what a badly
-funded department produces.
+**The mispricing it exploits was already in the game.** `computeValue` scales a
+player's price by his league's reputation, from 0.55 in the lowest to 1.4 in
+the highest — the same footballer costs two and a half times as much in one
+country as another, because the market is paying for the shop window. A
+department that values the player rather than the window finds what real ones
+find: good players in unfashionable leagues are cheap.
 
-It sits on top of the recruitment model, which is why it comes after it: the
-edge should be expressed in the club's own terms.
+**The risk it cannot remove.** Not everyone settles. Climbing asks whether he
+can cope; dropping asks whether he will bother, and both are real. No amount of
+investment removes that — it only makes the department better at saying how
+uncertain it is, which is why the output carries a confidence figure and not a
+recommendation.
+
+**A badly funded department is not a quiet one. It is a wrong one.** Measured
+by running the same model over the same world 40 times at each level and
+checking each finding against the valuation the model cannot see:
+
+| level | error band | names | accuracy | stated confidence |
+|---|---|---|---|---|
+| 1 | 42% | 3 | **10%** | 21% |
+| 5 | 34% | 5 | 28% | 31% |
+| 12 | 20% | 9 | 53% | 50% |
+| 20 | 4% | 14 | **100%** | 76% |
+
+A level-1 department is wrong nine times out of ten and says so on the screen —
+"out by about 42% either way, so some of what follows is wrong". That is the
+whole point: the investment buys accuracy, not volume, and hiding the
+inaccuracy would make the spending pointless.
+
+The two right-hand columns measure different things and the gap is honest. The
+accuracy column asks whether the *price* was right; the confidence figure also
+carries whether he will settle after the move, which nothing here can measure.
+So a top department is under-confident about valuations it gets right, which is
+the correct way round for it to be wrong.
+
+It sits on the recruitment model: the model only spends its time on players the
+club's stated policy would actually sign, so a develop-and-sell club is not
+shown twenty-nine-year-olds who are ready now.
 
 ## The dressing room
 

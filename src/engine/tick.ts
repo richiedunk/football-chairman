@@ -13,6 +13,7 @@ import { progressProjects } from './systems/facilities'
 import { decayStadium, progressStadiumWork, releaseArchitects } from './systems/stadium'
 import { processContracts } from './systems/contracts'
 import { processScouting } from './systems/scouting'
+import { modelDue, pruneFindings, runModel } from './systems/dataDepartment'
 import { generateIncomingOffers, processAiTransfers, processNegotiations } from './systems/transfers'
 import { runAiSquadManagement } from './systems/aiSquad'
 import { checkForExposure, generateOrganicStories } from './systems/media'
@@ -367,6 +368,39 @@ export function advanceWeek(state: GameState, deps: TickDeps): TickResult {
         body: report.verdict,
         link: { view: 'player', id: player.id },
       })
+    }
+  }
+
+  // --- 8b. The data department ---------------------------------------------
+  //
+  // Re-run on a cadence rather than every week, because a model is consulted
+  // rather than watched, and because sweeping the world's players every week
+  // would cost more than the rest of the tick.
+  if (playerClub) {
+    state.dataFindings = pruneFindings(state, playerClub)
+    if (modelDue(state)) {
+      const before = state.dataFindings.length
+      state.dataFindings = runModel(state, playerClub, rng.fork(`data:${week}`))
+      const level = playerClub.facilities.dataDepartment
+      const best = state.dataFindings[0]
+      if (best && (state.dataFindings.length > before || week === 1)) {
+        const player = state.players[best.playerId]
+        addInboxItem(state, ids, {
+          category: 'scouting',
+          subject: `The model has ${state.dataFindings.length} name${state.dataFindings.length === 1 ? '' : 's'}`,
+          from: 'Data Department',
+          body: player
+            ? `This run puts ${player.knownAs} at the top: valued at `
+              + `${best.marketValue.toLocaleString()}, and the model has him at `
+              + `${best.modelValue.toLocaleString()}. ${best.rationale} `
+              + `Confidence ${Math.round(best.confidence * 100)}%`
+              + (level < 8
+                ? ' — which is as much as a department this size can honestly claim.'
+                : '.')
+            : 'The list has been refreshed.',
+          link: { view: 'data' },
+        })
+      }
     }
   }
 

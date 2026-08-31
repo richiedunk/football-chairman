@@ -53,6 +53,7 @@ const sections = computed(() => [
   { to: '/facilities', icon: 'facilities', label: 'Facilities', detail: `${club.value?.facilities.projects.length ?? 0} project${club.value?.facilities.projects.length === 1 ? '' : 's'} under way` },
   { to: '/staff', icon: 'staff', label: 'Staff', detail: store.headCoach?.knownAs ?? 'No head coach' },
   { to: '/recruitment', icon: 'agents', label: 'Recruitment policy', detail: club.value ? philosophyOf(club.value).name : '' },
+  { to: '/data', icon: 'scouting', label: 'Data department', detail: `${store.game?.dataFindings?.length ?? 0} name${(store.game?.dataFindings?.length ?? 0) === 1 ? '' : 's'} on the list` },
   { to: '/academy', icon: 'academy', label: 'Academy', detail: `${store.academy.length} in the setup` },
   { to: '/registration', icon: 'registration', label: 'Squad registration', detail: `${registered.value} named` },
   { to: '/agents', icon: 'agents', label: 'Agents', detail: `${store.agents.length} on the circuit` },

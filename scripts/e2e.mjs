@@ -466,6 +466,33 @@ await step('a bad address from cold does not look like a lost save', async () =>
   }
 })
 
+await step('the data department says how wrong it might be', async () => {
+  await page.goto('http://127.0.0.1:4173/#/data')
+  await page.waitForSelector('.section-title:has-text("The model")', { timeout: 15000 })
+
+  // The honest part of the feature: a small department must say plainly that
+  // its own numbers are unreliable, rather than presenting a confident list.
+  const preamble = (await page.textContent('.card__body'))?.replace(/\s+/g, ' ') ?? ''
+  if (!/out by about \d+%/.test(preamble)) {
+    throw new Error(`the model does not state its error band: ${preamble.slice(0, 120)}`)
+  }
+  if (!/policy would actually sign/i.test(preamble)) {
+    throw new Error('the model does not say it works in the club\'s own terms')
+  }
+
+  const rows = await page.locator('.list__row').count()
+  const empty = await page.locator('.empty').count()
+  if (rows === 0 && empty === 0) throw new Error('neither findings nor an empty state')
+
+  // Every finding has to carry a confidence, or it is an answer not an edge.
+  if (rows > 0) {
+    const confident = await page.locator('text=/CONFIDENT/').count()
+    if (confident < rows) throw new Error(`${rows} findings but only ${confident} confidences`)
+  }
+  await page.screenshot({ path: `${SHOT}/32-data.png`, fullPage: false })
+  console.log(`   ${rows} name${rows === 1 ? '' : 's'} on the list, error band stated`)
+})
+
 await step('the club states a recruitment policy', async () => {
   await page.goto('http://127.0.0.1:4173/#/recruitment')
   await page.waitForSelector('.section-title:has-text("What kind of club we are")', { timeout: 15000 })

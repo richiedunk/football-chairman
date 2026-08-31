@@ -13,6 +13,7 @@ export const SCREEN_LABELS: Record<string, string> = {
   player: 'Player profile',
   transfers: 'Transfers',
   scouting: 'Scouting',
+  data: 'Data department',
   agents: 'Agents',
   deadline: 'Deadline Day',
   club: 'Club',
