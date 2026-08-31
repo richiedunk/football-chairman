@@ -35,8 +35,32 @@ export function storageName(): string {
   return adapter.name
 }
 
+/**
+ * Slot id for the untouched copy taken before a save is migrated.
+ *
+ * Prefixed rather than suffixed so a backup sorts away from the save it came
+ * from and can never be mistaken for one — `listSaves` filters them out, and
+ * `listBackups` is how the UI would offer one back.
+ */
+export const BACKUP_PREFIX = 'premigration:'
+
+export function backupSlotId(slotId: string, fromVersion: number): string {
+  return `${BACKUP_PREFIX}${slotId}:v${fromVersion}`
+}
+
+export function isBackupSlot(id: string): boolean {
+  return id.startsWith(BACKUP_PREFIX)
+}
+
 export async function listSaves(): Promise<SaveSlotMeta[]> {
-  return adapter.list()
+  return (await adapter.list()).filter((slot) => !isBackupSlot(slot.id))
+}
+
+/** Pre-migration copies, newest first. */
+export async function listBackups(): Promise<SaveSlotMeta[]> {
+  return (await adapter.list())
+    .filter((slot) => isBackupSlot(slot.id))
+    .sort((a, b) => b.savedAt - a.savedAt)
 }
 
 export async function saveGame(
@@ -77,7 +101,33 @@ export async function loadGame(slotId: string): Promise<GameState | null> {
 
   const json = await decompressAsync(data)
   const state = JSON.parse(json) as GameState
+
+  // Keep the original before touching it.
+  //
+  // A migration that throws leaves the slot alone, so that case was never the
+  // danger. The danger is a migration that *succeeds* and is wrong: the game
+  // carries on, autosaves over the slot within the week, and the last good
+  // copy of a forty-season career is gone with nothing to go back to. So the
+  // untouched bytes are put aside the moment we know the format has moved,
+  // before anything is changed and before anything can overwrite them.
+  const fromVersion = state.version
+  if (typeof fromVersion === 'number' && fromVersion < SAVE_VERSION) {
+    await writeBackup(slotId, fromVersion, data, state)
+  }
+
   const migrated = migrate(state)
+
+  // A migration is code that runs against data no test ever saw, on somebody
+  // else's career, once. If it produced something the game cannot run, say so
+  // here rather than handing a broken world to the UI and failing somewhere
+  // less legible three screens later — the backup above is the way back.
+  const problem = firstIntegrityProblem(migrated)
+  if (problem) {
+    throw new Error(
+      `This save could not be brought up to date (${problem}). `
+      + 'The version before the attempt has been kept.',
+    )
+  }
 
   // The rating cache is derived data keyed by player id, and player ids are
   // only unique within a save. Loading without clearing it would let one
@@ -88,6 +138,73 @@ export async function loadGame(slotId: string): Promise<GameState | null> {
 
 export async function deleteSave(slotId: string): Promise<void> {
   await adapter.remove(slotId)
+}
+
+/**
+ * Put the untouched bytes aside under a backup id.
+ *
+ * Failing to take a backup must never stop a save loading — a full disk is a
+ * reason to play on without a safety net, not a reason to be locked out of
+ * your own career — so this swallows its own errors deliberately.
+ */
+async function writeBackup(
+  slotId: string,
+  fromVersion: number,
+  data: Uint8Array,
+  state: GameState,
+): Promise<void> {
+  const id = backupSlotId(slotId, fromVersion)
+  try {
+    if (await adapter.read(id)) return // already kept from an earlier attempt
+    const club = playerClub(state)
+    await adapter.write(id, data, {
+      id,
+      name: `Before update to format ${SAVE_VERSION}`,
+      savedAt: Date.now(),
+      size: data.length,
+      summary: {
+        directorName: state.director?.name ?? 'Unknown',
+        clubName: club?.name ?? 'Unemployed',
+        leagueName: club ? state.leagues[club.leagueId]?.name ?? '' : '',
+        season: state.date?.season ?? 0,
+        week: state.date?.week ?? 0,
+        level: state.director?.level ?? 1,
+        xp: state.director?.xp ?? 0,
+      },
+    })
+  } catch {
+    // Deliberately silent: see above.
+  }
+}
+
+/**
+ * The first thing wrong with a migrated save, or null if it is sound.
+ *
+ * Deliberately a short list of things whose absence makes the game
+ * unplayable rather than a schema check. A migration that drops a field the
+ * UI reads is a bug to find in a test; a migration that leaves no clubs is a
+ * bug to catch before the player sees it.
+ */
+export function firstIntegrityProblem(state: GameState): string | null {
+  if (!state || typeof state !== 'object') return 'the save is not a game'
+  if (typeof state.version !== 'number') return 'no format version'
+  if (state.version !== SAVE_VERSION) return `still at format ${state.version}`
+  for (const key of ['clubs', 'players', 'leagues', 'nations', 'cups'] as const) {
+    if (!state[key] || typeof state[key] !== 'object') return `no ${key}`
+  }
+  if (Object.keys(state.clubs).length === 0) return 'no clubs'
+  if (Object.keys(state.leagues).length === 0) return 'no leagues'
+  if (!Array.isArray(state.fixtures)) return 'no fixture list'
+  if (!state.date || typeof state.date.season !== 'number') return 'no date'
+  if (!state.director || typeof state.director.name !== 'string') return 'no director'
+
+  // The one cross-reference worth checking: being in charge of a club that is
+  // not in the world is the shape of bug that took 169 sackings to notice.
+  if (state.playerClubId !== null && state.playerClubId !== undefined
+    && !state.clubs[state.playerClubId]) {
+    return 'in charge of a club that is not in the world'
+  }
+  return null
 }
 
 export async function storageQuota(): Promise<{ used: number; available: number } | null> {

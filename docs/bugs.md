@@ -13,6 +13,30 @@ will break next.
 
 ## Open
 
+### CAF has no nations, and AFC has one
+The world contains 18 nations: 13 UEFA, 2 CONMEBOL (Brazil, Argentina), 2
+CONCACAF (USA, Mexico), 1 AFC (Japan) and **no** African nation at all. So
+`CONTINENTAL_DEFS` carries two African competitions that can never be created,
+which is the same dangling-definition fault the continental work was meant to
+remove — it just moved from the league data into the competition data. AFC
+raises three qualified clubs, below the minimum field, so Japan's league has
+its continental places stripped and a Japanese champion has nowhere to go.
+
+Fixing it is content rather than engine: each nation needs a def in
+`nations.ts` (cities, name pools, league tiers with club counts, strengths,
+prize money, qualification places) and a club list in `realClubs.ts`. South
+Korea, Saudi Arabia, Australia and China would give AFC a real competition;
+Egypt, Morocco and South Africa would give CAF one.
+
+### A pre-v4 save could not be loaded at all
+Found the moment the migration tests existed. `migrate()` walks the version
+steps in ascending order, but the v2 step rebuilds squad lists through
+`autoRegister`, which asks whether the club is under a registration embargo —
+and the regulation record that question reads is created by the **v4** step.
+So a genuinely old save threw a TypeError on load. `embargoedSince` now treats
+a missing record as no sanctions, which is the right answer as well as the safe
+one. Fixed, and covered by a test per historical version.
+
 ### A club short of players starts the match with ten
 `selection.ts` fills one slot per available player and stops when it runs out
 (`if (best)` at the end of the slot loop). A club whose fit, unsuspended senior

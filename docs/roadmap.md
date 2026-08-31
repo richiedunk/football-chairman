@@ -739,6 +739,47 @@ a much larger job and it mostly adds guaranteed fixtures; the two-legged
 knockout delivers all four of the things above. Worth revisiting, not worth
 blocking on.
 
+## Saves that survive an update
+
+`migrate()` had six version steps and no test exercised any of them. Every one
+is code that runs against data no test ever saw, on somebody else's career,
+exactly once — and a mistake in it costs a forty-season save. Three things now
+sit under it.
+
+**A test per historical format.** A save is loaded from every version 1 to 7
+and asserted to arrive at the current format intact, plus a test that each
+step repairs the thing it exists for. The fixtures are honest about what they
+are: not real historical saves — no build of this game is old enough to have
+written one — but a current save with exactly the fields a version's migration
+adds stripped back out, which is the shape that code is written to repair. That
+proves every branch runs; it cannot prove the stripped shape matches a real v3
+save in every other respect. When a genuinely old save turns up, keep it.
+
+It found a real defect on its first run. The steps walk in ascending order, but
+the v2 step rebuilds squad lists through `autoRegister`, which asks whether the
+club is under a registration embargo — and the record that question reads is
+created by the **v4** step. A genuinely old save threw on load. Six version
+steps had been shipped without anything ever running them.
+
+**A copy taken before migrating.** A migration that throws leaves the slot
+alone, so that was never the danger. The danger is one that *succeeds* and is
+wrong: the game carries on, autosaves over the slot inside a week, and the last
+good copy is gone. So the untouched bytes are put aside the moment the format
+is seen to have moved, under a `premigration:` id that `listSaves` hides and
+`listBackups` offers. Failing to take a backup never blocks a load — a full
+disk is a reason to play without a safety net, not a reason to be locked out of
+your own career.
+
+**An integrity check after migrating.** A short list of things whose absence
+makes the game unplayable — no clubs, no leagues, no date, still on an old
+format, in charge of a club that is not in the world — checked before the world
+reaches the UI, so a bad migration fails legibly next to its own backup rather
+than three screens later.
+
+What this does **not** do is make the cloud a migration story. If a new build
+cannot read an old save, a copy of that old save in Frankfurt does not help.
+Migration safety is local work and this is it.
+
 ## Known defects
 
 Bugs found in play go in `docs/bugs.md` — this section is for the ones with a

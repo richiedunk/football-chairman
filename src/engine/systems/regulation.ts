@@ -168,7 +168,13 @@ export function underEmbargo(club: Club): boolean {
  */
 export function embargoedSince(club: Club): number | null {
   let season: number | null = null
-  for (const sanction of club.finances.regulation.sanctions) {
+  // The regulation record is created by the v4 migration, and the v2 step runs
+  // before it — v2 rebuilds squad lists through `autoRegister`, which asks
+  // whether the club is under an embargo. So on a save older than v4 this is
+  // reached with no record at all, and read unguarded it threw, which meant a
+  // genuinely old save could not be loaded. A club with no record has no
+  // sanctions, which is the right answer as well as the safe one.
+  for (const sanction of club.finances.regulation?.sanctions ?? []) {
     if (sanction.kind !== 'registrationEmbargo' || sanction.seasonsRemaining <= 0) continue
     if (season === null || sanction.season < season) season = sanction.season
   }
