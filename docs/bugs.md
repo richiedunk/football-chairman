@@ -14,15 +14,6 @@ will break next.
 ## Open
 
 
-### A pre-v4 save could not be loaded at all
-Found the moment the migration tests existed. `migrate()` walks the version
-steps in ascending order, but the v2 step rebuilds squad lists through
-`autoRegister`, which asks whether the club is under a registration embargo —
-and the regulation record that question reads is created by the **v4** step.
-So a genuinely old save threw a TypeError on load. `embargoedSince` now treats
-a missing record as no sanctions, which is the right answer as well as the safe
-one. Fixed, and covered by a test per historical version.
-
 ### A club short of players starts the match with ten
 `selection.ts` fills one slot per available player and stops when it runs out
 (`if (best)` at the end of the slot loop). A club whose fit, unsuspended senior
@@ -104,13 +95,26 @@ reach expiry at all, and the per-week limits on free-agent recruitment. Nothing
 should be tuned until one of those is shown to be the cause — two confident
 diagnoses have already been wrong here.
 
-### Save export and import are written but unreachable
-`exportSave` and `importSave` exist in `src/storage/saves.ts` and nothing in
-the UI calls either, so there is no way for a player to back a career up or
-move it to another device. `exportSave` also serialises uncompressed, which
-would hand the player a ~50 MB file where the stored save is ~5 MB.
-
 ## Fixed
+
+### A pre-v4 save could not be loaded at all
+Found the moment the migration tests existed. `migrate()` walks the version
+steps in ascending order, but the v2 step rebuilds squad lists through
+`autoRegister`, which asks whether the club is under a registration embargo —
+and the regulation record that question reads is created by the **v4** step.
+So a genuinely old save threw a TypeError on load. `embargoedSince` now treats
+a missing record as no sanctions, which is the right answer as well as the safe
+one. Fixed, and covered by a test per historical version.
+
+### Save export and import were written but unreachable
+`exportSave` and `importSave` had existed in `src/storage/saves.ts` since it was
+written and nothing in the UI called either, so a player had no way to back a
+career up or move it to another device. The exporter also serialised
+uncompressed, which would have handed over a ~50 MB file where the stored save
+is ~5 MB. Both are now in Settings under Backup, the exporter writes the same
+compressed bytes the device holds, and the importer accepts either shape,
+migrates on the way in and lands in a slot of its own.
+
 
 ### CAF had no nations and AFC had one
 The world held 18 nations — 13 UEFA, 2 CONMEBOL, 2 CONCACAF, 1 AFC and no
