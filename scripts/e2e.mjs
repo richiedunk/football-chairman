@@ -210,6 +210,10 @@ async function advanceOneWeek() {
     await page.goto('http://127.0.0.1:4173/#/home')
     await page.waitForSelector('.advance-bar .advance')
   }
+  // Any loading screen still up from the previous iteration has to come down
+  // before this one is timed, or the measurement catches the tail of somebody
+  // else's screen and reports a floor that never failed.
+  await page.waitForFunction(() => !document.querySelector('.loading'), null, { timeout: 30000 })
   await clickAdvance()
   // Only time a tick that actually ran: a refused advance (a decision
   // outstanding) never raises the loading screen at all, and counting those

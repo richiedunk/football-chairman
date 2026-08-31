@@ -9,7 +9,7 @@ import { sortTable } from '../engine/systems/board'
 import { levelFor, levelProgress, nextLevel } from '../engine/systems/career'
 import { blockingItems, pendingDecisionCount, unreadCount } from '../engine/systems/inbox'
 import { resolveDecision } from '../engine/systems/decisions'
-import { totalWageBill } from '../engine/systems/valuation'
+import { computeWageDemand, totalWageBill } from '../engine/systems/valuation'
 import { isTransferWindowOpen, PHASE_LABELS, windowLabel } from '../engine/sim/schedule'
 import {
   applyRenewal, evaluateRenewal, releasePlayer, type RenewalOffer, type RenewalResponse,
@@ -23,6 +23,7 @@ import {
 } from '../engine/systems/registration'
 import { AUTOSAVE_SLOT, loadGame, saveGame } from '../storage/saves'
 import { playerClub } from '../engine/playerClub'
+import { exerciseBuyBack } from '../engine/systems/buyBack'
 import {
   canChangePhilosophy, philosophyById, setPhilosophy, type PhilosophyId,
 } from '../engine/systems/recruitment'
@@ -440,6 +441,61 @@ export const useGameStore = defineStore('game', () => {
         ? `Policy stated. The board have taken ${verdict.confidenceCost} off your confidence for it.`
         : 'Policy stated. Everyone now knows what kind of club this is.',
     }
+  }
+
+  /**
+   * Bring back a player you sold, at the price agreed when you sold him.
+   *
+   * A contractual right rather than a negotiation — the club holding him has
+   * no say, which is the whole point of having one. What it does not override
+   * is the money or the squad place, so it goes through the same transfer
+   * machinery as any other signing rather than teleporting him back.
+   */
+  function exerciseClause(playerId: ID): { ok: boolean; message: string } {
+    const s = state.value
+    const club = s ? playerClub(s) : null
+    if (!s || !club) return { ok: false, message: 'No club.' }
+    const player = s.players[playerId]
+    if (!player) return { ok: false, message: 'That player is no longer in the game.' }
+
+    const verdict = exerciseBuyBack(s, player, club)
+    if (!verdict.ok) return verdict
+
+    const clause = player.buyBack!
+    const seller = player.clubId ? s.clubs[player.clubId] : null
+    const league = s.leagues[club.leagueId]
+    const nation = s.nations[club.nationId]
+
+    executeTransfer(s, { ids, rng: new Rng(`${s.seed}:buyback:${playerId}`) }, {
+      player,
+      buyer: club,
+      seller,
+      fee: clause.price,
+      kind: 'permanent',
+      contract: {
+        wage: Math.round(computeWageDemand(player, league, nation)),
+        expiresSeason: s.date.season + 4,
+        signingBonus: 0,
+        releaseClause: null,
+        appearanceFee: 0,
+        goalBonus: 0,
+        loyaltyBonus: 0,
+        inNegotiation: false,
+        weeksSinceRenewalRequest: 0,
+      },
+      agentFee: 0,
+      sellOnPercentage: 0,
+      buyBackPrice: 0,
+      wageContribution: 0,
+      loanUntilSeason: null,
+    })
+    // Exercised is spent: the right does not survive being used.
+    player.buyBack = null
+    addNews(s, ids, 'transfer',
+      `${club.name} have exercised their buy-back on ${player.knownAs}.`,
+      { view: 'player', id: player.id }, club.id)
+    commit()
+    return { ok: true, message: `${player.knownAs} is back.` }
   }
 
   // --- Match reports --------------------------------------------------------
@@ -1002,7 +1058,7 @@ export const useGameStore = defineStore('game', () => {
     agents, agentIntroductions, agentClients,
     owner, takeover, worldTakeovers,
     isDeadline, deadlineOffers, deadlineTaken, refreshDeadline, takeDeadlineOffer,
-    statePhilosophy,
+    statePhilosophy, exerciseClause,
     idFactory, nameGenerator, reset,
   }
 })

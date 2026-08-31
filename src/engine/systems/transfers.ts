@@ -1,5 +1,6 @@
 import { clamp, Rng } from '../rng'
 import { philosophyAppeal } from './recruitment'
+import { aiWantsBuyBack, buyBackConcession, createClause } from './buyBack'
 import { IdFactory, ID_PREFIX } from '../ids'
 import { computeAskingPrice, computeValue, computeWageDemand, squadImportance, totalWageBill } from './valuation'
 import { canAfford, facilityUpkeep } from './finance'
@@ -36,6 +37,7 @@ export const DEFAULT_TERMS: TransferTerms = {
   upfrontPercentage: 1,
   instalments: 1,
   sellOnPercentage: 0,
+  buyBackPrice: 0,
   appearanceBonus: 0,
   promotionBonus: 0,
   wageContribution: 0,
@@ -456,14 +458,20 @@ function seedCompetition(
   }
 }
 
-/** Value of an offer accounting for structure, sell-ons and bonuses. */
+/** Value of an offer accounting for structure, sell-ons, bonuses and clauses. */
 export function effectiveOfferValue(negotiation: TransferNegotiation): number {
   const t = negotiation.terms
   // Instalments are discounted; a sell-on clause has real but uncertain value.
   const instalmentDiscount = 1 - (1 - t.upfrontPercentage) * 0.12 * Math.max(0, t.instalments - 1)
   const sellOnValue = negotiation.offeredFee * t.sellOnPercentage * 0.35
   const bonusValue = (t.appearanceBonus + t.promotionBonus) * 0.4
-  return negotiation.offeredFee * instalmentDiscount + sellOnValue + bonusValue
+  // A buy-back runs the other way to every other term: it is worth something
+  // to whoever is *selling*, and it costs the buyer the upside on a player he
+  // is about to develop. The cheaper the clause, the more it costs him, which
+  // is why a selling club has to give money back to get one.
+  const buyBackCost = negotiation.offeredFee
+    * buyBackConcession(negotiation.offeredFee, t.buyBackPrice)
+  return negotiation.offeredFee * instalmentDiscount + sellOnValue + bonusValue - buyBackCost
 }
 
 // ---------------------------------------------------------------------------
@@ -504,6 +512,7 @@ function completeTransfer(
     contract: negotiation.playerTerms,
     agentFee: negotiation.agentFee,
     sellOnPercentage: negotiation.terms.sellOnPercentage,
+    buyBackPrice: negotiation.terms.buyBackPrice,
     wageContribution: negotiation.terms.wageContribution,
     loanUntilSeason: negotiation.kind === 'loan' || negotiation.kind === 'loanWithOption'
       ? state.date.season
@@ -525,6 +534,8 @@ export interface ExecuteTransferArgs {
   contract: Contract
   agentFee: number
   sellOnPercentage: number
+  /** Selling club's right to buy him back at this fixed price. 0 for none. */
+  buyBackPrice?: number
   wageContribution: number
   loanUntilSeason: number | null
 }
@@ -649,6 +660,13 @@ export function executeTransfer(
   }
 
   // A new sell-on obligation for the selling club's benefit.
+  // A buy-back replaces any the player was already carrying: the club that
+  // held one and has now sold him on has given the right up, and it cannot be
+  // passed along to somebody who never agreed to it.
+  if (seller) {
+    player.buyBack = createClause(seller, fee, args.buyBackPrice ?? 0, state.date.season)
+  }
+
   if (args.sellOnPercentage > 0 && seller) {
     player.sellOnClauseOwed = [
       ...player.sellOnClauseOwed.filter((c) => c.clubId !== seller.id),
@@ -1146,6 +1164,13 @@ function aiCompleteDeal(
     },
     agentFee: Math.round(wage * 52 * 0.08),
     sellOnPercentage: 0,
+    // AI clubs ask for buy-backs on the players they did not want to lose,
+    // which in practice means the young and the promising. Without this the
+    // mechanic would exist only for the human, and a clause nobody else uses
+    // is a cheat code rather than a market instrument.
+    buyBackPrice: seller
+      ? Math.round(fee * aiWantsBuyBack(ctx.rng, seller, player))
+      : 0,
     wageContribution: 0,
     loanUntilSeason: null,
   })

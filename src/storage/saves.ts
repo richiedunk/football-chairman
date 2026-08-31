@@ -360,6 +360,16 @@ function migrate(state: GameState): GameState {
     state.version = 9
   }
 
+  // v10: buy-back clauses. Nobody has one in a save made before they existed,
+  // and inventing them retrospectively would hand the player rights over
+  // players he sold under different rules.
+  if (state.version < 10) {
+    for (const player of Object.values(state.players)) {
+      if (player.buyBack === undefined) player.buyBack = null
+    }
+    state.version = 10
+  }
+
   state.version = SAVE_VERSION
   return state
 }

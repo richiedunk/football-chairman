@@ -762,6 +762,17 @@ export interface Player {
   amortisationCharge: number
   /** Percentage of any future sale owed to a previous club, 0-1. */
   sellOnClauseOwed: { clubId: ID; percentage: number }[]
+  /**
+   * A right to buy him back at a fixed price, held by a club that sold him.
+   *
+   * The instrument that stops selling a nineteen-year-old being a pure loss:
+   * take the money, let somebody else pay his wages and give him the football
+   * you could not, and keep the right to bring him back at a price agreed
+   * before anybody knew what he would become. At most one is held at a time —
+   * a buy-back is extinguished when it is exercised or when it lapses, and a
+   * club that sells him on cannot pass the old one along.
+   */
+  buyBack: BuyBackClause | null
   /** Hidden development modifier — some players just kick on, some stall. */
   developmentRate: number
   /**
@@ -1040,10 +1051,28 @@ export interface TransferNegotiation {
   deadlineWeek: number
 }
 
+export interface BuyBackClause {
+  /** The club that sold him and kept the right. */
+  clubId: ID
+  /** Fixed fee to bring him back. Agreed at the sale, whatever he becomes. */
+  price: number
+  /** First season the right can be exercised — never the one he just left in. */
+  fromSeason: number
+  /** Last season it is live. After this it lapses and cannot be revived. */
+  untilSeason: number
+  /** The fee he was sold for, so the screen can say what the right is worth. */
+  soldFor: number
+}
+
 export interface TransferTerms {
   upfrontPercentage: number // 0-1
   instalments: number // number of seasons
   sellOnPercentage: number // 0-1
+  /**
+   * Selling only: a fixed price to buy him back later, 0 for none. Costly to
+   * ask for and cheap to grant at a high price, which is exactly how it works.
+   */
+  buyBackPrice: number
   appearanceBonus: number
   promotionBonus: number
   /** Loans only: share of wages the parent club keeps paying, 0-1. */
@@ -1526,4 +1555,4 @@ export interface GameSettings {
   hapticsEnabled: boolean
 }
 
-export const SAVE_VERSION = 9
+export const SAVE_VERSION = 10

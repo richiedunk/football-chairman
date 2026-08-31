@@ -9,6 +9,7 @@ import { clamp } from '../rng'
 import type { Club, GameState, InboxItem, Player } from '../types'
 import { resolveOwnerPitch, type PitchId } from './takeovers'
 import { playerClub } from '../playerClub'
+import { buyBackAskingPrice, buyBackDiscountedFee } from './buyBack'
 
 /**
  * Resolving inbox decisions.
@@ -86,6 +87,17 @@ function resolveTransferOffer(
     return `You reject ${buyer.name}'s offer for ${player.knownAs}.`
   }
 
+  if (optionId === 'buyBack') {
+    // Less money now, and the right to bring him back at a fixed price. The
+    // buying club takes the discount because it is being asked to develop a
+    // player it may not get to keep.
+    const price = buyBackAskingPrice(fee)
+    const discounted = buyBackDiscountedFee(fee)
+    completeSale(state, player, buyer, discounted, ctx, price)
+    return `${player.knownAs} joins ${buyer.name} for ${discounted.toLocaleString()}. `
+      + `We can buy him back for ${price.toLocaleString()} from next season.`
+  }
+
   if (optionId === 'negotiate') {
     const asking = computeAskingPrice(state, player, seller, buyer)
     const willingness = buyer.finances.transferBudget / Math.max(1, asking)
@@ -109,6 +121,7 @@ function completeSale(
   buyer: Club,
   fee: number,
   ctx: DecisionContext,
+  buyBackPrice = 0,
 ): void {
   const seller = playerClub(state)
   const league = state.leagues[buyer.leagueId]
@@ -134,6 +147,7 @@ function completeSale(
     },
     agentFee: 0,
     sellOnPercentage: 0,
+    buyBackPrice,
     wageContribution: 0,
     loanUntilSeason: null,
   })

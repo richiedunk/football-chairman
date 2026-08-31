@@ -14,6 +14,7 @@ import { injuryDescription } from '../../engine/systems/injuries'
 import { loanSuitorsFor } from '../../engine/systems/loans'
 import type { AttributeKey, SquadStatus } from '../../engine/types'
 import { fullName, nickname } from '../playerName'
+import { clauseState, clauseUpside } from '../../engine/systems/buyBack'
 
 const route = useRoute()
 const router = useRouter()
@@ -23,6 +24,31 @@ const notify = inject<(t: string, k?: 'info' | 'error' | 'success') => void>('no
 const player = computed(() => store.player(String(route.params.id)))
 const isOurs = computed(() => player.value?.clubId === store.club?.id)
 const currentClub = computed(() => (player.value?.clubId ? store.clubById(player.value.clubId) : null))
+/**
+ * A buy-back this club holds on him.
+ *
+ * Shown on his profile rather than on a screen of its own, because that is
+ * where a director goes to think about a player, and a right you have to hunt
+ * for is a right you will let lapse.
+ */
+const buyBack = computed(() => {
+  const s = store.game
+  const p = player.value
+  if (!s || !p?.buyBack || p.buyBack.clubId !== store.club?.id) return null
+  return {
+    clause: p.buyBack,
+    state: clauseState(p.buyBack, s.date.season),
+    upside: clauseUpside(p),
+  }
+})
+
+function buyBackNow() {
+  const p = player.value
+  if (!p) return
+  const outcome = store.exerciseClause(p.id)
+  notify?.(outcome.message, outcome.ok ? 'success' : 'error')
+}
+
 const report = computed(() => {
   const s = store.game
   const p = player.value
@@ -389,6 +415,50 @@ function doRelease() {
           <span class="small muted">Squad role</span>
           <span class="chip">{{ SQUAD_STATUS_LABELS[player.squadStatus] }}</span>
         </div>
+      </div>
+    </div>
+
+    <!-- A buy-back we hold on a player who is somebody else's now -->
+    <div v-if="buyBack" class="card">
+      <div class="card__head"><span class="card__title">Our buy-back</span></div>
+      <div class="card__body stack">
+        <div class="row row--between">
+          <span class="small muted">We can buy him back for</span>
+          <span class="bold num">{{ formatMoney(buyBack.clause.price, store.currency) }}</span>
+        </div>
+        <div class="row row--between">
+          <span class="small muted">We sold him for</span>
+          <span class="num">{{ formatMoney(buyBack.clause.soldFor, store.currency) }}</span>
+        </div>
+        <div class="row row--between">
+          <span class="small muted">He is worth</span>
+          <span class="bold num" :class="buyBack.upside > 0 ? 'pos-val' : 'neg-val'">
+            {{ formatMoney(player.value, store.currency) }}
+          </span>
+        </div>
+        <div class="small" :class="buyBack.upside > 0 ? '' : 'muted'">
+          <template v-if="buyBack.state === 'waiting'">
+            Opens in {{ buyBack.clause.fromSeason }}, and runs to the end of
+            {{ buyBack.clause.untilSeason }}.
+          </template>
+          <template v-else-if="buyBack.state === 'live'">
+            Live until the end of {{ buyBack.clause.untilSeason }}.
+            <template v-if="buyBack.upside > 0">
+              Exercising it is worth {{ formatMoney(buyBack.upside, store.currency) }} against
+              what he would cost on the open market.
+            </template>
+            <template v-else>
+              He has not kicked on the way we hoped — buying him back at the agreed price
+              would be paying over the odds out of sentiment.
+            </template>
+          </template>
+          <template v-else>It has lapsed.</template>
+        </div>
+        <button
+          v-if="buyBack.state === 'live'"
+          class="btn btn--primary btn--block"
+          @click="buyBackNow"
+        >Buy him back for {{ formatMoney(buyBack.clause.price, store.currency) }}</button>
       </div>
     </div>
 

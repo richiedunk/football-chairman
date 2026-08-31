@@ -170,6 +170,7 @@ export function generatePlayer(ctx: PlayerGenContext, opts: PlayerGenOptions): P
     bookValue: 0,
     amortisationCharge: 0,
     sellOnClauseOwed: [],
+    buyBack: null,
     developmentRate: rng.float(0.7, 1.35),
     trainingYears: seedTrainingYears(rng, nationality, opts, age),
     weeksUnattached: 0,

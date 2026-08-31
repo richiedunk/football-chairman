@@ -35,10 +35,8 @@ simulating seasons and reading the numbers, never by inspecting code — so
 7. **The long save.** Never yet run. The 65 cap bounds a full career at about
    thirty-five seasons, which makes it a finite, measurable thing rather than
    an open-ended soak test.
-8. **Recruitment model.** Consolidates dials that already exist rather than
-   sitting beside them.
-9. **Buy-back clauses.** Small, self-contained, and it makes selling young
-   players a decision rather than a loss.
+8. ~~**Recruitment model.**~~ Built — see below.
+9. ~~**Buy-back clauses.**~~ Built — see below.
 10. **The data department.** Needs the recruitment model to sit on.
 11. **The dressing room.** Deliberately last of the new systems, because it is
     the one that could pull the game out of its lane.
@@ -401,21 +399,52 @@ What a philosophy should do that loose dials do not:
 The care needed: a philosophy must stay *market* policy. The moment it starts
 saying how the team plays, we are in the head coach's job.
 
-## Buy-back clauses
+## Buy-back clauses — built
 
-Insert a buy-back price and a window when selling. It is a real and now very
-common mechanism, and it is squarely the director's instrument.
+Selling a nineteen-year-old stops being a pure loss. Take the money, let
+somebody else pay his wages and give him the football you could not, and keep
+the right to bring him back at a price agreed before anybody knew what he would
+become. Squarely the director's instrument — a clause in a contract, not a
+decision about who plays on Saturday.
 
-What it buys the game: selling a 19-year-old stops being a pure loss. You can
-take the money, let someone else pay his wages and give him the football you
-could not, and keep the right to bring him back at a known price. When he
-becomes very good, the clause is worth more than the fee ever was — and when it
-lapses unexercised because you had no room in the 25, that is a real and
-self-inflicted regret.
+**Where you ask for it.** A third option on an incoming offer: *accept, with a
+buy-back*. You take less money now — up to a third less — for the right to buy
+him back at two and a half times the original fee. That is the real trade, and
+putting it on the offer rather than on a screen of its own means it arrives as
+a decision about a specific player rather than a setting.
 
-Needs: a price, a window, a decision point when the window opens, and AI clubs
-that both request and honour them. Selling clubs should resist a low buy-back
-the way they resist a low fee.
+**Why the buying club resists.** A cheap buy-back hands over the upside on a
+player they are about to develop, so `buyBackConcession` scales what they want
+off the fee by how cheap the clause is: a third off at the floor of 1.4x the
+fee, nothing at all by 4x, where he would have to become a different player
+entirely. Below 1.4x they refuse outright, the same way they refuse a low fee.
+
+**The window.** Opens a season after the sale — a club that sells a player and
+buys him back the same summer has not sold him, and a clause that allowed it
+would be a loan with extra steps — and runs three seasons. It is a contractual
+right rather than a negotiation, so the holding club has no say; what it does
+not override is the money or the squad place, which is what makes it something
+to plan for rather than a free player.
+
+**Measured over six seasons across 678 clubs:**
+
+| season | clauses | worth using | under water | median upside | mean age | oldest |
+|---|---|---|---|---|---|---|
+| 1 | 22 | 0 | 22 | — | 20.5 | 25 |
+| 3 | 297 | 46 | 251 | £26k | 22.7 | 27 |
+| 6 | 477 | **187** | **290** | **£292k** | 24.0 | 27 |
+
+Clauses land on the players they should — mean age 24, oldest 27, **none at all
+on a player over 32**. About four in ten come good, and a good one is worth
+real money by season six. The other six in ten stay under water, which is the
+mechanism working rather than failing: a right you should not exercise is still
+information, and the profile says so plainly rather than hiding it.
+
+Not covered by the walkthrough. Exercising a clause needs an incoming offer for
+a young player, a sale, and a season roll, which a ten-week run does not reach
+— and a step that silently skips is the vacuous test this project has already
+been caught by once. The logic is unit-tested and the world behaviour measured
+above.
 
 ## The data department
 

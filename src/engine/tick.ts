@@ -1,4 +1,5 @@
 import { clamp, Rng } from './rng'
+import { buyBackAskingPrice, buyBackDiscountedFee } from './systems/buyBack'
 import { IdFactory } from './ids'
 import { NameGenerator } from './names/generator'
 import { quickSimulate, simulateMatch } from './sim/match'
@@ -705,6 +706,17 @@ function reportIncomingOffers(
         prompt: `How do you want to respond to ${offer.buyer.name}?`,
         options: [
           { id: 'accept', label: 'Accept the offer', hint: 'He leaves and the money comes in.', available: true },
+          {
+            id: 'buyBack',
+            label: 'Accept, with a buy-back',
+            // The real trade: you take less money now for the right to bring
+            // him back at a fixed price later. Offered only where it is
+            // credible — nobody grants a buy-back on a thirty-year-old.
+            hint: `Take ${formatMoneyShort(buyBackDiscountedFee(offer.fee))} instead, and keep the `
+              + `right to buy him back for ${formatMoneyShort(buyBackAskingPrice(offer.fee))}.`,
+            available: offer.player.age <= 24,
+            unavailableReason: 'They will only grant one on a young player.',
+          },
           { id: 'negotiate', label: 'Ask for more', hint: 'They may improve it, or walk away.', available: true },
           { id: 'reject', label: 'Reject it', hint: 'He stays. He may not be pleased.', available: true },
         ],

@@ -13,6 +13,7 @@ import { addInboxItem, addNews } from './systems/inbox'
 import { emptyStats } from './world/playerGen'
 import { cupResultFor, resetCup } from './sim/cups'
 import { continentalResultFor, refreshContinentalEntrants } from './systems/continental'
+import { clauseUpside, clausesHeldBy } from './systems/buyBack'
 import { accrueTrainingYear, autoRegister, releaseRegistration } from './systems/registration'
 import { writeOffBookValue } from './systems/finance'
 import { adjustForPlayer, decayRelationships } from './systems/agents'
@@ -239,6 +240,51 @@ export function runSeasonRollover(state: GameState, deps: RolloverDeps): void {
   for (const player of Object.values(state.players)) {
     player.stats = emptyStats()
     player.suspendedWeeks = 0
+  }
+
+  // Buy-backs that have just opened, and ones that have just gone.
+  //
+  // Both are worth a message and the second one more than the first: a clause
+  // that lapses unexercised is the regret the mechanism exists to create, and
+  // it should not happen quietly.
+  const owner = clubInCharge(state)
+  if (owner) {
+    for (const player of clausesHeldBy(state, owner.id)) {
+      const clause = player.buyBack
+      if (!clause) continue
+      if (clause.fromSeason === state.date.season) {
+        const upside = clauseUpside(player)
+        addInboxItem(state, ids, {
+          category: 'transfer',
+          subject: `Your buy-back on ${player.knownAs} is live`,
+          from: 'Recruitment',
+          body: `We sold ${player.knownAs} to ${state.clubs[player.clubId ?? '']?.name ?? 'another club'} `
+            + `for ${clause.soldFor.toLocaleString()} and kept the right to bring him back for `
+            + `${clause.price.toLocaleString()}. He is valued at ${player.value.toLocaleString()} now. `
+            + (upside > 0
+              ? `That is ${upside.toLocaleString()} of value for nothing but the fee and the squad place.`
+              : 'He has not kicked on the way we hoped, so the right is not worth much today.')
+            + ` It runs until the end of ${clause.untilSeason}.`,
+          link: { view: 'player', id: player.id },
+        })
+      } else if (clause.untilSeason < state.date.season) {
+        addInboxItem(state, ids, {
+          category: 'transfer',
+          subject: `The buy-back on ${player.knownAs} has lapsed`,
+          from: 'Recruitment',
+          body: `Our right to buy ${player.knownAs} back for ${clause.price.toLocaleString()} `
+            + `expired at the end of last season. He is valued at ${player.value.toLocaleString()}.`,
+          link: { view: 'player', id: player.id },
+        })
+        player.buyBack = null
+      }
+    }
+  }
+
+  // Everyone else's lapse quietly, but they do lapse — a clause nothing ever
+  // clears is a right that lasts for ever.
+  for (const player of Object.values(state.players)) {
+    if (player.buyBack && player.buyBack.untilSeason < state.date.season) player.buyBack = null
   }
 
   // --- 7. Job offers --------------------------------------------------------
