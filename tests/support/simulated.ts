@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import crypto from 'node:crypto'
+import { gunzipSync, gzipSync } from 'node:zlib'
 import type { GameState } from '../../src/engine/types'
 
 /**
@@ -61,11 +62,14 @@ function hashEngine(): string {
  * seasons from the same seed should share a key and pay for it once.
  */
 export function simulatedWorld(key: string, build: () => GameState): GameState {
-  const file = path.join(CACHE_DIR, `${key}-${hashEngine()}.json`)
+  // Gzipped: a simulated world is 28MB of JSON and a dozen of these would eat
+  // a container's disk allowance. It compresses about fourteen to one, and
+  // unzipping costs less than a tenth of what parsing does.
+  const file = path.join(CACHE_DIR, `${key}-${hashEngine()}.json.gz`)
 
   if (fs.existsSync(file)) {
     try {
-      return JSON.parse(fs.readFileSync(file, 'utf8')) as GameState
+      return JSON.parse(gunzipSync(fs.readFileSync(file)).toString('utf8')) as GameState
     } catch {
       // A truncated or half-written cache is not worth diagnosing: throw it
       // away and simulate, which is what would have happened anyway.
@@ -80,7 +84,7 @@ export function simulatedWorld(key: string, build: () => GameState): GameState {
     // Written beside and moved into place, so a run interrupted mid-write
     // cannot leave a half a world behind for the next one to read.
     const temp = `${file}.${process.pid}.tmp`
-    fs.writeFileSync(temp, JSON.stringify(state))
+    fs.writeFileSync(temp, gzipSync(JSON.stringify(state)))
     fs.renameSync(temp, file)
     // Anything from an older engine is dead weight now.
     for (const name of fs.readdirSync(CACHE_DIR)) {

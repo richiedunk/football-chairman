@@ -4,6 +4,7 @@ import { simulateMatch } from '../src/engine/sim/match'
 import { isAvailable, selectableSquad, selectTeam } from '../src/engine/sim/selection'
 import { Rng } from '../src/engine/rng'
 import { prepareNewGame, startCareerAt } from '../src/engine/newGame'
+import { simulatedWorld } from './support/simulated'
 import { advanceWeek } from '../src/engine/tick'
 import { sortTable } from '../src/engine/systems/board'
 import { totalWageBill } from '../src/engine/systems/valuation'
@@ -182,19 +183,29 @@ describe('match engine', () => {
 
 describe('season simulation', () => {
   it('runs a full season without corrupting state', () => {
-    const setup = prepareNewGame({
+    // The shape of the world before a ball is kicked, taken from a fresh
+    // generation of the same seed. Generating is a second; simulating the
+    // season is half a minute, so the season comes from the cache and this
+    // does not.
+    const before = prepareNewGame({
       seed: 'SEASONTEST', directorName: 'T', background: 'scout',
       worldSize: 'compact', homeNationId: 'eng', startingSeason: 2025,
     })
-    const state = startCareerAt(setup, firstEligible(setup))
-    const deps = { ids: setup.ids, names: setup.names }
-
-    const startingClubs = Object.keys(state.clubs).length
+    const startingClubs = Object.keys(before.state.clubs).length
     const leagueSizes = new Map(
-      Object.values(state.leagues).map((l) => [l.id, l.clubIds.length]),
+      Object.values(before.state.leagues).map((l) => [l.id, l.clubIds.length]),
     )
 
-    for (let week = 0; week < 52; week++) advanceWeek(state, deps)
+    const state = simulatedWorld('season-52', () => {
+      const setup = prepareNewGame({
+        seed: 'SEASONTEST', directorName: 'T', background: 'scout',
+        worldSize: 'compact', homeNationId: 'eng', startingSeason: 2025,
+      })
+      const world = startCareerAt(setup, firstEligible(setup))
+      const deps = { ids: setup.ids, names: setup.names }
+      for (let week = 0; week < 52; week++) advanceWeek(world, deps)
+      return world
+    })
 
     // Divisions keep their size through promotion and relegation.
     expect(Object.keys(state.clubs).length).toBe(startingClubs)
@@ -236,13 +247,16 @@ describe('season simulation', () => {
   })
 
   it('produces a league table that adds up', () => {
-    const setup = prepareNewGame({
-      seed: 'TABLETEST', directorName: 'T', background: 'analyst',
-      worldSize: 'compact', homeNationId: 'eng',
+    const state = simulatedWorld('table-30', () => {
+      const setup = prepareNewGame({
+        seed: 'TABLETEST', directorName: 'T', background: 'analyst',
+        worldSize: 'compact', homeNationId: 'eng',
+      })
+      const world = startCareerAt(setup, firstEligible(setup))
+      const deps = { ids: setup.ids, names: setup.names }
+      for (let week = 0; week < 30; week++) advanceWeek(world, deps)
+      return world
     })
-    const state = startCareerAt(setup, firstEligible(setup))
-    const deps = { ids: setup.ids, names: setup.names }
-    for (let week = 0; week < 30; week++) advanceWeek(state, deps)
 
     for (const league of Object.values(state.leagues)) {
       const table = sortTable(state.tables[league.id])
@@ -261,13 +275,16 @@ describe('season simulation', () => {
   })
 
   it('keeps the player club solvent enough to be playable', () => {
-    const setup = prepareNewGame({
-      seed: 'SOLVENCY', directorName: 'T', background: 'financier',
-      worldSize: 'compact', homeNationId: 'eng',
+    const state = simulatedWorld('solvency-40', () => {
+      const setup = prepareNewGame({
+        seed: 'SOLVENCY', directorName: 'T', background: 'financier',
+        worldSize: 'compact', homeNationId: 'eng',
+      })
+      const world = startCareerAt(setup, firstEligible(setup))
+      const deps = { ids: setup.ids, names: setup.names }
+      for (let week = 0; week < 40; week++) advanceWeek(world, deps)
+      return world
     })
-    const state = startCareerAt(setup, firstEligible(setup))
-    const deps = { ids: setup.ids, names: setup.names }
-    for (let week = 0; week < 40; week++) advanceWeek(state, deps)
 
     const club = state.clubs[state.playerClubId]
     // Doing nothing should not bankrupt a club inside one season — the game
@@ -292,21 +309,31 @@ describe('season simulation', () => {
 
 describe('cup competitions', () => {
   it('converges from an odd field to a single winner', () => {
-    const setup = prepareNewGame({
+    // The field is read from a freshly generated world — a second — and the
+    // season it takes to resolve comes from the cache.
+    const fresh = prepareNewGame({
       seed: 'CUPTEST', directorName: 'T', background: 'scout',
       worldSize: 'compact', homeNationId: 'eng', startingSeason: 2025,
     })
-    const state = startCareerAt(setup, firstEligible(setup))
-    const deps = { ids: setup.ids, names: setup.names }
-    const cup = Object.values(state.cups).find((c) => c.nationId === 'eng')!
-    const entrants = cup.entrantIds.length
+    const entrants = Object.values(fresh.state.cups)
+      .find((c) => c.nationId === 'eng')!.entrantIds.length
 
     // A 114-club field is deliberately not a power of two: the bye maths has
     // to bring it to one after the first round, not before it.
     expect(entrants).toBeGreaterThan(64)
     expect(Math.log2(entrants) % 1).not.toBe(0)
 
-    for (let week = 0; week < 46; week++) advanceWeek(state, deps)
+    const state = simulatedWorld('cup-46', () => {
+      const setup = prepareNewGame({
+        seed: 'CUPTEST', directorName: 'T', background: 'scout',
+        worldSize: 'compact', homeNationId: 'eng', startingSeason: 2025,
+      })
+      const world = startCareerAt(setup, firstEligible(setup))
+      const deps = { ids: setup.ids, names: setup.names }
+      for (let week = 0; week < 46; week++) advanceWeek(world, deps)
+      return world
+    })
+    const cup = Object.values(state.cups).find((c) => c.nationId === 'eng')!
 
     expect(cup.winnerId, 'the cup produced no winner').toBeTruthy()
     expect(state.clubs[cup.winnerId!]).toBeDefined()
@@ -324,13 +351,16 @@ describe('cup competitions', () => {
   })
 
   it('never leaves a knockout tie drawn', () => {
-    const setup = prepareNewGame({
-      seed: 'KNOCKOUT', directorName: 'T', background: 'scout',
-      worldSize: 'compact', homeNationId: 'eng', startingSeason: 2025,
+    const state = simulatedWorld('knockout-46', () => {
+      const setup = prepareNewGame({
+        seed: 'KNOCKOUT', directorName: 'T', background: 'scout',
+        worldSize: 'compact', homeNationId: 'eng', startingSeason: 2025,
+      })
+      const world = startCareerAt(setup, firstEligible(setup))
+      const deps = { ids: setup.ids, names: setup.names }
+      for (let week = 0; week < 46; week++) advanceWeek(world, deps)
+      return world
     })
-    const state = startCareerAt(setup, firstEligible(setup))
-    const deps = { ids: setup.ids, names: setup.names }
-    for (let week = 0; week < 46; week++) advanceWeek(state, deps)
 
     // Single-leg ties only: a leg of a two-legged tie is allowed to finish
     // level, because the tie is settled on aggregate afterwards.
