@@ -65,6 +65,35 @@ club can be as low as seven for a few weeks before signings catch up.
    under their ceiling, and the median has 1,119 signable free agents. Cardiff
    City sit on eleven players with 2,720 available.
 
+**A third diagnosis, also wrong, recorded so it counts as a third.** The
+absorption theory: that `FREE_AGENT_TARGET` parks clubs at 21 and the ability
+ceiling blocks the ones below the floor. Both are hypothesis 1 and hypothesis 2
+above, already disproved here, and they were changed in code anyway before this
+file was re-read — the ceiling lift has since been reverted, with the reason
+written at the line so nobody lifts it a third time. The window-gating of the
+reserve gap was kept, because outside a window a short club genuinely cannot
+buy anybody, but it should be understood as a realism change and not as a fix:
+measured over ten seasons it moved mid-season squads from 24.1 to 24.3.
+
+**What the season-four cliff actually is.** `scripts/churn.ts`, compact world,
+six seasons: senior releases run 84, 210, 501, then **1,312** in season four.
+The keep-or-release threshold was a staircase in age — rank 24 up to age 24,
+20 to 28, 15 to 31, 8 above — applied to a world whose players age in lockstep
+from a mean of 24.4. The whole distribution crosses 28 in the same summer and
+31 in the same summer. It is a slope now, and contract lengths carry a
+per-player jitter so the world stops re-synchronising its expiries.
+
+**And the headline number was the wrong one all along.** Mid-season squads
+settle at 24.3, which is `TARGET_SENIOR_SQUAD`. The rollover figure this entry
+is built on is sampled at week 1 — five weeks before the first fixture, before
+recruiting has run once — and by week 15 the smallest club in the world is at
+the emergency floor. `scripts/namedcheck.ts` closed the other half: `named`
+tracks the count of players aged 21 and over almost exactly, 19.9/19.9 at
+kick-off to 17.2/17.2 at season ten, and at worst 37 of 238 clubs hit any
+registration limit. What is really happening is that the world **drifts
+young** — 21+ players 19.9 to 17.2, homegrown 13.4 to 8.1 — which is a
+different defect and is recorded in the roadmap under Known defects.
+
 **What is worth measuring next**, before anything is changed: why recovery from
 the roll is getting slower. The candidates are the bunching of contract lengths
 at generation, the renewal pass (weeks 26-46) letting ~1,600 players a season

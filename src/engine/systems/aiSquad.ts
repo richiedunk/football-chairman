@@ -349,13 +349,17 @@ function recruitOne(
 
   for (const player of pool) {
     if (player.clubId) continue // signed earlier in this same pass
-    // The ability ceiling is what stops a non-league club signing a player
-    // plainly above its station. Below the emergency floor it has to go: a
-    // club that cannot field eleven will take anyone, and a professional
-    // without a club drops a division rather than not play. Left in place it
-    // was the reason 34 clubs sat below the floor while 2,174 free agents
-    // went unsigned — every one of them too good, and none of them playing.
-    if (!emergency && player.currentAbility > ceiling * 1.02) continue
+    // The ability ceiling stops a non-league club signing a player plainly
+    // above its station, and it stays on in an emergency.
+    //
+    // It was lifted here once, on the reasoning that 34 clubs sat below the
+    // floor while 2,174 free agents went unsigned. That is co-occurrence, not
+    // cause, and `docs/bugs.md` already records the hypothesis as tested and
+    // disproved: `scripts/stuckclubs.ts` found that of 30 clubs below the
+    // floor, **zero** had nobody under their ceiling, and the median had 1,119
+    // signable free agents. Those clubs are not blocked from signing. Do not
+    // lift it again without a measurement that says which clubs it blocks.
+    if (player.currentAbility > ceiling * 1.02) continue
     if (player.currentAbility < floor) break // the list is sorted, so we are done
 
     const wage = Math.max(90, Math.round(computeWageDemand(player, league, nation)))
