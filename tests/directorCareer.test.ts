@@ -10,6 +10,7 @@ import {
 } from '../src/engine/systems/directorCareer'
 import { prepareNewGame, startCareerAt } from '../src/engine/newGame'
 import { advanceWeek } from '../src/engine/tick'
+import { simulated } from './support/simulated'
 import type { DirectorProfile, GameState } from '../src/engine/types'
 
 const at = (age: number) => ({ age }) as DirectorProfile
@@ -58,25 +59,40 @@ describe('a career in progress', () => {
   })
 
   it('adds a year at the season roll, not weekly', () => {
-    state = fresh()
-    for (let week = 0; week < 20; week++) advanceWeek(state, deps)
-    expect(state.director.age, 'aged mid-season').toBe(STARTING_AGE)
+    // Both readings come out of one run, and the pair is the assertion: the
+    // clock must not have moved by week twenty and must have by week sixty.
+    const { midSeason, afterRoll } = simulated('director-ages', () => {
+      const world = fresh()
+      for (let week = 0; week < 20; week++) advanceWeek(world, deps)
+      const mid = world.director.age
+      for (let week = 0; week < 40; week++) advanceWeek(world, deps)
+      return { midSeason: mid, afterRoll: world.director.age }
+    })
+    expect(midSeason, 'aged mid-season').toBe(STARTING_AGE)
+    expect(afterRoll).toBe(STARTING_AGE + 1)
+  })
 
-    // Far enough to cross the roll.
-    for (let week = 0; week < 40; week++) advanceWeek(state, deps)
-    expect(state.director.age).toBe(STARTING_AGE + 1)
+  /**
+   * One retirement, read by both tests that need one.
+   *
+   * They were running the identical setup — jump the director to sixty-four,
+   * play until he goes — and paying for it twice, forty seconds between them.
+   */
+  const retired = () => simulated('director-retires', () => {
+    const world = fresh()
+    // Jump the clock rather than simulating thirty-five seasons: the birthday
+    // is what is under test, not the intervening football.
+    world.director.age = RETIREMENT_AGE - 1
+    let guard = 0
+    while (world.director.retiredAtSeason === undefined && guard < 120) {
+      advanceWeek(world, deps)
+      guard++
+    }
+    return world
   })
 
   it('retires at sixty-five, with the record intact', () => {
-    state = fresh()
-    // Jump the clock rather than simulating thirty-five seasons: the birthday
-    // is what is under test, not the intervening football.
-    state.director.age = RETIREMENT_AGE - 1
-    let guard = 0
-    while (state.director.retiredAtSeason === undefined && guard < 120) {
-      advanceWeek(state, deps)
-      guard++
-    }
+    state = retired()
     expect(state.director.retiredAtSeason, 'never retired').toBeDefined()
     expect(state.director.age).toBe(RETIREMENT_AGE)
     expect(state.director.retiredBecause).toBe('age')
@@ -85,11 +101,7 @@ describe('a career in progress', () => {
   })
 
   it('tells the player it has happened', () => {
-    state = fresh()
-    state.director.age = RETIREMENT_AGE - 1
-    for (let guard = 0; guard < 120 && state.director.retiredAtSeason === undefined; guard++) {
-      advanceWeek(state, deps)
-    }
+    state = retired()
     const notice = state.inbox.find((item) => item.subject.includes('end of it'))
     expect(notice, 'no word to the player that his career ended').toBeDefined()
   })

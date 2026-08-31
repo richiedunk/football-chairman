@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest'
 import { prepareNewGame, startCareerAt } from '../src/engine/newGame'
 import { advanceWeek } from '../src/engine/tick'
+import { simulatedWorld } from './support/simulated'
 import { startingClubCandidates } from '../src/engine/systems/career'
 import { acceptJobOffer } from '../src/engine/season'
 import { cupWeeksFor, isTwoLegged, roundsRequired } from '../src/engine/sim/cups'
@@ -23,19 +24,26 @@ let state: GameState
 let firstSeasonWinners: Record<string, string | null> = {}
 
 beforeAll(() => {
-  const setup = prepareNewGame({
-    seed: 'CONTEST', directorName: 'T', background: 'scout',
-    worldSize: 'standard', homeNationId: 'eng', startingSeason: 2025,
-  })
-  state = startCareerAt(setup, startingClubCandidates(setup.state)[0].id)
-  const deps = { ids: setup.ids, names: setup.names }
-  while (state.date.week < 46) {
-    advanceWeek(state, deps)
-    if (state.playerClubId === null) {
-      const offer = state.director.jobOffers.find((o) => !o.barred)
-      if (offer) acceptJobOffer(state, offer.id)
+  // A standard world played most of a season is the most expensive setup in
+  // the suite. It is cached against a hash of the engine, so it simulates for
+  // real whenever engine code moves and loads otherwise — see
+  // `tests/support/simulated.ts`.
+  state = simulatedWorld('continental-w46', () => {
+    const setup = prepareNewGame({
+      seed: 'CONTEST', directorName: 'T', background: 'scout',
+      worldSize: 'standard', homeNationId: 'eng', startingSeason: 2025,
+    })
+    const world = startCareerAt(setup, startingClubCandidates(setup.state)[0].id)
+    const deps = { ids: setup.ids, names: setup.names }
+    while (world.date.week < 46) {
+      advanceWeek(world, deps)
+      if (world.playerClubId === null) {
+        const offer = world.director.jobOffers.find((o) => !o.barred)
+        if (offer) acceptJobOffer(world, offer.id)
+      }
     }
-  }
+    return world
+  })
   for (const cup of Object.values(state.cups)) {
     if (cup.type === 'continental') firstSeasonWinners[cup.name] = cup.winnerId
   }

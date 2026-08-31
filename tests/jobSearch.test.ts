@@ -8,6 +8,7 @@ import {
 import { prepareNewGame, startCareerAt } from '../src/engine/newGame'
 import { acceptJobOffer } from '../src/engine/season'
 import { advanceWeek } from '../src/engine/tick'
+import { simulated } from './support/simulated'
 import { startingClubCandidates } from '../src/engine/systems/career'
 import { IdFactory } from '../src/engine/ids'
 import { Rng } from '../src/engine/rng'
@@ -61,14 +62,20 @@ describe('being dismissed', () => {
   it('cannot be sacked twice from the same chair', () => {
     // The bug this whole system exists to fix: 169 dismissals in one career,
     // because the first one never let go of the club.
-    const { state, ids, names } = fresh('DOUBLESACK')
-    const deps = { ids, names }
-    let sackings = 0
-    for (let week = 0; week < 120; week++) {
-      const tick = advanceWeek(state, deps)
-      if (tick.sacked) sackings++
-      if (state.playerClubId === null) break
-    }
+    // Two years of football to find out whether one thing happens twice: the
+    // count is what matters, not the world it came from, so the count is what
+    // is cached. Re-simulated whenever engine code moves.
+    const { sackings } = simulated('double-sack', () => {
+      const { state, ids, names } = fresh('DOUBLESACK')
+      const deps = { ids, names }
+      let count = 0
+      for (let week = 0; week < 120; week++) {
+        const tick = advanceWeek(state, deps)
+        if (tick.sacked) count++
+        if (state.playerClubId === null) break
+      }
+      return { sackings: count }
+    })
     expect(sackings, 'sacked more than once without being re-hired').toBeLessThanOrEqual(1)
   })
 })

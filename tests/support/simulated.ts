@@ -62,6 +62,19 @@ function hashEngine(): string {
  * seasons from the same seed should share a key and pay for it once.
  */
 export function simulatedWorld(key: string, build: () => GameState): GameState {
+  return simulated(key, build)
+}
+
+/**
+ * The same, for anything a test needs rather than only a world.
+ *
+ * Some tests care about what happened during the run — how many times a
+ * director was sacked, what his age was at two points — rather than about the
+ * world at the end of it. Whatever `build` returns is cached, as long as it
+ * survives a round trip through JSON, which is the same rule the save format
+ * already lives by.
+ */
+export function simulated<T>(key: string, build: () => T): T {
   // Gzipped: a simulated world is 28MB of JSON and a dozen of these would eat
   // a container's disk allowance. It compresses about fourteen to one, and
   // unzipping costs less than a tenth of what parsing does.
@@ -69,7 +82,7 @@ export function simulatedWorld(key: string, build: () => GameState): GameState {
 
   if (fs.existsSync(file)) {
     try {
-      return JSON.parse(gunzipSync(fs.readFileSync(file)).toString('utf8')) as GameState
+      return JSON.parse(gunzipSync(fs.readFileSync(file)).toString('utf8')) as T
     } catch {
       // A truncated or half-written cache is not worth diagnosing: throw it
       // away and simulate, which is what would have happened anyway.
@@ -77,14 +90,14 @@ export function simulatedWorld(key: string, build: () => GameState): GameState {
     }
   }
 
-  const state = build()
+  const value = build()
 
   try {
     fs.mkdirSync(CACHE_DIR, { recursive: true })
     // Written beside and moved into place, so a run interrupted mid-write
     // cannot leave a half a world behind for the next one to read.
     const temp = `${file}.${process.pid}.tmp`
-    fs.writeFileSync(temp, gzipSync(JSON.stringify(state)))
+    fs.writeFileSync(temp, gzipSync(JSON.stringify(value)))
     fs.renameSync(temp, file)
     // Anything from an older engine is dead weight now.
     for (const name of fs.readdirSync(CACHE_DIR)) {
@@ -96,5 +109,5 @@ export function simulatedWorld(key: string, build: () => GameState): GameState {
     // A cache that cannot be written is a slow test, not a failing one.
   }
 
-  return state
+  return value
 }
