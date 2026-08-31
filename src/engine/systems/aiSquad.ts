@@ -1,6 +1,7 @@
 import { clamp, hashString, Rng } from '../rng'
 import { IdFactory } from '../ids'
 import { abilityCeilingFor } from '../world/playerGen'
+import { isTransferWindowOpen } from '../sim/schedule'
 import { ratingForPositionCached } from '../world/attributes'
 import { promoteToSenior } from './academy'
 import { targetSquadFor } from './recruitment'
@@ -202,10 +203,20 @@ export function processAiRenewals(state: GameState, club: Club): number {
     // wrong way up: in reality the experienced pro drops down and keeps
     // playing, and it is the biggest clubs that will not carry him.
     const veteranAllowance = club.reputation < 40 ? 7 : club.reputation < 65 ? 3 : 0
-    const threshold = player.age <= 24 ? 24
-      : player.age <= 28 ? 20
-      : player.age <= 31 ? 15 + veteranAllowance
-      : 8 + veteranAllowance
+
+    // A slope, not a staircase.
+    //
+    // The step version applied to a world whose players age in lockstep: a
+    // squad generated at mean age 24.4 crosses 28 together, then 31 together,
+    // and the whole distribution falls off a cliff edge in the same summer.
+    // Measured, senior releases went 84, 210, 501, then 1,312 in season four
+    // as the mass crossed the bands, and the world settled five players a club
+    // lower for good. Ageing is gradual; the decision that follows it should
+    // be too.
+    const curve = player.age <= 24 ? 24
+      : player.age <= 31 ? 24 - (player.age - 24) * (9 / 7)
+      : Math.max(8, 15 - (player.age - 31) * 2.5)
+    const threshold = Math.round(curve + (player.age > 28 ? veteranAllowance : 0))
     const position = rank.get(player.id) ?? 99
     // A year out, a club only moves for the players it is sure about. The ones
     // it is unsure about it lets run, which is where the free market comes
@@ -311,9 +322,21 @@ function recruitOne(
   // which is the gap it keeps back for the window. It used to sit three below
   // a constant every club in the world shared, because `targetSquadSize` was
   // generated for each club and read by nothing.
+  //
+  // The gap only makes sense while there is a window to keep it for. Applied
+  // all year it was the binding constraint on the whole world: measured over
+  // six seasons, 95 of 237 clubs sat parked at 21-23 with 2,174 free agents
+  // and 1,825 academy players aged seventeen or over unused, against a total
+  // shortfall of 876 — four times the supply anybody needed, and nobody able
+  // to sign it. Outside a window a club with nineteen players cannot buy
+  // anyone, so declining a free agent is choosing to be short until February.
+  // Which is exactly why real clubs sign free agents in October.
   const squad = seniorSquad(state, club)
   const target = targetSquadFor(club, TARGET_SENIOR_SQUAD)
-  const freeAgentCeiling = Math.max(EMERGENCY_SQUAD, target - (TARGET_SENIOR_SQUAD - FREE_AGENT_TARGET))
+  const reserving = isTransferWindowOpen(state.date.week)
+  const freeAgentCeiling = reserving
+    ? Math.max(EMERGENCY_SQUAD, target - (TARGET_SENIOR_SQUAD - FREE_AGENT_TARGET))
+    : target
   if (squad.length >= freeAgentCeiling) return null
 
   const shortfall = freeAgentCeiling - squad.length
@@ -338,7 +361,13 @@ function recruitOne(
 
   for (const player of pool) {
     if (player.clubId) continue // signed earlier in this same pass
-    if (player.currentAbility > ceiling * 1.02) continue
+    // The ability ceiling is what stops a non-league club signing a player
+    // plainly above its station. Below the emergency floor it has to go: a
+    // club that cannot field eleven will take anyone, and a professional
+    // without a club drops a division rather than not play. Left in place it
+    // was the reason 34 clubs sat below the floor while 2,174 free agents
+    // went unsigned — every one of them too good, and none of them playing.
+    if (!emergency && player.currentAbility > ceiling * 1.02) continue
     if (player.currentAbility < floor) break // the list is sorted, so we are done
 
     const wage = Math.max(90, Math.round(computeWageDemand(player, league, nation)))
