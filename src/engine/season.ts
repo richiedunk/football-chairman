@@ -469,13 +469,17 @@ function processPlayerYearEnd(state: GameState, deps: RolloverDeps): void {
       // could be signed, released or retired by anything.
       if (player.isAcademy) {
         if (club) club.squad = club.squad.filter((id) => id !== player.id)
-        if (rng.chance(0.25)) {
-          // A handful drop into the free-agent pool and go on to have careers
-          // lower down, which is also true to life.
+        // Same rule as the summer cull: the ones with something about them
+        // carry on elsewhere, and the club that let them go is on the record.
+        if (rng.chance(survivalChance(player))) {
           player.isAcademy = false
           player.clubId = null
           player.contract = null
           player.value = 0
+          if (club) {
+            player.academyRelease = { clubId: club.id, season }
+            player.gotAwayReported = false
+          }
         } else {
           delete state.players[player.id]
         }
@@ -632,8 +636,21 @@ function retirementReason(player: Player, rng: Rng): string {
  * per season, save size ballooned, and the weekly tick got slower every year.
  * Real academies release the overwhelming majority of their intake.
  */
+/**
+ * Whether a released boy keeps playing somewhere.
+ *
+ * Most do not — the overwhelming majority of academy releases are the end of
+ * it, and pretending otherwise would fill the world with phantom prospects.
+ * But the ones with something about them get picked up, and they are exactly
+ * the ones a club needs to still exist for its decision to mean anything.
+ */
+function survivalChance(player: Player): number {
+  return clamp(0.12 + (player.potentialAbility - 90) / 170, 0.06, 0.9)
+}
+
 function releaseUnpromotedYouth(state: GameState, deps: RolloverDeps): void {
   const { rng, ids } = deps
+  const season = state.date.season
 
   for (const club of Object.values(state.clubs)) {
     const academy = club.squad
@@ -665,14 +682,23 @@ function releaseUnpromotedYouth(state: GameState, deps: RolloverDeps): void {
         continue
       }
 
-      // Everyone else is released. A handful drop into the free-agent pool and
-      // go on to have careers lower down, which is also true to life.
+      // Everyone else is released.
+      //
+      // Whether he survives into the free-agent pool used to be a flat one in
+      // four, which quietly guaranteed that three-quarters of every academy
+      // mistake was deleted before it could be proved a mistake. Survival now
+      // follows potential: a boy with nothing goes and is not heard of again,
+      // and a boy the club has misjudged carries on somewhere else — which is
+      // the only way a decision made in an office in June can come back four
+      // years later from somebody else's ground.
       club.squad = club.squad.filter((id) => id !== player.id)
-      if (rng.chance(0.25)) {
+      if (rng.chance(survivalChance(player))) {
         player.clubId = null
         player.contract = null
         player.isAcademy = false
         player.value = 0
+        player.academyRelease = { clubId: club.id, season }
+        player.gotAwayReported = false
       } else {
         delete state.players[player.id]
       }

@@ -402,6 +402,17 @@ function migrate(state: GameState): GameState {
     state.version = 13
   }
 
+  // v14: the ones that got away. Nobody in an older save carries a record of
+  // which academy released him, and inventing one would hang a grievance on a
+  // club that never made the decision. The record starts from here.
+  if (state.version < 14) {
+    for (const player of Object.values(state.players)) {
+      if (player.academyRelease === undefined) player.academyRelease = null
+      if (player.gotAwayReported === undefined) player.gotAwayReported = false
+    }
+    state.version = 14
+  }
+
   state.version = SAVE_VERSION
   return state
 }

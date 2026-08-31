@@ -45,6 +45,7 @@ export const STORY_KIND_LABELS: Record<MediaStoryKind, string> = {
   rivalTaunt: 'Rival taunt',
   signingReaction: 'Signing reaction',
   sackSpeculation: 'Sack speculation',
+  oneThatGotAway: 'The one that got away',
 }
 
 export const RESPONSE_LABELS: Record<MediaResponse, string> = {
