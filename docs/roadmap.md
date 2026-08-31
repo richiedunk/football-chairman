@@ -631,6 +631,15 @@ takes its best twenty-three, wherever they play, whoever they are. The first
 eleven go every time and the rest are in and out, which is what separates a
 fringe international from a certain one.
 
+What that costs, measured on the default world over two seasons: **0.78
+players away per club per break**, 76% of clubs losing nobody at all, and the
+leading club losing 9.6 of a 24-man squad — which is about what an elite club
+really loses in a November window, and a fifth of what the bar was taking. A
+mid-table club in a mid-ranked league loses 0.7; a non-league club loses
+nobody, ever, which is one of the quieter compensations for being small. The
+other cost, in the same run: 202 injuries picked up on duty and 1,120
+player-weeks lost, none of them anybody's fault at the club.
+
 That turns the director's question into the real one — not *is he good enough
 for a country* but *is he in the twenty-three his country has*. It is why
 signing a Northern Irish squad player costs you more Saturdays than signing a
