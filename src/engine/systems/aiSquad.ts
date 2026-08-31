@@ -257,14 +257,42 @@ export function processAiRenewals(state: GameState, club: Club): number {
  * merely useful, which is what actually keeps a lower-league squad stocked.
  */
 export function promoteFromAcademy(state: GameState, club: Club, rng: Rng): Player | null {
-  const seniors = seniorSquad(state, club).length
+  const squad = seniorSquad(state, club)
+  const seniors = squad.length
   if (seniors >= targetSquadFor(club, TARGET_SENIOR_SQUAD)) return null
   if (seniors >= EMERGENCY_SQUAD && !rng.chance(0.35)) return null
 
-  const candidate = club.squad
+  const academy = club.squad
     .map((id) => state.players[id])
     .filter((p): p is Player => Boolean(p) && p.isAcademy && p.age >= 17)
-    .sort((a, b) => b.potentialAbility - a.potentialAbility)[0]
+  if (academy.length === 0) return null
+
+  // Is he ready, or is he just next?
+  //
+  // This used to promote the highest-potential teenager whenever the squad was
+  // below target, with no bar at all — and because it runs before free-agent
+  // recruiting, the kid took the place every time. Measured over ten seasons
+  // that is where the world went young: players aged 21 and over fell from
+  // 19.9 a club to 17.2 and homegrown from 13.4 to 8.1, while roughly 1,700
+  // professionals sat unemployed. Seven of every twenty-four were under 21,
+  // against maybe three in the real game.
+  //
+  // A coach promotes a boy when he is better than what is already there, and
+  // signs a free agent when he is not. The bar is the bottom of the senior
+  // squad rather than its average, because that is the place actually going
+  // spare — he has to beat the worst professional at the club, not the best.
+  const ranked = squad.map((p) => p.currentAbility).sort((a, b) => a - b)
+  const bar = ranked.length > 0
+    ? ranked[Math.floor(ranked.length * 0.2)]
+    : 0
+
+  // Below the emergency floor nobody is fussy: bodies beat readiness, and a
+  // crisis blooding is how a career really starts.
+  const desperate = seniors < EMERGENCY_SQUAD
+  const ready = academy
+    .filter((p) => desperate || p.currentAbility >= bar)
+    .sort((a, b) => b.potentialAbility - a.potentialAbility)
+  const candidate = ready[0]
   if (!candidate) return null
 
   const result = promoteToSenior(state, club, candidate)

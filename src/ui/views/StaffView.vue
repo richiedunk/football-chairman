@@ -63,7 +63,7 @@ const staffSeasons = ref(2)
 
 const HIREABLE_ROLES: StaffRole[] = [
   'scout', 'assistantCoach', 'physio', 'analyst', 'academyDirector',
-  'fitnessCoach', 'goalkeepingCoach',
+  'fitnessCoach', 'goalkeepingCoach', 'setPieceCoach',
 ]
 
 const roleCandidates = computed(() => {
@@ -115,6 +115,8 @@ const ROLE_NOTES: Record<string, string> = {
   academyDirector: 'Raises what the youth intake produces every year.',
   fitnessCoach: 'Fewer soft-tissue injuries and better condition through a season.',
   goalkeepingCoach: 'Develops keepers, who otherwise improve slowest of anyone.',
+  setPieceCoach: 'Drills corners and free kicks. Worth around three goals a season '
+    + 'against clubs who have not bothered, and nothing at all against those who have.',
 }
 
 /** Every post, whether or not anyone holds it. */

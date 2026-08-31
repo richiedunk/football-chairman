@@ -63,6 +63,7 @@ export const ROLE_LABELS: Record<StaffRole, string> = {
   academyDirector: 'Academy Director',
   fitnessCoach: 'Fitness Coach',
   goalkeepingCoach: 'Goalkeeping Coach',
+  setPieceCoach: 'Set-Piece Coach',
 }
 
 /** Which attributes actually matter for each role, for hiring and effects. */
@@ -75,6 +76,9 @@ export const ROLE_KEY_ATTRIBUTES: Record<StaffRole, (keyof StaffAttributes)[]> =
   academyDirector: ['youthDevelopment', 'judgingPotential', 'coaching'],
   fitnessCoach: ['coaching', 'physiotherapy'],
   goalkeepingCoach: ['coaching', 'tactical'],
+  // A set-piece coach is a analyst who coaches: he finds the routine in the
+  // opposition's marking and then drills it on a Friday.
+  setPieceCoach: ['tactical', 'coaching', 'dataAnalysis'],
 }
 
 export function generateStaff(
@@ -176,6 +180,7 @@ function staffWage(reputation: number, role: StaffRole): number {
     academyDirector: 1.4,
     fitnessCoach: 1.0,
     goalkeepingCoach: 1.0,
+    setPieceCoach: 1.0,
   }
   const base = Math.pow(reputation / 50, 3) * 2_400
   return Math.max(400, Math.round((base * roleMultiplier[role]) / 100) * 100)
@@ -204,6 +209,10 @@ export function generateBackroom(
   if (quality > 45) staff.push(generateStaff(ctx, 'analyst', clubId, quality * 0.8, nation))
   if (quality > 35) staff.push(generateStaff(ctx, 'fitnessCoach', clubId, quality * 0.8, nation))
   if (quality > 55) staff.push(generateStaff(ctx, 'goalkeepingCoach', clubId, quality * 0.8, nation))
+  // The last hire a club makes, and the first it does without. A dedicated
+  // set-piece coach is a recent and still slightly embarrassed job title, held
+  // almost entirely by clubs rich enough to look for edges at the margins.
+  if (quality > 68) staff.push(generateStaff(ctx, 'setPieceCoach', clubId, quality * 0.85, nation))
 
   return staff
 }
@@ -234,6 +243,7 @@ export function generateFreeAgentStaff(
     ['academyDirector', Math.max(8, Math.round(clubCount * 0.06))],
     ['fitnessCoach', Math.max(6, Math.round(clubCount * 0.05))],
     ['goalkeepingCoach', Math.max(6, Math.round(clubCount * 0.05))],
+    ['setPieceCoach', Math.max(4, Math.round(clubCount * 0.03))],
   ]
 
   for (const [role, count] of counts) {

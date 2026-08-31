@@ -1,7 +1,8 @@
 import { clamp, Rng } from '../rng'
 import type {
-  Club, GameState, ID, MatchEvent, MatchResult, Player, Position,
+  Club, GameState, ID, MatchEvent, MatchResult, Player, Position, Staff,
 } from '../types'
+import { staffEffectiveness } from '../world/staffGen'
 import { selectTeam, type AvailabilityContext, type SelectedTeam } from './selection'
 
 /**
@@ -136,8 +137,9 @@ function runMatch(
   // chance, ~26 chances a match, ~120 matches a week — comfortably the largest
   // source of garbage in the whole simulation. The eleven do not change during
   // the match, so neither do the weights.
-  const homeTables = buildPickTables(state, home)
-  const awayTables = buildPickTables(state, away)
+  const homeTables = buildPickTables(state, home, setPieceCoaching(state, homeClub))
+  const awayTables = buildPickTables(state, away, setPieceCoaching(state, awayClub))
+
 
   let homeGoals = 0
   let awayGoals = 0
@@ -197,8 +199,16 @@ function runMatch(
       // get one, so what decides it is the delivery and who wins it in the
       // crowd — which is why a side of tall centre-halves and one good striker
       // of a ball beats a better football team more often than it should.
+      //
+      // Coaching enters as a ratio, not as a bonus. Applied to the attacking
+      // side alone it inflated the whole competition — a division where every
+      // club employs a set-piece coach scored more goals than one where none
+      // does, which is not what a coach is. As a ratio, equal coaching on both
+      // sides cancels exactly and only the edge counts, which is the honest
+      // version: the advantage is over the clubs who have not bothered.
+      const coachingEdge = attackTables.coaching / defendTables.coaching
       const attackQuality = isSetPiece
-        ? attackTables.deadBall * 0.5 + attackTables.aerial * 0.5
+        ? (attackTables.deadBall * 0.5 + attackTables.aerial * 0.5) * coachingEdge
         : attackTeam.strength.attack * 0.62 + attackTeam.strength.midfield * 0.38
       const defenceQuality = isSetPiece
         ? defendTables.aerial * 0.62 + defendTeam.strength.defence * 0.38
@@ -520,9 +530,35 @@ interface PickTables {
   deadBall: number
   /** How dangerous this side is in the air, attacking and defending. */
   aerial: number
+  /** What a set-piece coach adds to the routine, 1.0 with no coach. */
+  coaching: number
 }
 
-function buildPickTables(state: GameState, team: SelectedTeam): PickTables {
+/**
+ * What a set-piece coach is worth.
+ *
+ * The post used to be unbuildable: there was nothing in the match engine for
+ * him to act on, so hiring one would have been a job title with no
+ * consequence. Now there is, and this is the whole of his effect — he does not
+ * make anyone a better header of a ball, he makes the routine better. A drilled
+ * side attacks the same corner with a plan and defends it knowing where the
+ * runners go, which in this model is worth a modest amount at both ends and
+ * nothing at all anywhere else.
+ *
+ * Returns a multiplier on the side's dead-ball quality, 1.0 with no coach.
+ */
+export function setPieceCoaching(state: GameState, club: Club): number {
+  const coach = club.staff
+    .map((id) => state.staff[id])
+    .find((s): s is Staff => Boolean(s) && s.role === 'setPieceCoach')
+  if (!coach) return 1
+  // A good one is worth about a tenth on the routine, which over a season is
+  // a goal or two either way — the right size for a specialist nobody outside
+  // the building has heard of.
+  return 1 + (staffEffectiveness(coach) / 100) * 0.12
+}
+
+function buildPickTables(state: GameState, team: SelectedTeam, coaching = 1): PickTables {
   const players: Player[] = []
   const slots: Position[] = []
   let keeperId: ID | null = null
@@ -588,6 +624,7 @@ function buildPickTables(state: GameState, team: SelectedTeam): PickTables {
     takerId,
     deadBall: Math.max(0, bestDelivery) * 10,
     aerial: outfield > 0 ? (aerialSum / outfield) * 10 : 100,
+    coaching,
   }
 }
 

@@ -898,6 +898,7 @@ export type StaffRole =
   | 'academyDirector'
   | 'fitnessCoach'
   | 'goalkeepingCoach'
+  | 'setPieceCoach'
 
 export interface Staff {
   id: ID
