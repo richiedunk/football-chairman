@@ -131,6 +131,18 @@ export function selectionScore(
 }
 
 /**
+ * How many players a club could actually put on the pitch this week.
+ *
+ * The same ladder `selectTeam` walks, exposed so the rest of the engine can
+ * ask the question before kick-off rather than discovering the answer in a
+ * team sheet with nine names on it.
+ */
+export function fieldableCount(state: GameState, club: Club, ctx: AvailabilityContext): number {
+  const fit = selectableSquad(state, club).filter((p) => isAvailable(p, club.id, ctx))
+  return fit.length
+}
+
+/**
  * Pick a starting eleven and a bench.
  *
  * Greedy assignment in spine-first order. A full optimal assignment (Hungarian
@@ -165,10 +177,17 @@ export function selectTeam(
   // Fallbacks in order of how much they cost the fiction. Fielding an
   // unregistered player is the last of them: better than a match that cannot
   // be played, and only reachable from a save built before registration.
+  //
+  // The ladder used to bottom out at `selectable`, which is every owned or
+  // borrowed player with no filter at all — so before it ever fielded ten it
+  // would field an injured man, a suspended man, a man away with his country,
+  // or a man currently on loan at another club, putting one player in two
+  // teams in the same week. Losing is better than that. The bottom rung is
+  // now everyone actually available, and a side short of eleven is somebody
+  // else's problem to have solved before kick-off.
   const pool = available.length >= 11 ? available
     : eligible.length >= 11 ? eligible
-    : fit.length >= 11 ? fit
-    : selectable
+    : fit
 
   // Slots ordered spine-first, keeping duplicates (a 4-4-2 has two MC slots).
   const orderedSlots = shape

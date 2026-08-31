@@ -6,6 +6,7 @@ import PlayerRow from '../components/PlayerRow.vue'
 import MeterBar from '../components/MeterBar.vue'
 import { formatMoney, formatWage } from '../../engine/systems/valuation'
 import { auditSquadDepth } from '../../engine/sim/selection'
+import { ELEVEN, fieldable } from '../../engine/systems/matchday'
 import type { Player, Position } from '../../engine/types'
 import Chevron from '../components/Chevron.vue'
 
@@ -63,6 +64,20 @@ const depth = computed(() => {
 const shortages = computed(() => depth.value.filter((d) => d.shortage))
 
 const registration = computed(() => store.registration)
+
+/**
+ * Can we field a side at all?
+ *
+ * The one thing on this screen that is not advice. Everything else here is a
+ * judgement about depth; this is a fact about whether there is a team, and it
+ * is the only failure the board dismisses a director for outright.
+ */
+const fieldableNow = computed(() => {
+  const s = store.game
+  const c = store.club
+  if (!s || !c) return null
+  return fieldable(s, c, s.date.week).length
+})
 </script>
 
 <template>
@@ -123,6 +138,23 @@ const registration = computed(() => store.registration)
         </div>
       </div>
     </button>
+
+    <div
+      v-if="fieldableNow !== null && fieldableNow < ELEVEN"
+      class="card card--boxed"
+      style="border-color: var(--danger)"
+    >
+      <div class="card__body">
+        <div class="bold" style="color: var(--danger)">
+          We cannot field a side — {{ ELEVEN - fieldableNow }} short
+        </div>
+        <div class="small muted mt">
+          {{ fieldableNow }} player{{ fieldableNow === 1 ? '' : 's' }} available and eleven needed.
+          Promote from the academy, sign somebody, or get players registered. If a match comes
+          round with the squad in this state the board will dismiss you for it.
+        </div>
+      </div>
+    </div>
 
     <button
       v-if="shortages.length"

@@ -5,7 +5,6 @@ import { isTransferWindowOpen } from '../sim/schedule'
 import { ratingForPositionCached } from '../world/attributes'
 import { promoteToSenior } from './academy'
 import { targetSquadFor } from './recruitment'
-import { addInboxItem } from './inbox'
 import { suggestRenewal } from './contracts'
 import { executeTransfer, moveAppeal } from './transfers'
 import { computeValue, computeWageDemand, totalWageBill } from './valuation'
@@ -91,28 +90,17 @@ export function runAiSquadManagement(state: GameState, ctx: AiSquadContext): voi
   for (const club of Object.values(state.clubs)) {
     const clubRng = ctx.rng.fork(club.id)
 
-    // The human's squad is his own problem — nobody renews his contracts or
-    // does his shopping, and a director who ignores both should watch his
-    // squad thin out. But a club with seven players is not a hard lesson, it
-    // is a broken game state, so the secretary signs free agents to fulfil
-    // the fixture list and nothing more.
-    if (club.id === state.playerClubId) {
-      if (seniorSquad(state, club).length < EMERGENCY_SQUAD) {
-        const signing = recruitFreeAgents(state, ctx, club, freeAgents, clubRng)
-        if (signing) {
-          addInboxItem(state, ctx.ids, {
-            category: 'player',
-            subject: 'The secretary has signed a free agent',
-            from: 'Club Secretary',
-            body: `We cannot fulfil our fixtures with the players we have, so I have signed `
-              + `${signing.knownAs} on a free transfer. I would rather you did this yourself.`,
-            urgent: true,
-            link: { view: 'squad' },
-          })
-        }
-      }
-      continue
-    }
+    // The human's squad is his own problem, all the way down.
+    //
+    // The secretary used to sign free agents for him once the squad fell below
+    // the emergency floor, on the reasoning that a club with seven players is
+    // a broken game state rather than a hard lesson. It is a hard lesson: the
+    // one thing a director of football is unambiguously employed to do is put
+    // eleven players on a pitch, and a game that quietly does it for him has
+    // removed the only unarguable failure condition it had. He is warned every
+    // week the squad cannot field a side, and dismissed if it is still true on
+    // the morning of a match — see `matchday.ts`.
+    if (club.id === state.playerClubId) continue
 
     // Renewals run through the second half of the season rather than on one
     // fixed afternoon. A club whose wage bill leaves no room in March may have

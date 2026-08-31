@@ -14,29 +14,6 @@ will break next.
 ## Open
 
 
-### A club short of players starts the match with ten
-`selection.ts` fills one slot per available player and stops when it runs out
-(`if (best)` at the end of the slot loop). A club whose fit, unsuspended senior
-pool is below eleven simply starts with fewer, with no bench call-up, no
-academy promotion for the day and no forfeit. Found when a walkthrough on a
-random seed reopened a match report and counted ten rated players.
-
-Real football does not allow this: a club that cannot name eleven names
-academy players, recalls a loanee, or forfeits the fixture. Which of those it
-should be is a design question — forfeiting is the most realistic and the most
-punishing, an emergency academy call-up is the most forgiving.
-
-Related to, but not the same as, the thin-squad measurements above: those
-counted registered squad size at the season roll, this is *availability on the
-day* after injuries and suspensions. A club can be at eighteen registered and
-still be a man short in February.
-
-The walkthrough previously asserted eleven rated players and so failed
-intermittently on whichever random world happened to contain such a club. That
-assertion was testing an engine property the engine does not hold, from the UI,
-so it now checks what it can actually guarantee — that the report renders every
-player it was given — and reports the count.
-
 ### The season roll digs a hole the world takes longer and longer to climb out of
 Measured with `scripts/churn.ts`, standard world, 492 clubs, twelve seasons,
 sampling squad size twice a year — deep mid-season at week 26, and at the roll.
@@ -96,6 +73,39 @@ should be tuned until one of those is shown to be the cause — two confident
 diagnoses have already been wrong here.
 
 ## Fixed
+
+### A club short of players starts the match with ten
+Worse than reported. `selectTeam` walked a fallback ladder whose last rung was
+every owned or borrowed player with **no filter at all**, so before it ever
+fielded ten it would field an injured man, a suspended man, one away with his
+country, or one on loan at another club that same week — putting a player in
+two teams on the same Saturday. And if even that came up short, the slot loop
+filled what it could and returned a nine-man side with nothing anywhere told.
+
+The bottom rung is now everyone actually available. Below eleven is somebody
+else's problem to have solved before kick-off, and `matchday.ts` is where it
+gets solved. **Nothing forfeits** — a league that cannot fulfil its own
+calendar is a broken world, not a hard lesson — but the two sides of the game
+answer for it very differently:
+
+- **An AI club fixes itself**, in the order a real club reaches: the academy
+  first, because those players are already there and already registered; then
+  a free agent, capped at a quarter above the best player already at the club,
+  so the fix stays in proportion; then, as an admission, an invented local
+  sixteen-year-old with nothing to recommend him but a pulse and a
+  registration.
+- **The human is answerable.** The club secretary no longer signs free agents
+  for him below the emergency floor — that quietly removed the only
+  unarguable failure condition the game had. He is warned the moment his squad
+  cannot field eleven, checked against the week his next fixture is played
+  rather than this one, and dismissed if it is still true on the morning of the
+  match. The club then becomes an AI club and assembles a side in time to kick
+  off, which is why the fixture still stands.
+
+Failing to put eleven players on a pitch is the one thing a director of
+football is unambiguously employed to prevent, so it is the one thing he is
+sacked for outright rather than warned about twice.
+
 
 ### Every squad becomes half-foreign within four seasons
 `domesticBias` had reached free-agent recruiting and the human's scouting

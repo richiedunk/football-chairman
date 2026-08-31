@@ -44,6 +44,38 @@ const SECOND_CHANCE_PROBABILITY = 0.6
 
 /** Share of shots that hit the target, before quality adjustment. */
 const BASE_ON_TARGET = 0.35
+
+/**
+ * Set pieces.
+ *
+ * Roughly a quarter to a third of real goals come from a dead ball, and until
+ * now none of them did here: `setPieces` was an attribute with weight in every
+ * position rating and no reader anywhere in the match engine, and the only
+ * thing resembling a penalty was a flat nine per cent roll that relabelled a
+ * goal already scored. The text changed; the probability did not, and no
+ * player's ability touched it.
+ *
+ * A chance is now open play or a dead ball, drawn rather than added, so the
+ * chance count and the shot totals stay where they were calibrated. What
+ * changes is who creates it, who finishes it and what decides whether it goes
+ * in: the taker's delivery and both sides in the air, instead of the same
+ * attack-against-defence sum every time.
+ */
+const SET_PIECE_SHARE = 0.26
+
+/** Of those, the share that is a penalty — about a quarter of a match. */
+const PENALTY_SHARE = 0.042
+
+/**
+ * A dead ball is a worse chance than an open-play one, per attempt.
+ *
+ * It is only worth as much as it is because there are so many of them and
+ * because nobody has to beat a defender to get one.
+ */
+const SET_PIECE_CONVERSION = 0.78
+
+/** What a penalty is actually worth, before the taker and the keeper. */
+const PENALTY_CONVERSION = 0.76
 /** Share of on-target shots that go in, before quality adjustment. */
 const BASE_CONVERSION = 0.265
 
@@ -150,27 +182,56 @@ function runMatch(
       if (isHome) shots.home++
       else shots.away++
 
-      // Chance quality: attack against defence, decided on the balance of the
-      // two, with a floor so even a poor side occasionally creates something.
-      const attackQuality = attackTeam.strength.attack * 0.62 + attackTeam.strength.midfield * 0.38
-      const defenceQuality = defendTeam.strength.defence * 0.78 + defendTeam.strength.midfield * 0.22
-      const openingChance = clamp(
-        BASE_ON_TARGET + (attackQuality - defenceQuality) / 620,
-        0.15,
-        0.6,
-      )
-
       const attackTables = isHome ? homeTables : awayTables
       const defendTables = isHome ? awayTables : homeTables
 
+      // Open play or a dead ball. Drawn rather than added, so the chance count
+      // this engine was calibrated on does not move.
+      const isSetPiece = rng.chance(SET_PIECE_SHARE)
+      const isPenalty = isSetPiece && rng.chance(PENALTY_SHARE)
+
+      // Chance quality: attack against defence, decided on the balance of the
+      // two, with a floor so even a poor side occasionally creates something.
+      //
+      // A dead ball is a different question. Nobody has to beat a defender to
+      // get one, so what decides it is the delivery and who wins it in the
+      // crowd — which is why a side of tall centre-halves and one good striker
+      // of a ball beats a better football team more often than it should.
+      const attackQuality = isSetPiece
+        ? attackTables.deadBall * 0.5 + attackTables.aerial * 0.5
+        : attackTeam.strength.attack * 0.62 + attackTeam.strength.midfield * 0.38
+      const defenceQuality = isSetPiece
+        ? defendTables.aerial * 0.62 + defendTeam.strength.defence * 0.38
+        : defendTeam.strength.defence * 0.78 + defendTeam.strength.midfield * 0.22
+
+      // A penalty is on target unless it is dragged wide, and that is the
+      // taker's business rather than a contest.
+      const openingChance = isPenalty
+        ? 0.94
+        : clamp(BASE_ON_TARGET + (attackQuality - defenceQuality) / 620, 0.15, 0.6)
+
       if (!rng.chance(openingChance)) {
         // Chance broken up before a shot on target.
-        if (detailed && rng.chance(0.28)) {
-          const player = pickWeighted(attackTables.players, attackTables.scorerWeights, rng)
+        if (detailed && (isPenalty || rng.chance(0.28))) {
+          const weights = isSetPiece ? attackTables.setPieceScorerWeights : attackTables.scorerWeights
+          const taker = isPenalty
+            ? attackTables.players.find((p) => p.id === attackTables.takerId) ?? null
+            : null
+          const player = taker ?? pickWeighted(attackTables.players, weights, rng)
           if (player) {
-            events.push(makeEvent(minute, 'chanceMissed', attackClub.id, player.id, undefined,
-              `${player.knownAs} drags a shot wide from the edge of the area.`))
-            involvement[player.id] = (involvement[player.id] ?? 0) + 0.4
+            events.push(makeEvent(
+              minute,
+              isPenalty ? 'penaltyMissed' : 'chanceMissed',
+              attackClub.id,
+              player.id,
+              undefined,
+              isPenalty
+                ? `${player.knownAs} puts the penalty wide.`
+                : isSetPiece
+                  ? `${player.knownAs} heads over from the corner.`
+                  : `${player.knownAs} drags a shot wide from the edge of the area.`,
+            ))
+            involvement[player.id] = (involvement[player.id] ?? 0) + (isPenalty ? -0.6 : 0.4)
           }
         }
         continue
@@ -181,28 +242,55 @@ function runMatch(
 
       // Conversion: finisher against goalkeeper.
       const keeperQuality = defendTeam.strength.goalkeeper
-      const conversion = clamp(
-        BASE_CONVERSION
-          + (attackQuality - keeperQuality) / 780
-          + (isHome && !ctx.neutralVenue ? HOME_CONVERSION_BONUS : 0),
-        0.12,
-        0.55,
-      )
+      const conversion = isPenalty
+        // The taker against the keeper, and very little else. A good taker
+        // scores nine in ten and a poor one still scores most of them, which
+        // is exactly why a penalty is the best chance in football.
+        ? clamp(
+          PENALTY_CONVERSION
+            + (attackTables.deadBall - keeperQuality) / 1400,
+          0.6,
+          0.93,
+        )
+        : clamp(
+          (BASE_CONVERSION
+            + (attackQuality - keeperQuality) / 780
+            + (isHome && !ctx.neutralVenue ? HOME_CONVERSION_BONUS : 0))
+          * (isSetPiece ? SET_PIECE_CONVERSION : 1),
+          0.12,
+          0.55,
+        )
 
       if (rng.chance(conversion)) {
-        const scorer = pickWeighted(attackTables.players, attackTables.scorerWeights, rng)
+        const scorer = isPenalty
+          ? attackTables.players.find((p) => p.id === attackTables.takerId)
+            ?? pickWeighted(attackTables.players, attackTables.scorerWeights, rng)
+          : pickWeighted(
+            attackTables.players,
+            isSetPiece ? attackTables.setPieceScorerWeights : attackTables.scorerWeights,
+            rng,
+          )
         if (!scorer) continue
         if (isHome) homeGoals++
         else awayGoals++
         involvement[scorer.id] = (involvement[scorer.id] ?? 0) + 3
 
-        const assister = rng.chance(0.72)
-          ? pickWeightedExcluding(attackTables.players, attackTables.assistWeights, scorer.id, rng)
+        // Nobody assists a penalty. A dead-ball goal is credited to the man
+        // who delivered it, which is how a set-piece specialist builds an
+        // assist column out of a skill open play never asks him for.
+        const taker = attackTables.takerId && attackTables.takerId !== scorer.id
+          ? attackTables.players.find((p) => p.id === attackTables.takerId) ?? null
           : null
+        const assister = isPenalty
+          ? null
+          : isSetPiece
+            ? taker
+            : rng.chance(0.72)
+              ? pickWeightedExcluding(attackTables.players, attackTables.assistWeights, scorer.id, rng)
+              : null
         if (assister) involvement[assister.id] = (involvement[assister.id] ?? 0) + 1.4
 
         if (detailed) {
-          const isPenalty = rng.chance(0.09)
           events.push(makeEvent(
             minute,
             isPenalty ? 'penaltyScored' : 'goal',
@@ -211,9 +299,13 @@ function runMatch(
             assister?.id,
             isPenalty
               ? `${scorer.knownAs} sends the keeper the wrong way from the spot.`
-              : assister
-                ? `${scorer.knownAs} finishes from ${assister.knownAs}'s pass.`
-                : `${scorer.knownAs} scores.`,
+              : isSetPiece
+                ? assister
+                  ? `${scorer.knownAs} heads in ${assister.knownAs}'s delivery.`
+                  : `${scorer.knownAs} scores from the set piece.`
+                : assister
+                  ? `${scorer.knownAs} finishes from ${assister.knownAs}'s pass.`
+                  : `${scorer.knownAs} scores.`,
           ))
         }
       } else {
@@ -397,6 +489,19 @@ const SCORER_WEIGHT: Record<Position, number> = {
   ST: 40, AM: 18, ML: 10, MR: 10, MC: 9, DM: 3, DC: 4, DL: 2, DR: 2, GK: 0.05,
 }
 
+/**
+ * Who scores from a dead ball, which is a different list entirely.
+ *
+ * A corner is the one moment in football when the centre-half is the most
+ * dangerous man on the pitch, and it is why a team of small technicians can
+ * lose to a team of tall ones. Strikers still score the most because they are
+ * in the six-yard box too, but the shape of this table is the whole reason
+ * set pieces are worth modelling separately rather than as a flat bonus.
+ */
+const SET_PIECE_SCORER_WEIGHT: Record<Position, number> = {
+  ST: 26, DC: 22, AM: 8, MC: 7, DM: 6, ML: 4, MR: 4, DL: 4, DR: 4, GK: 0.02,
+}
+
 const ASSIST_WEIGHT: Record<Position, number> = {
   AM: 24, ML: 18, MR: 18, MC: 16, ST: 12, DL: 8, DR: 8, DM: 6, DC: 3, GK: 0.5,
 }
@@ -408,6 +513,13 @@ interface PickTables {
   disciplineWeights: number[]
   injuryWeights: number[]
   keeperId: ID | null
+  /** Who scores from a corner — a different list from open play. */
+  setPieceScorerWeights: number[]
+  /** The side's designated taker, and his delivery on the 0-200 scale. */
+  takerId: ID | null
+  deadBall: number
+  /** How dangerous this side is in the air, attacking and defending. */
+  aerial: number
 }
 
 function buildPickTables(state: GameState, team: SelectedTeam): PickTables {
@@ -427,6 +539,15 @@ function buildPickTables(state: GameState, team: SelectedTeam): PickTables {
   const assistWeights: number[] = []
   const disciplineWeights: number[] = []
   const injuryWeights: number[] = []
+  const setPieceScorerWeights: number[] = []
+
+  // The taker is simply the best deliverer in the side, which is how a coach
+  // picks one and why the attribute is worth having on a player who does
+  // nothing else especially well.
+  let takerId: ID | null = null
+  let bestDelivery = -1
+  let aerialSum = 0
+  let outfield = 0
 
   for (let i = 0; i < players.length; i++) {
     const player = players[i]
@@ -443,9 +564,31 @@ function buildPickTables(state: GameState, team: SelectedTeam): PickTables {
     injuryWeights.push(
       10 + player.injuryProneness * 0.8 + Math.max(0, 100 - player.fitness) * 0.5,
     )
+
+    // Heading first, strength second: winning the ball in a crowd is mostly
+    // timing and leap, and partly not being shoved off it.
+    const inTheAir = player.attributes.heading * 0.62 + player.attributes.strength * 0.38
+    setPieceScorerWeights.push((SET_PIECE_SCORER_WEIGHT[slot] ?? 1) * (0.35 + inTheAir / 13))
+
+    if (slot !== 'GK') {
+      aerialSum += inTheAir
+      outfield += 1
+      if (player.attributes.setPieces > bestDelivery) {
+        bestDelivery = player.attributes.setPieces
+        takerId = player.id
+      }
+    }
   }
 
-  return { players, scorerWeights, assistWeights, disciplineWeights, injuryWeights, keeperId }
+  // Attributes run 1-20 and team strengths run 0-200, so both are scaled up
+  // to meet the numbers the chance model already speaks in.
+  return {
+    players, scorerWeights, assistWeights, disciplineWeights, injuryWeights, keeperId,
+    setPieceScorerWeights,
+    takerId,
+    deadBall: Math.max(0, bestDelivery) * 10,
+    aerial: outfield > 0 ? (aerialSum / outfield) * 10 : 100,
+  }
 }
 
 function pickWeighted(players: Player[], weights: number[], rng: Rng): Player | null {

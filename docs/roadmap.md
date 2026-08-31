@@ -1065,13 +1065,36 @@ Migration safety is local work and this is it.
 Bugs found in play go in `docs/bugs.md` — this section is for the ones with a
 measurement behind them.
 
-**No set-piece coach.** The ask was for coaching posts you assign — youth, set
-pieces, goalkeeping. `academyDirector` and `goalkeepingCoach` exist and both
-do something: the academy director moves intake quality, the goalkeeping coach
-moves keeper development. There is nothing in the match engine for a set-piece
-coach to act on, so adding the post would be a job title with no consequence —
-a dial that does not turn. It waits on set pieces existing as a modelled part
-of a match. Named here so it is a deferral rather than an omission.
+**~~No set-piece coach.~~ Set pieces are modelled; the post is now buildable.**
+The deferral was right at the time: `setPieces` was an attribute carried in
+every position rating with no reader anywhere in the match engine, and the only
+thing resembling a dead ball was a flat 9% roll that relabelled an
+already-scored goal as a penalty — the text changed, the probability did not,
+and no player's ability touched it.
+
+A chance is now open play or a dead ball, **drawn rather than added**, so the
+chance count and shot totals stay where they were calibrated. What changes is
+who creates it, who finishes it, and what decides whether it goes in: the
+taker's delivery and both sides in the air, instead of the same
+attack-against-defence sum every time. A corner is the one moment in football
+when the centre-half is the most dangerous man on the pitch, so the dead-ball
+scorer table is a different list — and the taker takes the assist, which is how
+a specialist builds an assist column out of a skill open play never asks him
+for.
+
+Measured over 2,400 matches, against the real game:
+
+| | model | real |
+|---|---|---|
+| dead-ball goals | 30% | 25–33% |
+| penalties, share of goals | 8% | ~8–10% |
+| penalties per game | 0.25 | ~0.27 |
+| centre-backs, share of goals | 11% | ~8–10% |
+
+Goals per game moved 2.63 to 2.75. That is left alone rather than tuned back:
+the Premier League runs around 2.8, so adding a real mechanism moved a
+calibrated number *towards* reality, and putting it back would be preserving a
+baseline at the cost of the thing it was measuring.
 
 **Squads do not thin. The world drifts young.** ~~Squads thin at the season
 roll from season four onwards.~~ Measured properly, that entry was wrong, and

@@ -21,6 +21,7 @@ import {
 } from './systems/international'
 import { generateIncomingOffers, processAiTransfers, processNegotiations } from './systems/transfers'
 import { runAiSquadManagement } from './systems/aiSquad'
+import { ELEVEN, canFieldEleven, fieldable, fixAiSquad, warnHuman } from './systems/matchday'
 import { checkForExposure, generateOrganicStories } from './systems/media'
 import { processBoard, processCoachRelations, sortTable, updateFanMood } from './systems/board'
 import { addInboxItem, addNews, expireItems } from './systems/inbox'
@@ -120,6 +121,54 @@ export function advanceWeek(state: GameState, deps: TickDeps): TickResult {
 
   // Suspensions are computed once for the week from accumulated cards.
   const suspendedIds = collectSuspensions(state)
+
+  // --- 2a. Being able to field a side --------------------------------------
+  //
+  // Before a ball is kicked, every club with a fixture has to have eleven
+  // players. Nothing forfeits: a league that cannot fulfil its own calendar is
+  // a broken world, not a hard lesson. The two sides answer for it differently.
+  //
+  // An AI club fixes itself — academy, free agent, and an invented sixteen-
+  // year-old as the admission of last resort. The human is not rescued: he has
+  // been warned every week it was true (section 5b), and if it is still true
+  // on the morning of a match he is dismissed for it. Failing to put eleven
+  // players on a pitch is the one thing a director of football is
+  // unambiguously employed to prevent. The club then becomes an AI club and
+  // fixes the side in time to kick off, which is why the fixture still stands.
+  const matchdayDeps = { ids, names, rng: rng.fork('matchday') }
+  const playingThisWeek = new Set<ID>()
+  for (const fixture of weekFixtures) {
+    playingThisWeek.add(fixture.homeClubId)
+    playingThisWeek.add(fixture.awayClubId)
+  }
+
+  const clubOnMatchday = clubInCharge(state)
+  if (clubOnMatchday && playingThisWeek.has(clubOnMatchday.id)
+    && !canFieldEleven(state, clubOnMatchday, week)) {
+    const short = ELEVEN - fieldable(state, clubOnMatchday, week).length
+    addInboxItem(state, ids, {
+      category: 'board',
+      subject: 'You are dismissed',
+      from: 'Chairman',
+      body: `We have a match this week and you have left us ${short} player`
+        + `${short === 1 ? '' : 's'} short of a legal side. Whatever else this job is, `
+        + 'it is putting eleven players on a pitch. Your contract is terminated with '
+        + 'immediate effect and we will assemble a team ourselves.',
+      urgent: true,
+      link: { view: 'career' },
+    })
+    result.sacked = true
+    result.sackMessage = 'Dismissed for failing to field a side.'
+    paySeverance(state, clubOnMatchday)
+    dismissDirector(state, ids, rng.fork('dismissal:squad'))
+  }
+
+  for (const clubId of playingThisWeek) {
+    const club = state.clubs[clubId]
+    if (!club || club.id === state.playerClubId) continue
+    if (canFieldEleven(state, club, week)) continue
+    fixAiSquad(state, club, matchdayDeps, week)
+  }
 
   for (const fixture of weekFixtures) {
     const home = state.clubs[fixture.homeClubId]
@@ -258,6 +307,25 @@ export function advanceWeek(state: GameState, deps: TickDeps): TickResult {
 
   // --- 5. Morale and squad state -------------------------------------------
   const playerClub = clubInCharge(state)
+
+  // --- 5b. Can we field a side next week? -----------------------------------
+  //
+  // Said as early as it is true, and repeated every week it stays true. By
+  // match day it is a dismissal rather than a warning, and a director sacked
+  // for something nobody ever told him is a bug rather than a consequence.
+  if (playerClub) {
+    const nextFixture = state.fixtures.find(
+      (f) => f.season === state.date.season && f.week > week && !f.result
+        && (f.homeClubId === playerClub.id || f.awayClubId === playerClub.id),
+    )
+    // Checked against the week the match is played, not this one: a squad that
+    // is whole today and loses three men to a break next Tuesday is already in
+    // trouble, and that is precisely when it can still be fixed.
+    const matchWeek = nextFixture?.week ?? week + 1
+    if (!canFieldEleven(state, playerClub, matchWeek)) {
+      warnHuman(state, playerClub, ids, matchWeek, nextFixture ? nextFixture.week - week : null)
+    }
+  }
   for (const club of allClubs) {
     // Squad harmony at clubs the player never looks at only needs to be
     // roughly right, so it is refreshed monthly rather than weekly.
