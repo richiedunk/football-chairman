@@ -12,6 +12,9 @@ import { autoRegister } from '../systems/registration'
 import { createOwner, ownerName, startingOwnerKind } from '../systems/ownership'
 import { realClubsFor, type RealClub } from './realClubs'
 import { resetCup } from '../sim/cups'
+import {
+  createContinentalCups, refreshContinentalEntrants, stripUnplayablePlaces,
+} from '../systems/continental'
 import { SAVE_VERSION } from '../types'
 import { STARTING_AGE } from '../systems/directorCareer'
 import type {
@@ -321,6 +324,20 @@ export function generateWorld(options: WorldGenOptions): GameState {
     }
     state.cups[cup.id] = cup
   }
+
+  // --- Continental competition ---------------------------------------------
+  //
+  // Created after the domestic cups and after the tables exist, because who is
+  // in one is read off a league table. At world creation those tables are
+  // empty, so the first field is seeded from league position order — which is
+  // reputation order — and from the second season on it is last season's real
+  // finishing places.
+  //
+  // Confederations too small to field a competition have their leagues'
+  // qualification places removed here rather than left pointing at nothing.
+  stripUnplayablePlaces(state)
+  createContinentalCups(state, ids)
+  refreshContinentalEntrants(state)
 
   // Cup entrants and the round calendar are derived, so they are established
   // the same way at world creation as at every subsequent season roll.

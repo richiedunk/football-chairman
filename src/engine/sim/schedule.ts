@@ -100,7 +100,21 @@ export function scheduleLeague(
  */
 export const DOMESTIC_CUP_WEEKS = [10, 15, 20, 26, 32, 37, 42]
 
-export const CONTINENTAL_WEEKS = [12, 14, 18, 22, 25, 29, 33, 36, 39, 43]
+/**
+ * Weeks on which continental rounds are played.
+ *
+ * Spaced six apart rather than the domestic cup's five, because every
+ * continental round bar the final is two-legged and the second leg lands three
+ * weeks after the first. Five would have put the next first leg on top of the
+ * previous second leg. Like the domestic weeks these are consumed from the end,
+ * so the final is always week 41 whatever the size of the field.
+ *
+ * Six entries is room for a 64-club competition. The largest this world builds
+ * is 29, which takes five rounds and therefore starts in week 18 — a European
+ * campaign running from autumn to a final three weeks before the league ends,
+ * which is the right shape.
+ */
+export const CONTINENTAL_WEEKS = [11, 17, 23, 29, 35, 41]
 
 export const CUP_ROUND_NAMES = [
   'First Round', 'Second Round', 'Third Round', 'Fourth Round',

@@ -13,6 +13,29 @@ will break next.
 
 ## Open
 
+### A club short of players starts the match with ten
+`selection.ts` fills one slot per available player and stops when it runs out
+(`if (best)` at the end of the slot loop). A club whose fit, unsuspended senior
+pool is below eleven simply starts with fewer, with no bench call-up, no
+academy promotion for the day and no forfeit. Found when a walkthrough on a
+random seed reopened a match report and counted ten rated players.
+
+Real football does not allow this: a club that cannot name eleven names
+academy players, recalls a loanee, or forfeits the fixture. Which of those it
+should be is a design question — forfeiting is the most realistic and the most
+punishing, an emergency academy call-up is the most forgiving.
+
+Related to, but not the same as, the thin-squad measurements above: those
+counted registered squad size at the season roll, this is *availability on the
+day* after injuries and suspensions. A club can be at eighteen registered and
+still be a man short in February.
+
+The walkthrough previously asserted eleven rated players and so failed
+intermittently on whichever random world happened to contain such a club. That
+assertion was testing an engine property the engine does not hold, from the UI,
+so it now checks what it can actually guarantee — that the report renders every
+player it was given — and reports the count.
+
 ### The season roll digs a hole the world takes longer and longer to climb out of
 Measured with `scripts/churn.ts`, standard world, 492 clubs, twelve seasons,
 sampling squad size twice a year — deep mid-season at week 26, and at the roll.

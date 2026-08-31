@@ -1,6 +1,6 @@
 import { Rng } from '../rng'
 import { IdFactory, ID_PREFIX } from '../ids'
-import { CUP_ROUND_NAMES, DOMESTIC_CUP_WEEKS } from './schedule'
+import { CONTINENTAL_WEEKS, CUP_ROUND_NAMES, DOMESTIC_CUP_WEEKS } from './schedule'
 import type { CupCompetition, CupRound, Fixture, GameState, ID } from '../types'
 
 /**
@@ -24,7 +24,17 @@ import type { CupCompetition, CupRound, Fixture, GameState, ID } from '../types'
  * tie into a two-week problem where a first-leg lead has to be defended by a
  * squad that also has league fixtures in between.
  */
-export function isTwoLegged(roundIndex: number, totalRounds: number): boolean {
+export function isTwoLegged(
+  roundIndex: number,
+  totalRounds: number,
+  type: CupCompetition['type'] = 'domestic',
+): boolean {
+  // Continental football is two legs from the first round to the semi-final,
+  // and one match for the final. That is not decoration: it doubles the
+  // fixtures a European run costs, which is the whole reason a squad that can
+  // win a league cannot always survive a campaign as well. The domestic cup
+  // keeps its single two-legged semi-final.
+  if (type === 'continental') return totalRounds - roundIndex - 1 > 0
   return totalRounds - roundIndex - 1 === 1
 }
 
@@ -41,9 +51,13 @@ export function roundsRequired(entrants: number): number {
  * Cup weeks used by a competition of this size, taken from the *end* of the
  * calendar so every final lands on the same week regardless of field size.
  */
-export function cupWeeksFor(entrants: number): number[] {
-  const rounds = Math.min(roundsRequired(entrants), DOMESTIC_CUP_WEEKS.length)
-  return DOMESTIC_CUP_WEEKS.slice(DOMESTIC_CUP_WEEKS.length - rounds)
+export function cupWeeksFor(
+  entrants: number,
+  type: CupCompetition['type'] = 'domestic',
+): number[] {
+  const calendar = type === 'continental' ? CONTINENTAL_WEEKS : DOMESTIC_CUP_WEEKS
+  const rounds = Math.min(roundsRequired(entrants), calendar.length)
+  return calendar.slice(calendar.length - rounds)
 }
 
 /** Name a round by how far from the final it is, so "Semi-final" always fits. */
@@ -85,7 +99,7 @@ export function drawNextRoundIfDue(
 ): Fixture[] {
   if (cup.winnerId) return []
 
-  const weeks = cupWeeksFor(cup.entrantIds.length || 2)
+  const weeks = cupWeeksFor(cup.entrantIds.length || 2, cup.type)
   const totalRounds = weeks.length
   if (cup.currentRound >= totalRounds) return []
 
@@ -124,7 +138,7 @@ export function drawNextRoundIfDue(
     playing = surviving.filter((id) => !byeSet.has(id))
   }
 
-  const twoLegged = isTwoLegged(cup.currentRound, totalRounds)
+  const twoLegged = isTwoLegged(cup.currentRound, totalRounds, cup.type)
   const shuffled = rng.shuffle(playing)
   const fixtures: Fixture[] = []
 

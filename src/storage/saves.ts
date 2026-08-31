@@ -8,6 +8,10 @@ import { createStorageAdapter, type SaveSlotMeta, type StorageAdapter } from './
 import { compressAsync, decompressAsync } from './compression'
 import { RETIREMENT_AGE, STARTING_AGE } from '../engine/systems/directorCareer'
 import { playerClub } from '../engine/playerClub'
+import { IdFactory } from '../engine/ids'
+import {
+  createContinentalCups, refreshContinentalEntrants, stripUnplayablePlaces,
+} from '../engine/systems/continental'
 
 /**
  * Save and load.
@@ -205,8 +209,38 @@ function migrate(state: GameState): GameState {
     state.version = 7
   }
 
+  // v8: continental competition. Older saves have leagues awarding
+  // qualification places and no competition to award them to, so the
+  // competitions are created and the field drawn from the tables as they
+  // stand. A save reloaded mid-season joins the current campaign at whatever
+  // round it has reached rather than being given a season that has already
+  // been half played, which is why the cups are created but not reset.
+  if (state.version < 8) {
+    const hasContinental = Object.values(state.cups)
+      .some((cup) => cup.type === 'continental')
+    if (!hasContinental) {
+      stripUnplayablePlaces(state)
+      createContinentalCups(state, new IdFactory(state.nextId))
+      refreshContinentalEntrants(state)
+      // `createContinentalCups` consumed ids, so the save's counter has to
+      // move with them or the next new object collides with a cup.
+      state.nextId = Math.max(state.nextId, highestId(state) + 1)
+    }
+    state.version = 8
+  }
+
   state.version = SAVE_VERSION
   return state
+}
+
+/** The largest numeric id in use, so a migration that mints ids cannot collide. */
+function highestId(state: GameState): number {
+  let highest = 0
+  for (const cup of Object.values(state.cups)) {
+    const n = Number(cup.id.replace(/^\D+/, ''))
+    if (Number.isFinite(n)) highest = Math.max(highest, n)
+  }
+  return highest
 }
 
 /** Export a save as a downloadable JSON blob, for backup or sharing a seed. */

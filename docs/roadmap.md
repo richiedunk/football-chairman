@@ -45,12 +45,12 @@ simulating seasons and reading the numbers, never by inspecting code — so
 12. **International football.** Largest of the new work, and it wants a stable
     calendar underneath it.
 
-**Still deferred: continental competitions.** Qualification places are already
-modelled and clubs already qualify; the competition itself is not built. It is
-the largest remaining hole and the largest job. Either it gets built or the
-dangling `continentalPlaces` hooks get hidden — leaving leagues awarding
-qualification to a competition that does not exist is the worst of the three
-options. Decide after the long save, which will show how much it is missed.
+**Continental competitions are built.** They were deferred pending the long
+save, the long save has been run, and they are done — see "Continental
+competition" below. The dangling `continentalPlaces` hooks are gone: every
+league that awards a place now awards it to a competition that exists, and the
+leagues whose confederation is too small to field one have had their places
+removed rather than left pointing at nothing.
 
 ## What each mirrors
 
@@ -685,6 +685,59 @@ raw JSON a year, which gzips to near nothing.
 moving off IndexedDB has to be made on other grounds — surviving a data clear,
 moving a career between devices, migrating old saves eagerly rather than
 lazily, or verifying a leaderboard entry — and not on size.
+
+## Continental competition
+
+The last large hole. Leagues have awarded qualification places since the world
+was first generated and there was nothing on the other end of them, which is
+worse than not awarding them at all — it promises the player something the game
+cannot pay.
+
+**What it is, from this chair.** Four things: a reason the final league
+position matters beyond the title, a fixture burden that tests squad depth, a
+revenue line big enough to change what the club can afford, and a standing that
+makes players answer the phone. Emphatically not a tactical layer — the head
+coach picks the side for a European night the same as any other.
+
+**The shape falls out of the data rather than being decided.** Counting the
+places the nations actually award: UEFA raises 29 clubs for an elite
+competition and 26 for a secondary one, CONMEBOL 8 and 4, CONCACAF 4 and 4, and
+Japan on its own raises three. So the rule is a minimum field of eight, and:
+
+| confederation | competitions |
+|---|---|
+| UEFA | two — European Cup (29), European Trophy (26) |
+| CONMEBOL | one — South American Cup (12), the two sets of places merged |
+| CONCACAF | one — North American Cup (8), merged |
+| AFC | none — and its leagues' places are removed |
+
+That last row is the honest half. A one-nation confederation has no continent
+to play, so rather than leave the hook dangling the place is taken off the
+league and a club finishing second in Japan is told the truth.
+
+**Two legs in every round but the final**, against the domestic cup's single
+two-legged semi-final. That is not decoration: it is what makes a European run
+cost a squad rather than a Saturday. Measured across seventeen leagues, a
+qualified club plays **4.7 more matches** than its own league-mates — the
+comparison has to be against league-mates, because a non-league club plays 42
+league games to a top-flight club's 38 and league size otherwise swamps the
+effect entirely.
+
+**The money is proportionate rather than invented.** The ladder steepens by
+about 1.9x a round, so a run is worth far more than the sum of its early
+rounds. Winning the European Cup pays £44.6m across the campaign against a top
+English club's £120m from the league — roughly the ratio the real competition
+pays, and transformative rather than decorative for a Scottish or Danish
+champion collecting the same first-round cheque.
+
+Names are invented. Real club names are used in this game; real competition
+names are somebody's trade mark and are not.
+
+**Deferred inside it:** the league phase. The real elite competition now opens
+with a 36-club Swiss-model group stage rather than a straight knockout. That is
+a much larger job and it mostly adds guaranteed fixtures; the two-legged
+knockout delivers all four of the things above. Worth revisiting, not worth
+blocking on.
 
 ## Known defects
 

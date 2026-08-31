@@ -57,7 +57,7 @@ export interface Nation {
   cities: City[]
   leagueIds: ID[]
   /** Continental confederation, for continental competition eligibility. */
-  confederation: 'UEFA' | 'CONMEBOL' | 'CONCACAF' | 'CAF' | 'AFC'
+  confederation: Confederation
   /** Rough population in millions — scales how many big clubs it supports. */
   population: number
 }
@@ -94,6 +94,8 @@ export interface League {
 }
 
 export type ContinentalTier = 'elite' | 'secondary' | 'none'
+
+export type Confederation = 'UEFA' | 'CONMEBOL' | 'CONCACAF' | 'CAF' | 'AFC'
 
 export interface LeagueTableRow {
   clubId: ID
@@ -1459,6 +1461,13 @@ export interface CupCompetition {
   nationId: ID | null
   type: 'domestic' | 'continental'
   tier: ContinentalTier
+  /**
+   * Continental competitions only: whose competition this is. A domestic cup
+   * knows its field from `nationId`; a continental one has to be told, because
+   * its entrants are re-drawn from a dozen different league tables every
+   * summer rather than being every club in one country.
+   */
+  confederation?: Confederation
   /** Clubs still involved. */
   entrantIds: ID[]
   rounds: CupRound[]
@@ -1501,4 +1510,4 @@ export interface GameSettings {
   hapticsEnabled: boolean
 }
 
-export const SAVE_VERSION = 7
+export const SAVE_VERSION = 8

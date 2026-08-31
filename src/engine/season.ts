@@ -12,6 +12,7 @@ import { computeValue, computeWageDemand } from './systems/valuation'
 import { addInboxItem, addNews } from './systems/inbox'
 import { emptyStats } from './world/playerGen'
 import { cupResultFor, resetCup } from './sim/cups'
+import { continentalResultFor, refreshContinentalEntrants } from './systems/continental'
 import { accrueTrainingYear, autoRegister, releaseRegistration } from './systems/registration'
 import { writeOffBookValue } from './systems/finance'
 import { adjustForPlayer, decayRelationships } from './systems/agents'
@@ -76,7 +77,9 @@ export function runSeasonRollover(state: GameState, deps: RolloverDeps): void {
         goalsFor: row.goalsFor,
         goalsAgainst: row.goalsAgainst,
         cupResult: domesticCup ? cupResultFor(state, domesticCup, club.id) : '—',
-        continentalResult: '—',
+        // Read before the entrants are re-drawn for next season, which is why
+        // the history is written in step 1 and the refresh happens in step 6.
+        continentalResult: continentalResultFor(state, club.id),
         netSpend: closed.transfersIn - closed.transfersOut,
         finalBalance: club.finances.balance,
         headCoachName: club.headCoachId
@@ -203,6 +206,10 @@ export function runSeasonRollover(state: GameState, deps: RolloverDeps): void {
   state.phase = 'preseason'
 
   state.fixtures = []
+  // Who is in Europe next season is decided by the tables that have just been
+  // closed, so this runs before `resetCup` reads the field — and before the
+  // tables below are wiped for the new season.
+  refreshContinentalEntrants(state)
   for (const cup of Object.values(state.cups)) resetCup(state, cup)
   for (const league of Object.values(state.leagues)) {
     state.fixtures.push(

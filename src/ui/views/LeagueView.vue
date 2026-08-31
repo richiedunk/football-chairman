@@ -10,6 +10,7 @@ import Chevron from '../components/Chevron.vue'
 import { CATEGORY_LABELS } from '../../engine/systems/inbox'
 import { FIRST_MATCH_WEEK } from '../../engine/sim/schedule'
 import { followLink } from '../link'
+import type { CupCompetition } from '../../engine/types'
 
 const store = useGameStore()
 const router = useRouter()
@@ -61,16 +62,24 @@ const results = computed(() => {
     .slice(0, 40)
 })
 
-/** The domestic cup for this division's nation, and where the player stands. */
-const cup = computed(() => {
+/**
+ * Where the player's club stands in one knockout competition.
+ *
+ * Written against a competition rather than looking one up, because the same
+ * card now serves the domestic cup and the continental competitions, and a
+ * European tie reads exactly the same as a cup tie: who, what round, what the
+ * aggregate is and whether you are still in it.
+ */
+function standingIn(competition: CupCompetition) {
   const s = store.game
-  const l = league.value
-  if (!s || !l) return null
-  const competition = Object.values(s.cups).find((c) => c.nationId === l.nationId)
-  if (!competition) return null
+  if (!s) return null
 
   const currentRound = competition.rounds[competition.rounds.length - 1] ?? null
-  const stillIn = survivorsOf(s, competition).includes(store.club?.id ?? '')
+  // Whether your club was ever in it at all. Without this a competition your
+  // club never qualified for was marked "Out", which reads as having been
+  // knocked out of something you were never in.
+  const entered = competition.entrantIds.includes(store.club?.id ?? '')
+  const stillIn = entered && survivorsOf(s, competition).includes(store.club?.id ?? '')
   // A two-legged round has two fixtures for the club, so the card shows the
   // tie rather than a single match.
   const legs = currentRound
@@ -91,7 +100,64 @@ const cup = computed(() => {
       )
     : null
 
-  return { competition, currentRound, stillIn, tie: legs[0] ?? null, legs, aggregate }
+  return { competition, currentRound, entered, stillIn, tie: legs[0] ?? null, legs, aggregate }
+}
+
+/** The domestic cup for this division's nation. */
+const cup = computed(() => {
+  const s = store.game
+  const l = league.value
+  if (!s || !l) return null
+  const competition = Object.values(s.cups).find((c) => c.nationId === l.nationId)
+  return competition ? standingIn(competition) : null
+})
+
+/**
+ * Continental competitions for this division's confederation.
+ *
+ * Shown whether or not your club is in one — the competition your rivals are
+ * playing in is exactly the thing a qualification place is for, and a season
+ * spent watching it from outside is part of what makes finishing fifth sting.
+ */
+const continental = computed(() => {
+  const s = store.game
+  const l = league.value
+  if (!s || !l) return []
+  const confederation = s.nations[l.nationId]?.confederation
+  if (!confederation) return []
+
+  // Only where it belongs. A division that awards no European place is four
+  // tiers below anyone who could qualify, and putting the European Cup on its
+  // table is clutter — unless your own club is somehow in it, in which case it
+  // is the most important thing on the screen.
+  const ourClub = store.club?.id
+  return Object.values(s.cups)
+    .filter((c) => c.type === 'continental' && c.confederation === confederation)
+    .filter((c) => l.continentalPlaces.length > 0
+      || (ourClub ? c.entrantIds.includes(ourClub) : false))
+    .sort((a, b) => (a.tier === 'elite' ? -1 : 1) - (b.tier === 'elite' ? -1 : 1))
+    .map((c) => standingIn(c))
+    .filter((c): c is NonNullable<ReturnType<typeof standingIn>> => c !== null)
+})
+
+/** Every knockout competition worth showing on this division's screen. */
+const cupCards = computed(() => {
+  const domestic = cup.value ? [cup.value] : []
+  return [...domestic, ...continental.value]
+})
+
+/** Which clubs from this division are in Europe, and in which competition. */
+const qualified = computed(() => {
+  const s = store.game
+  const l = league.value
+  if (!s || !l) return []
+  const out: { clubId: string; competition: string }[] = []
+  for (const entry of continental.value) {
+    for (const clubId of entry.competition.entrantIds) {
+      if (l.clubIds.includes(clubId)) out.push({ clubId, competition: entry.competition.name })
+    }
+  }
+  return out
 })
 
 const otherLeagues = computed(() => {
@@ -231,31 +297,31 @@ const notStarted = computed(() => table.value.every((row) => row.played === 0))
       </div>
     </div>
 
-    <template v-if="cup">
-      <div class="section-title">{{ cup.competition.name }}</div>
+    <template v-for="entry in cupCards" :key="entry.competition.id">
+      <div class="section-title">{{ entry.competition.name }}</div>
       <div class="card">
         <div class="card__body">
           <div class="row row--between mb">
             <span class="small muted">
-              {{ cup.competition.winnerId ? 'Winners' : cup.currentRound?.name ?? 'Not yet under way' }}
+              {{ entry.competition.winnerId ? 'Winners' : entry.currentRound?.name ?? 'Not yet under way' }}
             </span>
             <span
-              v-if="cup.competition.winnerId"
+              v-if="entry.competition.winnerId"
               class="chip chip--gold"
-            >{{ store.clubById(cup.competition.winnerId)?.shortName }}</span>
+            >{{ store.clubById(entry.competition.winnerId)?.shortName }}</span>
             <span
-              v-else
+              v-else-if="entry.entered"
               class="chip"
-              :class="cup.stillIn ? 'chip--accent' : 'chip--danger'"
-            >{{ cup.stillIn ? 'Still in' : 'Out' }}</span>
+              :class="entry.stillIn ? 'chip--accent' : 'chip--danger'"
+            >{{ entry.stillIn ? 'Still in' : 'Out' }}</span>
           </div>
-          <template v-if="cup.aggregate">
+          <template v-if="entry.aggregate">
             <div class="small bold">
-              {{ short(cup.aggregate.clubA) }} {{ cup.aggregate.goalsA }}–{{ cup.aggregate.goalsB }}
-              {{ short(cup.aggregate.clubB) }}
+              {{ short(entry.aggregate.clubA) }} {{ entry.aggregate.goalsA }}–{{ entry.aggregate.goalsB }}
+              {{ short(entry.aggregate.clubB) }}
               <span class="tiny faint">on aggregate</span>
             </div>
-            <div v-for="leg in cup.legs" :key="leg.id" class="tiny muted">
+            <div v-for="leg in entry.legs" :key="leg.id" class="tiny muted">
               Leg {{ leg.legOf?.leg }} (wk {{ leg.week }}):
               {{ short(leg.homeClubId) }}
               <template v-if="leg.result">
@@ -265,18 +331,40 @@ const notStarted = computed(() => table.value.every((row) => row.played === 0))
               {{ short(leg.awayClubId) }}
             </div>
           </template>
-          <div v-else-if="cup.tie" class="small">
-            {{ short(cup.tie.homeClubId) }}
-            <template v-if="cup.tie.result">
-              {{ cup.tie.result.homeGoals }}–{{ cup.tie.result.awayGoals }}
-              <span v-if="cup.tie.result.penalties" class="tiny faint">
-                ({{ cup.tie.result.penalties.home }}–{{ cup.tie.result.penalties.away }} pens)
+          <div v-else-if="entry.tie" class="small">
+            {{ short(entry.tie.homeClubId) }}
+            <template v-if="entry.tie.result">
+              {{ entry.tie.result.homeGoals }}–{{ entry.tie.result.awayGoals }}
+              <span v-if="entry.tie.result.penalties" class="tiny faint">
+                ({{ entry.tie.result.penalties.home }}–{{ entry.tie.result.penalties.away }} pens)
               </span>
             </template>
             <template v-else> v </template>
-            {{ short(cup.tie.awayClubId) }}
+            {{ short(entry.tie.awayClubId) }}
+          </div>
+          <div v-else-if="!entry.entered" class="small muted">
+            {{ entry.competition.entrantIds.length }} clubs are in it. You are not.
           </div>
           <div v-else class="small muted">No tie this round.</div>
+        </div>
+      </div>
+    </template>
+
+    <template v-if="qualified.length">
+      <div class="section-title">In continental competition</div>
+      <div class="card">
+        <div class="list">
+          <button
+            v-for="q in qualified"
+            :key="q.clubId + q.competition"
+            class="list__row"
+            @click="$router.push('/club')"
+          >
+            <div class="list__main">
+              <div class="list__primary">{{ store.clubById(q.clubId)?.name }}</div>
+              <div class="list__secondary">{{ q.competition }}</div>
+            </div>
+          </button>
         </div>
       </div>
     </template>
