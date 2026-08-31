@@ -45,6 +45,13 @@ describe('advanceIntent', () => {
     expect(i.route).toBe('/career')
   })
 
+  it('points a finished career at the only thing that outlasts it', () => {
+    // The second line is the whole reason the button still exists here.
+    expect(advanceIntent(ctx({ retired: 'age' })).detail).toBe('THE RECORD IS ALL THAT IS LEFT')
+    expect(advanceIntent(ctx({ retired: 'choice' })).detail)
+      .toBe('THE RECORD IS ALL THAT IS LEFT')
+  })
+
   it('says it differently when you chose to go', () => {
     expect(advanceIntent(ctx({ retired: 'choice' })).label).toBe('You stood down')
   })
@@ -114,6 +121,21 @@ describe('advanceIntent', () => {
     expect(i.detail).toBe('AWAY · CHELSEA')
   })
 
+  it('says which end of the season opener you are at', () => {
+    // Every fixture in this file is away, so the home wording on both the
+    // opener and the ordinary week went unwritten and unread.
+    const home = { ...base.nextFixture!, isHome: true }
+    expect(advanceIntent(ctx({ phase: 'preseason', nextFixture: home })).detail)
+      .toBe('HOME · CHELSEA')
+  })
+
+  it('says which end of an ordinary match you are at', () => {
+    const home = { ...base.nextFixture!, isHome: true }
+    expect(advanceIntent(ctx({ nextFixture: home })).detail).toBe('HOME · THE PREM')
+    expect(advanceIntent(ctx({ nextFixture: home, out: 1 })).detail)
+      .toBe('HOME · THE PREM · 1 OUT')
+  })
+
   it('does not claim the season is starting mid-preseason', () => {
     const i = advanceIntent(
       ctx({ phase: 'preseason', nextFixture: { ...base.nextFixture!, inWeeks: 4 } }),
@@ -131,6 +153,22 @@ describe('advanceIntent', () => {
   it('names the phase on a blank week that has one', () => {
     expect(advanceIntent(ctx({ phase: 'endOfSeason', nextFixture: null })).detail)
       .toBe('SEASON OVER')
+  })
+
+  it('never leaves the second line blank, whatever the week holds', () => {
+    // Every phase carries a detail of its own, so the empty-string fallback in
+    // advanceIntent is unreachable. That is only true while this holds.
+    const phases: AdvanceContext['phase'][] = [
+      'preseason', 'earlySeason', 'autumn', 'winterWindow',
+      'runIn', 'endOfSeason', 'summerWindow',
+    ]
+    for (const phase of phases) {
+      expect(advanceIntent(ctx({ phase, nextFixture: null })).detail, phase).toBeTruthy()
+      expect(
+        advanceIntent(ctx({ phase, nextFixture: { ...base.nextFixture!, inWeeks: 5 } })).detail,
+        phase,
+      ).toBeTruthy()
+    }
   })
 
   it('always offers somewhere to go', () => {

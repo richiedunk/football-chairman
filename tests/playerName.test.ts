@@ -30,6 +30,26 @@ describe('listName', () => {
 
   it('never invents an initial from an empty forename', () => {
     expect(listName(p('', 'Ronaldinho'), 4)).toBe('Ronaldinho')
+    // A forename that is only whitespace is an empty one. Without the trim it
+    // yields a space as the initial, and the list reads ". Ronaldinho".
+    expect(listName(p('  ', 'Ronaldinho'), 4)).toBe('Ronaldinho')
+  })
+
+  it('does not carry stray whitespace into the abbreviation', () => {
+    expect(listName(p(' Maximilian ', 'Wolfsburger-Hartmann'))).toBe('M. Wolfsburger-Hartmann')
+  })
+})
+
+describe('fullName', () => {
+  it('writes the two parts with one space between them', () => {
+    expect(fullName(p('Bruno', 'Fernandes'))).toBe('Bruno Fernandes')
+  })
+
+  it('does not leave a hanging space when a part is missing', () => {
+    // Mononymous players exist in the pack, and a squad list showing
+    // " Ronaldinho" with a leading space is a visible defect.
+    expect(fullName(p('', 'Ronaldinho'))).toBe('Ronaldinho')
+    expect(fullName(p('Ronaldinho', ''))).toBe('Ronaldinho')
   })
 
   it('does not use what he is known as — a list is a register', () => {
@@ -50,5 +70,12 @@ describe('nickname', () => {
 
   it('stays quiet when there is nothing there', () => {
     expect(nickname(p('Bruno', 'Fernandes', '   '))).toBeNull()
+  })
+
+  it('sees through whitespace on either side of the comparison', () => {
+    // Both sides are trimmed before they are compared, so a padded surname in
+    // the data does not make the profile report a man is known as his own name.
+    expect(nickname(p('Bruno', ' Fernandes ', 'Fernandes'))).toBeNull()
+    expect(nickname(p('Bruno', 'Fernandes', ' Fernandes '))).toBeNull()
   })
 })
