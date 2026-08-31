@@ -63,14 +63,17 @@ export const useGameStore = defineStore('game', () => {
   /**
    * How long the loading screen stays up once it is up.
    *
-   * A week tick measures 275ms at the median and 342ms at the mean, which is
-   * long enough to be worth covering and far too short to read. The result was
-   * a screen that flashed — the reader registered that something had happened
-   * without ever seeing what it said, which is worse than no loading screen at
-   * all. So the work is floored: whatever the tick costs, the screen is up for
-   * long enough to read one line off it.
+   * A week tick measured 275ms at the median and 342ms at the mean before the
+   * world went global, which is long enough to be worth covering and far too
+   * short to read. The result was a screen that flashed — the reader
+   * registered that something had happened without ever seeing what it said,
+   * which is worse than no loading screen at all. So the work is floored:
+   * whatever the tick costs, the screen is up long enough to read one line.
+   *
+   * A round second, deliberately. The line is the point of the screen and 900
+   * milliseconds was cutting the longer ones fine.
    */
-  const MIN_LOADING_MS = 900
+  const MIN_LOADING_MS = 1_000
 
   /**
    * Run blocking work behind the loading screen.

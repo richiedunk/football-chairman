@@ -260,7 +260,7 @@ await step('advance 10 weeks', async () => {
   // without a floor it flashed: the reader registered that something happened
   // without ever seeing what it said.
   const shortest = Math.min(...loadingTimes)
-  if (shortest < 800) throw new Error(`loading screen flashed by in ${shortest}ms`)
+  if (shortest < 950) throw new Error(`loading screen flashed by in ${shortest}ms`)
   const mean = Math.round(loadingTimes.reduce((a, b) => a + b, 0) / loadingTimes.length)
   console.log(`   loading screen up for ${shortest}-${Math.max(...loadingTimes)}ms, mean ${mean}ms`)
   console.log(`   match reports shown: ${reportsSeen}`)

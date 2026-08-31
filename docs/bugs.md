@@ -13,20 +13,6 @@ will break next.
 
 ## Open
 
-### CAF has no nations, and AFC has one
-The world contains 18 nations: 13 UEFA, 2 CONMEBOL (Brazil, Argentina), 2
-CONCACAF (USA, Mexico), 1 AFC (Japan) and **no** African nation at all. So
-`CONTINENTAL_DEFS` carries two African competitions that can never be created,
-which is the same dangling-definition fault the continental work was meant to
-remove — it just moved from the league data into the competition data. AFC
-raises three qualified clubs, below the minimum field, so Japan's league has
-its continental places stripped and a Japanese champion has nowhere to go.
-
-Fixing it is content rather than engine: each nation needs a def in
-`nations.ts` (cities, name pools, league tiers with club counts, strengths,
-prize money, qualification places) and a club list in `realClubs.ts`. South
-Korea, Saudi Arabia, Australia and China would give AFC a real competition;
-Egypt, Morocco and South Africa would give CAF one.
 
 ### A pre-v4 save could not be loaded at all
 Found the moment the migration tests existed. `migrate()` walks the version
@@ -125,6 +111,16 @@ move it to another device. `exportSave` also serialises uncompressed, which
 would hand the player a ~50 MB file where the stored save is ~5 MB.
 
 ## Fixed
+
+### CAF had no nations and AFC had one
+The world held 18 nations — 13 UEFA, 2 CONMEBOL, 2 CONCACAF, 1 AFC and no
+African nation at all — so two African competitions were defined that could
+never be created, and Japan raised three qualified clubs, below the minimum
+field, meaning its league had its continental places stripped and a Japanese
+champion had nowhere to go. Twelve nations added across four confederations
+(Egypt, Morocco, Nigeria, South Africa; South Korea, Saudi Arabia, Australia;
+Colombia, Uruguay, Chile; Costa Rica, Canada). All five confederations now
+field competitions and no league awards a place to nothing.
 
 ### A bad address looked like being logged out of your game
 An unresolvable address was answered with a redirect — to the dashboard

@@ -47,9 +47,18 @@ export interface WorldGenOptions {
 /** Nations included at each world size, and how deep their pyramid goes. */
 const SIZE_NATIONS: Record<WorldSize, string[]> = {
   compact: ['eng', 'esp', 'ita', 'ger', 'fra', 'ned', 'por', 'sco'],
+  // Standard carries every confederation, because the alternative is the fault
+  // this list used to have: one Asian nation and no African one, so Japan's
+  // champion had nowhere to go and two African competitions were defined that
+  // could never be created. A world with a continent in it that cannot play
+  // anybody is not a smaller world, it is a broken one.
   standard: [
     'eng', 'esp', 'ita', 'ger', 'fra', 'ned', 'por', 'sco', 'bel', 'tur',
-    'gre', 'pol', 'den', 'bra', 'arg', 'usa', 'mex', 'jpn',
+    'gre', 'pol', 'den',
+    'bra', 'arg', 'col', 'uru', 'chi',
+    'usa', 'mex', 'crc', 'can',
+    'egy', 'mar', 'nga', 'rsa',
+    'jpn', 'kor', 'ksa', 'aus',
   ],
   large: NATION_DEFS.map((n) => n.id),
 }

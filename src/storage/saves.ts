@@ -360,17 +360,44 @@ function highestId(state: GameState): number {
   return highest
 }
 
-/** Export a save as a downloadable JSON blob, for backup or sharing a seed. */
+/**
+ * Export a career as a file the player can keep.
+ *
+ * Compressed, the same as the copy on the device. Uncompressed this is a 50 MB
+ * download where the save itself is 5 MB, which is a rotten thing to hand
+ * somebody over a phone connection to save a career that fits in a photo.
+ */
 export async function exportSave(state: GameState): Promise<Blob> {
-  return new Blob([JSON.stringify(state)], { type: 'application/json' })
+  const packed = await compressAsync(JSON.stringify(state))
+  return new Blob([packed as BlobPart], { type: 'application/octet-stream' })
 }
 
 export async function importSave(file: File): Promise<GameState> {
-  const text = await file.text()
-  const state = JSON.parse(text) as GameState
+  const bytes = new Uint8Array(await file.arrayBuffer())
+
+  // Accept either shape. Exports are compressed, but a file someone has
+  // unzipped, or produced by hand, should still load — and telling a player
+  // their own career file is "not a save" because of the wrapper would be a
+  // poor way to find out.
+  let text: string
+  try {
+    text = await decompressAsync(bytes)
+  } catch {
+    text = new TextDecoder().decode(bytes)
+  }
+
+  let state: GameState
+  try {
+    state = JSON.parse(text) as GameState
+  } catch {
+    throw new Error('That file is not a Director of Football career.')
+  }
   if (typeof state.version !== 'number' || !state.players) {
-    throw new Error('That file is not a Director of Football save.')
+    throw new Error('That file is not a Director of Football career.')
   }
   clearRatingCache()
-  return migrate(state)
+  const migrated = migrate(state)
+  const problem = firstIntegrityProblem(migrated)
+  if (problem) throw new Error(`That career file could not be read (${problem}).`)
+  return migrated
 }

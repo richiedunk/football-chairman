@@ -790,6 +790,408 @@ export const NATION_DEFS: NationDef[] = [
       },
     ],
   },
+  // -------------------------------------------------------------- Africa --
+  //
+  // CAF had no nations at all, so two African competitions were defined and
+  // could never be created. Four nations is enough to field them properly
+  // rather than tokenistically: this is a global game with a European career
+  // at its centre, not a European game.
+  {
+    id: 'egy',
+    name: 'Egypt',
+    adjective: 'Egyptian',
+    code: 'EGY',
+    reputation: 55,
+    economyFactor: 0.4,
+    namePool: 'maghrebi',
+    secondaryPools: [{ pool: 'westAfrican', weight: 6 }],
+    confederation: 'CAF',
+    population: 106,
+    clubNameStyle: 'arabic',
+    domesticCupName: 'Egypt Cup',
+    cities: [
+      c('Cairo', 95), c('Alexandria', 80), c('Giza', 74), c('Port Said', 58),
+      c('Suez', 52), c('Mansoura', 48), c('Tanta', 44), c('Asyut', 42),
+      c('Ismailia', 40), c('Luxor', 36), c('Aswan', 34), c('Zagazig', 38),
+      c('Damanhur', 32), c('Faiyum', 30),
+    ],
+    tiers: [
+      {
+        name: 'Egyptian Premier', clubCount: 18, strength: 40,
+        promotionPlaces: 0, playoffPlaces: 0, relegationPlaces: 3,
+        prizeMoneyTop: 2_200_000, prizeMoneyBottom: 400_000, tvRevenue: 1_600_000,
+        continentalPlaces: [
+          { competition: 'elite', positions: [1, 2] },
+          { competition: 'secondary', positions: [3, 4] },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'mar',
+    name: 'Morocco',
+    adjective: 'Moroccan',
+    code: 'MAR',
+    reputation: 53,
+    economyFactor: 0.38,
+    namePool: 'maghrebi',
+    secondaryPools: [{ pool: 'french', weight: 8 }, { pool: 'westAfrican', weight: 5 }],
+    confederation: 'CAF',
+    population: 37,
+    clubNameStyle: 'arabic',
+    domesticCupName: 'Coupe du Trone',
+    cities: [
+      c('Casablanca', 90), c('Rabat', 76), c('Marrakesh', 68), c('Fes', 66),
+      c('Tangier', 62), c('Agadir', 56), c('Meknes', 52), c('Oujda', 46),
+      c('Kenitra', 44), c('Tetouan', 40), c('Safi', 36), c('Sale', 48),
+      c('Nador', 32), c('Berkane', 28),
+    ],
+    tiers: [
+      {
+        name: 'Botola Premier', clubCount: 16, strength: 39,
+        promotionPlaces: 0, playoffPlaces: 0, relegationPlaces: 2,
+        prizeMoneyTop: 1_900_000, prizeMoneyBottom: 350_000, tvRevenue: 1_300_000,
+        continentalPlaces: [
+          { competition: 'elite', positions: [1, 2] },
+          { competition: 'secondary', positions: [3, 4] },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'nga',
+    name: 'Nigeria',
+    adjective: 'Nigerian',
+    code: 'NGA',
+    reputation: 48,
+    economyFactor: 0.3,
+    namePool: 'westAfrican',
+    secondaryPools: [{ pool: 'english', weight: 8 }],
+    confederation: 'CAF',
+    population: 223,
+    clubNameStyle: 'african',
+    domesticCupName: 'Federation Cup',
+    cities: [
+      c('Lagos', 95), c('Kano', 72), c('Ibadan', 70), c('Abuja', 68),
+      c('Port Harcourt', 62), c('Benin City', 56), c('Kaduna', 54),
+      c('Enugu', 50), c('Jos', 46), c('Warri', 42), c('Aba', 44),
+      c('Uyo', 38), c('Calabar', 36), c('Ilorin', 40),
+    ],
+    tiers: [
+      {
+        name: 'Nigerian Premier', clubCount: 18, strength: 34,
+        promotionPlaces: 0, playoffPlaces: 0, relegationPlaces: 3,
+        prizeMoneyTop: 900_000, prizeMoneyBottom: 180_000, tvRevenue: 600_000,
+        continentalPlaces: [
+          { competition: 'elite', positions: [1, 2] },
+          { competition: 'secondary', positions: [3, 4] },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'rsa',
+    name: 'South Africa',
+    adjective: 'South African',
+    code: 'RSA',
+    reputation: 50,
+    economyFactor: 0.42,
+    namePool: 'english',
+    secondaryPools: [{ pool: 'westAfrican', weight: 22 }, { pool: 'dutch', weight: 8 }],
+    confederation: 'CAF',
+    population: 60,
+    clubNameStyle: 'african',
+    domesticCupName: 'Nedbank Trophy',
+    cities: [
+      c('Johannesburg', 90), c('Cape Town', 82), c('Durban', 74), c('Pretoria', 68),
+      c('Soweto', 66), c('Gqeberha', 54), c('Bloemfontein', 48), c('Polokwane', 44),
+      c('Nelspruit', 40), c('Kimberley', 34), c('Rustenburg', 38), c('East London', 42),
+      c('Pietermaritzburg', 36), c('Welkom', 30),
+    ],
+    tiers: [
+      {
+        name: 'Premier Division', clubCount: 16, strength: 36,
+        promotionPlaces: 0, playoffPlaces: 0, relegationPlaces: 2,
+        prizeMoneyTop: 1_400_000, prizeMoneyBottom: 280_000, tvRevenue: 1_100_000,
+        continentalPlaces: [
+          { competition: 'elite', positions: [1, 2] },
+          { competition: 'secondary', positions: [3, 4] },
+        ],
+      },
+    ],
+  },
+
+  // ---------------------------------------------------------------- Asia --
+  //
+  // Japan was alone here, which raised three qualified clubs — below the
+  // minimum field, so its league's continental places were being stripped and
+  // a Japanese champion had nowhere to go.
+  {
+    id: 'kor',
+    name: 'South Korea',
+    adjective: 'South Korean',
+    code: 'KOR',
+    reputation: 57,
+    economyFactor: 0.66,
+    namePool: 'korean',
+    secondaryPools: [{ pool: 'brazilian', weight: 6 }],
+    confederation: 'AFC',
+    population: 52,
+    clubNameStyle: 'korean',
+    domesticCupName: 'Korea Cup',
+    cities: [
+      c('Seoul', 95), c('Busan', 76), c('Incheon', 72), c('Daegu', 68),
+      c('Daejeon', 62), c('Gwangju', 60), c('Ulsan', 58), c('Suwon', 64),
+      c('Seongnam', 54), c('Jeonju', 48), c('Pohang', 44), c('Changwon', 46),
+      c('Gangwon', 38), c('Jeju', 36),
+    ],
+    tiers: [
+      {
+        name: 'K Premier', clubCount: 14, strength: 42,
+        promotionPlaces: 0, playoffPlaces: 0, relegationPlaces: 2,
+        prizeMoneyTop: 3_000_000, prizeMoneyBottom: 700_000, tvRevenue: 2_400_000,
+        continentalPlaces: [
+          { competition: 'elite', positions: [1, 2] },
+          { competition: 'secondary', positions: [3, 4] },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'ksa',
+    name: 'Saudi Arabia',
+    adjective: 'Saudi',
+    code: 'KSA',
+    reputation: 60,
+    economyFactor: 1.15,
+    namePool: 'maghrebi',
+    secondaryPools: [
+      { pool: 'brazilian', weight: 14 },
+      { pool: 'portuguese', weight: 8 },
+      { pool: 'westAfrican', weight: 6 },
+    ],
+    confederation: 'AFC',
+    population: 37,
+    clubNameStyle: 'arabic',
+    domesticCupName: "King's Cup",
+    cities: [
+      c('Riyadh', 92), c('Jeddah', 84), c('Mecca', 70), c('Medina', 64),
+      c('Dammam', 62), c('Taif', 52), c('Buraidah', 46), c('Tabuk', 44),
+      c('Khobar', 50), c('Abha', 40), c('Hail', 38), c('Najran', 34),
+      c('Jubail', 42), c('Yanbu', 32),
+    ],
+    tiers: [
+      {
+        // The wage market here is deliberately out of proportion to the
+        // league's standing, because that is exactly what it is.
+        name: 'Saudi Premier', clubCount: 16, strength: 44,
+        promotionPlaces: 0, playoffPlaces: 0, relegationPlaces: 3,
+        prizeMoneyTop: 7_000_000, prizeMoneyBottom: 1_800_000, tvRevenue: 5_000_000,
+        continentalPlaces: [
+          { competition: 'elite', positions: [1, 2] },
+          { competition: 'secondary', positions: [3, 4] },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'aus',
+    name: 'Australia',
+    adjective: 'Australian',
+    code: 'AUS',
+    reputation: 48,
+    economyFactor: 0.62,
+    namePool: 'english',
+    secondaryPools: [
+      { pool: 'italian', weight: 8 },
+      { pool: 'balkan', weight: 8 },
+      { pool: 'greek', weight: 5 },
+    ],
+    confederation: 'AFC',
+    population: 26,
+    clubNameStyle: 'australian',
+    domesticCupName: 'Australia Cup',
+    cities: [
+      c('Sydney', 90), c('Melbourne', 88), c('Brisbane', 72), c('Perth', 68),
+      c('Adelaide', 62), c('Gold Coast', 54), c('Newcastle', 50), c('Canberra', 48),
+      c('Wollongong', 42), c('Geelong', 40), c('Hobart', 34), c('Townsville', 32),
+      c('Cairns', 30), c('Darwin', 28),
+    ],
+    tiers: [
+      {
+        name: 'A Premier', clubCount: 14, strength: 36,
+        promotionPlaces: 0, playoffPlaces: 0, relegationPlaces: 0,
+        prizeMoneyTop: 1_600_000, prizeMoneyBottom: 450_000, tvRevenue: 1_200_000,
+        continentalPlaces: [
+          { competition: 'elite', positions: [1, 2] },
+          { competition: 'secondary', positions: [3] },
+        ],
+      },
+    ],
+  },
+
+  // ------------------------------------------------------- South America --
+  {
+    id: 'col',
+    name: 'Colombia',
+    adjective: 'Colombian',
+    code: 'COL',
+    reputation: 55,
+    economyFactor: 0.34,
+    namePool: 'colombian',
+    secondaryPools: [{ pool: 'spanish', weight: 8 }],
+    confederation: 'CONMEBOL',
+    population: 52,
+    clubNameStyle: 'iberian',
+    domesticCupName: 'Copa Colombia',
+    cities: [
+      c('Bogota', 92), c('Medellin', 80), c('Cali', 76), c('Barranquilla', 66),
+      c('Cartagena', 58), c('Bucaramanga', 54), c('Pereira', 48), c('Manizales', 44),
+      c('Cucuta', 46), c('Ibague', 42), c('Santa Marta', 40), c('Pasto', 38),
+      c('Villavicencio', 36), c('Neiva', 34),
+    ],
+    tiers: [
+      {
+        name: 'Categoria Primera', clubCount: 18, strength: 42,
+        promotionPlaces: 0, playoffPlaces: 0, relegationPlaces: 2,
+        prizeMoneyTop: 1_700_000, prizeMoneyBottom: 350_000, tvRevenue: 1_300_000,
+        continentalPlaces: [
+          { competition: 'elite', positions: [1, 2] },
+          { competition: 'secondary', positions: [3, 4] },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'uru',
+    name: 'Uruguay',
+    adjective: 'Uruguayan',
+    code: 'URU',
+    reputation: 53,
+    economyFactor: 0.3,
+    namePool: 'argentine',
+    secondaryPools: [{ pool: 'spanish', weight: 8 }, { pool: 'italian', weight: 6 }],
+    confederation: 'CONMEBOL',
+    population: 3,
+    clubNameStyle: 'iberian',
+    domesticCupName: 'Copa Uruguay',
+    cities: [
+      c('Montevideo', 90), c('Salto', 52), c('Paysandu', 48), c('Las Piedras', 44),
+      c('Rivera', 42), c('Maldonado', 46), c('Tacuarembo', 38), c('Melo', 36),
+      c('Mercedes', 34), c('Artigas', 32), c('Minas', 30), c('San Jose', 33),
+      c('Durazno', 28), c('Florida', 26),
+    ],
+    tiers: [
+      {
+        name: 'Primera Uruguaya', clubCount: 16, strength: 40,
+        promotionPlaces: 0, playoffPlaces: 0, relegationPlaces: 2,
+        prizeMoneyTop: 900_000, prizeMoneyBottom: 200_000, tvRevenue: 700_000,
+        continentalPlaces: [
+          { competition: 'elite', positions: [1, 2] },
+          { competition: 'secondary', positions: [3, 4] },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'chi',
+    name: 'Chile',
+    adjective: 'Chilean',
+    code: 'CHI',
+    reputation: 52,
+    economyFactor: 0.36,
+    namePool: 'spanish',
+    secondaryPools: [{ pool: 'argentine', weight: 10 }],
+    confederation: 'CONMEBOL',
+    population: 20,
+    clubNameStyle: 'iberian',
+    domesticCupName: 'Copa Chile',
+    cities: [
+      c('Santiago', 90), c('Valparaiso', 68), c('Concepcion', 62), c('Vina del Mar', 58),
+      c('Antofagasta', 52), c('Temuco', 48), c('Rancagua', 44), c('Iquique', 42),
+      c('La Serena', 46), c('Talca', 38), c('Puerto Montt', 36), c('Arica', 34),
+      c('Chillan', 32), c('Osorno', 30),
+    ],
+    tiers: [
+      {
+        name: 'Primera Chilena', clubCount: 16, strength: 39,
+        promotionPlaces: 0, playoffPlaces: 0, relegationPlaces: 2,
+        prizeMoneyTop: 1_100_000, prizeMoneyBottom: 240_000, tvRevenue: 850_000,
+        continentalPlaces: [
+          { competition: 'elite', positions: [1, 2] },
+          { competition: 'secondary', positions: [3, 4] },
+        ],
+      },
+    ],
+  },
+
+  // ------------------------------------------------------- North America --
+  {
+    id: 'crc',
+    name: 'Costa Rica',
+    adjective: 'Costa Rican',
+    code: 'CRC',
+    reputation: 45,
+    economyFactor: 0.3,
+    namePool: 'spanish',
+    secondaryPools: [{ pool: 'colombian', weight: 8 }],
+    confederation: 'CONCACAF',
+    population: 5,
+    clubNameStyle: 'iberian',
+    domesticCupName: 'Copa Costa Rica',
+    cities: [
+      c('San Jose', 88), c('Alajuela', 66), c('Cartago', 58), c('Heredia', 56),
+      c('Liberia', 44), c('Puntarenas', 46), c('Limon', 42), c('Perez Zeledon', 38),
+      c('San Carlos', 36), c('Guapiles', 32), c('Turrialba', 30), c('Santa Cruz', 28),
+      c('Grecia', 34), c('Palmares', 26),
+    ],
+    tiers: [
+      {
+        name: 'Primera Division', clubCount: 12, strength: 32,
+        promotionPlaces: 0, playoffPlaces: 0, relegationPlaces: 1,
+        prizeMoneyTop: 600_000, prizeMoneyBottom: 140_000, tvRevenue: 420_000,
+        continentalPlaces: [
+          { competition: 'elite', positions: [1, 2] },
+          { competition: 'secondary', positions: [3, 4] },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'can',
+    name: 'Canada',
+    adjective: 'Canadian',
+    code: 'CAN',
+    reputation: 44,
+    economyFactor: 0.7,
+    namePool: 'english',
+    secondaryPools: [
+      { pool: 'french', weight: 16 },
+      { pool: 'italian', weight: 6 },
+      { pool: 'balkan', weight: 5 },
+    ],
+    confederation: 'CONCACAF',
+    population: 40,
+    clubNameStyle: 'american',
+    domesticCupName: 'Canadian Championship',
+    cities: [
+      c('Toronto', 88), c('Montreal', 80), c('Vancouver', 74), c('Calgary', 62),
+      c('Edmonton', 60), c('Ottawa', 58), c('Winnipeg', 52), c('Quebec City', 50),
+      c('Hamilton', 48), c('Halifax', 44), c('Victoria', 40), c('Saskatoon', 38),
+      c('Regina', 34), c('London', 42),
+    ],
+    tiers: [
+      {
+        name: 'Canadian Premier', clubCount: 12, strength: 30,
+        promotionPlaces: 0, playoffPlaces: 0, relegationPlaces: 0,
+        prizeMoneyTop: 700_000, prizeMoneyBottom: 180_000, tvRevenue: 500_000,
+        continentalPlaces: [
+          { competition: 'elite', positions: [1, 2] },
+          { competition: 'secondary', positions: [3] },
+        ],
+      },
+    ],
+  },
 ]
 
 export const NATION_BY_ID = new Map(NATION_DEFS.map((n) => [n.id, n]))

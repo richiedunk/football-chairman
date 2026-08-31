@@ -33,6 +33,10 @@ export type ClubNameStyle =
   | 'spanish-american'
   | 'american'
   | 'japanese'
+  | 'korean'
+  | 'arabic'
+  | 'african'
+  | 'australian'
 
 interface NamePattern {
   /** `{city}` is substituted; `{n}` becomes a plausible founding year. */
@@ -184,6 +188,48 @@ const PATTERNS: Record<ClubNameStyle, NamePattern[]> = {
     { template: '{city} Sol', weight: 6, short: '{city}' },
     { template: '{city} FC', weight: 10, short: '{city}' },
     { template: '{city} Kaiyo', weight: 5, short: '{city}' },
+  ],
+  // Korean clubs are overwhelmingly city plus a word, often a sponsor's — the
+  // sponsor half is invented here for the same reason every other name is.
+  korean: [
+    { template: '{city} Motors', weight: 9, short: '{city}' },
+    { template: '{city} Bluewings', weight: 7, short: '{city}' },
+    { template: '{city} Steelers', weight: 7, short: '{city}' },
+    { template: '{city} Citizen', weight: 7, short: '{city}' },
+    { template: '{city} Dragons', weight: 6, short: '{city}' },
+    { template: '{city} FC', weight: 12, short: '{city}' },
+    { template: '{city} Hanul', weight: 5, short: '{city}' },
+  ],
+  // "Al-" is the definite article and prefixes a great many club names across
+  // the Arab world; the word after it here is ordinary vocabulary rather than
+  // any particular club's.
+  arabic: [
+    { template: 'Al {city}', weight: 12, short: '{city}' },
+    { template: '{city} SC', weight: 10, short: '{city}' },
+    { template: '{city} FC', weight: 8, short: '{city}' },
+    { template: 'Al Ittihad {city}', weight: 6, short: 'Itt {city}' },
+    { template: 'Al Ahli {city}', weight: 6, short: 'Ahli {city}' },
+    { template: '{city} Olympic', weight: 5, short: '{city} Oly' },
+    { template: 'Nadi {city}', weight: 5, short: '{city}' },
+  ],
+  african: [
+    { template: '{city} FC', weight: 14, short: '{city}' },
+    { template: '{city} United', weight: 10, short: '{city} Utd' },
+    { template: '{city} Rangers', weight: 7, short: '{city} Rgrs' },
+    { template: '{city} Chiefs', weight: 7, short: '{city}' },
+    { template: '{city} Pirates', weight: 6, short: '{city}' },
+    { template: '{city} Stars', weight: 7, short: '{city}' },
+    { template: 'Enyimba {city}', weight: 4, short: '{city}' },
+    { template: '{city} Sundowns', weight: 5, short: '{city}' },
+  ],
+  australian: [
+    { template: '{city} Victory', weight: 9, short: '{city}' },
+    { template: '{city} City', weight: 9, short: '{city}' },
+    { template: '{city} FC', weight: 12, short: '{city}' },
+    { template: '{city} United', weight: 8, short: '{city} Utd' },
+    { template: '{city} Wanderers', weight: 6, short: '{city} Wdrs' },
+    { template: '{city} Roar', weight: 6, short: '{city}' },
+    { template: '{city} Glory', weight: 6, short: '{city}' },
   ],
 }
 

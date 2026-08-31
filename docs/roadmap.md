@@ -715,6 +715,24 @@ That last row is the honest half. A one-nation confederation has no continent
 to play, so rather than leave the hook dangling the place is taken off the
 league and a club finishing second in Japan is told the truth.
 
+**The world is now global, which is what made the rule bite properly.** It had
+13 UEFA nations, two CONMEBOL, two CONCACAF, one AFC and no African nation at
+all — so the rule above stripped Japan's places and two African competitions
+sat defined and uncreatable. Twelve nations were added: Egypt, Morocco, Nigeria
+and South Africa; South Korea, Saudi Arabia and Australia; Colombia, Uruguay
+and Chile; Costa Rica and Canada. All five confederations now field a
+competition and no league awards a place to nothing.
+
+The rule that decides the shape still stands and still does the work — CONCACAF
+raises 8 elite and 7 secondary, so its two sets of places merge into one
+competition of 15; AFC merges into one of 14; CAF raises 8 and 8 and gets two.
+
+The cost is 186 clubs on top of 492, about 38% more of everything the weekly
+tick walks. That is deliberate: a world with a continent in it that cannot play
+anybody is not a smaller world, it is a broken one. The loading screen's floor
+went to a round second at the same time, so a typical week still reads as one
+line of terrace humour rather than as a wait.
+
 **Two legs in every round but the final**, against the domestic cup's single
 two-legged semi-final. That is not decoration: it is what makes a European run
 cost a squad rather than a Saturday. Measured across seventeen leagues, a

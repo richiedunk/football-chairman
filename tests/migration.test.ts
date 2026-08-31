@@ -2,7 +2,8 @@ import { beforeAll, describe, expect, it } from 'vitest'
 import { prepareNewGame, startCareerAt } from '../src/engine/newGame'
 import { startingClubCandidates } from '../src/engine/systems/career'
 import {
-  backupSlotId, deleteSave, firstIntegrityProblem, listBackups, listSaves, loadGame, saveGame,
+  backupSlotId, deleteSave, exportSave, firstIntegrityProblem, importSave, listBackups, listSaves,
+  loadGame, saveGame,
 } from '../src/storage/saves'
 import { SAVE_VERSION, type GameState } from '../src/engine/types'
 
@@ -190,5 +191,45 @@ describe('the integrity check', () => {
   it('accepts a director between jobs', () => {
     const jobless = { ...base, playerClubId: null } as GameState
     expect(firstIntegrityProblem(jobless)).toBeNull()
+  })
+})
+
+describe('taking a career off the device', () => {
+  it('exports and imports the same career', async () => {
+    const blob = await exportSave(base)
+    const file = new File([blob], 'career.dof')
+    const back = await importSave(file)
+
+    expect(back.version).toBe(SAVE_VERSION)
+    expect(back.seed).toBe(base.seed)
+    expect(Object.keys(back.clubs).length).toBe(Object.keys(base.clubs).length)
+    expect(back.playerClubId).toBe(base.playerClubId)
+    expect(firstIntegrityProblem(back)).toBeNull()
+  }, 60_000)
+
+  it('exports compressed, not raw JSON', async () => {
+    // Uncompressed this is a 50 MB download for a 5 MB save.
+    const blob = await exportSave(base)
+    const raw = JSON.stringify(base).length
+    expect(blob.size).toBeLessThan(raw / 2)
+  }, 60_000)
+
+  it('still reads an uncompressed career file', async () => {
+    const file = new File([JSON.stringify(base)], 'career.json')
+    const back = await importSave(file)
+    expect(back.seed).toBe(base.seed)
+  }, 60_000)
+
+  it('migrates an old career file on the way in', async () => {
+    const old = stripToVersion(base, 3)
+    const file = new File([JSON.stringify(old)], 'old.json')
+    const back = await importSave(file)
+    expect(back.version).toBe(SAVE_VERSION)
+    expect(firstIntegrityProblem(back)).toBeNull()
+  }, 60_000)
+
+  it('refuses something that is not a career at all', async () => {
+    const file = new File(['this is not a save'], 'notes.txt')
+    await expect(importSave(file)).rejects.toThrow(/not a Director of Football/i)
   })
 })
