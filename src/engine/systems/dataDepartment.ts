@@ -49,20 +49,44 @@ export const DATA_REFRESH_WEEKS = 4
 const MIN_EDGE_FRACTION = 0.18
 
 /**
+ * How far the model discounts its own signal, given how noisy it knows it is.
+ *
+ * A poor estimator shrinks toward the prior. Passing a noisy signal through
+ * raw and then filtering on it selects for whoever drew the largest upward
+ * error, which is the winner's curse.
+ */
+export function modelTrust(level: number): number {
+  return 1 - clamp(modelNoise(level) / 0.7, 0, 0.8)
+}
+
+/**
  * How large an edge has to look before a department of this quality believes it.
  *
- * A fixed threshold is the other half of the winner's curse. However far the
- * estimate is shrunk, filtering a noisy quantity at a fixed bar still lets
- * through whoever drew the largest error, and at middling department levels
- * that was enough to drag accuracy below chance — 44% at level 10, measured.
+ * **Derived from a target confidence, not chosen.** Getting this wrong twice
+ * is what makes it worth spelling out. A finding is a false positive when the
+ * player's real edge is nothing and noise alone carried him over the bar, so
+ * the false-positive rate is set by how many standard deviations of the shrunk
+ * estimate the bar sits at — `bar / (trust x noise)`. Hand-picking the bar as a
+ * curve over the noise left that quantity sagging in the middle:
  *
- * So the bar rises with the noise. A model out by 40% has to see a 55% edge
- * before it will say anything; one out by 4% will speak up at 20%. This is
- * just a signal-to-noise test, and it is what makes a poor department quiet
- * rather than wrong.
+ *     level  1    2.32 sigma      level 12   1.96 sigma
+ *     level  8    1.90 sigma      level 20   5.30 sigma
+ *
+ * which meant a level-8 department was **less accurate than a level-1 one** —
+ * 79% against 85%, measured. Paying to upgrade bought more names and worse
+ * ones, and a progression where spending makes the tool worse is broken however
+ * good the story around it sounds.
+ *
+ * So the bar is now set *from* the confidence rather than the confidence
+ * falling out of the bar: hold the sigma constant and solve for the bar. The
+ * floor then binds at the top of the range, where the model is accurate enough
+ * that a modest edge is worth acting on, so a better department both sees more
+ * and is surer of what it sees.
  */
+const TARGET_SIGMA = 2.5
+
 export function requiredEdgeFraction(level: number): number {
-  return MIN_EDGE_FRACTION + modelNoise(level) * 0.5
+  return Math.max(MIN_EDGE_FRACTION, TARGET_SIGMA * modelTrust(level) * modelNoise(level))
 }
 
 /**
@@ -173,8 +197,7 @@ export function runModel(state: GameState, club: Club, rng: Rng): DataFinding[] 
     // real, and one that does will surface the players it happened to
     // over-estimate rather than the players who are cheap. Filtering on the
     // shrunk figure is what keeps a small department quiet instead of wrong.
-    const trust = 1 - clamp(noise / 0.7, 0, 0.8)
-    const estimated = market + (raw - market) * trust
+    const estimated = market + (raw - market) * modelTrust(level)
     const seenEdge = estimated - market
     if (seenEdge < market * requiredEdgeFraction(level)) continue
 

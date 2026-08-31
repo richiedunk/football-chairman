@@ -473,30 +473,44 @@ the winner's curse. A level-1 department came out right one time in ten: worse
 than chance, and so worse than not having one at all. A tool that is reliably
 wrong is not a cheap tool, it is a trap.
 
-Two fixes, both what an honest estimator does rather than tuning. The model
-**shrinks its estimate toward the market price** by how unreliable it knows
-itself to be — a model out by 40% does not report a 40% edge as though it were
-real. And the **bar it has to clear scales with its own noise**: 39% at level
-one, 20% at level twenty. That is a signal-to-noise test, and it is what makes
-a small department say less rather than guess.
+The model **shrinks its estimate toward the market price** by how unreliable it
+knows itself to be — one that is out by 40% does not report a 40% edge as
+though it were real.
 
-Measured by running the same model over the same world 40 times at each level
-and checking every finding against the valuation the model cannot see, on two
-different worlds:
+**And the bar it must clear is derived from a target confidence rather than
+chosen**, which took two goes to get right. A finding is a false positive when
+a player's real edge is nothing and noise alone carried him over the bar, so
+the false-positive rate is set by how many standard deviations of the shrunk
+estimate the bar sits at — `bar / (trust x noise)`. Picking the bar as a curve
+over the noise left that quantity sagging in the middle:
+
+    level  1    2.32 sigma      level 12   1.96 sigma
+    level  8    1.90 sigma      level 20   5.30 sigma
+
+so a **level-8 department was less accurate than a level-1 one**, 79% against
+85%. More names and worse ones. A progression where spending money makes the
+tool worse is broken however good the story around it sounds, and "better than
+chance at every level" was the wrong property to have tested — it passed
+throughout.
+
+Holding the sigma constant and solving for the bar fixes it. Measured over two
+worlds, 40 runs at each level, every finding checked against the valuation the
+model cannot see:
 
 | level | error band | bar it clears | names per run | accuracy |
 |---|---|---|---|---|
-| 1 | 42% | 39% | 2.8 | **85%** |
-| 8 | 28% | 32% | 5.6 | 79% |
-| 12 | 20% | 28% | 7.8 | 87% |
-| 20 | 4% | 20% | 14 | **100%** |
+| 1 | 42% | 42% | 2.6 | 88% |
+| 8 | 28% | 42% | 6.7 | 95% |
+| 12 | 20% | 36% | 9.0 | 94% |
+| 20 | 4% | 18% | 14 | **100%** |
 
-So **what money buys is how much the department sees, not whether it is worth
-listening to**. The smallest one names two or three players it is right about
-five times in six — the blindingly obvious, which you might have found anyway.
-The largest names fourteen, including the ones you would not have. Accuracy
-never falls below about four in five at any level, and the screen states both
-the error band and the bar it holds itself to.
+Accuracy now rises with spend and never falls, and the names per run rise with
+it — **upgrading buys more of them and better ones**. A test asserts that
+directly: no level may be materially worse than any cheaper one, and the range
+must actually go somewhere. It runs 150 samples a level, because a small
+department produces two or three names a run and twenty-five runs put level one
+on a sample of thirty-six — wide enough both to fail on noise and to hide a
+real regression.
 
 The confidence figure shown against each name is deliberately lower than that
 accuracy, and the gap is honest. Accuracy asks whether the *price* was right;

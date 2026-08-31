@@ -3,7 +3,7 @@ import { prepareNewGame, startCareerAt } from '../src/engine/newGame'
 import { startingClubCandidates } from '../src/engine/systems/career'
 import {
   DATA_REFRESH_WEEKS, fitsPolicy, modelDue, modelNoise, modelValuation, pruneFindings, runModel,
-  moveConfidence, shortlistSize,
+  modelTrust, moveConfidence, requiredEdgeFraction, shortlistSize,
 } from '../src/engine/systems/dataDepartment'
 import { setPhilosophy } from '../src/engine/systems/recruitment'
 import { Rng } from '../src/engine/rng'
@@ -186,6 +186,66 @@ describe('a department is never worse than not having one', () => {
       // department is worth consulting at any size, not that it scrapes past.
       expect(right / total, `level ${level} is right ${right} of ${total}`).toBeGreaterThan(0.6)
     }
+  })
+
+  it('never gets worse when you pay for it', () => {
+    // The test that was missing. The old bar was picked as a curve over the
+    // noise rather than derived from a target confidence, which left the
+    // effective sigma sagging in the middle: level 8 sat at 1.90 where level 1
+    // sat at 2.32, so a level-8 department was measurably *less* accurate than
+    // a level-1 one. Asserting only "better than chance" did not catch it, and
+    // a progression where spending money makes the tool worse is broken
+    // whatever the accuracy floor.
+    const accuracyAt = (level: number) => {
+      club.facilities.dataDepartment = level
+      let right = 0
+      let wrong = 0
+      // 150 rather than a handful: a small department produces two or three
+      // names a run, so 25 runs put level 1 on a sample of 36 with a standard
+      // error of six points — wide enough to fail on noise alone and to hide a
+      // real regression. At this size the compact world is cleanly monotonic.
+      for (let run = 0; run < 150; run++) {
+        for (const finding of runModel(state, club, new Rng(`mono:${level}:${run}`))) {
+          const player = state.players[finding.playerId]
+          if (!player) continue
+          if (modelValuation(state, player, club) - player.value > 0) right++
+          else wrong++
+        }
+      }
+      return right + wrong === 0 ? null : right / (right + wrong)
+    }
+
+    const levels = [1, 5, 8, 12, 16, 20]
+    const scores = levels.map((level) => ({ level, accuracy: accuracyAt(level) }))
+      .filter((row): row is { level: number; accuracy: number } => row.accuracy !== null)
+
+    for (let i = 1; i < scores.length; i++) {
+      const worstBelow = Math.min(...scores.slice(0, i).map((row) => row.accuracy))
+      // A few points of sampling slack; the six-point drop that prompted this
+      // is well outside it.
+      expect(
+        scores[i].accuracy,
+        `level ${scores[i].level} (${(scores[i].accuracy * 100).toFixed(0)}%) is worse than a `
+          + `cheaper department (${(worstBelow * 100).toFixed(0)}%)`,
+      ).toBeGreaterThan(worstBelow - 0.03)
+    }
+
+    // And the whole range must actually go somewhere: the top is meaningfully
+    // better than the bottom, not merely not-worse.
+    expect(scores[scores.length - 1].accuracy - scores[0].accuracy).toBeGreaterThan(0.1)
+  }, 120_000)
+
+  it('holds itself to the same confidence at every level', () => {
+    // The bar is derived from a target sigma rather than chosen, so the
+    // false-positive rate is constant by construction. This is the property
+    // that makes the accuracy curve well-behaved.
+    const sigma = (level: number) =>
+      requiredEdgeFraction(level) / (modelTrust(level) * modelNoise(level))
+    for (const level of [1, 5, 8, 12]) {
+      expect(sigma(level), `level ${level}`).toBeCloseTo(sigma(1), 5)
+    }
+    // At the top the floor binds instead, which only makes it stricter.
+    expect(sigma(20)).toBeGreaterThan(sigma(1))
   })
 
   it('is never silent either — a department that says nothing is no use', () => {
