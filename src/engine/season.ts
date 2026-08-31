@@ -567,15 +567,7 @@ function processPlayerYearEnd(state: GameState, deps: RolloverDeps): void {
     const league = club ? state.leagues[club.leagueId] : null
     const nation = club ? state.nations[club.nationId] : state.nations[player.nationalityId]
     player.value = computeValue(player, league, nation ?? null, season + 1)
-
-    // Recomputed from who he is now, then discounted by however far he has
-    // already come down. Resetting the figure outright wiped out a year of
-    // softening every summer, so a man unemployed for five seasons asked
-    // exactly what he asked the day he was released.
-    const asking = computeWageDemand(player, league, nation ?? null)
-    player.wageDemand = player.clubId
-      ? asking
-      : Math.max(90, Math.round(asking * (player.wageDiscount ?? 1)))
+    player.wageDemand = computeWageDemand(player, league, nation ?? null)
   }
 
   for (const player of retiring) {

@@ -413,16 +413,6 @@ function migrate(state: GameState): GameState {
     state.version = 14
   }
 
-  // v15: wage demands soften by a multiplier rather than in place. Everyone in
-  // an older save starts undiscounted, which is what they were being treated
-  // as anyway — the softening was written and never read.
-  if (state.version < 15) {
-    for (const player of Object.values(state.players)) {
-      if (typeof player.wageDiscount !== 'number') player.wageDiscount = 1
-    }
-    state.version = 15
-  }
-
   state.version = SAVE_VERSION
   return state
 }
