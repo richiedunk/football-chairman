@@ -50,6 +50,15 @@ export const FREE_AGENT_TARGET = 21
 /** Below this a club cannot field a side and hires whoever will come. */
 export const EMERGENCY_SQUAD = 16
 
+/**
+ * How many places at a club are worth competing for.
+ *
+ * Eleven who play and five who are a substitution or an injury away. Beyond
+ * that a signing is not depth, it is a wage — and a wage that comes out of the
+ * budget that would otherwise have bought somebody who plays.
+ */
+export const DEPTH_PLACES = 16
+
 /** Weeks without a club after which a player stops waiting for the phone. */
 export const PATIENCE_WEEKS = 104
 
@@ -392,7 +401,27 @@ function recruitOne(
   const ceiling = abilityCeilingFor(club.reputation)
   // A club will not sign someone plainly above its station without a fee, and
   // will not sign someone plainly beneath it unless it is desperate.
-  const floor = emergency ? 0 : ceiling * (0.5 - desperation * 0.28)
+  const stationFloor = emergency ? 0 : ceiling * (0.5 - desperation * 0.28)
+
+  // Would he actually get near the side?
+  //
+  // Wages run as ability to the power of four and a half, so a weak player is
+  // disproportionately cheap: measured across a division, a 17-20 year old
+  // costs £200 per rating point against £344 for a 25-28 year old, and for the
+  // price of one professional a club can have two and a third teenagers. Under
+  // a wage cap that arithmetic says quantity beats quality every time, so a
+  // club filled itself with the cheap end, committed the bill, and then could
+  // only afford the cheap end again. A ratchet, and the reason five separate
+  // attempts to raise the inflow were each met by a matching rise in releases.
+  //
+  // Match strength comes from the best eleven, not the squad mean, so sixteen
+  // good players beat twenty-four ordinary ones and the AI had no way to know
+  // it. A signing now has to be better than the man holding the last squad
+  // place worth having — below the floor a club still takes anybody, because
+  // then bodies genuinely are the problem.
+  const ranked = squad.map((p) => p.currentAbility).sort((a, b) => b - a)
+  const depthBar = !emergency && ranked.length >= DEPTH_PLACES ? ranked[DEPTH_PLACES - 1] : 0
+  const floor = Math.max(stationFloor, depthBar)
   const wageBill = totalWageBill(state, club)
   const budget = club.finances.wageBudget
 
