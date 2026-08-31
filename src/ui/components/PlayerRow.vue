@@ -5,6 +5,7 @@ import PosBadge from './PosBadge.vue'
 import { useGameStore } from '../../stores/game'
 import { formatMoney, formatWage } from '../../engine/systems/valuation'
 import { U21_AGE } from '../../engine/systems/registration'
+import { isAwayOnDuty } from '../../engine/systems/international'
 import type { Player } from '../../engine/types'
 import { listName } from '../playerName'
 
@@ -33,6 +34,11 @@ const status = computed(() => {
   const p = props.player
   if (p.injury) return { label: `${p.injury.weeksRemaining}w`, cls: 'chip--danger', title: p.injury.type }
   if (p.suspendedWeeks > 0) return { label: 'Susp', cls: 'chip--danger', title: 'Suspended' }
+  // Away with his country outranks everything below it because it is the one
+  // unavailability nobody at the club chose or can do anything about.
+  if (store.game && isAwayOnDuty(p, store.game.date.week)) {
+    return { label: 'Away', cls: 'chip--warn', title: 'Away on international duty' }
+  }
   if (p.loanClubId && p.clubId === store.club?.id) {
     return { label: 'Out on loan', cls: 'chip--info', title: 'Loaned to another club' }
   }

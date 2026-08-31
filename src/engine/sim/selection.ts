@@ -1,4 +1,5 @@
 import { clamp, Rng } from '../rng'
+import { isAwayOnDuty } from '../systems/international'
 import { positionalCompetence, ratingForPositionCached } from '../world/attributes'
 import { isRegisteredFor } from '../systems/registration'
 import type {
@@ -45,6 +46,8 @@ export interface SelectedTeam {
 
 export interface AvailabilityContext {
   suspendedIds: Set<string>
+  /** The week being played, so international duty can be checked. */
+  week: number
 }
 
 /**
@@ -58,6 +61,10 @@ export function isAvailable(player: Player, clubId: ID, ctx?: AvailabilityContex
   if (player.injury && player.injury.weeksRemaining > 0) return false
   if (player.suspendedWeeks > 0) return false
   if (ctx?.suspendedIds.has(player.id)) return false
+  // Away with his country. The league does not pause for it — a twenty-four
+  // club division has no room in the calendar to stop — so the fixture goes
+  // ahead and the club plays without him.
+  if (ctx && isAwayOnDuty(player, ctx.week)) return false
   // Loaned out: only the borrowing club may pick him.
   if (player.loanClubId && player.loanClubId !== clubId) return false
   return true

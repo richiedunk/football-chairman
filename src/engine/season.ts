@@ -14,6 +14,7 @@ import { emptyStats } from './world/playerGen'
 import { cupResultFor, resetCup } from './sim/cups'
 import { continentalResultFor, refreshContinentalEntrants } from './systems/continental'
 import { clauseUpside, clausesHeldBy } from './systems/buyBack'
+import { TOURNAMENT_STOCK_DECAY } from './systems/international'
 import { accrueTrainingYear, autoRegister, releaseRegistration } from './systems/registration'
 import { writeOffBookValue } from './systems/finance'
 import { adjustForPlayer, decayRelationships } from './systems/agents'
@@ -163,6 +164,21 @@ export function runSeasonRollover(state: GameState, deps: RolloverDeps): void {
   // and retirement have all just torn through the squads, and last season's
   // list would be half made of players who no longer exist.
   for (const club of Object.values(state.clubs)) autoRegister(state, club)
+
+  // --- 4d. International reset ----------------------------------------------
+  // Duty flags are week numbers against a clock that has just gone back to
+  // one, so a player left flagged would be away from his club for the whole of
+  // next season. The tournament premium decays here too: a year is roughly how
+  // long the market remembers a good summer, and a club that did not sell in
+  // that window finds the number gone — which is the cruellest honest thing in
+  // this market and happens every other year.
+  for (const player of Object.values(state.players)) {
+    player.internationalUntilWeek = null
+    if (player.tournamentStock) {
+      const remaining = player.tournamentStock * TOURNAMENT_STOCK_DECAY
+      player.tournamentStock = remaining < 0.01 ? 0 : remaining
+    }
+  }
 
   // --- 5. Club housekeeping -------------------------------------------------
   for (const club of Object.values(state.clubs)) {

@@ -37,6 +37,34 @@ beforeAll(() => {
 function stripToVersion(state: GameState, version: number): GameState {
   const s = JSON.parse(JSON.stringify(state)) as GameState
 
+  if (version < 13) {
+    for (const player of Object.values(s.players)) {
+      delete (player as { caps?: number }).caps
+      delete (player as { internationalUntilWeek?: number | null }).internationalUntilWeek
+      delete (player as { tournamentStock?: number }).tournamentStock
+    }
+  }
+  if (version < 12) {
+    // The trait was called `clubhouseCancer` before it was renamed, and it is
+    // on real saves — so the fixture carries the old spelling, not the new one.
+    for (const player of Object.values(s.players)) {
+      if (!Array.isArray(player.traits)) continue
+      const at = player.traits.indexOf('disruptive')
+      if (at >= 0) player.traits[at] = 'clubhouseCancer' as typeof player.traits[number]
+    }
+  }
+  if (version < 11) delete (s as { dataFindings?: unknown }).dataFindings
+  if (version < 10) {
+    for (const player of Object.values(s.players)) {
+      delete (player as { buyBack?: unknown }).buyBack
+    }
+  }
+  if (version < 9) {
+    for (const club of Object.values(s.clubs)) {
+      delete (club.strategy as { philosophy?: unknown }).philosophy
+      delete (club.strategy as { philosophySince?: number }).philosophySince
+    }
+  }
   if (version < 8) {
     for (const id of Object.keys(s.cups)) {
       if (s.cups[id].type === 'continental') delete s.cups[id]
@@ -90,7 +118,7 @@ async function loadFrom(version: number, slotId: string): Promise<GameState> {
   return loaded!
 }
 
-const HISTORICAL = [1, 2, 3, 4, 5, 6, 7]
+const HISTORICAL = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
 
 describe('every historical format still loads', () => {
   for (const version of HISTORICAL) {
@@ -122,6 +150,16 @@ describe('every historical format still loads', () => {
       Object.values(loaded.cups).some((c) => c.type === 'continental'),
       'v8: no continental competition',
     ).toBe(true)
+    expect(club.strategy.philosophy, 'v9: no recruitment policy').toBeTruthy()
+    expect(player.buyBack, 'v10: buy-back left undefined').toBeNull()
+    expect(Array.isArray(loaded.dataFindings), 'v11: no findings list').toBe(true)
+    expect(
+      Object.values(loaded.players).some((p) => p.traits.includes('clubhouseCancer' as never)),
+      'v12: a trait is still named after an illness',
+    ).toBe(false)
+    expect(typeof player.caps, 'v13: no cap count').toBe('number')
+    expect(player.internationalUntilWeek, 'v13: duty flag left undefined').toBeNull()
+    expect(typeof player.tournamentStock, 'v13: no tournament premium').toBe('number')
     await deleteSave('mig-all')
   }, 60_000)
 

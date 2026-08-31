@@ -1,4 +1,5 @@
 import { clamp } from '../rng'
+import { capsPremium } from './international'
 import type { Club, GameState, League, Nation, Player } from '../types'
 
 /**
@@ -64,6 +65,16 @@ export function computeValue(
     value *= 1 + premium
   }
 
+  // Caps. A player who has a good summer costs more to keep and is worth more
+  // to sell, and the number never comes back down — which is the single most
+  // reliably real thing about this market.
+  value *= capsPremium(player.caps ?? 0)
+
+  // And what a good tournament did on top of them, while it lasts. This one
+  // decays, which is the difference: the caps are a fact about his career, the
+  // summer is a mood the market is in about him.
+  value *= 1 + (player.tournamentStock ?? 0)
+
   // Market context: rich leagues pay more for the same player.
   const leagueFactor = league ? 0.55 + (league.reputation / 100) * 0.85 : 0.7
   const economyFactor = nation ? nation.economyFactor : 1
@@ -112,6 +123,13 @@ export function computeWageDemand(
   }
   // Veterans take a discount as options thin out, unless they are still elite.
   if (player.age >= 32) wage *= clamp(1 - (player.age - 31) * 0.07, 0.5, 1)
+
+  // An international knows what he is, and so does his agent. The same curve
+  // as the valuation, so a good summer moves the price and the wage together
+  // — which is exactly what makes it expensive to keep him.
+  wage *= capsPremium(player.caps ?? 0)
+  // His agent read the same newspapers, and asks before the mood passes.
+  wage *= 1 + (player.tournamentStock ?? 0) * 0.7
 
   // How much a division pays for the same player.
   //

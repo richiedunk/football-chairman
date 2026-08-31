@@ -202,6 +202,15 @@ async function clearMatchReports() {
 
 const loadingTimes = []
 
+/**
+ * The week the game is actually on, read from the status strip — the one piece
+ * of chrome present on every screen.
+ */
+async function weekNumber() {
+  const label = await page.textContent('.statusbar')
+  return Number(/W(\d+)/.exec(label ?? '')?.[1] ?? 0)
+}
+
 async function advanceOneWeek() {
   // Anything still waiting to be read sits over the whole app, so it is cleared
   // before reaching for a button underneath it.
@@ -276,6 +285,45 @@ await step('advance 10 weeks', async () => {
   await page.waitForTimeout(300)
   await page.screenshot({ path: `${SHOT}/07-home-after.png` })
   console.log(`   decisions answered: ${decisionsAnswered}`)
+})
+
+await step('an international break empties the squad list a week early', async () => {
+  // Week 16 is a break. Squads are named the week before, so advancing to the
+  // start of week 16 is the state a director actually sees: the players are
+  // still at the club, already unavailable, and there is nothing to be done
+  // about it. This is also the check that the "Away" chip is reachable at all
+  // — the first implementation called players up and played the week in the
+  // same tick, so the flag was set and consumed before any screen rendered it.
+  while (await weekNumber() < 16) await advanceOneWeek()
+
+  await page.goto('http://127.0.0.1:4173/#/squad')
+  await page.waitForSelector('.list__row')
+  const away = await page.locator('.chip:has-text("Away")').count()
+
+  // Read the fitness line itself rather than the page text: "AWAY" is also how
+  // the dashboard labels an away fixture, and a regex over the whole body would
+  // eventually catch the wrong one.
+  await page.goto('http://127.0.0.1:4173/#/home')
+  await page.waitForSelector('.dash-standing')
+  const fitness = (await page.locator('.dash-fitness').count())
+    ? ((await page.textContent('.dash-fitness')) ?? '').replace(/\s+/g, ' ').trim()
+    : null
+  const claimed = Number(fitness?.match(/(\d+) AWAY/)?.[1] ?? 0)
+
+  // The line only exists alongside a next fixture. With no match to be missing
+  // for, there is nothing to cross-check and nothing wrong.
+  if (fitness !== null && claimed !== away) {
+    throw new Error(`dashboard says ${claimed} away, squad list marks ${away}`)
+  }
+  await page.screenshot({ path: `${SHOT}/34-international.png` })
+
+  // Nobody away is a legitimate outcome at the bottom of the pyramid — a club
+  // whose best player is nowhere near international standard loses nobody,
+  // which is one of the quieter compensations for being small. Silence about
+  // it would be the bug, so the step says which world it found.
+  console.log(away > 0
+    ? `   ${away} away with their country, dashboard agrees`
+    : '   nobody at international standard — no call-ups, correctly reported as none')
 })
 
 await step('a match report can be reopened and reads in full', async () => {
@@ -948,10 +996,7 @@ await step('deadline day', async () => {
   // The week moved out of the header and into the status strip, which is the
   // one piece of chrome present on every screen — so this reads it from there
   // rather than from a header whose subtitle changes with the route.
-  const weekOf = async () => {
-    const label = await page.textContent('.statusbar')
-    return Number(/W(\d+)/.exec(label ?? '')?.[1] ?? 0)
-  }
+  const weekOf = weekNumber
 
   await page.goto('http://127.0.0.1:4173/#/deadline')
   await page.waitForSelector('.card')

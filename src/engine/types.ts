@@ -741,6 +741,27 @@ export interface Player {
   careerStats: PlayerCareerRecord[]
   /** Ids of clubs whose scouts have watched them, for the interest system. */
   interestedClubIds: ID[]
+  /**
+   * International caps. Never goes down, and neither does what he costs
+   * because of them — the most reliably real thing about the market.
+   */
+  caps?: number
+  /**
+   * Week he is back from international duty, or null. He is away from his club
+   * until then: the league does not pause for it, which is the whole
+   * complaint.
+   */
+  internationalUntilWeek?: number | null
+  /**
+   * What a good tournament did to his price, as a fraction on top.
+   *
+   * Separate from caps because it behaves differently: caps never come back
+   * down, a tournament summer does. A player who is the story of a June is
+   * priced on it for a year and then priced on his football again, and a club
+   * that did not sell him in that window finds the number gone. It is the
+   * cruellest honest thing in the market and it happens every other summer.
+   */
+  tournamentStock?: number
   /** True for academy players not yet promoted to the senior squad. */
   isAcademy: boolean
   /** Season they joined the club, for loyalty and testimonials. */
@@ -1575,4 +1596,4 @@ export interface GameSettings {
   hapticsEnabled: boolean
 }
 
-export const SAVE_VERSION = 12
+export const SAVE_VERSION = 13

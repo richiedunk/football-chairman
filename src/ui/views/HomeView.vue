@@ -6,6 +6,7 @@ import { ordinal } from '../../engine/systems/career'
 import { headerBand } from '../colour'
 import { confidenceLabel } from '../../engine/systems/board'
 import { formatMoney } from '../../engine/systems/valuation'
+import { isAwayOnDuty } from '../../engine/systems/international'
 import { ratingForPositionCached } from '../../engine/world/attributes'
 import FormRun from '../components/FormRun.vue'
 import Chevron from '../components/Chevron.vue'
@@ -111,10 +112,19 @@ const injured = computed(
   () => store.squad.filter((p) => p.injury && p.injury.weeksRemaining > 0).length,
 )
 const suspended = computed(() => store.squad.filter((p) => p.suspendedWeeks > 0).length)
+// Away with their country belongs in the same line, because it is the same
+// problem on Saturday — and it is the one the coach will bring up first, since
+// it is the one nobody at the club decided.
+const away = computed(() => {
+  const s = store.game
+  if (!s) return 0
+  return store.squad.filter((p) => isAwayOnDuty(p, s.date.week)).length
+})
 const unavailable = computed(() => {
   const bits: string[] = []
   if (injured.value) bits.push(`${injured.value} OUT`)
   if (suspended.value) bits.push(`${suspended.value} SUSPENDED`)
+  if (away.value) bits.push(`${away.value} AWAY`)
   return bits.join(' · ')
 })
 
@@ -334,7 +344,7 @@ const hub = computed(() => {
       </span>
       <span class="dash-match__trail">
         {{ nextMatch.standing ?? nextMatch.competition }}<br>
-        <span :style="{ color: unavailable ? 'var(--danger)' : 'var(--text-faint)' }">
+        <span class="dash-fitness" :style="{ color: unavailable ? 'var(--danger)' : 'var(--text-faint)' }">
           {{ unavailable || 'FULLY FIT' }}
         </span>
       </span>

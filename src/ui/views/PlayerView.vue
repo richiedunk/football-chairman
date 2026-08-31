@@ -2,6 +2,7 @@
 import { computed, inject, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useGameStore } from '../../stores/game'
+import { isAwayOnDuty } from '../../engine/systems/international'
 import PosBadge from '../components/PosBadge.vue'
 import MeterBar from '../components/MeterBar.vue'
 import AppSheet from '../components/AppSheet.vue'
@@ -254,6 +255,33 @@ function doRelease() {
   notify?.(result.message, result.ok ? 'success' : 'error')
   if (result.ok) router.back()
 }
+
+/**
+ * His international standing, in the two forms a director cares about: how
+ * many times his country has picked him, and whether the market is currently
+ * paying for a summer he had. The second is the number that decides whether
+ * now is the moment to sell, and it is shown as a fading thing rather than a
+ * badge because that is what it is.
+ */
+const awayNow = computed(() => {
+  const s = store.game
+  return Boolean(s && player.value && isAwayOnDuty(player.value, s.date.week))
+})
+
+const internationalLine = computed(() => {
+  const p = player.value
+  if (!p) return null
+  const caps = p.caps ?? 0
+  const stock = p.tournamentStock ?? 0
+  if (!caps && !stock) return null
+  const bits: string[] = []
+  if (caps) {
+    const nation = store.game?.nations[p.nationalityId]?.name ?? 'his country'
+    bits.push(`${caps} cap${caps === 1 ? '' : 's'} for ${nation}`)
+  }
+  if (stock >= 0.02) bits.push(`priced up ${Math.round(stock * 100)}% on his tournament`)
+  return bits.join(' · ')
+})
 </script>
 
 <template>
@@ -283,6 +311,12 @@ function doRelease() {
 
         <div v-if="player.injury" class="chip chip--danger mt">
           {{ injuryDescription(player.injury) }}
+        </div>
+        <div v-if="awayNow" class="chip chip--warn mt">
+          Away with {{ store.game?.nations[player.nationalityId]?.name }}
+        </div>
+        <div v-if="internationalLine" class="chip chip--info mt">
+          {{ internationalLine }}
         </div>
         <div v-if="player.loanClubId" class="chip chip--info mt">
           On loan at {{ store.clubById(player.loanClubId)?.name }}

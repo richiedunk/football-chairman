@@ -390,6 +390,18 @@ function migrate(state: GameState): GameState {
     state.version = 12
   }
 
+  // v13: international football. Nobody in an older save has a cap, and
+  // inventing a career's worth retrospectively would reprice a squad the
+  // player already knows the value of. They start from here.
+  if (state.version < 13) {
+    for (const player of Object.values(state.players)) {
+      if (typeof player.caps !== 'number') player.caps = 0
+      if (player.internationalUntilWeek === undefined) player.internationalUntilWeek = null
+      if (typeof player.tournamentStock !== 'number') player.tournamentStock = 0
+    }
+    state.version = 13
+  }
+
   state.version = SAVE_VERSION
   return state
 }

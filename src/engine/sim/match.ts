@@ -63,7 +63,7 @@ export function simulateMatch(
   ctx: MatchContext,
   detailed: boolean,
 ): MatchResult {
-  const availability: AvailabilityContext = { suspendedIds: ctx.suspendedIds }
+  const availability: AvailabilityContext = { suspendedIds: ctx.suspendedIds, week: state.date.week }
   const home = selectTeam(state, homeClub, rng, availability)
   const away = selectTeam(state, awayClub, rng, availability)
 
@@ -625,7 +625,7 @@ export function quickSimulate(
   rng: Rng,
   ctx: MatchContext,
 ): MatchResult {
-  const availability: AvailabilityContext = { suspendedIds: ctx.suspendedIds }
+  const availability: AvailabilityContext = { suspendedIds: ctx.suspendedIds, week: state.date.week }
   const home = selectTeam(state, homeClub, rng, availability)
   const away = selectTeam(state, awayClub, rng, availability)
   return runMatch(state, homeClub, awayClub, home, away, rng, ctx, false)

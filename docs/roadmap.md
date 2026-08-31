@@ -597,19 +597,86 @@ strongest voice whether or not the average looks unremarkable.
 ## International football
 
 Consequences, not management. You do not pick a national side; you live with
-what it does to your players.
+what it does to your players. Built last because it wanted a stable calendar
+underneath it.
 
-- **Call-ups** take players out of your weeks, and the number of them is a
-  consequence of how you recruited — a squad built on South Americans empties
-  differently from one built at home.
-- **Caps and tournaments raise value and wages.** A player who has a good
-  summer costs more to keep and is worth more to sell, which is the single
-  most reliably real thing about the transfer market.
+- **Call-ups** take players out of your weeks, and who goes is a consequence
+  of how you recruited rather than a rule anywhere in the code.
+- **Caps raise value and wages**, and never come back down — the single most
+  reliably real thing about the transfer market.
 - **Injuries on international duty** are the oldest grievance in the job.
-- **Tournament years reshape the calendar and the market**, and a good
-  tournament turns a squad player into a target.
+- **Tournament summers** turn a squad player into somebody else's target.
 
-It wants a stable calendar underneath it, which is why it is last.
+**The league does not pause, and that is not a simplification.** A twenty-four
+club division is forty-six rounds inside a thirty-nine week window, so the
+calendar has no room to stop even if it wanted to. It is also the truer
+version: South American qualifiers have clashed with European club football for
+decades, and the argument that follows — my player, your fixture, his flight —
+is the oldest complaint in the job. Your Brazilian is away on Saturday and you
+play anyway.
+
+### The bar was the wrong model, and the measurement said so
+
+The first version asked whether a player was *good enough to be an
+international*: an ability threshold scaled to his nation's league standing.
+It reads sensibly and it is backwards. `intlcheck.ts` reported one per cent of
+the Scottish top flight at international standard against thirty-five per cent
+of Spain's, and the leading club losing **thirteen players of a twenty-three
+man squad** to a single break while a Championship club never lost anybody at
+all, in two full seasons.
+
+A weak nation does not stop picking a side. It picks the best it has, and the
+best it has is worse. So the model is now a **squad, not a bar**: every country
+takes its best twenty-three, wherever they play, whoever they are. The first
+eleven go every time and the rest are in and out, which is what separates a
+fringe international from a certain one.
+
+That turns the director's question into the real one — not *is he good enough
+for a country* but *is he in the twenty-three his country has*. It is why
+signing a Northern Irish squad player costs you more Saturdays than signing a
+better Brazilian who will never be picked, and it is the whole recruitment
+consequence, falling out of the nationalities you signed rather than being
+enforced anywhere.
+
+### Squads are named the week before
+
+The first implementation called players up and played the week in the same
+tick, so nobody was ever visibly away: the flag was set and consumed before a
+screen could render it, and the squad list's "Away" chip was unreachable code.
+A real call-up arrives days ahead, and that gap is the point — the loss is
+something you watch coming and cannot do anything about, which is a different
+feeling from finding out afterwards.
+
+### A loanee is called up by his country, and his loan club loses him
+
+Not the club that owns him. A young international on loan is precisely the
+player who disappears every break, and the club borrowing him has to plan
+around it without ever having chosen him.
+
+### The flight, not the football
+
+The grievance was never really about a friendly. It is about a player crossing
+a confederation, losing two days to aeroplanes at each end, playing at altitude
+or in heat his season has not prepared him for, and landing on the Friday of a
+Saturday game. So the odds of him coming back hurt scale with how far he went —
+home, continental, intercontinental — read off the confederations the nations
+already carry. It also retired a function that had stopped doing anything: the
+nation-strength score survived the rewrite with a comment claiming it stood for
+how far a call-up travels, which nothing used. Decoration with a justification
+attached is worse than dead code, because it reads as a decision.
+
+### The tournament premium fades
+
+Caps never come back down; a summer does. A player who is the story of a June
+is priced on it for about a year and then priced on his football again, and a
+club that did not sell him in that window finds the number gone. It is the
+cruellest honest thing in this market and it happens every other year — which
+is what makes "sell now or find out what it costs to say no" a real decision
+rather than a line of flavour text.
+
+Around one in five of the players who go to a tournament come back repriced.
+The first cut boosted more than half of them, which is not a tournament, it is
+an inflation.
 
 ## The match report
 
@@ -947,9 +1014,13 @@ is code that runs against data no test ever saw, on somebody else's career,
 exactly once — and a mistake in it costs a forty-season save. Three things now
 sit under it.
 
-**A test per historical format.** A save is loaded from every version 1 to 7
-and asserted to arrive at the current format intact, plus a test that each
-step repairs the thing it exists for. The fixtures are honest about what they
+**A test per historical format.** A save is loaded from every version and
+asserted to arrive at the current format intact, plus a test that each step
+repairs the thing it exists for. The coverage stopped at v7 when it was
+written — the five steps added since (recruitment policy, buy-back clauses,
+the findings list, the trait rename, international football) were shipped
+under the same silence the net was built to end, so the fixtures now strip
+back to every version through v12. The fixtures are honest about what they
 are: not real historical saves — no build of this game is old enough to have
 written one — but a current save with exactly the fields a version's migration
 adds stripped back out, which is the shape that code is written to repair. That
