@@ -174,6 +174,8 @@ export function generatePlayer(ctx: PlayerGenContext, opts: PlayerGenOptions): P
     caps: 0,
     internationalUntilWeek: null,
     tournamentStock: 0,
+    academyRelease: null,
+    gotAwayReported: false,
     developmentRate: rng.float(0.7, 1.35),
     trainingYears: seedTrainingYears(rng, nationality, opts, age),
     weeksUnattached: 0,

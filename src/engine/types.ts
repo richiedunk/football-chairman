@@ -762,6 +762,17 @@ export interface Player {
    * cruellest honest thing in the market and it happens every other summer.
    */
   tournamentStock?: number
+  /**
+   * The club that let him go from its academy, and the summer it happened.
+   *
+   * Kept for the rest of his career, because the whole point is that it comes
+   * back. A boy released at eighteen who turns into somebody is the sharpest
+   * verdict there is on an academy, and it is a verdict that arrives four
+   * years after the decision, from somebody else's ground.
+   */
+  academyRelease?: { clubId: ID; season: number } | null
+  /** Set once the world has noticed what he became, so it is said once. */
+  gotAwayReported?: boolean
   /** True for academy players not yet promoted to the senior squad. */
   isAcademy: boolean
   /** Season they joined the club, for loyalty and testimonials. */
@@ -1167,6 +1178,7 @@ export type MediaStoryKind =
   | 'academyHype'
   | 'rivalTaunt'
   | 'signingReaction'
+  | 'oneThatGotAway'
   | 'sackSpeculation'
 
 export interface MediaStory {
@@ -1597,4 +1609,4 @@ export interface GameSettings {
   hapticsEnabled: boolean
 }
 
-export const SAVE_VERSION = 13
+export const SAVE_VERSION = 14

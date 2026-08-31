@@ -37,6 +37,12 @@ beforeAll(() => {
 function stripToVersion(state: GameState, version: number): GameState {
   const s = JSON.parse(JSON.stringify(state)) as GameState
 
+  if (version < 14) {
+    for (const player of Object.values(s.players)) {
+      delete (player as { academyRelease?: unknown }).academyRelease
+      delete (player as { gotAwayReported?: boolean }).gotAwayReported
+    }
+  }
   if (version < 13) {
     for (const player of Object.values(s.players)) {
       delete (player as { caps?: number }).caps
@@ -118,7 +124,7 @@ async function loadFrom(version: number, slotId: string): Promise<GameState> {
   return loaded!
 }
 
-const HISTORICAL = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+const HISTORICAL = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
 
 describe('every historical format still loads', () => {
   for (const version of HISTORICAL) {
@@ -160,6 +166,10 @@ describe('every historical format still loads', () => {
     expect(typeof player.caps, 'v13: no cap count').toBe('number')
     expect(player.internationalUntilWeek, 'v13: duty flag left undefined').toBeNull()
     expect(typeof player.tournamentStock, 'v13: no tournament premium').toBe('number')
+    // v14 starts the record from here rather than inventing grievances
+    // against clubs that never made the decision.
+    expect(player.academyRelease, 'v14: release record left undefined').toBeNull()
+    expect(player.gotAwayReported, 'v14: got-away flag left undefined').toBe(false)
     await deleteSave('mig-all')
   }, 60_000)
 

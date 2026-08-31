@@ -281,8 +281,18 @@ export function processAiRenewals(state: GameState, club: Club): number {
  */
 export function promoteFromAcademy(state: GameState, club: Club, rng: Rng): Player | null {
   const seniors = seniorSquad(state, club).length
-  // Places, not bodies: a squad of under-21s is not a full squad.
-  if (registrableSquad(state, club).length >= targetSquadFor(club, TARGET_SENIOR_SQUAD)) return null
+  // Promotion is bounded by bodies, not by places.
+  //
+  // Counting only the over-21s here was a plain error and the measurement
+  // caught it: a club with seventeen professionals and seven teenagers never
+  // reached a target of twenty-four, so it promoted for ever. Players aged 21
+  // and over fell to 16.8 a club against 18.7 on the baseline — the fix made
+  // the thing it was aimed at worse, by removing the only brake on the inflow
+  // it was trying to slow.
+  //
+  // Places govern who a club signs; bodies govern how many it can carry to
+  // training. Only the first of those is a rule about registration.
+  if (seniors >= targetSquadFor(club, TARGET_SENIOR_SQUAD)) return null
   if (seniors >= EMERGENCY_SQUAD && !rng.chance(0.35)) return null
 
   // Promoted on potential, with no readiness bar.

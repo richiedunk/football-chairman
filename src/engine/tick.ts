@@ -23,6 +23,7 @@ import { generateIncomingOffers, processAiTransfers, processNegotiations } from 
 import { runAiSquadManagement } from './systems/aiSquad'
 import { ELEVEN, canFieldEleven, fieldable, fixAiSquad, warnHuman } from './systems/matchday'
 import { checkForExposure, generateOrganicStories } from './systems/media'
+import { boardRemark, gotAwayStory, reportOnesThatGotAway, scoredAgainstUs } from './systems/oneThatGotAway'
 import { processBoard, processCoachRelations, sortTable, updateFanMood } from './systems/board'
 import { addInboxItem, addNews, expireItems } from './systems/inbox'
 import { computeValue } from './systems/valuation'
@@ -211,6 +212,28 @@ export function advanceWeek(state: GameState, deps: TickDeps): TickResult {
 
     if (home.id === state.playerClubId || away.id === state.playerClubId) {
       result.playerFixtures.push({ fixture, result: matchResult })
+
+      // Did one of ours score against us?
+      //
+      // The worst version of the whole thing, and the one the board mentions.
+      // Everything else about a released boy can be read about at a distance;
+      // this happened in front of everybody, and the chairman was there.
+      const ours = state.clubs[state.playerClubId!]
+      for (const event of matchResult.events) {
+        if (event.type !== 'goal' && event.type !== 'penaltyScored') continue
+        if (event.clubId === ours.id) continue
+        const ghost = scoredAgainstUs(state, ours, event.playerId)
+        if (!ghost) continue
+        ours.fanMood = clamp(ours.fanMood - 4, 1, 100)
+        addInboxItem(state, ids, {
+          category: 'board',
+          subject: `${ghost.knownAs} scored against us`,
+          from: 'Chairman',
+          body: boardRemark(ghost, state),
+          urgent: false,
+          link: { view: 'player', id: ghost.id },
+        })
+      }
     }
   }
 
@@ -589,8 +612,31 @@ export function advanceWeek(state: GameState, deps: TickDeps): TickResult {
     }
   }
 
-  // --- 10. Media ------------------------------------------------------------
+  // --- 9b. The ones that got away -------------------------------------------
+  //
+  // Checked on a cadence, because this is a story the press finds when a boy
+  // does something rather than a database the club audits every Monday. It is
+  // the only moment where being wrong about a sixteen-year-old costs anything
+  // a director can feel, and it arrives years after the decision, from
+  // somebody else's ground.
   const mediaCtx = { rng: rng.fork('media'), ids }
+  if (playerClub && week % 6 === 3) {
+    const gotAway = reportOnesThatGotAway(state, playerClub, { ids, rng: rng.fork('gotaway') })
+    for (const { player, sting } of gotAway) {
+      const story = gotAwayStory(state, playerClub, player, sting, ids, mediaCtx.rng)
+      if (!story) continue
+      state.mediaStories.push(story)
+      addInboxItem(state, ids, {
+        category: 'media',
+        subject: story.headline,
+        from: state.outlets[story.outletId]?.name ?? 'The press',
+        body: story.body,
+        link: { view: 'media' },
+      })
+    }
+  }
+
+  // --- 10. Media ------------------------------------------------------------
   const stories = generateOrganicStories(state, mediaCtx)
   for (const story of stories) {
     addInboxItem(state, ids, {
