@@ -7,8 +7,111 @@ import { ordinal } from './career'
 import { expectedWage } from '../world/staffGen'
 import { expectationLift, impatienceFactor } from './ownership'
 import type {
-  BoardMandate, Club, GameState, ID, League, LeagueTableRow, Player, SquadRequest, Staff, StaffRole,
+  BoardMandate, Club, CompletedTransfer, CupCompetition, Fixture, GameState, ID, League,
+  LeagueTableRow, Player, SquadRequest, Staff, StaffRole,
 } from '../types'
+
+/**
+ * Per-week lookups for the fan-mood pass.
+ *
+ * `assessFanMood` runs for every club in the world every week, and three of the
+ * things it asked for were linear scans of season-sized arrays:
+ *
+ * - `cupSurvivor` called `state.fixtures.find()` once per fixture id per round
+ *   per cup per club, against a list of roughly nine thousand fixtures. It was
+ *   the single most expensive function in the entire tick at 15.6% of it.
+ * - `assessRecruitmentMood` filtered the whole completed-transfer history twice
+ *   per club, and that history only ever grows.
+ * - `averageTicketPrice` walked and reduced a division's clubs once per club in
+ *   that division.
+ *
+ * None of that changes within a week, so it is built once and reused. Keyed on
+ * the state object so a test or a second world cannot read another's index, and
+ * rebuilt whenever the clock moves or a transfer completes — the fixture
+ * objects themselves are shared by reference, so results filled in mid-week are
+ * visible without rebuilding anything.
+ */
+interface BoardIndex {
+  season: number
+  week: number
+  transferCount: number
+  fixturesById: Map<ID, Fixture>
+  cupByNation: Map<ID, CupCompetition>
+  soldBy: Map<ID, CompletedTransfer[]>
+  boughtBy: Map<ID, CompletedTransfer[]>
+  averageTicket: Map<ID, number>
+}
+
+const boardIndexes = new WeakMap<GameState, BoardIndex>()
+
+function boardIndex(state: GameState): BoardIndex {
+  const existing = boardIndexes.get(state)
+  if (
+    existing
+    && existing.season === state.date.season
+    && existing.week === state.date.week
+    && existing.transferCount === state.completedTransfers.length
+  ) {
+    return existing
+  }
+
+  const fixturesById = new Map<ID, Fixture>()
+  for (const fixture of state.fixtures) fixturesById.set(fixture.id, fixture)
+
+  // Domestic cups only: a continental competition has no single nation, and
+  // the fan-mood pass asks "our cup", not "a cup".
+  const cupByNation = new Map<ID, CupCompetition>()
+  for (const cup of Object.values(state.cups)) {
+    const nationId = cup.nationId
+    if (!nationId) continue
+    if (!cupByNation.has(nationId)) cupByNation.set(nationId, cup)
+  }
+
+  const season = state.date.season
+  const soldBy = new Map<ID, CompletedTransfer[]>()
+  const boughtBy = new Map<ID, CompletedTransfer[]>()
+  for (const transfer of state.completedTransfers) {
+    if (transfer.season !== season) continue
+    const from = transfer.fromClubId
+    if (transfer.fee > 0 && from) {
+      const list = soldBy.get(from)
+      if (list) list.push(transfer)
+      else soldBy.set(from, [transfer])
+    }
+    const to = transfer.toClubId
+    if (to) {
+      const list = boughtBy.get(to)
+      if (list) list.push(transfer)
+      else boughtBy.set(to, [transfer])
+    }
+  }
+
+  const averageTicket = new Map<ID, number>()
+  for (const league of Object.values(state.leagues)) {
+    let sum = 0
+    let n = 0
+    for (const id of league.clubIds) {
+      const club = state.clubs[id]
+      if (!club) continue
+      sum += club.facilities.stadium.ticketPrice
+      n += 1
+    }
+    averageTicket.set(league.id, n === 0 ? 0 : sum / n)
+  }
+
+  const built: BoardIndex = {
+    season,
+    week: state.date.week,
+    transferCount: state.completedTransfers.length,
+    fixturesById,
+    cupByNation,
+    soldBy,
+    boughtBy,
+    averageTicket,
+  }
+  boardIndexes.set(state, built)
+  return built
+}
 
 /**
  * The board, and your relationship with the head coach.
@@ -294,7 +397,7 @@ export function assessFanMood(state: GameState, club: Club): FanMoodAssessment {
 
   // 6. A cup run. Disproportionately important lower down, which is exactly
   //    where it is most likely to happen.
-  const cup = Object.values(state.cups).find((c) => c.nationId === club.nationId)
+  const cup = boardIndex(state).cupByNation.get(club.nationId)
   if (cup) {
     if (cup.winnerId === club.id) factors.push({ label: `Won the ${cup.name}`, delta: 16 })
     else if (cup.currentRound >= 4 && cupSurvivor(state, cup, club.id)) {
@@ -355,14 +458,10 @@ export function assessFanMood(state: GameState, club: Club): FanMoodAssessment {
  */
 function assessRecruitmentMood(state: GameState, club: Club): FanMoodFactor[] {
   const factors: FanMoodFactor[] = []
-  const season = state.date.season
 
-  const soldThisSeason = state.completedTransfers.filter(
-    (t) => t.season === season && t.fromClubId === club.id && t.fee > 0,
-  )
-  const boughtThisSeason = state.completedTransfers.filter(
-    (t) => t.season === season && t.toClubId === club.id,
-  )
+  const index = boardIndex(state)
+  const soldThisSeason = index.soldBy.get(club.id) ?? []
+  const boughtThisSeason = index.boughtBy.get(club.id) ?? []
 
   const revenue = Math.max(1, weeklyClubRevenue(state, club) * 52)
   const salesValue = soldThisSeason.reduce((sum, t) => sum + t.fee, 0)
@@ -397,15 +496,14 @@ export function updateFanMood(state: GameState, club: Club): void {
 }
 
 function averageTicketPrice(state: GameState, league: League): number {
-  const clubs = league.clubIds.map((id) => state.clubs[id]).filter(Boolean) as Club[]
-  if (clubs.length === 0) return 0
-  return clubs.reduce((sum, c) => sum + c.facilities.stadium.ticketPrice, 0) / clubs.length
+  return boardIndex(state).averageTicket.get(league.id) ?? 0
 }
 
 function cupSurvivor(state: GameState, cup: { rounds: { fixtureIds: ID[] }[] }, clubId: ID): boolean {
+  const byId = boardIndex(state).fixturesById
   for (const round of cup.rounds) {
     for (const fixtureId of round.fixtureIds) {
-      const fixture = state.fixtures.find((f) => f.id === fixtureId)
+      const fixture = byId.get(fixtureId)
       if (!fixture?.result) continue
       if (fixture.homeClubId !== clubId && fixture.awayClubId !== clubId) continue
       const result = fixture.result
