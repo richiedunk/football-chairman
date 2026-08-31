@@ -80,6 +80,21 @@ export const useGameStore = defineStore('game', () => {
   const MIN_LOADING_MS = 1_000
 
   /**
+   * ...except when a machine is reading it.
+   *
+   * The floor exists so a person can read one line. An end-to-end run reads
+   * nothing, and paying a second per advance across a forty-five step
+   * walkthrough is a minute of the suite spent waiting for an animation
+   * nobody watches. The flag is set by the harness on the built bundle, so
+   * production behaviour is unchanged and there is no way for it to be true
+   * in a real browser session unless somebody sets it themselves.
+   */
+  function loadingFloorMs(): number {
+    const w = globalThis as { __dofNoLoadingFloor?: boolean }
+    return w.__dofNoLoadingFloor ? 0 : MIN_LOADING_MS
+  }
+
+  /**
    * Run blocking work behind the loading screen.
    *
    * Two things have to be true and neither happens by itself. The screen must
@@ -98,8 +113,9 @@ export const useGameStore = defineStore('game', () => {
       await nextFrame()
       return await work()
     } finally {
+      const floor = loadingFloorMs()
       const showing = Date.now() - shownAt
-      if (showing < MIN_LOADING_MS) await wait(MIN_LOADING_MS - showing)
+      if (showing < floor) await wait(floor - showing)
       busy.value = false
       busyMessage.value = ''
     }
