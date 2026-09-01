@@ -108,19 +108,34 @@ no screen offers). Both are on the register in `tests/dials.test.ts`.
 
 A third is not, and it is the more interesting one:
 
-### A takeover computes the new owner's opinion of you, and only the tests read it
-`Owner.faithInDirector` is set to `clamp(Math.round(50 + fit * 42), 5, 95)`
-when a takeover completes, and two assertions in `systems.test.ts` check that
-arithmetic. No code in the game has ever consulted the result.
+### ~~A takeover computes the new owner's opinion of you, and only the tests read it~~ — deleted
+`Owner.faithInDirector` was set to `clamp(Math.round(50 + fit * 42), 5, 95)`
+when a takeover completed, and two assertions in `systems.test.ts` checked that
+arithmetic. No code in the game ever consulted the result. Gone in format 16.
 
-It is **not** on the unread register, and cannot be: the register asks whether
-anything reads a field, tests were added to what it scans (they had to be —
-missing them reported `Club.isPlayerClub` as unread while two tests asserted on
-it), and a test is something. So a field the game ignores but a test checks
-slips through by construction. Worth knowing about the tool.
+The pitch it was computed from still matters: `fit` drives `board.confidence`
+and the transfer budget, which the board does act on. The two tests now assert
+on confidence — the thing with consequences — rather than on a number nothing
+read.
 
-Being inherited by an owner who does not rate you should be among the worst
-things that can happen in this job. Today it is nothing at all.
+**It could not have been caught by the register**, and that limit is worth
+keeping in mind. `tests/dials.test.ts` asks whether anything reads a field, and
+tests are among the things it scans (they had to be added — without them
+`Club.isPlayerClub` read as unread while two tests asserted on it). So a field
+the game ignores but a test checks passes the check by construction. This one
+was found by reading the code, not by the tool.
+
+Its own save version rather than an addition to format 15's list: 15 had
+already shipped, and folding the strip backwards would leave anyone already at
+15 carrying the field for ever. Verified by disabling the strip and watching
+`migration.test.ts` fail — which it did not do at first, because the test
+loaded from format 1 and the v5 step deletes `board.owner` wholesale, so a
+fresh owner was built without the field either way and the assertion was
+vacuous. It loads from 15 now.
+
+Byte-proof that nothing else moved: the state with `faithInDirector` stripped
+from the old engine and the state from the new one are identical at 27,885,503
+bytes apart from `"version": 15` becoming `16`.
 
 
 ### The dressing room is a tax again, and the measurement that said otherwise was corrupt

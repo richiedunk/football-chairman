@@ -106,7 +106,6 @@ export function createOwner(
     youthBelief: sample(rng, profile.youthBelief),
     sinceSeason: season,
     stake,
-    faithInDirector: 50,
   }
 }
 

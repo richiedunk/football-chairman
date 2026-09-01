@@ -432,6 +432,15 @@ function migrate(state: GameState): GameState {
     state.version = 15
   }
 
+  // `Owner.faithInDirector`, which a takeover computed and nothing consulted.
+  // Its own version rather than an addition to the set above: format 15 has
+  // already shipped, and a save that has been through it would keep this one
+  // for ever if the strip were folded backwards.
+  if (state.version < 16) {
+    stripFields(state, new Set(['faithInDirector']))
+    state.version = 16
+  }
+
   state.version = SAVE_VERSION
   return state
 }

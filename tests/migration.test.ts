@@ -37,10 +37,15 @@ beforeAll(() => {
 function stripToVersion(state: GameState, version: number): GameState {
   const s = JSON.parse(JSON.stringify(state)) as GameState
 
-  // v15 is the first migration here that *removes* fields rather than filling
-  // them in, so this one has to work the other way: put back the fifteen the
-  // world model used to carry, or there is nothing for the migration to strip
-  // and the test passes without exercising it.
+  // The deleting migrations have to work the other way round: put the fields
+  // back, or there is nothing to strip and the test passes without exercising
+  // anything.
+  if (version < 16) {
+    for (const club of Object.values(s.clubs)) {
+      (club.board.owner as unknown as Record<string, unknown>).faithInDirector = 50
+    }
+  }
+
   if (version < 15) {
     const bag = (o: object) => o as Record<string, unknown>
     bag(s).rngCounters = {}
@@ -154,7 +159,7 @@ async function loadFrom(version: number, slotId: string): Promise<GameState> {
   return loaded!
 }
 
-const HISTORICAL = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
+const HISTORICAL = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
 
 describe('every historical format still loads', () => {
   for (const version of HISTORICAL) {
@@ -214,6 +219,21 @@ describe('every historical format still loads', () => {
     }
 
     await deleteSave('mig-all')
+  }, 60_000)
+
+  it('strips the owner field the game stopped reading', async () => {
+    // Loaded from 15 rather than 1 on purpose. The v5 step deletes
+    // `board.owner` wholesale and the migration builds a fresh one, so a save
+    // taken back to v1 has no owner to carry the field and the assertion would
+    // pass without the migration doing anything at all. It did, until this was
+    // checked by disabling the strip and finding the test still green.
+    const loaded = await loadFrom(15, 'mig-v16')
+    const club = Object.values(loaded.clubs)[0]
+    expect(
+      (club.board.owner as unknown as Record<string, unknown>).faithInDirector,
+      'v16: dead owner field survived',
+    ).toBeUndefined()
+    await deleteSave('mig-v16')
   }, 60_000)
 
   it('refuses a save from a newer build rather than mangling it', async () => {

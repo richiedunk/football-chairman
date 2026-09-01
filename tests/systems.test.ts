@@ -1891,13 +1891,16 @@ describe('ownership', () => {
 
     const good = resolveOwnerPitch(club, 'push')
     expect(good).toContain('backing')
-    expect(club.board.owner.faithInDirector).toBeGreaterThan(70)
+    // Board confidence, not the owner's private opinion. There used to be a
+    // `faithInDirector` on the owner, and these assertions were the only thing
+    // in the project that ever read it — a test checking arithmetic the game
+    // itself ignored. Confidence is what the board actually acts on.
+    expect(club.board.confidence, 'a good pitch was not rewarded').toBeGreaterThan(50)
     expect(club.finances.transferBudget).toBeGreaterThan(1_000_000)
 
     club.board.confidence = 50
     const bad = resolveOwnerPitch(club, 'youth')
-    expect(club.board.owner.faithInDirector).toBeLessThan(40)
-    expect(club.board.confidence).toBeLessThan(50)
+    expect(club.board.confidence, 'a bad pitch cost nothing').toBeLessThan(50)
     expect(bad).toContain('wrong man')
   })
 

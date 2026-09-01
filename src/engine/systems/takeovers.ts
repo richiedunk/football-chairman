@@ -338,7 +338,6 @@ export function completeTakeover(
   club.board.warnings = 0
   club.board.graceUntilSeason = state.date.season
   club.board.confidence = clamp(45 + (club.board.confidence - 50) * 0.35, 20, 70)
-  incoming.faithInDirector = 50
 
   addInboxItem(state, ids, {
     category: 'board',
@@ -428,7 +427,6 @@ export function resolveOwnerPitch(club: Club, pitch: PitchId): string {
   const owner = club.board.owner
   const fit = pitchFit(owner, pitch)
 
-  owner.faithInDirector = clamp(Math.round(50 + fit * 42), 5, 95)
   club.board.confidence = clamp(club.board.confidence + fit * 22, 5, 95)
 
   if (fit > 0.35) {

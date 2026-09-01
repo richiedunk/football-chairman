@@ -551,12 +551,6 @@ export interface Owner {
   sinceSeason: number
   /** Percentage held. Below 100 there are other shareholders to answer to. */
   stake: number
-  /**
-   * 0-100, and only meaningful at the club the human runs: what this owner
-   * makes of the director they inherited. A takeover never costs you the job
-   * outright, but it can cost you every ounce of goodwill you had built.
-   */
-  faithInDirector: number
 }
 
 /**
@@ -1601,4 +1595,4 @@ export interface GameSettings {
   hapticsEnabled: boolean
 }
 
-export const SAVE_VERSION = 15
+export const SAVE_VERSION = 16
