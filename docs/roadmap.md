@@ -1184,6 +1184,77 @@ all from `scripts/`:
   season out of 238.
 - Wages **54-78% of revenue**, per-player pay realistic at every tier.
 
+## The plan for the bottom of the pyramid
+
+The open work, in order, and why it is in that order.
+
+**Where it stands.** `maintainStadium` fixed the largest cause — nothing in the
+world ever repaired a stand — and the top two tiers are close to flat now. The
+bottom three are not. A tier 5 club settles at twenty players of whom **3.6 are
+aged 24 to 31**: a youth team with a few veterans. A real fifth-tier club is
+about twenty-three players and most are full-time professionals.
+
+Two figures worth carrying into the work. Tier 5 spends **82% of revenue on
+wages** against the 55–75% this project already cites as the real range, while
+tier 1 sits at 61%. And revenue between those tiers differs **47×** where
+per-player wages differ only **29×** — the wage curve is flatter than the
+economy it prices into.
+
+### 1. Measure the signing decision, before touching anything
+
+The question none of the existing measurements answer: a tier 5 club has money
+in the bank and seventeen hundred free agents to choose from, and it signs
+teenagers. Why?
+
+Three worlds, and they want opposite fixes:
+
+- **it cannot afford any adult** — then the fix is the economy, revenue at the
+  bottom or the league factor in `computeWageDemand`;
+- **it prefers youth** — then the fix is recruitment preference under a tight
+  budget, in `aiSquad.ts`;
+- **no suitable adult exists in the pool** — then the fix is who becomes a free
+  agent, and the age shape of the players released each summer.
+
+So: instrument the free-agent decision for tier 4 and 5 clubs at equilibrium.
+Who was in the pool by age band, who was affordable, who was rejected and on
+what test, who was actually signed. One script, one answer, and the answer
+picks the fix.
+
+**This step is not optional and it is not a formality.** Six confident
+diagnoses of this defect have been wrong, including one in this very section
+that would have had us shrink lower-league squads to match a number that turned
+out to be indefensible.
+
+### 2. Fix what it shows
+
+Named above. Whichever it is, it lands with a before-and-after on the same
+three measurements.
+
+### 3. Loans, which currently do nothing
+
+Players loaned out and loaned in are **0.0 per club in every tier** at
+equilibrium. Loans are how a young player gets games and a thin club gets
+cover — precisely the pressure valve this problem needs — and twelve seasons in
+there is not one anywhere in the world. Worth its own look whatever step 1
+finds.
+
+### The acceptance test
+
+Not "the number moved". Over fourteen seasons, tier 4 and 5 clubs hold about
+twenty players with **eight or more aged 24 to 31**, and a wage bill inside
+55–75% of revenue. Measured with `wagedrift.ts`, `rollcheck.ts` and the squad
+composition breakdown, before and after.
+
+### Alongside, independent of all of the above
+
+- **Season one's budget is a fantasy.** Tiers 3, 4 and 5 open at 128%, 143% and
+  158% of revenue, then collapse by about 60% in season two once a real ledger
+  exists. One year of imaginary money and a cliff. Unambiguous, small, and true
+  whatever the rest turns out to be.
+- **Clubs hoard.** Mean balance after twelve seasons is £207m in the top flight
+  and £30m in tier 3. Nothing in the game makes a club spend down a balance
+  that size.
+
 ## How the engine is put together
 
 Two orchestrators — the weekly tick and the season roll — and the same shape
