@@ -550,49 +550,53 @@ more damage than a disruptive back-up and a leader nobody picks sets no tone.
 The room feeds every squad member's morale, and a player's own contribution is
 taken back out of what he feels — nobody is paid for his own leadership.
 
-**Two things the measurement changed.** The first design added positive drift
-for a good room, and measured out at +1.34 morale against −5.42 for a bad one.
-Morale reverts to a baseline near 55 and sits below it most of the time, so
-there is no headroom above, while the downside compounds through form and
-results. A risk five times the size of the reward is exactly the tax the
-warning above is about. So a good room now **absorbs grievances instead of
-inventing cheer** — which is also a better model of what a senior professional
-does. He does not make contented players more contented; he stops an unhappy
-one becoming a problem.
+**It took three attempts to make the upside real, and the third one was not
+about strength.** The first design added positive drift for a good room and
+measured +1.34 morale against −5.42 for a bad one — a risk five times the size
+of the reward, which is exactly the tax the warning above is about. The second
+had a good room absorb grievances rather than invent cheer, which is a better
+model of what a senior professional does; measured on a fixed engine it came
+out at **−0.21** for a leader against **−2.62** for a disruptive player, which
+is to say nothing at all.
 
-~~| one senior player's traits | tone | squad morale |~~
-~~| leader | 0.85 | +1.27 |~~
+Neither failed on its idea. Both failed on **where they applied it and what
+they measured it from.**
 
-**That table was wrong, and the tax is still there.** It was measured through a
-corrupted rating cache: `roomcheck.ts` builds a world per seed in one process,
-the memo was keyed on player id, and ids restart at one for every world — so
-every trial after the first was reading the previous trial's ratings. See "The
-rating memo was handing worlds each other's players" in `docs/bugs.md`.
+*Where.* Both pushed on the weekly morale drift, and morale reverts toward its
+baseline at six per cent a week. A mechanism whose entire job is to erase
+transients was erasing them within a month.
 
-Re-measured on the fixed engine, one season, eight seeds:
+*From what.* Both treated a tone of zero as the neutral room. Measured across
+238 clubs, an ordinary squad reads **0.78** — median and mean both 0.78, tenth
+percentile 0.07, ninetieth 1.47, and only fourteen clubs anywhere below zero.
+So the bad-room penalty, which only fired below zero, reached six per cent of
+the world; and the good-room reward was measured from an origin every squad had
+already passed. A normal dressing room was collecting the reward for being
+normal.
+
+**As built now.** `roomBaseline` shifts the morale a player *settles at*,
+centred on that measured neutral and symmetric in both directions. A well-run
+squad is not a squad having a good week; it is a squad that is a better place
+to be. Twenty seeds, one senior player's traits swapped:
 
 | one senior player's traits | tone | squad morale |
 |---|---|---|
-| leader | 0.81 | **−0.21** |
-| professional | 0.68 | +0.06 |
-| nothing | 0.48 | — |
-| disruptive | 0.11 | **−2.62** |
-| disruptive + hothead | −0.03 | −3.54 |
+| leader | 0.78 | **+1.24** |
+| professional | 0.64 | +0.47 |
+| nothing | 0.44 | — |
+| disruptive | 0.08 | **−0.97** |
+| disruptive + hothead | −0.04 | −1.06 |
 
-A leader is worth nothing measurable; a disruptive player costs two and a half
-morale. `roomcheck` prints `ORDERING BROKEN — the upside half is not real`, and
-it is right. The absorb-grievances model is the correct idea and is too weak to
-show against a season's noise, so the feature is back to being the tax the
-warning above is about. Re-opened in `docs/bugs.md`.
+Monotonic across all five, and **the upside is now larger than the downside** —
+which is the whole point. The downside shrank from −2.62 to −0.97, and that is
+the honest price of making it symmetric rather than a tax.
 
-The upside has now been measured wrong twice: once because the instrument
-compared league points across runs that had relegated away from each other, and
-once because the instrument was reading another world's players. Both times the
-number that came back was the number that made the design look finished. The first attempt at this measured
-three seasons and compared league points, which measured nothing: the runs
-promote and relegate away from each other, so by season three the points are
-scored against different opposition. It reported that a squad with no leader
-outscored one with a leader.
+The upside was measured wrong three times before this: once by comparing league
+points across runs that had relegated away from each other, once by reading
+another world's players through a corrupted rating cache, and once by an
+eight-seed run that put `professional` below doing nothing. Each time the
+number that came back was the number that made the design look finished, or the
+one that made it look hopeless. Twenty seeds ordered cleanly.
 
 The effect is **modest and roughly symmetrical**, which is the right shape.
 Swapping one man in twenty-five moves a group property a little; it should not

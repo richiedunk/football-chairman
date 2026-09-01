@@ -167,27 +167,41 @@ export function roomSummary(reading: RoomReading): string {
 }
 
 /**
- * How much of a grievance a well-run room absorbs.
+ * The tone an ordinary squad reads, measured rather than assumed.
  *
- * The upside had to work differently from the downside, and measuring showed
- * why. Morale reverts toward a baseline near 55 and sits below it most of the
- * time, so there is very little headroom above — a good room adding positive
- * drift bought +1.34 morale where a bad one cost −5.42, because the downside
- * compounds through form and results and the upside runs into the ceiling. A
- * system where the risk is five times the reward is the tax the roadmap warns
- * about.
+ * Across a generated world of 238 clubs thirty weeks in: median 0.78, mean
+ * 0.78, tenth percentile 0.07, ninetieth 1.47, and only fourteen clubs below
+ * zero at all.
  *
- * It is also the wrong model of what a senior professional does. He does not
- * make contented players more contented. He stops an unhappy one becoming a
- * problem: the lad who has not played for a month is talked round rather than
- * left to fester. So a positive room **damps what is going wrong** rather than
- * adding to what is going right, which is both more useful and more true.
- *
- * Returns a multiplier on negative drift: 1 leaves a grievance at full weight,
- * below 1 absorbs part of it.
+ * That number is the whole story of why this system did nothing for so long.
+ * Both halves of it treated **zero** as the neutral room. But an ordinary
+ * squad already sits at 0.78, so the bad-room penalty — which only fired below
+ * zero — reached six per cent of the world, and the good-room reward was
+ * measured from an origin every club had already passed. A well-run squad was
+ * being rewarded for being normal, and the difference between a median room
+ * and a top-decile one came to a few per cent of one term.
  */
-export function grievanceDamping(tone: number): number {
-  return clamp(1 - Math.max(0, tone) * 0.11, 0.55, 1)
+export const ROOM_NEUTRAL = 0.78
+
+/**
+ * What a room is worth, as a shift in the morale a player settles at.
+ *
+ * Applied to the **baseline** rather than to the weekly drift, and that is the
+ * point. Morale reverts toward its baseline by six per cent a week, so
+ * anything added to drift is pulled straight back out again — which is exactly
+ * what happened to the two previous attempts. Adding positive drift bought
+ * +1.34 morale against a bad room's −5.42 and was abandoned as a tax; damping
+ * grievances instead measured at −0.21 for a leader, which is to say nothing
+ * at all. Neither failed because the idea was wrong. They failed because a
+ * transient cannot survive a mechanism whose whole job is to erase transients.
+ *
+ * A baseline shift does survive it, by construction: a well-run squad is not a
+ * squad having a good week, it is a squad that is a better place to be.
+ * Symmetric, so a bad room is the same statement in reverse, and centred on
+ * `ROOM_NEUTRAL` so that an ordinary squad is worth nothing either way.
+ */
+export function roomBaseline(tone: number): number {
+  return clamp((tone - ROOM_NEUTRAL) * 3, -6, 6)
 }
 
 /**

@@ -1,6 +1,6 @@
 import { clamp, Rng } from '../rng'
 import { squadImportance } from './valuation'
-import { grievanceDamping, influenceOf, readRoom } from './dressingRoom'
+import { influenceOf, readRoom, roomBaseline } from './dressingRoom'
 import type { Club, GameState, Player, SquadStatus } from '../types'
 
 /**
@@ -138,21 +138,20 @@ export function processMorale(
     // His own influence is taken back out of what he feels, so a leader is not
     // paid for his own leadership and a disruptive player does not sit in a
     // pool of his own making — each man is lifted or dragged by the others.
-    // A bad room is felt directly — it is the thing making everyone miserable.
-    // A good one works the other way about: rather than making contented
-    // players more contented, against a ceiling they are already near, it
-    // absorbs part of whatever is going wrong. That is what a senior
-    // professional actually does, and it is applied below once the grievances
-    // for this player are known.
+    // The room does not push on this week's drift at all any more. It sets
+    // where this player settles, further down, and the reasoning is in
+    // `roomBaseline`: the reversion term below erases anything added here
+    // within a few weeks, which is why two previous versions of this measured
+    // as nothing.
     const roomTone = room.tone - influenceOf(state, player, club) / 6
-    if (roomTone < 0) drift += roomTone * 0.55
-    else if (drift < 0) drift *= grievanceDamping(roomTone)
 
     if (player.traits.includes('homesick') && player.nationalityId !== club.nationId) drift -= 0.7
     if (player.traits.includes('inconsistent')) drift -= 0.1
 
-    // Morale reverts toward a personal baseline rather than drifting forever.
-    const baseline = 55 + (player.loyalty - 50) * 0.15
+    // Morale reverts toward a personal baseline rather than drifting forever —
+    // and the room is part of what that baseline is. A player in a well-run
+    // squad is not temporarily cheerful; he is contented at a higher level.
+    const baseline = 55 + (player.loyalty - 50) * 0.15 + roomBaseline(roomTone)
     drift += (baseline - player.morale) * 0.06
 
     player.morale = clamp(player.morale + drift, 1, 100)

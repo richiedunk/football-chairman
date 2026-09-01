@@ -138,32 +138,41 @@ from the old engine and the state from the new one are identical at 27,885,503
 bytes apart from `"version": 15` becoming `16`.
 
 
-### The dressing room is a tax again, and the measurement that said otherwise was corrupt
-`roomcheck.ts` builds a world per seed in one process. The rating memo was
-keyed on player id and ids restart at one per world, so every trial after the
-first read the previous trial's ratings — see "The rating memo was handing
-worlds each other's players" under Fixed. The dressing-room figures were taken
-through that.
+### ~~The dressing room is a tax again~~ — fixed, and the reason was the origin
+A leader was worth −0.21 morale and a disruptive player −2.62: no upside at
+all, which is exactly the failure the roadmap warns about.
 
-Re-measured on the fixed engine, one season, eight seeds:
+**The cause was that both halves measured from zero.** An ordinary squad reads
+a tone of **0.78** — measured across 238 clubs: median 0.78, mean 0.78, tenth
+percentile 0.07, ninetieth 1.47, and only fourteen clubs below zero anywhere in
+the world. So the bad-room penalty, which only fired below zero, reached six
+per cent of clubs; and the good-room reward was measured from an origin every
+squad had already passed, leaving a few per cent of one term between a median
+room and a top-decile one.
 
-| | reported | actual |
+**The fix is where it is applied, not how hard.** Both previous attempts pushed
+on the weekly morale drift, and morale reverts to its baseline at six per cent
+a week — so the mechanism whose whole job is to erase transients was erasing
+them. `roomBaseline` shifts the baseline instead, centred on the measured
+neutral and symmetric in both directions. A well-run squad is not a squad
+having a good week; it is a squad that is a better place to be.
+
+Twenty seeds, one senior player's traits swapped:
+
+| | before | after |
 |---|---|---|
-| leader over nothing | +1.27 morale | **−0.21** |
-| professional over nothing | — | +0.06 |
-| disruptive under nothing | −1.69 morale | **−2.62** |
+| leader | −0.21 | **+1.24** |
+| professional | +0.06 | **+0.47** |
+| disruptive | −2.62 | **−0.97** |
+| disruptive + hothead | — | −1.06 |
 
-So a leader is worth nothing measurable and a disruptive player costs two and a
-half morale. The roadmap's claim that the "just a tax" failure was designed out
-is false and has been corrected there.
+Monotonic across all five conditions, and the upside is now larger than the
+downside. The downside shrank, which is the honest cost of making it symmetric.
 
-The mechanism to look at is `grievanceDamping` in `dressingRoom.ts` and the
-room term in `morale.ts`: a good room currently damps grievances rather than
-adding cheer, which was the fix for the tax problem, and on this evidence the
-damping is too weak to show up against the noise of a season. Worth measuring
-before tuning — the upside has now been wrong twice, once by design and once
-by instrument.
-
+An eight-seed run of the same thing put `professional` at −0.49, below doing
+nothing, and read as an inversion. It was noise; twenty seeds ordered cleanly.
+This file already carries two entries about small samples in this project, and
+that is now three.
 
 
 ### The season roll digs a hole the world takes longer and longer to climb out of
@@ -246,57 +255,55 @@ registration limit. What is really happening is that the world **drifts
 young** — 21+ players 19.9 to 17.2, homegrown 13.4 to 8.1 — which is a
 different defect and is recorded in the roadmap under Known defects.
 
-### The world drifts young, and five fixes have failed
+### The world drifts young — measured, and it is the wage budget
+**Diagnosed.** Five fixes failed because every one of them was aimed at
+recruitment, and the constraint is money. `scripts/wagedrift.ts`, fourteen
+seasons, sampled deep mid-season at week 26 so the roll cannot flatter it.
 
-`driftcheck.ts` counts the flows across the line that matters. Per club per
-season, into and out of the 21-and-over pool: **1.4 age in, 1.0 signed in, 2.7
-leave.** Net minus 0.3 a season, which over twenty seasons takes a club from
-20.8 professionals to 14.2 while under-21s rise from 6.0 to 9.4 and every adult
-band collapses — 25-28 worst, 7.9 down to 4.1. Retirement accounts for only 1.2
-of the 2.7 leaving.
+The wage bill is pinned to the budget within two seasons and stays there:
 
-**Five attempts, all reverted or shown not to bite:**
+| tier | bill as % of budget, s1 → s14 | adults per club | wage per adult |
+|---|---|---|---|
+| 1 | 93.7% → 100.3% | 20.9 → 19.0 | −18.0% |
+| 2 | 90.4% → 99.7% | 20.9 → 16.1 | +13.1% |
+| 3 | 52.3% → 102.4% | 19.8 → 12.4 | **+79.5%** |
+| 4 | 37.4% → 109.6% | 20.0 → 10.9 | **+92.5%** |
+| 5 | 39.3% → 116.8% | 19.7 → 9.0 | **+60.7%** |
 
-1. *Contract-length jitter and renewing a year early.* Kept — correct on its
-   own terms — but moved the number by a third of a player.
-2. *A readiness bar on academy promotion.* Regression: promotions fell up to
-   38% but blocking one did not produce a signing, so clubs ended up shorter.
-   Clubs below the emergency floor went 34 to 54. Also the wrong idea —
-   there is nothing wrong with a recruit being the worst player in the squad,
-   and `development.ts` improves him from there.
-3. *Under-21s not counting against the squad target.* The arithmetic was exact
-   — 24.3 squad minus 7.1 under-21s is 17.2 — and the fix was still worth only
-   +0.4 at season ten, with homegrown slightly worse. Kept for the rule, not
-   the result. Its first form was a plain error that made things worse by
-   removing the only brake on promotion.
-4. *Reading the softened wage demand.* Clear regression, 14.2 to 9.5, because a
-   released academy boy's stored demand is a sixteen-year-old's, so the budget
-   filter waved teenagers through and kept rejecting professionals.
-5. *A wage discount multiplier with a quality-scaled floor.* Signings did rise
-   — 1.02 to 1.37 a club a season, and 1.5-1.9 in the middle years — and
-   releases rose with them, 2.66 to 2.87. Net worse: 12.9 against 14.2.
+**Read the last two columns together and the whole thing falls out.** In the
+lower tiers the number of adult professionals roughly halves while the price of
+one nearly doubles. Total adult spend is close to flat — the club can afford
+the same *money* every year, so as each professional gets dearer it affords
+fewer of them, and the places go to the only players who are cheap, which is
+the academy. The world drifts young because adults are being priced out of it.
 
-**What attempt five actually revealed, and the hypothesis to test next.** Every
-attempt to raise the inflow has been met by a matching rise in the outflow.
-That is the signature of a *budget* constraint rather than a supply or
-willingness one: a club can afford about twenty-four players' wages, so cheap
-free agents coming in force existing professionals out at renewal, and the age
-composition drifts young because young players are cheap. The 21-and-over
-decline may simply be the wage bill finding its level.
+Nothing in `aiSquad.ts` could ever have fixed that, which is exactly what the
+five failed attempts were telling us: each raised the inflow, the wage bill
+absorbed it, and the outflow rose to match.
 
-If that is right the fix is not in recruiting at all, and nothing in
-`aiSquad.ts` will ever move it. The things to measure are whether wage budgets
-keep pace with revenue across a long save, and whether the squad-cost ratio
-pushes clubs toward youth by construction. **Nothing should be changed in
-recruitment until one of those is measured** — five confident diagnoses have
-already been wrong here, which is more than any other entry in this file.
+Two things drive it, and both are in finance rather than recruitment:
 
-**What is worth measuring next**, before anything is changed: why recovery from
-the roll is getting slower. The candidates are the bunching of contract lengths
-at generation, the renewal pass (weeks 26-46) letting ~1,600 players a season
-reach expiry at all, and the per-week limits on free-agent recruitment. Nothing
-should be tuned until one of those is shown to be the cause — two confident
-diagnoses have already been wrong here.
+1. **Budgets fall faster than revenue.** Tier 1 revenue −8.7% over fourteen
+   seasons, budget −29.7%; budget as a share of revenue drops 80% → 62%. Tier 5
+   is worse: revenue −19.6%, budget −71.2%.
+2. **Revenue itself declines.** Every tier ends the run poorer than it started,
+   tier 5 by a fifth. A world economy that shrinks for fourteen years is its own
+   defect and probably the root of the first.
+
+**Two smaller faults the same run exposed:**
+
+- **Season one's budget is a fantasy.** Tiers 3, 4 and 5 open at 128%, 143% and
+  158% of revenue, then collapse by ~60% in season two once a real ledger
+  exists. Clubs get one year of imaginary money and a cliff.
+- **Lower-tier clubs are permanently over budget.** Tier 4 and 5 sit at
+  105–136% of budget from season two onwards. `recalculateBudgets` floors the
+  budget at committed wages, so this can only mean the bill grows *after* the
+  budget is set and is not re-floored until the next roll — leaving those clubs
+  unable to sign anyone for the rest of the season, every season.
+
+**Nothing has been changed on the back of this.** It is a diagnosis, and the
+five previous confident diagnoses in this entry are the reason for stopping to
+write it down first. The next move is the economy, not the market.
 
 ## Fixed
 

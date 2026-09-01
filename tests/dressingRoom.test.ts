@@ -3,7 +3,8 @@ import { prepareNewGame, startCareerAt } from '../src/engine/newGame'
 import { startingClubCandidates } from '../src/engine/systems/career'
 import { seniorSquad } from '../src/engine/systems/aiSquad'
 import {
-  grievanceDamping, influenceOf, readRoom, renewalAppetite, roomLabel, roomMeter, roomSummary,
+  influenceOf, readRoom, renewalAppetite, roomBaseline, roomLabel, roomMeter, roomSummary,
+  ROOM_NEUTRAL,
   voice,
 } from '../src/engine/systems/dressingRoom'
 import type { Club, GameState, Player, PlayerTrait } from '../src/engine/types'
@@ -88,16 +89,27 @@ describe('who sets the tone', () => {
 })
 
 describe('what the room does', () => {
-  it('absorbs grievances when it is good rather than inventing cheer', () => {
-    // Morale reverts to a baseline it already sits below, so adding positive
-    // drift ran into a ceiling: a good room bought +1.3 morale where a bad one
-    // cost −5.4. A senior professional does not make contented players more
-    // contented, he stops an unhappy one becoming a problem.
-    expect(grievanceDamping(0)).toBe(1)
-    expect(grievanceDamping(3)).toBeLessThan(1)
-    expect(grievanceDamping(10)).toBeLessThan(grievanceDamping(3))
-    // But never to nothing — a good room does not make a benched player happy.
-    expect(grievanceDamping(100)).toBeGreaterThanOrEqual(0.55)
+  it('is worth nothing at all to an ordinary squad', () => {
+    // The failure this replaced, in one line. Both previous versions measured
+    // the room from zero, and an ordinary squad already reads 0.78 — so a
+    // normal dressing room was collecting most of the reward for being normal,
+    // and a good one was barely distinguishable from it.
+    expect(roomBaseline(ROOM_NEUTRAL)).toBe(0)
+  })
+
+  it('pays a good room and charges a bad one, in the same currency', () => {
+    // Symmetric on purpose. The tax the roadmap warns about is a system where
+    // every signing is a risk and none is an upside.
+    const good = roomBaseline(ROOM_NEUTRAL + 0.7)
+    const bad = roomBaseline(ROOM_NEUTRAL - 0.7)
+    expect(good).toBeGreaterThan(1.5)
+    expect(bad).toBeLessThan(-1.5)
+    expect(good).toBeCloseTo(-bad, 6)
+  })
+
+  it('does not run away in a deliberately stacked room', () => {
+    expect(roomBaseline(50)).toBeLessThanOrEqual(6)
+    expect(roomBaseline(-50)).toBeGreaterThanOrEqual(-6)
   })
 
   it('makes a bad room harder to re-sign for, and a good one easier', () => {
@@ -192,7 +204,7 @@ describe('the lane', () => {
     const forbidden = /teamTalk|praise|fine|criticise|criticize|promise|motivate/i
     for (const name of [
       'readRoom', 'roomLabel', 'roomSummary', 'influenceOf', 'voice',
-      'grievanceDamping', 'renewalAppetite',
+      'roomBaseline', 'renewalAppetite',
     ]) {
       expect(name).not.toMatch(forbidden)
     }
