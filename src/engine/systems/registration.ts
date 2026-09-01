@@ -224,7 +224,7 @@ export function unregisterPlayer(
  * this runs for every club in the world at every window close.
  */
 function registrationPriority(player: Player): number {
-  let score = ratingForPositionCached(player.id, player.attributes, player.position)
+  let score = ratingForPositionCached(player.attributes, player.position)
   // A club will not burn a place on someone it is trying to move on, and will
   // find one for a player it just paid for.
   if (player.squadStatus === 'surplus') score -= 25

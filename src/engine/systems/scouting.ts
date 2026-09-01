@@ -364,7 +364,7 @@ function computeRecommendation(
 
   const inPosition = squad.filter((p) => p.position === player.position)
   const bestInPosition = inPosition.length
-    ? Math.max(...inPosition.map((p) => ratingForPositionCached(p.id, p.attributes, p.position)))
+    ? Math.max(...inPosition.map((p) => ratingForPositionCached(p.attributes, p.position)))
     : 0
 
   let score = 50

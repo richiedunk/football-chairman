@@ -237,7 +237,7 @@ const estate = computed(() => {
   // strong one, and eighteen is what actually gets on a teamsheet.
   const rated = store.squad
     .filter((p) => !p.injury)
-    .map((p) => ratingForPositionCached(p.id, p.attributes, p.position))
+    .map((p) => ratingForPositionCached(p.attributes, p.position))
     .sort((a, b) => b - a)
     .slice(0, 18)
   const squadStrength = rated.length

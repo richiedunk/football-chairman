@@ -91,7 +91,7 @@ export function selectionScore(
   const competence = positionalCompetence(player.position, player.altPositions, slot)
   if (competence < 0.2) return 0
 
-  let score = ratingForPositionCached(player.id, player.attributes, slot) * competence
+  let score = ratingForPositionCached(player.attributes, slot) * competence
 
   // Form and sharpness. A player who has not played is not match fit, which is
   // what makes a squad rotation policy matter rather than just a squad list.
@@ -266,7 +266,7 @@ function computeStrength(
   for (const { playerId, position } of starters) {
     const player = state.players[playerId]
     if (!player) continue
-    const rating = ratingForPositionCached(player.id, player.attributes, position)
+    const rating = ratingForPositionCached(player.attributes, position)
       * positionalCompetence(player.position, player.altPositions, position)
       * (0.85 + (player.fitness / 100) * 0.15)
       * (0.88 + (player.form / 100) * 0.2)
@@ -344,7 +344,7 @@ export function auditSquadDepth(
       (p) => positionalCompetence(p.position, p.altPositions, position) >= 0.7,
     )
     const bestRating = capable.length
-      ? Math.max(...capable.map((p) => ratingForPositionCached(p.id, p.attributes, position)))
+      ? Math.max(...capable.map((p) => ratingForPositionCached(p.attributes, position)))
       : 0
     return {
       position,

@@ -154,7 +154,7 @@ function applyAbilityChange(player: Player, delta: number, rng: Rng): void {
   if (!growing && player.age > PLATEAU_END_AGE && rng.chance(0.35)) {
     const key = rng.pick(MENTAL_ATTRIBUTES)
     player.attributes[key] = clamp(player.attributes[key] + 1, 1, 20)
-    invalidatePlayerRatings(player.id)
+    invalidatePlayerRatings(player.attributes)
   }
 
   let attributeMoved = false
@@ -174,7 +174,7 @@ function applyAbilityChange(player: Player, delta: number, rng: Rng): void {
   // all, so there is nothing to reconcile. Only pay for it when there is.
   if (attributeMoved) {
     calibrate(player.attributes, player.position, Math.round(player.currentAbility))
-    invalidatePlayerRatings(player.id)
+    invalidatePlayerRatings(player.attributes)
   }
 }
 
@@ -257,5 +257,5 @@ export function retrainPosition(
   const targetAbility = clamp(player.currentAbility * 0.94, 1, 200)
   player.attributes = generateAttributes(rng, newPosition, targetAbility, 0.5)
   player.currentAbility = ratingForPosition(player.attributes, newPosition)
-  invalidatePlayerRatings(player.id)
+  invalidatePlayerRatings(player.attributes)
 }

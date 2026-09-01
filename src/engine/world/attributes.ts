@@ -138,17 +138,29 @@ export function positionalCompetence(
  * transient and never serialised: it is derived data, and rebuilding it costs
  * one weighted sum.
  */
-const ratingCache = new Map<string, Map<Position, number>>()
+/**
+ * Keyed on the attributes themselves, not on the player's id.
+ *
+ * It was keyed on the id, and ids restart at one for every world generated —
+ * so a second world in the same process inherited the first world's ratings
+ * for every player who happened to share an id, which is all of them. The app
+ * and the tests both papered over it by calling `clearRatingCache` at the
+ * right moments; anything that forgot, or that loaded a world from a cache
+ * rather than generating it, got a quietly wrong squad. Measured: two
+ * identical seeded runs in one process diverged after twelve weeks, and
+ * clearing the cache between them made them identical again.
+ *
+ * An attributes object belongs to exactly one player in exactly one world, so
+ * as a key it cannot collide. A world that is dropped takes its entries with
+ * it, which is what makes this a WeakMap rather than a discipline.
+ */
+let ratingCache = new WeakMap<PlayerAttributes, Map<Position, number>>()
 
-export function ratingForPositionCached(
-  playerId: string,
-  attrs: PlayerAttributes,
-  pos: Position,
-): number {
-  let byPosition = ratingCache.get(playerId)
+export function ratingForPositionCached(attrs: PlayerAttributes, pos: Position): number {
+  let byPosition = ratingCache.get(attrs)
   if (!byPosition) {
     byPosition = new Map()
-    ratingCache.set(playerId, byPosition)
+    ratingCache.set(attrs, byPosition)
   }
   const cached = byPosition.get(pos)
   if (cached !== undefined) return cached
@@ -157,14 +169,25 @@ export function ratingForPositionCached(
   return value
 }
 
-/** Drop a player's cached ratings after his attributes change. */
-export function invalidatePlayerRatings(playerId: string): void {
-  ratingCache.delete(playerId)
+/**
+ * Drop a player's cached ratings after his attributes change.
+ *
+ * Still needed: `calibrate` rewrites an attributes object in place, so the key
+ * survives while the values behind it no longer hold.
+ */
+export function invalidatePlayerRatings(attrs: PlayerAttributes): void {
+  ratingCache.delete(attrs)
 }
 
-/** Drop the whole cache — used when a save is loaded or a new game starts. */
+/**
+ * Drop the whole cache.
+ *
+ * No longer load-bearing — collisions are impossible now — but kept because
+ * releasing a world's worth of entries at a known moment is cheap and the call
+ * sites read as intent rather than as superstition.
+ */
 export function clearRatingCache(): void {
-  ratingCache.clear()
+  ratingCache = new WeakMap()
 }
 
 /**

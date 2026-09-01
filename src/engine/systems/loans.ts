@@ -49,7 +49,7 @@ export function loanSuitorsFor(state: GameState, player: Player, limit = 12): Lo
   const parent = player.clubId ? state.clubs[player.clubId] : null
   if (!parent) return []
 
-  const playerRating = ratingForPositionCached(player.id, player.attributes, player.position)
+  const playerRating = ratingForPositionCached(player.attributes, player.position)
 
   const suitors: LoanSuitor[] = []
   for (const club of Object.values(state.clubs)) {
@@ -62,7 +62,7 @@ export function loanSuitorsFor(state: GameState, player: Player, limit = 12): Lo
       .map((id) => state.players[id])
       .filter((p): p is Player => Boolean(p) && !p.isAcademy && p.position === player.position)
     const bestRival = rivals.length
-      ? Math.max(...rivals.map((p) => ratingForPositionCached(p.id, p.attributes, p.position)))
+      ? Math.max(...rivals.map((p) => ratingForPositionCached(p.attributes, p.position)))
       : 0
 
     const margin = playerRating - bestRival
@@ -210,9 +210,9 @@ export function proposeLoanIn(
     .map((id) => state.players[id])
     .filter((p): p is Player => Boolean(p) && !p.isAcademy && p.position === player.position)
   const bestRival = rivals.length
-    ? Math.max(...rivals.map((p) => ratingForPositionCached(p.id, p.attributes, p.position)))
+    ? Math.max(...rivals.map((p) => ratingForPositionCached(p.attributes, p.position)))
     : 0
-  const playerRating = ratingForPositionCached(player.id, player.attributes, player.position)
+  const playerRating = ratingForPositionCached(player.attributes, player.position)
   const wouldStart = playerRating > bestRival - 4
 
   let chance = clamp(0.3 + (1 - importance) * 0.4, 0.05, 0.9)

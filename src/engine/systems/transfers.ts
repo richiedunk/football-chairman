@@ -400,8 +400,8 @@ export function moveAppeal(state: GameState, player: Player, buyer: Club): numbe
     .filter((p): p is Player => Boolean(p) && !p.isAcademy && p.position === player.position)
   const better = rivals.filter(
     (p) =>
-      ratingForPositionCached(p.id, p.attributes, p.position)
-      > ratingForPositionCached(player.id, player.attributes, player.position),
+      ratingForPositionCached(p.attributes, p.position)
+      > ratingForPositionCached(player.attributes, player.position),
   ).length
   appeal += better === 0 ? 0.25 : better === 1 ? 0.05 : -0.18 * better
 

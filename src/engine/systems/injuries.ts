@@ -104,7 +104,7 @@ export function processInjuries(
           player.attributes.stamina = clamp(Math.round(player.attributes.stamina * (1 - loss)), 1, 20)
           player.currentAbility = clamp(player.currentAbility * (1 - loss * 0.5), 1, 200)
           player.injuryProneness = clamp(player.injuryProneness + 8, 0, 100)
-          invalidatePlayerRatings(player.id)
+          invalidatePlayerRatings(player.attributes)
         }
         player.injury = null
         recovered.push(player)

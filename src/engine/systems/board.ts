@@ -621,7 +621,7 @@ export function processCoachRelations(
     const filled = squad.some(
       (p) =>
         positionalCompetence(p.position, p.altPositions, request.position) >= 0.85
-        && ratingForPositionCached(p.id, p.attributes, request.position) >= request.minAbility
+        && ratingForPositionCached(p.attributes, request.position) >= request.minAbility
         && p.joinedSeason >= state.date.season,
     )
     if (filled) {

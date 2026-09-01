@@ -169,7 +169,7 @@ export function processAiRenewals(state: GameState, club: Club): number {
   const season = state.date.season
   const seniors = seniorSquad(state, club)
   const ranked = seniors
-    .map((p) => ({ p, score: ratingForPositionCached(p.id, p.attributes, p.position) }))
+    .map((p) => ({ p, score: ratingForPositionCached(p.attributes, p.position) }))
     .sort((a, b) => b.score - a.score)
   const rank = new Map(ranked.map((entry, i) => [entry.p.id, i]))
 
