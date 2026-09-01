@@ -46,6 +46,22 @@ export const DEFAULT_TERMS: TransferTerms = {
 export interface TransferContext {
   rng: Rng
   ids: IdFactory
+  /**
+   * Where the AI's transfer attempts go, when somebody is counting.
+   *
+   * Optional and normally absent. A calibration script builds one with
+   * `newTransferStats()` and passes it in; the engine then fills it as a side
+   * effect of a run it would have done anyway.
+   *
+   * On the context rather than in a module variable, which is what it used to
+   * be. A module variable is ambient state: shared by every world in the
+   * process, switched on and off by calls made somewhere else entirely, and
+   * silently wrong the moment two runs overlap. That exact shape — a cache
+   * living outside the world it described — is what made two identical seeded
+   * runs produce different worlds for most of this project's life. Once is
+   * enough.
+   */
+  stats?: TransferAttemptStats
 }
 
 // ---------------------------------------------------------------------------
@@ -746,11 +762,11 @@ export function executeTransfer(
  * world every week of a window, and the player only ever sees the results.
  */
 /**
- * Where the AI's transfer attempts go, for calibration.
+ * A tally of where the AI's transfer attempts go.
  *
- * Counting is off by default and costs nothing when it is: guessing which of
- * five conditions is binding has been wrong twice, and a counter settles it in
- * one run.
+ * Guessing which of five conditions is binding has been wrong twice. A counter
+ * settles it in one run, and costs nothing on the runs that do not ask for it.
+ * Put one on the `TransferContext` to start counting.
  */
 export interface TransferAttemptStats {
   buyAttempts: number
@@ -765,24 +781,18 @@ export interface TransferAttemptStats {
   sold: number
 }
 
-let stats: TransferAttemptStats | null = null
-
-export function collectTransferStats(): TransferAttemptStats {
-  stats = {
+/** An empty tally, ready to be passed in and filled. */
+export function newTransferStats(): TransferAttemptStats {
+  return {
     buyAttempts: 0, noTargetPosition: 0, squadFull: 0, noCandidates: 0,
     dealRefused: 0, bought: 0, sellAttempts: 0, noChurnCandidate: 0,
     noBuyerForSale: 0, sold: 0,
   }
-  return stats
-}
-
-export function stopCollectingTransferStats(): void {
-  stats = null
 }
 
 export function processAiTransfers(state: GameState, ctx: TransferContext): void {
   if (!isTransferWindowOpen(state.date.week)) return
-  const { rng } = ctx
+  const { rng, stats } = ctx
 
   // Everyone who could move, indexed by position and sorted by ability.
   //

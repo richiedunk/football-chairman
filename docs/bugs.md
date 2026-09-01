@@ -13,6 +13,48 @@ will break next.
 
 ## Open
 
+### Seventeen fields of the world model are read by nothing
+Found by `scripts/dialcheck.ts`, enforced by `tests/dials.test.ts`. Two kinds,
+wanting opposite fixes, and none of them touched yet because both change the
+game.
+
+**Silent features** — written deliberately, consulted by nothing:
+
+| field | what it is |
+|---|---|
+| `Owner.faithInDirector` | A new owner arrives with a considered view of you, computed from fit and clamped 5–95 in `takeovers.ts`. Nothing ever asks. Being inherited by an owner who does not rate you should be among the worst things that can happen in this job; it is currently nothing at all. |
+| `TransferNegotiation.deadlineWeek` | Every negotiation is given a deadline at the window close. Nothing expires one, so a negotiation opened in July is still open in May. |
+| `TransferTerms.optionFee` | Not written anywhere either — an option-to-buy on a loan that no code path can create or exercise. |
+| `GameSettings.fastAdvance` | A setting, defaulted false, that no screen offers and no code obeys. |
+
+**Dead weight** — carried in every save, read by nobody:
+`Club.isPlayerClub` (a second copy of `state.playerClubId` that can only ever
+disagree), `Player.birthWeek` and `Player.secondNationalityId` (rolled for all
+9,700 players), `FacilityProject.totalCost`, `Takeover.collapseReason`,
+`SeasonHistory.continentalResult` / `.finalBalance` / `.headCoachName`,
+`MediaStory.subjectStaffIds`, `MediaEffect.metric`, `GameState.rngCounters`,
+`DirectorContract.signedSeason`, `TransferNegotiation.playerInitiated`.
+
+Deleting a property is a data decision, so nothing has been removed. The list
+is the register in `tests/dials.test.ts` and it can only shrink: a new unread
+field fails the test, and so does leaving one on the register after wiring it
+up.
+
+
+### Housekeeping refreshes the squad of the club that just sacked you
+`tick/phases/boardroom.ts`. The board's verdict can end the director's
+employment, and `housekeeping` ten lines later calls `refreshSquadStatuses` on
+`playerClub` — which is the value from the top of the week, i.e. the club he
+no longer runs. True of the six-hundred-line procedure this replaced, where it
+was invisible; preserved through the phase refactor deliberately so that change
+could be proved pure, and now written down at the line.
+
+Probably harmless — it recomputes labels on a squad nobody will look at — but
+it is a phase reading a stale fact, which is the exact class this project keeps
+shipping. Fix is one line; it changes the world, so it wants a hash and a
+reason.
+
+
 ### The dressing room is a tax again, and the measurement that said otherwise was corrupt
 `roomcheck.ts` builds a world per seed in one process. The rating memo was
 keyed on player id and ids restart at one per world, so every trial after the
