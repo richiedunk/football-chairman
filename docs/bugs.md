@@ -175,78 +175,68 @@ This file already carries two entries about small samples in this project, and
 that is now three.
 
 
-### The world drifts young and the roll never heals — one defect, and it is the wage budget
-Two entries for years; one cause. Measured by `scripts/wagedrift.ts` and
-`scripts/rollcheck.ts`, twelve to fourteen seasons each.
+### The world drifts young and the roll never heals — the grounds were falling down
+**Found, and largely fixed.** Six attempts failed before this because all six
+were aimed at recruitment. The chain runs the other way entirely, and it starts
+somewhere nobody had looked.
 
-**1. The bill is pinned to the budget within two seasons, and adults get
-priced out.** Sampled deep mid-season at week 26, where the roll cannot flatter
-it:
+**`stadiumProject` was only ever set by the human.** No AI code path anywhere
+started building work — `grep` for it outside `stadium.ts` returned nothing. So
+every stand at all 237 other clubs decayed at 3.5% a week for ever, the safety
+officer closed places 12% at a time up to 60% of a stand, and not one of them
+was ever repaired. Over fourteen seasons average capacity fell **27% in the top
+flight and 45% in the fourth tier**.
 
-| tier | bill as % of budget, s1 → s14 | adults per club | wage per adult |
-|---|---|---|---|
-| 1 | 93.7% → 100.3% | 20.9 → 19.0 | −18.0% |
-| 2 | 90.4% → 99.7% | 20.9 → 16.1 | +13.1% |
-| 3 | 52.3% → 102.4% | 19.8 → 12.4 | **+79.5%** |
-| 4 | 37.4% → 109.6% | 20.0 → 10.9 | **+92.5%** |
-| 5 | 39.3% → 116.8% | 19.7 → 9.0 | **+60.7%** |
+Matchday income is capacity times a rate, so it went with it: −34.6% in tier 1,
+−54.4% in tier 4. That is the largest revenue line in the game, halved. Which
+shrank the wage budgets, which priced adult professionals out of the lower
+divisions, which left fourteen hundred of them unsigned while squads ran four
+to five men short and filled the gaps from the academy.
 
-Read the last two columns together. In the lower tiers the number of adult
-professionals halves while the price of one nearly doubles: total adult spend
-is roughly flat, so a club affords the same *money* every year and fewer and
-fewer men for it. The places go to whoever is cheap, which is the academy.
+The young drift, the roll that never healed and the shrinking economy were one
+defect: **nobody was looking after the stadiums.**
 
-Behind that, budgets fall faster than revenue — tier 1 revenue −8.7% against a
-budget down 29.7%, tier 5 revenue −19.6% against a budget down 71.2% — and
-revenue itself declines in every tier. A world economy that shrinks for
-fourteen years is its own defect and is probably the root of the rest.
+`maintainStadium` gives an AI club the same behaviour a director has, and no
+better — it repairs its worst stand on the same panel of architects, at the
+going rate, in cash, never while in crisis, and never more than 35% of its
+balance at once.
 
-**2. The roll's recovery slows because clubs run out of money, not players.**
-The hole at week one grows from 1.1 players a club in season two to 4.8 by
-season twelve, and the time to climb back within one player of that season's
-own peak goes 2 weeks → 10 → 14.
+| tier | matchday, before → after | adults per club lost over 14 seasons |
+|---|---|---|
+| 1 | −34.6% → **−4.5%** | −1.8 → **−0.7** |
+| 2 | −27.3% → **+41.6%** | −4.8 → **−1.0** |
+| 3 | −12.7% → **+19.1%** | −7.4 → −6.3 |
+| 4 | −54.4% → **+0.6%** | −9.1 → −7.3 |
+| 5 | −46.2% → −17.1% | −10.8 → −8.7 |
 
-The refill curve flattens at week 10–13 every year. So does the free-agent
-pool, and that is the tell:
+And it makes clubs *richer*, which is the honest test of whether a ground is
+worth maintaining: after fourteen seasons, mean capacity 17,040 → **24,182**,
+mean balance £155.3m → **£165.9m**, and clubs in crisis **5 of 238 → 2**. The
+seats pay for the repairs several times over, which is why real clubs do it
+without being asked.
 
-| season | unattached at wk 1 | still unattached at wk 16 | of those, 21+ | their mean demand |
-|---|---|---|---|---|
-| 2 | 75 | **0** | — | — |
-| 3 | 168 | 5 | 4 | — |
-| 5 | 1,621 | **1,373** | 678 (49%) | £16,341 |
-| 7 | 2,322 | **1,860** | 1,202 (65%) | £10,624 |
-| 12 | 1,936 | **1,502** | 834 (56%) | £12,270 |
+**Still open, and stated plainly: this does not finish the job.** The top two
+tiers are close to flat now, but the bottom three still shed six to nine adults
+over fourteen seasons and tier 5's matchday income still falls 17%. The roll
+improves rather than heals — the hole at week one goes 4.8 to 4.5 players and
+recovery 12 weeks to 10 — and around seventeen hundred players are still
+unattached at week 16. The poorest clubs cannot afford repairs even at a third
+of their balance, so the decay outruns them.
 
-In the early seasons the market clears completely — every free agent is signed
-within five weeks. From season five it stops dead with **fourteen hundred
-players still on the shelf**, over half of them adults, while squads sit four
-to five short.
+The next thing to look at is the bottom of the pyramid specifically: whether
+tier 4 and 5 clubs can ever fund a repair, and why revenue there still falls
+when it now rises everywhere else.
 
-**It is not supply and it is not willingness.** It is price. Those leftover
-adults want about £10,600 a week; a tier-3 club pays its own adults £7,008 and
-a tier-4 club £2,096. The unattached professionals are asking more than the
-clubs who need them pay anybody. Only 26 of 238 clubs are at their budget in
-week one — they have room, they spend it in ten weeks, and then they stop.
+**A hypothesis that was wrong, recorded because it was tested.** Before finding
+the stadiums, the suspicion was ability inflation: wage demand is
+`(ability/100)^4.5`, so a 15% rise in mean ability would be an 86% rise in
+wages on its own, which matched the observed +79–92%. Measured, mean adult
+ability moved −5.1% to +3.3%. It was not the players getting better. It was the
+grounds falling down.
 
-**So the five failed fixes were all aimed at the wrong system**, exactly as
-this entry has suspected since attempt five: each raised the inflow, the wage
-bill absorbed it, and the outflow rose to match. Nothing in `aiSquad.ts` was
-ever going to move it.
-
-**Two smaller faults the same runs exposed:**
-
-- **Season one's budget is a fantasy.** Tiers 3, 4 and 5 open at 128%, 143% and
-  158% of revenue, then collapse by about 60% in season two once a real ledger
-  exists. One year of imaginary money, then a cliff.
-- **Lower-tier clubs are permanently over budget mid-season**, 105–136% from
-  season two on, while being comfortably inside it in week one. The bill grows
-  after the budget is set and is not re-floored until the next roll, so those
-  clubs cannot sign anyone for most of the season, every season.
-
-**Nothing has been changed on the back of this.** Five confident diagnoses in
-this entry have already been wrong, which is why it is written down first. The
-next move is the economy — why revenue shrinks, and why wage demands inflate
-against it — not the market.
+**One smaller fault still open from the same runs:** season one's budget is a
+fantasy — tiers 3, 4 and 5 open at 128%, 143% and 158% of revenue, then
+collapse by about 60% in season two once a real ledger exists.
 
 ## Fixed
 

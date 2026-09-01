@@ -6,7 +6,7 @@ import { updateFanMood } from '../../systems/board'
 import { developPlayer } from '../../systems/development'
 import { processFinances } from '../../systems/finance'
 import { progressProjects } from '../../systems/facilities'
-import { decayStadium, progressStadiumWork } from '../../systems/stadium'
+import { decayStadium, maintainStadium, progressStadiumWork } from '../../systems/stadium'
 import { canFieldEleven, warnHuman } from '../../systems/matchday'
 import { addInboxItem, addNews } from '../../systems/inbox'
 import { payDirectorSalary } from '../../systems/directorContract'
@@ -70,6 +70,12 @@ export const clubWeek = phase({
       // safety officer starts closing places long before it falls down.
       const wear = decayStadium(state, club, clubRng)
       const building = progressStadiumWork(state, club, clubRng)
+
+      // A club with nobody in the chair still looks after its own ground.
+      // Until this existed nothing in the world ever repaired a stand, so
+      // every stadium bar the player's slowly closed itself down — see
+      // `maintainStadium`, which is the largest single thing that was missing.
+      if (club.id !== state.playerClubId) maintainStadium(state, club, ids, clubRng)
 
       if (club.id === state.playerClubId) {
         reportInjuries(state, ids, newInjuries)

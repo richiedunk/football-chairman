@@ -769,3 +769,94 @@ export function releaseArchitects(state: GameState): void {
     if (architect.busyUntil && isAvailable(architect, state)) architect.busyUntil = null
   }
 }
+
+// ---------------------------------------------------------------------------
+// Clubs that look after their own ground
+// ---------------------------------------------------------------------------
+
+/**
+ * A club with nobody in the director's chair maintaining its own stadium.
+ *
+ * **This was missing entirely, and it was quietly the largest defect in the
+ * game.** `stadiumProject` was only ever set by the human: no AI code path
+ * anywhere started building work. So every stand at all 237 other clubs
+ * decayed at three and a half per cent a week for ever, the safety officer
+ * closed places twelve per cent at a time up to sixty per cent of a stand, and
+ * nothing was ever repaired.
+ *
+ * Measured over fourteen seasons, average stadium capacity fell 27% in the top
+ * flight and 45% in the fourth tier. Matchday income is capacity times a rate,
+ * so it fell with it — a third to a half of every club's largest revenue line,
+ * gone. That is what was shrinking the world's economy, which shrank the wage
+ * budgets, which priced adult professionals out of the lower leagues and left
+ * fourteen hundred of them unsigned while squads ran four to five men short.
+ *
+ * The young drift, the season roll that never healed and the falling revenue
+ * were all the same thing: the grounds were falling down.
+ *
+ * Real clubs do this without being asked. A safety closure is an emergency and
+ * gets fixed; a stand allowed to rot is a scandal. So an AI club repairs on the
+ * same terms a director would, and no better: it pays the going rate to a real
+ * firm from the same panel, it cannot start work while in crisis, and it can
+ * only afford what it can afford.
+ */
+
+/** Condition at which a club calls somebody in, before the closures start. */
+const AI_REPAIR_THRESHOLD = 55
+
+/**
+ * How much of the balance a club will put into its ground at once.
+ *
+ * Deliberately cautious. The point is that grounds are maintained, not that AI
+ * clubs out-build the player — a director who inherits a well-kept stadium
+ * still has expansion, hospitality and relocation to himself, and those are
+ * where the interesting decisions are.
+ */
+const AI_REPAIR_SHARE = 0.35
+
+/**
+ * Look at the ground, and call the builders if it needs them.
+ *
+ * Runs for AI clubs only, on the same rotation as the rest of the club week.
+ */
+export function maintainStadium(
+  state: GameState,
+  club: Club,
+  ids: IdFactory,
+  rng: Rng,
+): void {
+  if (club.facilities.stadiumProject) return
+  if (club.finances.inCrisis) return
+
+  // The worst stand, and only if it is bad enough to act on. Closed places
+  // count for more than a low condition: seats nobody may sit in are revenue
+  // already being lost rather than revenue at risk.
+  let worst: Stand | null = null
+  let worstScore = 0
+  for (const stand of club.facilities.stadium.stands) {
+    const closedShare = stand.capacity > 0 ? stand.closedSeats / stand.capacity : 0
+    const score = (AI_REPAIR_THRESHOLD - stand.condition) + closedShare * 120
+    if (score > worstScore) {
+      worst = stand
+      worstScore = score
+    }
+  }
+  if (!worst || worstScore <= 0) return
+
+  // Not every club is on top of it every week. Without this the whole world
+  // repairs in lockstep the moment a threshold is crossed, which is both
+  // unrealistic and a wall of identical building work.
+  if (!rng.chance(0.12)) return
+
+  const spec: WorkSpec = { kind: 'repair', standId: worst.id }
+  const affordable = club.finances.balance * AI_REPAIR_SHARE
+  const bids = inviteTenders(state, club, spec)
+    .filter((b) => b.available && b.cost <= affordable)
+  if (bids.length === 0) return
+
+  // Cheapest that can do the job. An AI club has no reason to pay for a name,
+  // and a director who does is buying speed and a better finish with money the
+  // board would rather have kept — which is the trade the human gets to make.
+  const chosen = bids.reduce((best, b) => (b.cost < best.cost ? b : best))
+  awardContract(state, club, ids, spec, chosen.architectId, 'cash')
+}
