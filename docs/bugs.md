@@ -156,12 +156,44 @@ asks for eight or more players aged 24–31 at tiers 4 and 5; this gets tier 5 t
 4.9 and tier 4 to 6.2. Tier 3 is fractionally worse (7.3 to 6.5). It is real
 movement on the right axis rather than a finished job.
 
-**One hypothesis tested and discarded on the way.** `promoteFromAcademy` runs
+**Two more hypotheses tested and discarded. Both are recorded so nobody
+retries them.**
+
+*Stretching the ability ceiling for a long-unattached player.* The obvious next
+move, and well motivated: the "will not sign above its station" rule was
+written for the transfer market, where the seller has options, and a man nobody
+has called in eight months has none. An ex-league professional turning out in
+non-league is one of the most familiar things in English football. Tried at up
+to +35%, scaled on `weeksUnattached`.
+
+It made things **worse**, and the reason is worth keeping:
+
+| tier 5 | before | with the stretch |
+|---|---|---|
+| aged 24–31 | 4.9 | **4.1** |
+| signings a season | 50 | 39 |
+| rejected "too good" | 808,142 | 482,651 |
+| rejected on budget | 423,666 | **964,955** |
+
+The gate simply moved. Clubs considered better players they still could not
+pay for, so the rejection went from the ceiling to the budget — and the tier
+that *could* pay took the benefit. Tier 3's 24–31 band rose 6.5 to 7.6 while
+tiers 4 and 5 both fell. Relaxing a quality limit helps whoever has money,
+which is always the division above.
+
+*Reordering promotion and recruitment.* `promoteFromAcademy` runs
 before `recruitFreeAgents` every week, so the free seventeen-year-old takes the
 place before the market is consulted — an obvious ratchet. Swapping the order
 did essentially nothing and made tier 5 slightly worse: its 24–31 band went 3.6
 to 3.4 and promotions actually *rose*, 2.99 to 3.15, because recruitment
 declines most weeks by design and promotion fires anyway. Reverted.
+
+**Where that leaves it.** The acceptance test — eight or more players aged
+24–31 at tiers 4 and 5 — is not met: tier 4 is at 6.2 and tier 5 at 4.9. Three
+things have now been tried against the remaining gap and only one worked. What
+the failures have in common is that both tried to change *who a club would
+accept*, and the constraint is what a club can *pay*. The next idea should
+address that or it will meet the same wall.
 
 
 ### An unused Capacitor plugin is wired into both native projects
