@@ -1,6 +1,5 @@
 import { clamp, Rng } from '../rng'
 import { totalWageBill } from './valuation'
-import { emptyLedger } from '../world/worldGen'
 import { revenuePerHead } from './stadium'
 import {
   debtTolerance, lossCoverage, reserveRelease, wageBudgetShare,
@@ -547,6 +546,27 @@ export function awardSeasonPrizeMoney(
   club.finances.balance += prize
   club.finances.season.prizeMoney += prize
   return prize
+}
+
+/** A ledger with nothing in it yet: a club's opening books, and every roll. */
+export function emptyLedger() {
+  return {
+    matchdayIncome: 0,
+    tvIncome: 0,
+    sponsorshipIncome: 0,
+    prizeMoney: 0,
+    transfersIn: 0,
+    wagesPaid: 0,
+    transfersOut: 0,
+    facilitiesSpend: 0,
+    staffWages: 0,
+    agentFees: 0,
+    amortisation: 0,
+    playerTradingProfit: 0,
+    interestPaid: 0,
+    otherIncome: 0,
+    otherCosts: 0,
+  }
 }
 
 /** Close the season's books and open a fresh ledger. */

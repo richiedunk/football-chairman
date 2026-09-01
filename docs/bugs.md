@@ -361,11 +361,44 @@ wages on its own, which matched the observed +79–92%. Measured, mean adult
 ability moved −5.1% to +3.3%. It was not the players getting better. It was the
 grounds falling down.
 
-**One smaller fault still open from the same runs:** season one's budget is a
-fantasy — tiers 3, 4 and 5 open at 128%, 143% and 158% of revenue, then
-collapse by about 60% in season two once a real ledger exists.
-
 ## Fixed
+
+### Season one's wage budget was a fantasy, and nothing else ever used the formula
+Tiers 3, 4 and 5 opened at 128%, 142% and 157% of revenue over fourteen
+seasons, then fell by around 60% in season two. Tier 1 opened at a defensible
+80%, so the lower a club sat the more imaginary money it started with.
+
+There were two budget formulas. `recalculateBudgets` — revenue, minus running
+costs, times the owner's share — sets the budget at every season roll and on
+every division change. World generation used a different one: 58% of
+`revenueScale`, the reputation-only proxy `createFinances` invents to size
+sponsorship and balances, floored at 108% of the wage bill. Nothing used that
+number again.
+
+`scripts/budgetorigin.ts` measured both on the same untouched world, ten seeds,
+before a week is played. `revenueScale/52` against `weeklyRevenue`: £106k
+against £38k in tier 5, £220k against £89k in tier 4, £492k against £222k in
+tier 3 — but £1.16m against £1.68m in tier 1. Reputation grows faster than gate
+receipts, so a fixed share of the proxy is not a fixed share of income, and it
+is wrong in opposite directions at the two ends of the pyramid. On the same
+worlds the board routine gave 82%, 86%, 66%, 51% and 51% of revenue by tier
+against generation's 84%, 101%, 128%, 144% and 163%.
+
+Generation now calls `recalculateBudgets` like everything else. `wagedrift.ts`,
+fourteen seasons, season one then season two: tier 3 128%→67% became 61%→66%,
+tier 4 142%→57% became 54%→55%, tier 5 157%→58% became 50%→55%, tier 1 80%→80%
+became 79%→77%. The cliff is gone and season one now sits inside each tier's
+own long-run band. `bill/bud` opens at 103–108% instead of 37–52%, matching
+every later season.
+
+**A limit, stated:** half to three quarters of clubs now open with their budget
+resting on the floor under it — the wages they have already committed — rather
+than on an allowance their income could support. That is the same condition
+that holds from season two onwards (`bill/bud` sits at 100%+ for every tier in
+every later season), so this makes season one honest rather than comfortable.
+Whether that equilibrium is itself right is the open question above, not this
+one.
+
 
 ### A club short of players starts the match with ten
 Worse than reported. `selectTeam` walked a fallback ladder whose last rung was
