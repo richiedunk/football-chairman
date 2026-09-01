@@ -13,6 +13,33 @@ will break next.
 
 ## Open
 
+### The dressing room is a tax again, and the measurement that said otherwise was corrupt
+`roomcheck.ts` builds a world per seed in one process. The rating memo was
+keyed on player id and ids restart at one per world, so every trial after the
+first read the previous trial's ratings — see "The rating memo was handing
+worlds each other's players" under Fixed. The dressing-room figures were taken
+through that.
+
+Re-measured on the fixed engine, one season, eight seeds:
+
+| | reported | actual |
+|---|---|---|
+| leader over nothing | +1.27 morale | **−0.21** |
+| professional over nothing | — | +0.06 |
+| disruptive under nothing | −1.69 morale | **−2.62** |
+
+So a leader is worth nothing measurable and a disruptive player costs two and a
+half morale. The roadmap's claim that the "just a tax" failure was designed out
+is false and has been corrected there.
+
+The mechanism to look at is `grievanceDamping` in `dressingRoom.ts` and the
+room term in `morale.ts`: a good room currently damps grievances rather than
+adding cheer, which was the fix for the tax problem, and on this evidence the
+damping is too weak to show up against the noise of a season. Worth measuring
+before tuning — the upside has now been wrong twice, once by design and once
+by instrument.
+
+
 
 ### The season roll digs a hole the world takes longer and longer to climb out of
 Measured with `scripts/churn.ts`, standard world, 492 clubs, twelve seasons,

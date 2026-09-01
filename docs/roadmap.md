@@ -560,14 +560,35 @@ inventing cheer** — which is also a better model of what a senior professional
 does. He does not make contented players more contented; he stops an unhappy
 one becoming a problem.
 
+~~| one senior player's traits | tone | squad morale |~~
+~~| leader | 0.85 | +1.27 |~~
+
+**That table was wrong, and the tax is still there.** It was measured through a
+corrupted rating cache: `roomcheck.ts` builds a world per seed in one process,
+the memo was keyed on player id, and ids restart at one for every world — so
+every trial after the first was reading the previous trial's ratings. See "The
+rating memo was handing worlds each other's players" in `docs/bugs.md`.
+
+Re-measured on the fixed engine, one season, eight seeds:
+
 | one senior player's traits | tone | squad morale |
 |---|---|---|
-| leader | 0.85 | **+1.27** |
-| professional | 0.71 | +1.21 |
-| nothing | 0.52 | — |
-| disruptive | 0.10 | **−1.69** |
+| leader | 0.81 | **−0.21** |
+| professional | 0.68 | +0.06 |
+| nothing | 0.48 | — |
+| disruptive | 0.11 | **−2.62** |
+| disruptive + hothead | −0.03 | −3.54 |
 
-Measured over ten seeds, one season each. The first attempt at this measured
+A leader is worth nothing measurable; a disruptive player costs two and a half
+morale. `roomcheck` prints `ORDERING BROKEN — the upside half is not real`, and
+it is right. The absorb-grievances model is the correct idea and is too weak to
+show against a season's noise, so the feature is back to being the tax the
+warning above is about. Re-opened in `docs/bugs.md`.
+
+The upside has now been measured wrong twice: once because the instrument
+compared league points across runs that had relegated away from each other, and
+once because the instrument was reading another world's players. Both times the
+number that came back was the number that made the design look finished. The first attempt at this measured
 three seasons and compared league points, which measured nothing: the runs
 promote and relegate away from each other, so by season three the points are
 scored against different opposition. It reported that a squad with no leader
