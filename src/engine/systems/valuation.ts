@@ -108,6 +108,25 @@ export function computeValue(
  * end, because elite wages are set by a handful of clubs bidding against each
  * other rather than by any notion of worth.
  */
+/**
+ * How steeply a division's ability to pay rises with its standing.
+ *
+ * Above 1 the curve bends: the top flight is unchanged and everything below it
+ * pays proportionally less, which is what matches an economy where revenue
+ * spans 47x across the pyramid. At 1.35 the second tier pays 14% less than the
+ * old straight line, the fourth 23% less and the fifth 32% less.
+ */
+const LEAGUE_WAGE_CURVE = 1.35
+
+/**
+ * Chosen so the top flight is exactly where it was.
+ *
+ * `0.04 + 0.70^1.35 * 5.63 = 3.512`, which is what `0.04 + 0.70 * 4.96` gave.
+ * The point of the change is the bottom of the pyramid, and leaving the top
+ * untouched is what keeps it a redistribution rather than a devaluation.
+ */
+const LEAGUE_WAGE_SCALE = 5.63
+
 export function computeWageDemand(
   player: Player,
   league: League | null,
@@ -133,13 +152,40 @@ export function computeWageDemand(
 
   // How much a division pays for the same player.
   //
+  // **The curve is not linear, and measuring is what settled that.** The old
+  // version was `0.04 + (reputation / 100) * 4.96`, which spans 1.13 at the
+  // bottom of the pyramid to 3.51 at the top — a range of 3.1. Weekly revenue
+  // across the same two tiers spans **47**. A wage curve that flat against an
+  // economy that steep prices the bottom division out of its own market.
+  //
+  // Measured at twelve seasons, a fifth-tier club took £36,510 a week, earned
+  // £1,995 of that per player, and paid £1,517 for him — **76% of the revenue
+  // he represents**, against 47% in the top flight and 42% in the fourth tier.
+  // Its board was already allocating 87% of revenue to wages, well past the
+  // 55-75% this file calls real, and could still only afford eighteen players.
+  //
+  // The consequence was not "expensive players". It was **no players**:
+  // `recruitOne`'s budget gate rejected 5.4 million candidates a season
+  // world-wide, more than the ability ceiling rejected, and half of all
+  // attempts to sign anybody ended with a club examining the entire free-agent
+  // pool and finding nobody it could take. Squads then filled from the academy,
+  // because a boy is free — which is why the fifth tier settled at twenty
+  // players of whom 3.6 were aged 24 to 31.
+  //
+  // It also explains why blocking academy promotion failed when it was tried:
+  // `docs/bugs.md` records promotions falling 38% without producing a single
+  // extra signing, and clubs simply ending up shorter. Of course they did. They
+  // could not afford anybody either way.
+  //
   // Recalibrated when the squad-cost rule was built and immediately showed
   // that nobody could break it. Wages were 22% of revenue in the top flight
   // and 44% in non-league, against a real range of roughly 55-75% everywhere,
   // and clubs were sitting on hundreds of millions they had no way to spend.
   // The slope is steeper than the old one because the error was worst at the
   // top: a division's ability to pay rises far faster than its standing does.
-  const leagueFactor = league ? 0.04 + (league.reputation / 100) * 4.96 : 1.3
+  const leagueFactor = league
+    ? 0.04 + Math.pow(league.reputation / 100, LEAGUE_WAGE_CURVE) * LEAGUE_WAGE_SCALE
+    : 1.3
   const economyFactor = nation ? nation.economyFactor : 1
   wage *= leagueFactor * economyFactor
 

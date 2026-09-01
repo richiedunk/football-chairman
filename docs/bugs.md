@@ -38,6 +38,67 @@ loan by the agreed share. So loaning out an expensive player, the obvious way
 to answer that mandate, moves the number the board is *not* looking at.
 
 
+### The bottom of the pyramid could not afford anybody, and now it can — but it still signs boys
+**Half fixed, and the half that is not is written down.**
+
+**What was blocking it, measured rather than guessed.** `scripts/recruitgates.ts`
+counts every gate in `recruitOne`. Across seasons nine to twelve, world-wide,
+per season:
+
+| | |
+|---|---|
+| chances to sign | 12,391 |
+| no registration place free | 4,279 (34.5%) |
+| did not bother that week | 1,619 (13.1%) |
+| **looked at the whole pool and found nobody it could take** | **6,092 (49.2%)** |
+| signed somebody | 402 (3.2%) |
+
+And the reason, counted per candidate examined: **the wage gate rejected 5.37
+million a season**, more than the ability ceiling's 3.28 million, against 13,658
+refused on willingness and *zero* on being beneath the club's standard.
+
+Half of all attempts to sign anyone ended with a club reading the entire
+free-agent list and being able to take none of it. That is why squads filled
+from the academy: a boy is free.
+
+**Why it could not afford them.** The league wage factor was a straight line,
+`0.04 + (reputation / 100) * 4.96`, spanning 1.13 at the bottom of the pyramid
+to 3.51 at the top — a range of **3.1** against a weekly revenue range of
+**47**. Measured at twelve seasons a fifth-tier club took £36,510 a week, earned
+£1,995 of that per player and paid £1,517 for him: **76% of the revenue he
+represents**, against 47% in the top flight. Its board was allocating **87% of
+revenue** to wages, well past the 55–75% this project calls real, and still
+afforded eighteen players.
+
+The curve bends now — `LEAGUE_WAGE_CURVE = 1.35`, scaled so the top flight is
+exactly where it was, so this is a redistribution and not a devaluation.
+
+| tier 5, at twelve seasons | before | after |
+|---|---|---|
+| budget as a share of revenue | 87% | **67.5%** |
+| headroom, budget minus bill | £234 | **£1,570** |
+| players | 18.3 | 19.8 |
+| wage per player | £1,517 | £1,049 |
+
+Tier 1 is unchanged by design. Tier 4 gains too: 21.9 players to 24.7, and its
+24–31 band 4.0 to 5.6.
+
+**What it did not fix: tier 5's age profile.** The 24–31 band is still **3.6**.
+The extra places went to eighteen- to twenty-three-year-olds. So the money was
+one binding constraint and there is a second one behind it, which the same
+measurement points at: the free-agent pool is shaped young. `releaseUnpromotedYouth`
+tips every unpromoted academy player onto the market each summer, and
+`recruitOne` scores candidates on `currentAbility`, so a club takes the best
+available and the best available is a nineteen-year-old.
+
+That is the next step, and it is a supply problem rather than a money one:
+**who becomes a free agent**, not what they cost. Recorded here rather than
+guessed at, because six diagnoses of this defect have already been wrong and
+this is the seventh measurement that has changed the answer.
+
+**Also still true:** loans remain 0.0 per club in every tier.
+
+
 ### An unused Capacitor plugin is wired into both native projects
 `@capacitor/preferences` is in `package.json` and no code imports it, but
 `ios/App/Podfile` and `android/capacitor.settings.gradle` both point at it in

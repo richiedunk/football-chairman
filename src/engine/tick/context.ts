@@ -3,6 +3,7 @@ import type { IdFactory } from '../ids'
 import type { NameGenerator } from '../names/generator'
 import { phaseFactory, type Phase } from '../phases'
 import type { TransferAttemptStats } from '../systems/transfers'
+import type { RecruitStats } from '../systems/aiSquad'
 import type { Club, Fixture, GameState, ID, MatchResult } from '../types'
 
 /**
@@ -71,6 +72,8 @@ export interface TickContext {
   facts: TickFacts
   /** A tally for the AI transfer market, when a calibration run wants one. */
   transferStats?: TransferAttemptStats
+  /** A tally of why AI clubs sign, or do not sign, free agents. */
+  recruitStats?: RecruitStats
   /** Set by whichever phase ends the director's employment. */
   sack: (message: string) => void
   /** Set by the rollover phase. */

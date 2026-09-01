@@ -2,6 +2,7 @@ import { Rng } from '../rng'
 import { IdFactory } from '../ids'
 import { NameGenerator } from '../names/generator'
 import type { TransferAttemptStats } from '../systems/transfers'
+import type { RecruitStats } from '../systems/aiSquad'
 import { guardedFacts, runPhases } from '../phases'
 import { academyIntake, openTheWeek, seasonClock } from './phases/calendar'
 import { cupDraws, cupRounds, fixtureList, matchdayIntegrity, matches } from './phases/matchday'
@@ -69,6 +70,11 @@ export interface TickDeps {
    * somewhere else entirely.
    */
   transferStats?: TransferAttemptStats
+  /**
+   * A tally of why AI clubs do and do not sign free agents, when a calibration
+   * run wants one. Absent in the game and in every test.
+   */
+  recruitStats?: RecruitStats
 }
 
 /**
@@ -119,7 +125,7 @@ export const WEEK: readonly TickPhase[] = [
 ]
 
 export function advanceWeek(state: GameState, deps: TickDeps): TickResult {
-  const { ids, names, transferStats } = deps
+  const { ids, names, transferStats, recruitStats } = deps
   const week = state.date.week
   const rng = new Rng(`${state.seed}:${state.date.season}:${week}`)
 
@@ -135,6 +141,7 @@ export function advanceWeek(state: GameState, deps: TickDeps): TickResult {
     week,
     facts,
     transferStats,
+    recruitStats,
     sack: (message: string) => {
       result.sacked = true
       result.sackMessage = message

@@ -56,6 +56,53 @@ export const PATIENCE_WEEKS = 104
 export interface AiSquadContext {
   rng: Rng
   ids: IdFactory
+  /**
+   * Where free-agent recruitment goes, when a calibration run is counting.
+   *
+   * Absent in the game and in every test. Guessing which of six gates is the
+   * binding one has been wrong repeatedly in this project's history — the
+   * ability ceiling was blamed and cleared by measurement, the squad target
+   * was blamed and cleared — so the gates count themselves now.
+   *
+   * Passed in rather than kept in a module variable: ambient state shared by
+   * every world in the process is how two identical seeded runs once produced
+   * different worlds.
+   */
+  recruitStats?: RecruitStats
+}
+
+/** A tally of why a club did or did not sign a free agent. */
+export interface RecruitStats {
+  /** Chances to sign at all. */
+  passes: number
+  /** No registration place free, so it never looked. */
+  squadFull: number
+  /** Looked, but the weekly roll said not this week. */
+  didNotBother: number
+  /** Looked at the pool and it was empty of anyone at all. */
+  poolEmpty: number
+  /** Rejected: too good for this club. */
+  aboveCeiling: number
+  /** Rejected: below the standard this club will stoop to. */
+  belowFloor: number
+  /** Rejected: the wage would not fit the budget. */
+  unaffordable: number
+  /** Rejected: he would not come. */
+  unwilling: number
+  /** Signed. */
+  signed: number
+  /** Signed and aged 21 or over. */
+  signedAdult: number
+  /** Squad was below the emergency floor, so the budget did not apply. */
+  emergencies: number
+}
+
+export function newRecruitStats(): RecruitStats {
+  return {
+    passes: 0, squadFull: 0, didNotBother: 0, poolEmpty: 0, aboveCeiling: 0,
+    belowFloor: 0, unaffordable: 0, unwilling: 0, signed: 0, signedAdult: 0,
+    emergencies: 0,
+  }
 }
 
 export function seniorSquad(state: GameState, club: Club): Player[] {
@@ -367,6 +414,8 @@ function recruitOne(
   // to sign it. Outside a window a club with nineteen players cannot buy
   // anyone, so declining a free agent is choosing to be short until February.
   // Which is exactly why real clubs sign free agents in October.
+  const stats = ctx.recruitStats
+  if (stats) stats.passes += 1
   const squad = seniorSquad(state, club)
   // Places for the ceiling, bodies for the emergency — the same distinction the
   // registration rules make, and the reason under-21s never blocked a signing
@@ -377,7 +426,7 @@ function recruitOne(
   const freeAgentCeiling = reserving
     ? Math.max(EMERGENCY_SQUAD, target - (TARGET_SENIOR_SQUAD - FREE_AGENT_TARGET))
     : target
-  if (places >= freeAgentCeiling) return null
+  if (places >= freeAgentCeiling) { if (stats) stats.squadFull += 1; return null }
 
   const shortfall = freeAgentCeiling - places
   const desperation = clamp(shortfall / 8, 0, 1)
@@ -385,7 +434,11 @@ function recruitOne(
   // it stops shopping and starts hiring. Without this a club that fell behind
   // never caught up, and a handful reached zero senior players.
   const emergency = squad.length < EMERGENCY_SQUAD
-  if (!emergency && !rng.chance(0.45 + desperation * 0.5)) return null
+  if (stats && emergency) stats.emergencies += 1
+  if (!emergency && !rng.chance(0.45 + desperation * 0.5)) {
+    if (stats) stats.didNotBother += 1
+    return null
+  }
 
   const league = state.leagues[club.leagueId]
   const nation = state.nations[club.nationId]
@@ -411,7 +464,7 @@ function recruitOne(
     // floor, **zero** had nobody under their ceiling, and the median had 1,119
     // signable free agents. Those clubs are not blocked from signing. Do not
     // lift it again without a measurement that says which clubs it blocks.
-    if (player.currentAbility > ceiling * 1.02) continue
+    if (player.currentAbility > ceiling * 1.02) { if (stats) stats.aboveCeiling += 1; continue }
     if (player.currentAbility < floor) break // the list is sorted, so we are done
 
     const wage = Math.max(90, Math.round(computeWageDemand(player, league, nation)))
@@ -425,13 +478,16 @@ function recruitOne(
     // all: one measured non-league side had a budget of £11,638 a week and
     // nine players already on £10,344 of it. Left to the budget it stalled at
     // thirteen players for ever.
-    if (!emergency && wageBill + wage > budget) continue
+    if (!emergency && wageBill + wage > budget) { if (stats) stats.unaffordable += 1; continue }
 
     // Would he come? A player nobody has called for a year is not choosy, and
     // a club with nine fit men is not in a position to be turned down.
     if (!emergency) {
       const patience = clamp(player.weeksUnattached / 45, 0, 1)
-      if (moveAppeal(state, player, club) + patience * 0.55 < 0.55) continue
+      if (moveAppeal(state, player, club) + patience * 0.55 < 0.55) {
+        if (stats) stats.unwilling += 1
+        continue
+      }
     }
 
     // A club in trouble shops on price, not on quality. One that is merely
@@ -462,7 +518,11 @@ function recruitOne(
     }
   }
 
-  if (!best) return null
+  if (!best) { if (stats) stats.poolEmpty += 1; return null }
+  if (stats) {
+    stats.signed += 1
+    if (best.age >= 21) stats.signedAdult += 1
+  }
 
   // Short deals for free agents cycled the same players back onto the market
   // every year and doubled the churn the renewal pass had to absorb.

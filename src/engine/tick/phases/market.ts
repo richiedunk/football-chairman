@@ -63,7 +63,7 @@ export const valuations = phase({
 
 export const transfers = phase({
   name: 'transfers',
-  run({ state, ids, rng, transferStats }) {
+  run({ state, ids, rng, transferStats, recruitStats }) {
     const transferCtx = { rng: rng.fork('transfers'), ids, stats: transferStats }
     const negotiationNotices = processNegotiations(state, transferCtx)
     for (const notice of negotiationNotices) {
@@ -79,7 +79,7 @@ export const transfers = phase({
     // Renewals, academy promotions and free-agent signings. Runs every week and
     // outside the window as well, because a club short of players in February
     // cannot wait until June and a free agent needs no window.
-    runAiSquadManagement(state, { rng: rng.fork('aisquad'), ids })
+    runAiSquadManagement(state, { rng: rng.fork('aisquad'), ids, recruitStats })
     reportIncomingOffers(state, ids, transferCtx)
   },
 })
