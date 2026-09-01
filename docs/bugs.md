@@ -237,20 +237,43 @@ near twelve. Tier 5's matchday income does the same thing: 21,856 down to
 headline is an initial settling with ten stable seasons behind it.
 
 **So the world is generated richer than its own economy can sustain, and
-spends six to twelve seasons finding its level.** That is a different defect
-from a drift, and it wants a different answer:
+spends six to twelve seasons finding its level.** The first reading of that was
+that generation is wrong and the equilibrium honest. **That reading was wrong,
+and both halves of it were wrong.**
 
-- either **world generation is wrong** — a tier 5 club should start with about
-  twelve adult professionals and a bigger academy, not twenty, in which case
-  the equilibrium is right and the opening position is a fiction;
-- or **the bottom of the economy is too poor** — non-league clubs should be
-  able to sustain eighteen professionals, in which case revenue down there
-  needs raising.
+*What the squads actually settle into.* Mean per club at tier 5 after twelve
+seasons — 20.0 players, of whom:
 
-Worth noting which is realistic: a real non-league side carries sixteen to
-twenty players and most of them are part-time. Eleven full-time adults plus an
-academy may be the more honest world. This is a design decision rather than a
-bug, and it is the next thing to settle.
+| 16–17 | 18–20 | 21–23 | 24–27 | 28–31 | 32+ |
+|---|---|---|---|---|---|
+| 2.5 | **7.9** | 3.8 | **1.6** | **2.0** | 2.3 |
+
+Eight eighteen-to-twenty-year-olds, and a prime-age core of **3.6 players
+between 24 and 31**. That is not a non-league football club, it is a youth team
+with a few veterans in it. No level of the pyramid looks like that.
+
+*What a real one looks like.* The average squad across the National League
+System is **23 players**, against 26 at professional clubs, and the majority of
+National League (tier 5) sides are **fully professional** — several are former
+EFL clubs. So a fifth-tier club is around twenty-three players and most of them
+are full-time, not eleven adults propped up by an academy.
+
+That figure is on the record because the earlier version of this entry asserted
+the opposite — "eleven full-time adults plus an academy may be the more honest
+world", and "most of them are part-time" — with nothing behind it. No source
+was found for the *age profile* of National League squads, so nothing here
+claims one; the composition above is condemned on its own terms rather than
+against a measured target.
+
+**So the equilibrium is the defect, not the opening position.** Generating
+smaller lower-league squads would have made the game agree with a number that
+is wrong. The work is at the bottom of the economy: a tier 4 or 5 club has to
+be able to keep about twenty players, most of them grown men.
+
+**A separate finding from the same run: the loan system does nothing.** Players
+loaned out and loaned in are **0.0 per club in every tier** at equilibrium.
+Loans are the obvious way a young player gets games and a thin club gets
+cover, and at twelve seasons in there are none anywhere in the world.
 
 **A related oddity the same run turned up:** clubs are hoarding enormous sums.
 Mean balance after twelve seasons is £207m in the top flight and £30m in tier
