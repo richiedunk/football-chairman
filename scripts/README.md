@@ -11,6 +11,7 @@ running one of these rather than by reading code.
 | `npx tsx scripts/seasontest.ts` | Runs three full seasons and prints finances, board confidence, fan mood, XP and squad size each year. Catches slow drift that a single-week test cannot. |
 | `npx tsx scripts/phasetime.ts` | Times each simulation phase separately over a whole world. Use before optimising anything. |
 | `npx tsx scripts/cuptest.ts` | Runs a cup to completion and prints the round-by-round field size. |
+| `npx tsx scripts/budgetorigin.ts` | Where a club's *opening* wage budget comes from, and whether it agrees with the board routine that sets every budget after it. Prints revenue, upkeep, wage bill, the generated budget and what `recalculateBudgets` would set on the same untouched world, by tier over ten seeds. Found world generation budgeting 58% of a reputation-only proxy that ran to 2.8x real income in non-league, so every club below the top flight opened on money it had never earned. `SEED`, `SIZE`, `SEEDS`. |
 | `npx tsx scripts/financecheck.ts` | Revenue, wages, upkeep and net position by division at world creation. Found facility upkeep taking 58% of a non-league club's revenue. |
 | `npx tsx scripts/crisischeck.ts` | Runs three careers for a season and reports how much of the world ends up under a transfer embargo. |
 | `npx tsx scripts/attrcheck.ts` | Attribute means by division, and how far generated attributes drift from the ability they encode. |

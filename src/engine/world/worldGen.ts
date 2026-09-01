@@ -6,6 +6,7 @@ import { generateClubName, generateStadiumName, type ClubNameStyle } from './clu
 import { generatePlayer, generateSquad, generateYouthIntake } from './playerGen'
 import { generateBackroom, generateFreeAgentStaff } from './staffGen'
 import { computeValue, computeWageDemand } from '../systems/valuation'
+import { emptyLedger, recalculateBudgets } from '../systems/finance'
 import { scheduleLeague } from '../sim/schedule'
 import { generateArchitects } from '../systems/stadium'
 import { autoRegister } from '../systems/registration'
@@ -569,14 +570,17 @@ function createFinances(rng: Rng, reputation: number, league: League, nation: Na
   // left over is small and volatile, which is what makes finance a live
   // constraint rather than a number that only goes up.
   const revenueScale = Math.pow(reputation / 100, 2.4) * 120_000_000 * nation.economyFactor
-  const wageBudget = Math.round(((revenueScale * 0.58) / 52) / 100) * 100
   const balance = Math.round(rng.normal(revenueScale * 0.06, revenueScale * 0.09))
   const debt = rng.chance(0.35) ? Math.round(Math.abs(rng.normal(revenueScale * 0.12, revenueScale * 0.1))) : 0
 
   return {
     balance,
-    wageBudget: Math.max(2_500, wageBudget),
-    transferBudget: Math.max(0, Math.round(Math.max(0, balance) * 0.45 + revenueScale * 0.05)),
+    // Placeholders. Both budgets are set by `setBudgets` once the squad, the
+    // staff and the facilities exist, using the board's own routine —
+    // `revenueScale` is a reputation proxy, not income, and budgeting a share
+    // of it handed the lower divisions more than they earned.
+    wageBudget: 0,
+    transferBudget: 0,
     debt,
     weeklyInterestRate: 0.0009,
     season: emptyLedger(),
@@ -590,26 +594,6 @@ function createFinances(rng: Rng, reputation: number, league: League, nation: Na
     },
     inCrisis: false,
     regulation: { lastRatio: null, breachSeasons: 0, sanctions: [], pointsDeducted: 0 },
-  }
-}
-
-export function emptyLedger() {
-  return {
-    matchdayIncome: 0,
-    tvIncome: 0,
-    sponsorshipIncome: 0,
-    prizeMoney: 0,
-    transfersIn: 0,
-    wagesPaid: 0,
-    transfersOut: 0,
-    facilitiesSpend: 0,
-    staffWages: 0,
-    agentFees: 0,
-    amortisation: 0,
-    playerTradingProfit: 0,
-    interestPaid: 0,
-    otherIncome: 0,
-    otherCosts: 0,
   }
 }
 
@@ -704,18 +688,24 @@ function finalisePlayerEconomics(state: GameState, player: Player, season: numbe
 }
 
 function setBudgets(state: GameState, club: Club): void {
-  // The wage budget generated from revenue has to be reconciled against the
-  // squad the club actually has, or half the world starts in breach of it.
-  let wageBill = 0
-  for (const id of club.squad) {
-    const p = state.players[id]
-    if (p?.contract) wageBill += p.contract.wage
-  }
-  for (const id of club.staff) {
-    const s = state.staff[id]
-    if (s?.contract) wageBill += s.contract.wage
-  }
-  club.finances.wageBudget = Math.max(club.finances.wageBudget, Math.round(wageBill * 1.08))
+  // The board sets the budget, here as in every season after this one.
+  //
+  // This used to be a second, separate formula: 58% of `revenueScale`, the
+  // reputation-only proxy `createFinances` invents, floored at 108% of the
+  // wage bill. Nothing else in the game ever used it again, and it did not
+  // agree with the board. `revenueScale` is not revenue — measured over ten
+  // compact worlds it ran to 2.8x `weeklyRevenue` in the fifth tier and 2.2x
+  // in the fourth, while sitting *below* it in the first, because reputation
+  // grows faster than gate receipts do. So 58% of it came out at 128% of a
+  // third-tier club's income, 144% of a fourth-tier one's and 163% of a
+  // non-league club's, against a defensible 84% at the top.
+  //
+  // Every club therefore got one season of money it had never earned, and
+  // then a ~60% cut the first time `recalculateBudgets` ran at the end of it.
+  // The cliff was not the board tightening; it was the first honest number.
+  // Calling the same routine here means there is only one answer to what a
+  // club can afford, and season one is not a special case.
+  recalculateBudgets(state, club)
   const sponsorship = club.finances.sponsorship
   sponsorship.expiresSeason = state.date.season + 1 + (club.reputation % 3)
 }
