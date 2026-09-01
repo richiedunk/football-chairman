@@ -151,7 +151,6 @@ export function gotAwayStory(
     truth: 'true',
     subjectPlayerIds: [player.id],
     subjectClubIds: [club.id],
-    subjectStaffIds: [],
     plantedBy: null,
     effects: [],
     response: null,

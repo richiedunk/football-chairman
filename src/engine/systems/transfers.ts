@@ -116,7 +116,6 @@ export function openNegotiation(
     respondsOnWeek: state.date.week + 1,
     competingClubIds: [],
     log: [],
-    playerInitiated: buyingClubId === state.playerClubId,
     deadlineWeek: windowCloseWeek(state.date.week),
   }
 

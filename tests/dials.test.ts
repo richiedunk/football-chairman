@@ -31,58 +31,25 @@ import { findUnreadFields } from './support/unreadFields'
  * listed so the count can only go down: a new one fails this test, and so does
  * removing a field from the register without wiring it up or deleting it.
  * Nothing here is approved — this is the bill, itemised.
+ *
+ * It started at seventeen. Fourteen were deleted outright and one more,
+ * `MediaBriefing.targetStaffId`, went with them: deleting the field it fed
+ * left it feeding nothing.
+ *
+ * A field the game ignores but a *test* asserts on does not appear here, and
+ * that is a real limit rather than an oversight. `Owner.faithInDirector` is
+ * the live example: a takeover computes the new owner's opinion of you and two
+ * tests check the arithmetic, so something reads it and this check is quiet —
+ * while no code in the game has ever asked. That one is in `docs/bugs.md`.
  */
 
-/**
- * Known unread fields, with what each one actually is.
- *
- * Two kinds, and they want opposite fixes. A **silent feature** is code that
- * was written to do something and does not; the fix is to consult it. **Dead
- * weight** is a value carried in every save for no reader; the fix is to
- * delete it. Neither is done here — both change the game, and that is a
- * decision with an owner.
- */
+/** Known unread fields, with what each one actually is. */
 const KNOWN_UNREAD: Record<string, string> = {
-  // Silent features: written deliberately, consulted by nothing.
-  'Owner.faithInDirector':
-    'A new owner arrives with a considered view of you — takeovers.ts computes '
-    + 'it from fit, clamped 5-95 — and nothing ever asks. Being inherited by an '
-    + 'owner who does not rate you should be one of the worst things that can '
-    + 'happen in this job, and at the moment it is nothing at all.',
-  'TransferNegotiation.playerInitiated':
-    'Records whether the human opened the negotiation. Nothing behaves '
-    + 'differently either way — an AI club treats an approach from the player '
-    + 'exactly as it treats one of its own.',
   'TransferNegotiation.deadlineWeek':
     'Every negotiation is given a deadline at the window close. Nothing expires '
     + 'one, so a negotiation opened in July is still open in May.',
-  'TransferTerms.optionFee':
-    'Not written anywhere either. An option-to-buy on a loan that no code path '
-    + 'can create or exercise.',
   'GameSettings.fastAdvance':
     'A setting, defaulted to false, that no screen offers and no code obeys.',
-
-  // Dead weight: carried in the save, read by nobody.
-  'Club.isPlayerClub':
-    'Maintained in four places across season roll, world gen and dismissal. '
-    + '`state.playerClubId` is the actual source of truth and every reader uses '
-    + 'it, so this is a second copy that can only ever disagree.',
-  'Player.birthWeek':
-    'Rolled for every player in the world. Ages come from the season, so this '
-    + 'is 9,700 numbers nothing consults.',
-  'Player.secondNationalityId':
-    'Rolled for every player. Dual nationality would be worth having — it is '
-    + 'how registration and international eligibility get interesting — but '
-    + 'neither system asks.',
-  'FacilityProject.totalCost': 'Set when a project starts; progress reads the weekly figure.',
-  'Takeover.collapseReason': 'Initialised to null and never written again, let alone read.',
-  'SeasonHistory.continentalResult': 'Recorded every season for a history screen that does not show it.',
-  'SeasonHistory.finalBalance': 'As above.',
-  'SeasonHistory.headCoachName': 'As above.',
-  'MediaStory.subjectStaffIds': 'Populated by the briefing system; no story renderer reads it.',
-  'MediaEffect.metric': 'Named on every effect. The effect is applied by target and delta.',
-  'GameState.rngCounters': 'Initialised empty at world generation and never touched again.',
-  'DirectorContract.signedSeason': 'Stamped on signing; length and expiry are read from elsewhere.',
 }
 
 const { declared, unread: unreadFields } = findUnreadFields()

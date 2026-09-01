@@ -131,7 +131,6 @@ export function startCareerAt(
   if (!club) throw new Error(`Unknown club ${clubId}`)
 
   state.playerClubId = club.id
-  club.isPlayerClub = true
 
   applyBackgroundPerks(state, club)
 

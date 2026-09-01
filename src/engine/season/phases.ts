@@ -8,7 +8,7 @@ import { awardXp, levelFor, ordinal, seasonEndXp } from '../systems/career'
 import { addInboxItem, addNews } from '../systems/inbox'
 import { emptyStats } from '../world/playerGen'
 import { cupResultFor, resetCup } from '../sim/cups'
-import { continentalResultFor, refreshContinentalEntrants } from '../systems/continental'
+import { refreshContinentalEntrants } from '../systems/continental'
 import { clauseUpside, clausesHeldBy } from '../systems/buyBack'
 import { TOURNAMENT_STOCK_DECAY } from '../systems/international'
 import { autoRegister } from '../systems/registration'
@@ -95,14 +95,7 @@ export const finalTables = phase({
           goalsFor: row.goalsFor,
           goalsAgainst: row.goalsAgainst,
           cupResult: domesticCup ? cupResultFor(state, domesticCup, club.id) : '—',
-          // Read before the entrants are re-drawn for next season, which is why
-          // the history is written in step 1 and the refresh happens in step 6.
-          continentalResult: continentalResultFor(state, club.id),
           netSpend: closed.transfersIn - closed.transfersOut,
-          finalBalance: club.finances.balance,
-          headCoachName: club.headCoachId
-            ? state.staff[club.headCoachId]?.knownAs ?? 'Vacant'
-            : 'Vacant',
         }
         club.history.push(history)
         if (club.history.length > 40) club.history.shift()

@@ -297,22 +297,3 @@ export function awardContinentalStanding(
   )
 }
 
-/** Human-readable summary of a club's campaign, for the season history. */
-export function continentalResultFor(
-  state: GameState,
-  clubId: ID,
-): string {
-  for (const cup of Object.values(state.cups)) {
-    if (cup.type !== 'continental') continue
-    if (!cup.entrantIds.includes(clubId)) continue
-    if (cup.winnerId === clubId) return `Won the ${cup.name}`
-    const rounds = cup.rounds.filter((r) => r.fixtureIds.some((fid) => {
-      const fixture = state.fixtures.find((f) => f.id === fid)
-      return fixture && (fixture.homeClubId === clubId || fixture.awayClubId === clubId)
-    }))
-    const last = rounds[rounds.length - 1]
-    return last ? `${cup.name}: ${last.name}` : `${cup.name}: entered`
-  }
-  return '—'
-}
-

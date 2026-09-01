@@ -120,7 +120,6 @@ export function generateWorld(options: WorldGenOptions): GameState {
     inbox: [],
     newsFeed: [],
     nextId: 1,
-    rngCounters: {},
     settings: {
       currency: 'GBP',
       revealTrueAttributes: false,
@@ -502,7 +501,6 @@ function createClub(
     history: [],
     fanbase: clamp(Math.round(reputation * 0.7 + citySize * 0.3), 4, 99),
     fanMood: rng.normalInt(62, 10, 30, 90),
-    isPlayerClub: false,
   }
 }
 

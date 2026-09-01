@@ -219,8 +219,6 @@ export interface Club {
   /** Local support base 0-100 — floors attendance regardless of form. */
   fanbase: number
   fanMood: number // 0-100
-  /** True for the club the human player runs. */
-  isPlayerClub: boolean
   /**
    * The senior players named on the squad list.
    *
@@ -470,7 +468,6 @@ export interface FacilityProject {
   id: ID
   kind: FacilityKind
   targetLevel?: number
-  totalCost: number
   weeklyCost: number
   weeksRemaining: number
   description: string
@@ -583,8 +580,6 @@ export interface Takeover {
   season: number
   /** Whether the press have it yet. */
   public: boolean
-  /** Set when it collapses, for the news item. */
-  collapseReason: string | null
 }
 
 export interface BoardState {
@@ -644,11 +639,7 @@ export interface SeasonHistory {
   goalsFor: number
   goalsAgainst: number
   cupResult: string
-  continentalResult: string
   netSpend: number
-  finalBalance: number
-  /** Head coach at season's end. */
-  headCoachName: string
 }
 
 // ---------------------------------------------------------------------------
@@ -699,11 +690,8 @@ export interface Player {
   /** Display name — may be a mononym or nickname (Brazilian style). */
   knownAs: string
   nationalityId: ID
-  secondNationalityId: ID | null
   /** Age in years, recalculated at each birthday week. */
   age: number
-  /** Week of the year (1-52) their age ticks over. */
-  birthWeek: number
   position: Position
   /** Positions they can also fill, with a competence penalty. */
   altPositions: Position[]
@@ -1093,8 +1081,6 @@ export interface TransferNegotiation {
   competingClubIds: ID[]
   /** Log of what has been said, for the negotiation screen. */
   log: NegotiationLogEntry[]
-  /** True when the human club initiated it. */
-  playerInitiated: boolean
   deadlineWeek: number
 }
 
@@ -1138,8 +1124,6 @@ export interface TransferTerms {
   promotionBonus: number
   /** Loans only: share of wages the parent club keeps paying, 0-1. */
   wageContribution: number
-  /** Loans with option: the agreed future fee. */
-  optionFee?: number
 }
 
 export interface NegotiationLogEntry {
@@ -1208,7 +1192,6 @@ export interface MediaStory {
   /** Who or what the story is about. */
   subjectPlayerIds: ID[]
   subjectClubIds: ID[]
-  subjectStaffIds: ID[]
   /** Set when the human club planted it. */
   plantedBy: ID | null
   /** Effects already applied, kept for the "what did this do" panel. */
@@ -1222,7 +1205,6 @@ export interface MediaStory {
 export interface MediaEffect {
   target: 'player' | 'club' | 'staff' | 'fans' | 'board'
   targetId: ID
-  metric: string
   delta: number
   description: string
 }
@@ -1257,7 +1239,6 @@ export interface MediaBriefing {
   kind: MediaStoryKind
   targetPlayerId?: ID
   targetClubId?: ID
-  targetStaffId?: ID
   outletId: ID
   truth: 'true' | 'exaggerated' | 'fabricated'
   /** How hard the club pushes; higher = bigger effect, bigger exposure risk. */
@@ -1408,8 +1389,6 @@ export interface GameState {
 
   /** Counter used to mint unique ids deterministically. */
   nextId: number
-  /** Per-subsystem RNG stream counters, so streams stay independent. */
-  rngCounters: Record<string, number>
   settings: GameSettings
 }
 
@@ -1481,7 +1460,6 @@ export interface DirectorContract {
   /** Weeks of salary paid if the club dismisses you. */
   severanceWeeks: number
   clubId: ID
-  signedSeason: number
 }
 
 export interface EarningEntry {
@@ -1623,4 +1601,4 @@ export interface GameSettings {
   hapticsEnabled: boolean
 }
 
-export const SAVE_VERSION = 14
+export const SAVE_VERSION = 15

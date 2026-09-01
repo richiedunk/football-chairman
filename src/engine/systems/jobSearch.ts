@@ -52,7 +52,6 @@ export function dismissDirector(
   const club = state.playerClubId ? state.clubs[state.playerClubId] : null
   if (club) {
     closeCareerEntry(state.director, club.id, state.date.season, outcome)
-    club.isPlayerClub = false
   }
 
   state.director.reputation = Math.max(1, state.director.reputation - SACKING_REPUTATION_COST)

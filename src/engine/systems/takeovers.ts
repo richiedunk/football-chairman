@@ -166,7 +166,6 @@ export function processTakeovers(
       stageSince: absoluteWeek(state),
       season: state.date.season,
       public: false,
-      collapseReason: null,
     }
     state.takeovers.push(takeover)
     active.add(club.id)

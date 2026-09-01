@@ -84,8 +84,24 @@ export function findUnreadFields(root = process.cwd()): UnreadReport {
   const types = path.join(root, 'src/engine/types.ts')
   const declared = declaredFields(fs.readFileSync(types, 'utf8'))
 
-  const sources = [...walk(path.join(root, 'src')), ...walk(path.join(root, 'scripts'))]
-    .filter((f) => f !== types)
+  // `tests/` is scanned too, and was not to begin with. That gap reported
+  // `Club.isPlayerClub` as read by nothing while two tests asserted on it — so
+  // deleting it broke them, which is precisely the surprise this file exists to
+  // prevent. A field whose only reader is a test is its own smell: a test
+  // asserting on bookkeeping the game itself ignores. But "nothing reads it" has
+  // to mean nothing.
+  // The register itself is not a consumer. `dials.test.ts` lists the known
+  // unread fields as quoted keys, and a quoted name counts as a read, so
+  // scanning it made every field on the register look like it had just been
+  // wired up. A list of things nobody reads cannot be the thing that reads
+  // them. (This comment names no field for the same reason.)
+  const register = path.join(root, 'tests', 'dials.test.ts')
+  const sources = [
+    ...walk(path.join(root, 'src')),
+    ...walk(path.join(root, 'scripts')),
+    ...walk(path.join(root, 'tests')),
+  ]
+    .filter((f) => f !== types && f !== register)
     .map((f) => fs.readFileSync(f, 'utf8'))
 
   return {

@@ -413,8 +413,54 @@ function migrate(state: GameState): GameState {
     state.version = 14
   }
 
+  // Fifteen fields nothing read, taken out of the world model. A save from
+  // before this carries them all, and would carry them for ever: the loaded
+  // object is the parsed JSON, extra keys and all, and every subsequent save
+  // writes them straight back out.
+  //
+  // So this one deletes rather than fills in, which makes it the first
+  // migration here that is not additive. Nothing reads any of these names, so
+  // nothing can miss them — the risk in a deleting migration is deleting
+  // something a later version wants back, and the answer to that is git.
+  //
+  // Walked generically rather than field by field. Several of these sit on
+  // nested objects — a facility project inside a club, an effect inside a
+  // media story — and a hand-written list of where to look is exactly what
+  // went wrong when this deletion was first verified.
+  if (state.version < 15) {
+    stripFields(state, DELETED_IN_15)
+    state.version = 15
+  }
+
   state.version = SAVE_VERSION
   return state
+}
+
+/**
+ * Field names removed from the world model in format 15.
+ *
+ * Kept as a list rather than inlined so the commit that added it says what it
+ * dropped, and so a save from any earlier format walks through the same set.
+ */
+const DELETED_IN_15 = new Set([
+  'isPlayerClub', 'totalCost', 'collapseReason', 'continentalResult', 'finalBalance',
+  'headCoachName', 'secondNationalityId', 'birthWeek', 'playerInitiated', 'optionFee',
+  'subjectStaffIds', 'targetStaffId', 'metric', 'rngCounters', 'signedSeason',
+])
+
+/** Delete every occurrence of these keys, at any depth. */
+function stripFields(node: unknown, names: Set<string>, seen = new Set<object>()): void {
+  if (node === null || typeof node !== 'object' || seen.has(node)) return
+  seen.add(node)
+  if (Array.isArray(node)) {
+    for (const item of node) stripFields(item, names, seen)
+    return
+  }
+  const bag = node as Record<string, unknown>
+  for (const key of Object.keys(bag)) {
+    if (names.has(key)) delete bag[key]
+    else stripFields(bag[key], names, seen)
+  }
 }
 
 /** The largest numeric id in use, so a migration that mints ids cannot collide. */

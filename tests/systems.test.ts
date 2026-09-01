@@ -82,7 +82,6 @@ function freshWorld(seed = 'SYSTEMS'): GameState {
     directorName: 'Test Director', background: 'analyst',
   })
   state.playerClubId = Object.values(state.clubs).find((c) => c.reputation < 30)!.id
-  state.clubs[state.playerClubId!].isPlayerClub = true
   return state
 }
 
@@ -1836,7 +1835,7 @@ describe('ownership', () => {
     incoming.wealth = 95
     completeTakeover(state, ids, club, {
       id: 'v1', clubId: club.id, stage: 'agreed', incoming,
-      stageSince: 0, season: state.date.season, public: true, collapseReason: null,
+      stageSince: 0, season: state.date.season, public: true,
     })
 
     expect(club.board.owner.name).toBe('Meridian Capital')

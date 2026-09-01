@@ -67,7 +67,6 @@ export function startUpgrade(
     id: ids.next(ID_PREFIX.project),
     kind,
     targetLevel: currentLevel + 1,
-    totalCost: cost,
     weeklyCost: Math.round(cost / weeks),
     weeksRemaining: weeks,
     description: `Upgrading ${FACILITY_LABELS[kind].toLowerCase()} to level ${currentLevel + 1}`,

@@ -201,7 +201,6 @@ export function issueBriefing(
     truth: briefing.truth,
     subjectPlayerIds: target ? [target.id] : [],
     subjectClubIds: [club.id, ...(targetClub ? [targetClub.id] : [])],
-    subjectStaffIds: briefing.targetStaffId ? [briefing.targetStaffId] : [],
     plantedBy: club.id,
     effects: [],
     response: null,
@@ -237,12 +236,11 @@ function applyStoryEffects(state: GameState, story: MediaStory, ctx: MediaContex
   const record = (
     target: MediaEffect['target'],
     targetId: ID,
-    metric: string,
     delta: number,
     description: string,
   ) => {
     if (Math.abs(delta) < 0.5) return
-    effects.push({ target, targetId, metric, delta: Math.round(delta), description })
+    effects.push({ target, targetId, delta: Math.round(delta), description })
   }
 
   const subject = story.subjectPlayerIds[0] ? state.players[story.subjectPlayerIds[0]] : null
@@ -257,16 +255,16 @@ function applyStoryEffects(state: GameState, story: MediaStory, ctx: MediaContex
       const stepUp = club && subjectClub ? clamp((club.reputation - subjectClub.reputation) / 40, -0.5, 1) : 0
       const moraleHit = -8 * magnitude * truthFactor * (1 + stepUp)
       subject.morale = clamp(subject.morale + moraleHit, 1, 100)
-      record('player', subject.id, 'morale', moraleHit, `${subject.knownAs} is unsettled by the speculation.`)
+      record('player', subject.id, moraleHit, `${subject.knownAs} is unsettled by the speculation.`)
 
       // A publicly unsettled player is cheaper.
       const valueHit = -subject.value * 0.05 * magnitude * truthFactor
       subject.value = Math.max(0, Math.round(subject.value + valueHit))
-      record('player', subject.id, 'value', valueHit, 'His club\'s position has weakened.')
+      record('player', subject.id, valueHit, 'His club\'s position has weakened.')
 
       if (subjectClub) {
         subjectClub.fanMood = clamp(subjectClub.fanMood - 3 * magnitude, 1, 100)
-        record('fans', subjectClub.id, 'mood', -3 * magnitude, `${subjectClub.name} supporters are unhappy.`)
+        record('fans', subjectClub.id, -3 * magnitude, `${subjectClub.name} supporters are unhappy.`)
       }
       break
     }
@@ -275,13 +273,13 @@ function applyStoryEffects(state: GameState, story: MediaStory, ctx: MediaContex
       if (!subject) break
       const moraleHit = -12 * magnitude * truthFactor
       subject.morale = clamp(subject.morale + moraleHit, 1, 100)
-      record('player', subject.id, 'morale', moraleHit, `${subject.knownAs}'s relationship with his club has soured.`)
+      record('player', subject.id, moraleHit, `${subject.knownAs}'s relationship with his club has soured.`)
       subject.loyalty = clamp(subject.loyalty - 6 * magnitude * truthFactor, 1, 100)
-      record('player', subject.id, 'loyalty', -6 * magnitude * truthFactor, 'He feels less attached to the club.')
+      record('player', subject.id, -6 * magnitude * truthFactor, 'He feels less attached to the club.')
       // If he was already close to the edge, this can tip him over.
       if (subject.morale < 25 && ctx.rng.chance(0.3 * magnitude)) {
         subject.transferRequested = true
-        record('player', subject.id, 'transferRequest', 1, `${subject.knownAs} has asked to leave.`)
+        record('player', subject.id, 1, `${subject.knownAs} has asked to leave.`)
       }
       break
     }
@@ -290,11 +288,11 @@ function applyStoryEffects(state: GameState, story: MediaStory, ctx: MediaContex
       const club = playerClub(state)
       if (!club) break
       club.fanMood = clamp(club.fanMood + 6 * magnitude, 1, 100)
-      record('fans', club.id, 'mood', 6 * magnitude, 'The supporters are reassured.')
+      record('fans', club.id, 6 * magnitude, 'The supporters are reassured.')
       if (story.truth === 'fabricated') {
         // Claiming support you do not have is a gamble against the board.
         club.board.confidence = clamp(club.board.confidence - 4 * magnitude, 0, 100)
-        record('board', club.id, 'confidence', -4 * magnitude, 'The board did not authorise that briefing.')
+        record('board', club.id, -4 * magnitude, 'The board did not authorise that briefing.')
       }
       break
     }
@@ -302,10 +300,10 @@ function applyStoryEffects(state: GameState, story: MediaStory, ctx: MediaContex
     case 'formPraise': {
       if (!subject) break
       subject.morale = clamp(subject.morale + 7 * magnitude, 1, 100)
-      record('player', subject.id, 'morale', 7 * magnitude, `${subject.knownAs} is enjoying the attention.`)
+      record('player', subject.id, 7 * magnitude, `${subject.knownAs} is enjoying the attention.`)
       const valueGain = subject.value * 0.04 * magnitude
       subject.value = Math.round(subject.value + valueGain)
-      record('player', subject.id, 'value', valueGain, 'His market value has risen.')
+      record('player', subject.id, valueGain, 'His market value has risen.')
       // The cost: other clubs are now watching him.
       const suitors = Object.values(state.clubs)
         .filter((c) => c.id !== subject.clubId && c.reputation > (subjectClub?.reputation ?? 0))
@@ -320,11 +318,11 @@ function applyStoryEffects(state: GameState, story: MediaStory, ctx: MediaContex
       const club = playerClub(state)
       if (!club) break
       club.board.confidence = clamp(club.board.confidence + 3 * magnitude, 0, 100)
-      record('board', club.id, 'confidence', 3 * magnitude, 'The board like to hear about the academy.')
+      record('board', club.id, 3 * magnitude, 'The board like to hear about the academy.')
       if (subject) {
         const gain = Math.max(50_000, subject.value * 0.12) * magnitude
         subject.value = Math.round(subject.value + gain)
-        record('player', subject.id, 'value', gain, 'The hype has inflated his valuation.')
+        record('player', subject.id, gain, 'The hype has inflated his valuation.')
       }
       break
     }
@@ -334,18 +332,18 @@ function applyStoryEffects(state: GameState, story: MediaStory, ctx: MediaContex
       const target = targetClubId ? state.clubs[targetClubId] : null
       if (!target) break
       target.fanMood = clamp(target.fanMood - 8 * magnitude * truthFactor, 1, 100)
-      record('fans', target.id, 'mood', -8 * magnitude * truthFactor, `${target.name}'s supporters are worried.`)
+      record('fans', target.id, -8 * magnitude * truthFactor, `${target.name}'s supporters are worried.`)
       // Their players get twitchy, which softens their asking prices.
       for (const id of target.squad) {
         const player = state.players[id]
         if (!player) continue
         player.morale = clamp(player.morale - 4 * magnitude * truthFactor, 1, 100)
       }
-      record('club', target.id, 'squadMorale', -4 * magnitude * truthFactor, 'Their squad is unsettled.')
+      record('club', target.id, -4 * magnitude * truthFactor, 'Their squad is unsettled.')
       target.strategy.sellingClubStance = clamp(
         target.strategy.sellingClubStance + 6 * magnitude * truthFactor, 0, 100,
       )
-      record('club', target.id, 'sellingStance', 6 * magnitude, 'They are more willing to listen to offers.')
+      record('club', target.id, 6 * magnitude, 'They are more willing to listen to offers.')
       break
     }
 
@@ -459,7 +457,6 @@ export function generateOrganicStories(state: GameState, ctx: MediaContext): Med
       truth: 'true',
       subjectPlayerIds: subject ? [subject.id] : [],
       subjectClubIds: [club.id],
-      subjectStaffIds: [],
       plantedBy: null,
       effects: [],
       response: null,

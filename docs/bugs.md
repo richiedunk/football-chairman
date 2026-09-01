@@ -51,62 +51,76 @@ evict localStorage), so this may be a plugin installed for an adapter that was
 never written rather than one to throw away.
 
 
-### Seventeen fields of the world model are read by nothing
-Found by `scripts/dialcheck.ts`, enforced by `tests/dials.test.ts`. Two kinds,
-wanting opposite fixes, and none of them touched yet because both change the
-game.
+### ~~Seventeen fields of the world model are read by nothing~~ — fifteen deleted
+`scripts/dialcheck.ts` found seventeen. Fifteen are gone: fourteen dead fields
+plus `MediaBriefing.targetStaffId`, which was never written either and was left
+feeding nothing once `MediaStory.subjectStaffIds` went.
 
-**Silent features** — written deliberately, consulted by nothing:
+Measured before deciding, and the number was smaller than claimed: all of the
+dead fields together were **477 kB of a 23.28 MB save — 2.05%**, of which
+`secondNationalityId` was 262 kB and `birthWeek` 143 kB. The case for removing
+them was clarity, not size.
 
-| field | what it is |
-|---|---|
-| `Owner.faithInDirector` | A new owner arrives with a considered view of you, computed from fit and clamped 5–95 in `takeovers.ts`. Nothing ever asks. Being inherited by an owner who does not rate you should be among the worst things that can happen in this job; it is currently nothing at all. |
-| `TransferNegotiation.deadlineWeek` | Every negotiation is given a deadline at the window close. Nothing expires one, so a negotiation opened in July is still open in May. |
-| `TransferTerms.optionFee` | Not written anywhere either — an option-to-buy on a loan that no code path can create or exercise. |
-| `GameSettings.fastAdvance` | A setting, defaulted false, that no screen offers and no code obeys. |
+**Proved inert, except in one respect.** Two of them consumed random draws:
+`secondNationalityId` rolled a 14% chance and `birthWeek` an `int(1, 52)`, once
+per player. Holding those two draws and deleting everything else produced a
+state **byte-identical** to the old engine's with the same field names stripped
+out — 27,892,791 bytes, no diff. So the deletion changes the save shape and
+nothing else.
 
-**Dead weight** — carried in every save, read by nobody:
-`Club.isPlayerClub` (a second copy of `state.playerClubId` that can only ever
-disagree), `Player.birthWeek` and `Player.secondNationalityId` (rolled for all
-9,700 players), `FacilityProject.totalCost`, `Takeover.collapseReason`,
-`SeasonHistory.continentalResult` / `.finalBalance` / `.headCoachName`,
-`MediaStory.subjectStaffIds`, `MediaEffect.metric`, `GameState.rngCounters`,
-`DirectorContract.signedSeason`, `TransferNegotiation.playerInitiated`.
+Dropping the two draws is a real change: a seed no longer generates the world
+it used to, because every player's attributes come out of a stream that is now
+two numbers shorter per player. Old saves load unaffected — generation does not
+re-run — but `worldhash` moved from `adeee149e9968199a50b261e` to
+`d866b23168d61376f63e07b2`.
 
-Deleting a property is a data decision, so nothing has been removed. The list
-is the register in `tests/dials.test.ts` and it can only shrink: a new unread
-field fails the test, and so does leaving one on the register after wiring it
-up.
+**The calibration is unchanged**, on ten matched seeds:
 
+| | n | mean goals/game | sd | range |
+|---|---|---|---|---|
+| before | 10 | 2.696 | 0.064 | 2.593–2.854 |
+| after | 10 | 2.704 | 0.098 | 2.563–2.864 |
 
-### ~~Housekeeping refreshes the squad of the club that just sacked you~~ — fixed, with nothing to show for it
-The fix is in `tick/phases/boardroom.ts`: the phase that ends the director's
-employment writes `playerClub = null`, so the head coach no longer files a
-weekly relationship update against a man he no longer works with and the squad
-of the club that just sacked him no longer gets its labels rewritten.
+Per-seed deltas run from −0.236 to +0.201 and cancel. Worth recording how this
+nearly went wrong: the first check used four seeds, showed every one of them
+higher after the change, and was written up as "not noise, a 4% shift". It was
+noise. Four worlds is not a sample, and a tight cluster in a small one is the
+easiest thing in this project to mistake for a finding.
 
-**Measured, and it changed nothing observable.** `scripts/sackweek.ts`, eight
-careers of two hundred and sixty weeks, five dismissals between them: coach
-mail in the sacking week 0 before and 0 after, squad labels rewritten 0 and 0,
-and the same eight kinds of item landing in the inbox either way.
+Two more went as a chain: `MediaBriefing.targetStaffId`, whose only reference
+was the `subjectStaffIds` line, and `continentalResultFor`, which built the
+history string. Deleting a dead field orphans whatever fed it, and knip and the
+dial check found both on the next run rather than leaving them to rot.
 
-That is a weak result and it is stated as one. The script counts symptoms —
-messages and label changes — and the stale writes it was meant to catch are
-mostly silent: `processCoachRelations` moves `dofRelationship` whether or not
-it has anything to say, and `refreshSquadStatuses` recomputes labels that are
-usually already right. So this is a correctness fix with no evidence behind it
-of a behaviour change, rather than a fix that was shown to matter.
-`tick/phases/boardroom.ts`. The board's verdict can end the director's
-employment, and `housekeeping` ten lines later calls `refreshSquadStatuses` on
-`playerClub` — which is the value from the top of the week, i.e. the club he
-no longer runs. True of the six-hundred-line procedure this replaced, where it
-was invisible; preserved through the phase refactor deliberately so that change
-could be proved pure, and now written down at the line.
+**Save format 15** takes them out of existing saves too. It is the first
+migration here that deletes rather than fills in — an old save's loaded object
+is the parsed JSON, extra keys and all, so without this a v14 career would
+write those fifteen names back out on every save for ever. It walks the state
+generically rather than by a list of locations, because a hand-written list of
+where each field lives is exactly what went wrong the first time this deletion
+was verified. `migration.test.ts` builds a v14 save by putting them *back* and
+asserts they are gone; verified by disabling the strip and watching it fail.
 
-Probably harmless — it recomputes labels on a squad nobody will look at — but
-it is a phase reading a stale fact, which is the exact class this project keeps
-shipping. Fix is one line; it changes the world, so it wants a hash and a
-reason.
+**Two fields survive, as features to connect rather than weight to drop:**
+`TransferNegotiation.deadlineWeek` (nothing expires a negotiation, so one
+opened in July is still open in May) and `GameSettings.fastAdvance` (a setting
+no screen offers). Both are on the register in `tests/dials.test.ts`.
+
+A third is not, and it is the more interesting one:
+
+### A takeover computes the new owner's opinion of you, and only the tests read it
+`Owner.faithInDirector` is set to `clamp(Math.round(50 + fit * 42), 5, 95)`
+when a takeover completes, and two assertions in `systems.test.ts` check that
+arithmetic. No code in the game has ever consulted the result.
+
+It is **not** on the unread register, and cannot be: the register asks whether
+anything reads a field, tests were added to what it scans (they had to be —
+missing them reported `Club.isPlayerClub` as unread while two tests asserted on
+it), and a test is something. So a field the game ignores but a test checks
+slips through by construction. Worth knowing about the tool.
+
+Being inherited by an owner who does not rate you should be among the worst
+things that can happen in this job. Today it is nothing at all.
 
 
 ### The dressing room is a tax again, and the measurement that said otherwise was corrupt

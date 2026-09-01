@@ -125,9 +125,7 @@ export function generatePlayer(ctx: PlayerGenContext, opts: PlayerGenOptions): P
     lastName: name.lastName,
     knownAs: name.knownAs,
     nationalityId: nationality.id,
-    secondNationalityId: rollSecondNationality(ctx, nationality),
     age,
-    birthWeek: rng.int(1, 52),
     position: opts.position,
     altPositions,
     attributes,
@@ -374,13 +372,6 @@ function pickNationality(ctx: PlayerGenContext, opts: PlayerGenOptions): Nation 
   const candidates = ctx.nations.filter((n) => n.id !== opts.homeNation.id)
   if (candidates.length === 0) return opts.homeNation
   return ctx.rng.weighted(candidates, candidates.map((n) => Math.pow(n.reputation / 10, 2)))
-}
-
-function rollSecondNationality(ctx: PlayerGenContext, primary: Nation): ID | null {
-  if (!ctx.rng.chance(0.14)) return null
-  const candidates = ctx.nations.filter((n) => n.id !== primary.id)
-  if (candidates.length === 0) return null
-  return ctx.rng.pick(candidates).id
 }
 
 /**

@@ -233,7 +233,6 @@ export function signContract(
     targetBonus: Math.round(offer.targetBonus),
     severanceWeeks: Math.round(offer.severanceWeeks),
     clubId: club.id,
-    signedSeason: state.date.season,
   }
   state.director.contract = contract
 

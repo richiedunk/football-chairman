@@ -32,7 +32,6 @@ describe('being dismissed', () => {
     dismissDirector(state, ids, new Rng('sack'))
 
     expect(state.playerClubId, 'still holding the job').toBeNull()
-    expect(state.clubs[clubId].isPlayerClub).toBe(false)
     expect(state.director.contract).toBeNull()
   })
 

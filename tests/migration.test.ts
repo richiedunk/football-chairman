@@ -37,6 +37,36 @@ beforeAll(() => {
 function stripToVersion(state: GameState, version: number): GameState {
   const s = JSON.parse(JSON.stringify(state)) as GameState
 
+  // v15 is the first migration here that *removes* fields rather than filling
+  // them in, so this one has to work the other way: put back the fifteen the
+  // world model used to carry, or there is nothing for the migration to strip
+  // and the test passes without exercising it.
+  if (version < 15) {
+    const bag = (o: object) => o as Record<string, unknown>
+    bag(s).rngCounters = {}
+    for (const player of Object.values(s.players)) {
+      bag(player).birthWeek = 12
+      bag(player).secondNationalityId = null
+    }
+    for (const club of Object.values(s.clubs)) {
+      bag(club).isPlayerClub = false
+      const project = club.facilities.stadiumProject
+      if (project) bag(project).totalCost = 1_000_000
+      for (const entry of club.history) {
+        bag(entry).continentalResult = '—'
+        bag(entry).finalBalance = 0
+        bag(entry).headCoachName = 'Vacant'
+      }
+    }
+    for (const takeover of s.takeovers) bag(takeover).collapseReason = null
+    for (const story of s.mediaStories) {
+      bag(story).subjectStaffIds = []
+      for (const effect of story.effects) bag(effect).metric = 'morale'
+    }
+    for (const negotiation of s.negotiations) bag(negotiation).playerInitiated = false
+    if (s.director.contract) bag(s.director.contract).signedSeason = 2025
+  }
+
   if (version < 14) {
     for (const player of Object.values(s.players)) {
       delete (player as { academyRelease?: unknown }).academyRelease
@@ -124,7 +154,7 @@ async function loadFrom(version: number, slotId: string): Promise<GameState> {
   return loaded!
 }
 
-const HISTORICAL = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
+const HISTORICAL = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
 
 describe('every historical format still loads', () => {
   for (const version of HISTORICAL) {
@@ -170,6 +200,19 @@ describe('every historical format still loads', () => {
     // against clubs that never made the decision.
     expect(player.academyRelease, 'v14: release record left undefined').toBeNull()
     expect(player.gotAwayReported, 'v14: got-away flag left undefined').toBe(false)
+
+    // v15 deletes rather than fills. The whole point is that a save carrying
+    // these does not carry them afterwards — an old save would otherwise write
+    // them back out on every future save, for ever.
+    const bag = (o: object) => o as Record<string, unknown>
+    expect(bag(player).birthWeek, 'v15: dead player field survived').toBeUndefined()
+    expect(bag(player).secondNationalityId, 'v15: dead player field survived').toBeUndefined()
+    expect(bag(club).isPlayerClub, 'v15: dead club field survived').toBeUndefined()
+    expect(bag(loaded).rngCounters, 'v15: dead root field survived').toBeUndefined()
+    for (const entry of club.history) {
+      expect(bag(entry).headCoachName, 'v15: dead history field survived').toBeUndefined()
+    }
+
     await deleteSave('mig-all')
   }, 60_000)
 

@@ -91,12 +91,10 @@ export function acceptJobOffer(
 
   const oldClub = clubInCharge(state)
   if (oldClub) {
-    oldClub.isPlayerClub = false
     closeCareerEntry(state.director, oldClub.id, state.date.season, 'Left for another club')
   }
 
   state.playerClubId = newClub.id
-  newClub.isPlayerClub = true
   newClub.board.tenureSeasons = 0
   newClub.board.warnings = 0
   state.director.jobOffers = []
