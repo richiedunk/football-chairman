@@ -1180,6 +1180,45 @@ all from `scripts/`:
   season out of 238.
 - Wages **54-78% of revenue**, per-player pay realistic at every tier.
 
+## How the engine is put together
+
+Two orchestrators — the weekly tick and the season roll — and the same shape
+for both. A run is a **manifest of phases**, in `tick/index.ts` and
+`season/index.ts`. Read either top to bottom and you have read what a week or a
+year *is*, without four hundred lines of how in the way.
+
+A phase declares the facts it reads and the facts it writes. `engine/phases.ts`
+enforces the declaration at run time: an undeclared read throws, an undeclared
+write throws, and **reading a fact nothing has produced yet throws** — which is
+the ordering bug this project has shipped twice, named where it happens.
+`tests/phases.test.ts` proves the same thing statically against both real
+manifests in eight milliseconds, so a phase moved above the thing that feeds it
+fails before anything is simulated.
+
+What it does not catch, so nobody leans on it further than it goes: it guards
+the bindings, not what is behind them. A phase that legitimately reads a
+collection and mutates something reachable through it is doing something no
+proxy can see.
+
+**The one constraint the guard says nothing about.** `Rng.fork` draws from its
+parent, so the *sequence* of fork calls decides every random number in a run.
+Moving a phase, or adding one that forks, reshuffles every draw after it. The
+world stays deterministic for a given seed, so this is not a correctness
+problem — but no reordering is free, and a change meant to be pure will not be.
+`scripts/worldhash.ts` is how you find out which you did.
+
+Three things hold the whole arrangement up, and each has a test that fails if it
+stops being true:
+
+| property | what enforces it |
+|---|---|
+| the same seed gives the same world, in any order | `tests/determinism.test.ts` |
+| no phase reads what nothing has produced | `engine/phases.ts`, `tests/phases.test.ts` |
+| every field of the world model is read by something | `tests/dials.test.ts` |
+
+The last one is a debt register as much as a check: seventeen fields are on it
+today, listed in `docs/bugs.md`, and it can only shrink.
+
 ## Standing rules for this project
 
 - The engine stays pure TypeScript with no framework imports.
@@ -1189,3 +1228,10 @@ all from `scripts/`:
   behaviour was — the commit log is the design record.
 - Assert that a code edit matched before trusting it. A silently no-op edit has
   bitten this project once already.
+- A refactor that is meant to change nothing proves it with
+  `scripts/worldhash.ts`, before and after. Same hash or it changed something.
+- A new check earns its keep by being made to fail on purpose once. Every guard
+  in this project would pass against an engine with the thing it guards torn
+  out, unless somebody has checked.
+- Adding to a week or a year means adding a phase to a manifest. If that feels
+  like the wrong place, the phase boundaries are wrong, not the manifest.
