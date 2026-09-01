@@ -12,18 +12,14 @@ import type { AttributeKey, PlayerAttributes, Position, PositionGroup } from '..
  * scouting system, which reports attributes, starts lying to the user.
  */
 
-export const ALL_ATTRIBUTES: AttributeKey[] = [
+const ALL_ATTRIBUTES: AttributeKey[] = [
   'passing', 'shooting', 'dribbling', 'tackling', 'heading', 'crossing', 'setPieces', 'firstTouch',
   'pace', 'strength', 'stamina', 'agility',
   'composure', 'vision', 'workRate', 'positioning', 'leadership', 'determination', 'temperament',
   'reflexes', 'handling', 'distribution', 'command',
 ]
 
-export const OUTFIELD_ATTRIBUTES: AttributeKey[] = ALL_ATTRIBUTES.filter(
-  (a) => !['reflexes', 'handling', 'distribution', 'command'].includes(a),
-)
-
-export const GOALKEEPER_ATTRIBUTES: AttributeKey[] = [
+const GOALKEEPER_ATTRIBUTES: AttributeKey[] = [
   'reflexes', 'handling', 'distribution', 'command',
   'positioning', 'composure', 'agility', 'strength', 'determination', 'temperament',
   'leadership', 'workRate', 'passing', 'firstTouch',
@@ -88,16 +84,22 @@ export const POSITION_WEIGHTS: Record<Position, Partial<Record<AttributeKey, num
   },
 }
 
+/**
+ * The broad shape of a footballer.
+ *
+ * One mapping, in one place. There were two spelled out by hand — the position
+ * badge and the clean-sheet rule — and a third that used to live here and was
+ * deleted for having no callers at all.
+ */
 export function positionGroup(pos: Position): PositionGroup {
   if (pos === 'GK') return 'goalkeeper'
   if (pos === 'DC' || pos === 'DL' || pos === 'DR') return 'defender'
-  if (pos === 'ST') return 'forward'
-  if (pos === 'AM') return 'forward'
+  if (pos === 'ST' || pos === 'AM') return 'forward'
   return 'midfielder'
 }
 
 /** Positions a player of `pos` can plausibly also cover, and how well. */
-export const POSITION_ADJACENCY: Record<Position, Partial<Record<Position, number>>> = {
+const POSITION_ADJACENCY: Record<Position, Partial<Record<Position, number>>> = {
   GK: {},
   DC: { DM: 0.75, DL: 0.6, DR: 0.6 },
   DL: { ML: 0.8, DC: 0.6, DR: 0.5 },

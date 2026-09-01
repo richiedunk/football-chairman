@@ -37,7 +37,7 @@ const INJURY_TYPES: InjuryTemplate[] = [
 ]
 
 /** Roll a new injury for a player, scaled by the club's medical department. */
-export function rollInjury(rng: Rng, player: Player, medicalLevel: number, physioSkill: number): Injury {
+function rollInjury(rng: Rng, player: Player, medicalLevel: number, physioSkill: number): Injury {
   // Injury-prone and older players suffer proportionally more of the serious
   // injuries, not merely more injuries overall — which is what makes a
   // 33-year-old with a history a genuinely different risk to carry.
@@ -141,12 +141,4 @@ export function injuryDescription(injury: Injury): string {
   const weeks = injury.weeksRemaining
   const duration = weeks === 1 ? '1 week' : `${weeks} weeks`
   return `${injury.type} — out for ${duration}`
-}
-
-export const SEVERITY_LABELS: Record<Injury['severity'], string> = {
-  knock: 'Knock',
-  minor: 'Minor',
-  moderate: 'Moderate',
-  serious: 'Serious',
-  severe: 'Severe',
 }

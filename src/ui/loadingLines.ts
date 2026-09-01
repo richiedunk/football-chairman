@@ -13,7 +13,7 @@
  * screen has one of those instead.
  */
 
-export const LOADING_LINES: string[] = [
+const LOADING_LINES: string[] = [
   'Turning the floodlights on',
   'Heckling the away end',
   'Asking the chairman for a moment of his time',

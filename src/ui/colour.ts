@@ -100,7 +100,7 @@ export function hslToRgb({ h, s, l }: Hsl): Rgb {
 }
 
 /** Relative luminance, WCAG 2.1. */
-export function luminance({ r, g, b }: Rgb): number {
+function luminance({ r, g, b }: Rgb): number {
   const channel = (n: number) => {
     const c = n / 255
     return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)

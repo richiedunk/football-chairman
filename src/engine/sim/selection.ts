@@ -17,7 +17,7 @@ import type {
  */
 
 /** Which positions each formation actually fields. */
-export const FORMATION_SHAPES: Record<Formation, Position[]> = {
+const FORMATION_SHAPES: Record<Formation, Position[]> = {
   '4-4-2': ['GK', 'DR', 'DC', 'DC', 'DL', 'MR', 'MC', 'MC', 'ML', 'ST', 'ST'],
   '4-3-3': ['GK', 'DR', 'DC', 'DC', 'DL', 'DM', 'MC', 'MC', 'MR', 'ST', 'ML'],
   '4-2-3-1': ['GK', 'DR', 'DC', 'DC', 'DL', 'DM', 'DM', 'MR', 'AM', 'ML', 'ST'],
@@ -82,7 +82,7 @@ export function selectableSquad(state: GameState, club: Club): Player[] {
  * Combines raw positional rating with the situational modifiers a coach
  * actually reacts to: form, sharpness, and his own stylistic preferences.
  */
-export function selectionScore(
+function selectionScore(
   player: Player,
   slot: Position,
   coach: CoachProfile | null,

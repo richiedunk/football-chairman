@@ -559,7 +559,7 @@ function weeklyClubRevenue(state: GameState, club: Club): number {
   return Math.round(tv + sponsor + matchday)
 }
 
-export function leaguePosition(table: LeagueTableRow[], clubId: string): number {
+function leaguePosition(table: LeagueTableRow[], clubId: string): number {
   const sorted = sortTable(table)
   return sorted.findIndex((r) => r.clubId === clubId) + 1
 }

@@ -219,7 +219,7 @@ export function dutyInjuryChance(state: GameState, player: Player): number {
   return DUTY_INJURY_CHANCE * factor
 }
 
-export function dutyInjuryWeeks(rng: Rng, tournament: boolean): number {
+function dutyInjuryWeeks(rng: Rng, tournament: boolean): number {
   return tournament ? rng.int(3, 14) : rng.int(2, 9)
 }
 
@@ -254,7 +254,7 @@ export function dutyInjury(rng: Rng, tournament: boolean): Injury {
  * somebody else's target — and it is the moment a selling club either cashes
  * in or finds out what it costs to say no.
  */
-export function tournamentBoost(rng: Rng, player: Player): number {
+function tournamentBoost(rng: Rng, player: Player): number {
   const showing = rng.float(0, 1)
   // Better players are likelier to have the tournament that gets noticed, but
   // the whole appeal of a summer is that somebody nobody expected does.

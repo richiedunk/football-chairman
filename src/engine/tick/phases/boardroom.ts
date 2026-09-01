@@ -19,6 +19,7 @@ import { phase } from '../context'
 export const boardAndCoach = phase({
   name: 'boardAndCoach',
   reads: ['playerClub'],
+  writes: ['playerClub'],
   run({ state, ids, rng, facts, sack }) {
     const { playerClub } = facts
     if (playerClub) {
@@ -49,6 +50,13 @@ export const boardAndCoach = phase({
         // stayed yours, so the same board dismissed you again the week after,
         // and the week after that.
         dismissDirector(state, ids, rng.fork('dismissal'))
+
+        // The club stops being his here, and everything after this has to see
+        // that — inside this phase as much as outside it. Matchday does the
+        // same when a director cannot field a side; this is the other way the
+        // job ends mid-week.
+        facts.playerClub = null
+        return
       }
 
       const coachResult = processCoachRelations(state, playerClub, ids, rng.fork('coach'))
@@ -93,12 +101,9 @@ export const architects = phase({
 /**
  * Expire what nobody answered, and refresh the squad screen.
  *
- * `playerClub` here is the value from the top of the week, which is the value
- * before the board's verdict above. A director sacked ten lines ago still has
- * his old squad refreshed. That was true of the procedure this replaced and is
- * preserved rather than corrected, because correcting it changes the world and
- * that is a separate change with its own measurement. It is at least visible
- * now: the fact says where the value came from.
+ * `expireItems` is the whole inbox and runs whoever you work for. The squad
+ * refresh is a club's own business, so it only runs while there is a club:
+ * `playerClub` is null from the moment the board's verdict lands above.
  */
 export const housekeeping = phase({
   name: 'housekeeping',

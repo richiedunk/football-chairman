@@ -13,9 +13,10 @@ import { SQUAD_STATUS_LABELS } from '../../engine/systems/morale'
 import { suggestRenewal, type RenewalOffer } from '../../engine/systems/contracts'
 import { injuryDescription } from '../../engine/systems/injuries'
 import { loanSuitorsFor } from '../../engine/systems/loans'
-import type { AttributeKey, SquadStatus } from '../../engine/types'
+import type { AttributeKey, Position, SquadStatus } from '../../engine/types'
 import { fullName, nickname } from '../playerName'
 import { clauseState, clauseUpside } from '../../engine/systems/buyBack'
+import { U21_AGE } from '../../engine/systems/registration'
 
 const route = useRoute()
 const router = useRouter()
@@ -254,6 +255,58 @@ function doRelease() {
   const result = store.release(p.id)
   notify?.(result.message, result.ok ? 'success' : 'error')
   if (result.ok) router.back()
+}
+
+/**
+ * Back to the academy.
+ *
+ * Only offered where it is allowed and where it is the point: a senior player
+ * still young enough to go back, whose squad place is worth more to somebody
+ * else than his development is to you.
+ */
+const canDemote = computed(() => {
+  const p = player.value
+  return Boolean(isOurs.value && p && !p.isAcademy && p.age <= U21_AGE)
+})
+
+function doDemote() {
+  const p = player.value
+  if (!p) return
+  notifyResult(store.demote(p.id))
+}
+
+/**
+ * Retraining, and the positions worth offering him.
+ *
+ * Goalkeeping is excluded in both directions — it is a different job — and
+ * the list leads with the roles next to the one he already plays, because
+ * those are the conversions that keep most of the player.
+ */
+const retrainOpen = ref(false)
+const retrainTo = ref<Position | ''>('')
+
+const OUTFIELD: Position[] = ['DC', 'DL', 'DR', 'DM', 'MC', 'ML', 'MR', 'AM', 'ST']
+
+const retrainOptions = computed<Position[]>(() => {
+  const p = player.value
+  if (!p || p.position === 'GK') return []
+  const adjacent = new Set(p.altPositions)
+  return OUTFIELD
+    .filter((pos) => pos !== p.position)
+    .sort((a, b) => Number(adjacent.has(b)) - Number(adjacent.has(a)))
+})
+
+function notifyResult(result: { ok: boolean; message: string }) {
+  notify?.(result.message, result.ok ? 'success' : 'error')
+}
+
+function doRetrain() {
+  const p = player.value
+  const to = retrainTo.value
+  if (!p || !to) return
+  notifyResult(store.retrain(p.id, to))
+  retrainOpen.value = false
+  retrainTo.value = ''
 }
 
 /**
@@ -559,6 +612,20 @@ const internationalLine = computed(() => {
               A promise you break is remembered. Under-promising keeps him quiet but cheap to replace.
             </div>
           </div>
+          <button
+            v-if="!player.isAcademy && player.position !== 'GK'"
+            class="btn btn--ghost btn--block"
+            @click="retrainOpen = true"
+          >
+            Retrain in a new position
+          </button>
+          <button
+            v-if="canDemote"
+            class="btn btn--ghost btn--block"
+            @click="doDemote"
+          >
+            Send back to the academy
+          </button>
           <button class="btn btn--danger btn--block" @click="doRelease">Release (pay up contract)</button>
         </template>
 
@@ -629,6 +696,46 @@ const internationalLine = computed(() => {
     </AppSheet>
 
     <!-- Loan out -->
+    <AppSheet
+      v-if="retrainOpen"
+      :title="`Retrain ${player.knownAs}`"
+      subtitle="Permanent, and it costs him something"
+      @close="retrainOpen = false"
+    >
+      <div class="field">
+        <label class="field__label">
+          He plays {{ player.position }} now, and can already fill
+          {{ player.altPositions.length ? player.altPositions.join(', ') : 'nothing else' }}
+        </label>
+        <div class="table__scroll">
+          <div class="segmented" style="min-width: 560px">
+            <button
+              v-for="pos in retrainOptions"
+              :key="pos"
+              class="segmented__item"
+              :class="{ 'is-active': retrainTo === pos }"
+              @click="retrainTo = pos"
+            >{{ pos }}</button>
+          </div>
+        </div>
+        <div class="field__hint">
+          The coaches rebuild him for the new role. He comes out of it a little under
+          what he was worth in the old one and keeps {{ player.position }} as a position
+          he can still cover. It cannot be undone, and there is no way back to a
+          rating he has not earned in the new job — the coaching staff get some of it
+          back over a season, and that is the whole bet.
+        </div>
+      </div>
+
+      <template #footer>
+        <button
+          class="btn btn--primary btn--block"
+          :disabled="!retrainTo"
+          @click="doRetrain"
+        >{{ retrainTo ? `Retrain him as a ${retrainTo}` : 'Choose a position' }}</button>
+      </template>
+    </AppSheet>
+
     <AppSheet
       v-if="loanOutOpen"
       :title="`Loan out ${player.knownAs}`"

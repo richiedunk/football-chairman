@@ -21,7 +21,7 @@ import type {
  * the difference between them only shows up eighteen months later.
  */
 
-export const STAND_IDS: StandId[] = ['north', 'south', 'east', 'west']
+const STAND_IDS: StandId[] = ['north', 'south', 'east', 'west']
 
 export const WORK_LABELS: Record<StadiumWorkKind, string> = {
   repair: 'Repairs',
@@ -69,7 +69,7 @@ export function usableCapacity(stadium: Stadium, project: StadiumProject | null)
 }
 
 /** Overall condition of the ground, weighted by how big each stand is. */
-export function stadiumQuality(stadium: Stadium): number {
+function stadiumQuality(stadium: Stadium): number {
   const total = stadium.stands.reduce((sum, s) => sum + s.capacity, 0)
   if (total === 0) return 0
   const weighted = stadium.stands.reduce((sum, s) => {
@@ -105,7 +105,7 @@ export function revenuePerHead(stadium: Stadium): number {
 }
 
 /** Recompute the cached capacity and quality fields after any change. */
-export function refreshStadium(club: Club): void {
+function refreshStadium(club: Club): void {
   const stadium = club.facilities.stadium
   stadium.capacity = usableCapacity(stadium, club.facilities.stadiumProject)
   stadium.quality = stadiumQuality(stadium)
@@ -277,7 +277,7 @@ export function capacityLostDuring(club: Club, spec: WorkSpec): number {
 // The architect panel
 // ---------------------------------------------------------------------------
 
-export function isAvailable(architect: Architect, state: GameState): boolean {
+function isAvailable(architect: Architect, state: GameState): boolean {
   if (!architect.busyUntil) return true
   const { season, week } = architect.busyUntil
   if (state.date.season > season) return true
@@ -555,7 +555,7 @@ function boxCountFor(capacity: number, architect: Architect): number {
 }
 
 /** Lay out a fresh set of four stands to a target capacity. */
-export function buildStands(
+function buildStands(
   rng: Rng,
   totalCapacity: number,
   year: number,

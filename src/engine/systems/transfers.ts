@@ -3,6 +3,7 @@ import { philosophyAppeal } from './recruitment'
 import { aiWantsBuyBack, buyBackConcession, createClause } from './buyBack'
 import { IdFactory, ID_PREFIX } from '../ids'
 import { computeAskingPrice, computeValue, computeWageDemand, squadImportance, totalWageBill } from './valuation'
+import { wageHeadroom } from './contracts'
 import { canAfford, facilityUpkeep } from './finance'
 import { reactToDeparture, reactToSigning, refreshSquadStatuses } from './morale'
 import { ratingForPositionCached } from '../world/attributes'
@@ -33,7 +34,7 @@ import type {
  * transfer window a planning problem instead of a shopping trip.
  */
 
-export const DEFAULT_TERMS: TransferTerms = {
+const DEFAULT_TERMS: TransferTerms = {
   upfrontPercentage: 1,
   instalments: 1,
   sellOnPercentage: 0,
@@ -920,7 +921,7 @@ export function processAiTransfers(state: GameState, ctx: TransferContext): void
       const targetPosition = weakestPosition(state, club, current)
       if (!targetPosition) { if (stats) stats.noTargetPosition += 1; break }
 
-      const wageRoom = club.finances.wageBudget - totalWageBill(state, club)
+      const wageRoom = wageHeadroom(state, club)
       const candidates: Player[] = []
       for (const p of market.get(targetPosition) ?? []) {
         // The list is sorted by ability, so once it drops below the club's

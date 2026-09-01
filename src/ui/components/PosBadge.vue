@@ -1,15 +1,15 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { Position } from '../../engine/types'
+import type { Position, PositionGroup } from '../../engine/types'
+import { positionGroup } from '../../engine/world/attributes'
 
 const props = defineProps<{ position: Position }>()
 
-const group = computed(() => {
-  if (props.position === 'GK') return 'GK'
-  if (['DC', 'DL', 'DR'].includes(props.position)) return 'DEF'
-  if (['ST', 'AM'].includes(props.position)) return 'FWD'
-  return 'MID'
-})
+const SHORT: Record<PositionGroup, string> = {
+  goalkeeper: 'GK', defender: 'DEF', midfielder: 'MID', forward: 'FWD',
+}
+
+const group = computed(() => SHORT[positionGroup(props.position)])
 </script>
 
 <template>

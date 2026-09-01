@@ -14,7 +14,7 @@ import { isTransferWindowOpen, PHASE_LABELS, windowLabel } from '../engine/sim/s
 import {
   applyRenewal, evaluateRenewal, releasePlayer, type RenewalOffer, type RenewalResponse,
 } from '../engine/systems/contracts'
-import { promoteToSenior } from '../engine/systems/academy'
+import { demoteToAcademy, promoteToSenior } from '../engine/systems/academy'
 import { openNegotiation } from '../engine/systems/transfers'
 import { loanedIn, loanedOut, proposeLoanIn, proposeLoanOut, recallLoan } from '../engine/systems/loans'
 import {
@@ -29,6 +29,7 @@ import {
 } from '../engine/systems/recruitment'
 import { SEARCH_STRIDE_WEEKS, advanceSearch } from '../engine/systems/jobSearch'
 import { addNews } from '../engine/systems/inbox'
+import { retrainPosition } from '../engine/systems/development'
 import { agentsInvolvedWith, clientsOf, introductions } from '../engine/systems/agents'
 import {
   generateOpportunities, isDeadlineWeek, type DeadlineOpportunity,
@@ -41,7 +42,7 @@ import {
   achievement, ACHIEVEMENTS, earnedAchievements, type Achievement,
 } from '../engine/systems/achievements'
 import type {
-  Club, Fixture, GameState, ID, InboxItem, League, MatchResult, Player, Staff,
+  Club, Fixture, GameState, ID, InboxItem, League, MatchResult, Player, Position, Staff,
 } from '../engine/types'
 
 /**
@@ -760,6 +761,62 @@ export const useGameStore = defineStore('game', () => {
       : { ok: false, message: result.error }
   }
 
+  /**
+   * Send a young player back to the academy.
+   *
+   * The reason a director does this is the squad list: an academy player does
+   * not take a registration place, so demoting a boy who is not going to play
+   * frees a place for somebody who is. It costs him the senior environment,
+   * which is the trade.
+   */
+  function demote(playerId: ID): { ok: boolean; message: string } {
+    const s = state.value
+    const c = club.value
+    const p = s?.players[playerId]
+    if (!s || !c || !p) return { ok: false, message: 'That player is not available.' }
+    const result = demoteToAcademy(c, p)
+    commit()
+    return result.ok
+      ? { ok: true, message: `${p.knownAs} has gone back to the academy and given up his squad place.` }
+      : { ok: false, message: result.error }
+  }
+
+  /**
+   * Retrain a player in a new position.
+   *
+   * Permanent, and it costs him: his attributes are rebuilt for the new role
+   * at a little under what he was worth in the old one, and the old position
+   * stays on his card as one he can still fill. The seed is fixed on the
+   * player, the position and the week, so the same decision made twice from
+   * the same save produces the same footballer.
+   *
+   * A goalkeeper is a different sport and the conversion is refused both ways.
+   */
+  function retrain(playerId: ID, position: Position): { ok: boolean; message: string } {
+    const s = state.value
+    const c = club.value
+    const p = s?.players[playerId]
+    if (!s || !c || !p) return { ok: false, message: 'That player is not available.' }
+    if (p.clubId !== c.id) return { ok: false, message: 'He is not ours to retrain.' }
+    if (p.isAcademy) return { ok: false, message: 'Promote him first — the academy picks its own roles.' }
+    if (p.position === position) return { ok: false, message: `${p.knownAs} already plays there.` }
+    if ((p.position === 'GK') !== (position === 'GK')) {
+      return { ok: false, message: 'Nobody retrains into or out of goal. It is a different job.' }
+    }
+    if (p.injury && p.injury.weeksRemaining > 0) {
+      return { ok: false, message: `${p.knownAs} is injured. This is work for a fit player.` }
+    }
+    const was = p.position
+    const before = p.currentAbility
+    retrainPosition(new Rng(`${s.seed}:retrain:${playerId}:${position}:${s.date.week}`), p, position)
+    commit()
+    return {
+      ok: true,
+      message: `${p.knownAs} is a ${position} now, and still covers ${was}. `
+        + `Ability ${before} to ${p.currentAbility} — the coaches will get some of that back.`,
+    }
+  }
+
   function bid(
     playerId: ID,
     fee: number,
@@ -1067,7 +1124,7 @@ export const useGameStore = defineStore('game', () => {
     attach, attachWithFactories, commit, nextWeek, advanceUntilNextMatch,
     save, load, autosave, markRead, markAllRead, decide,
     toggleShortlist, isShortlisted, setTransferListed, setLoanListed, setSquadStatus,
-    renew, release, promote, bid,
+    renew, release, promote, demote, retrain, bid,
     loanOut, loanIn, recall, loansOut, loansIn,
     registration, registrationOpen, register, unregister, autoPickSquad, isHomegrown,
     achievementProgress, newAchievements,

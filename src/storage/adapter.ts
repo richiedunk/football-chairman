@@ -100,7 +100,7 @@ function promisify<T>(request: IDBRequest<T>): Promise<T> {
   })
 }
 
-export class IndexedDbAdapter implements StorageAdapter {
+class IndexedDbAdapter implements StorageAdapter {
   readonly name = 'IndexedDB'
 
   static isAvailable(): boolean {
@@ -181,7 +181,7 @@ export class IndexedDbAdapter implements StorageAdapter {
  * This exists so the game still works in a private window or wherever
  * IndexedDB is unavailable, not as the intended path.
  */
-export class LocalStorageAdapter implements StorageAdapter {
+class LocalStorageAdapter implements StorageAdapter {
   readonly name = 'localStorage'
   private prefix = 'dof:save:'
   private metaPrefix = 'dof:meta:'

@@ -1,6 +1,7 @@
 import { clamp, Rng } from '../rng'
 import { IdFactory } from '../ids'
-import { computeAskingPrice, computeWageDemand, totalWageBill } from './valuation'
+import { computeAskingPrice, computeWageDemand } from './valuation'
+import { wageHeadroom } from './contracts'
 import { moveAppeal } from './transfers'
 import { addInboxItem, addNews } from './inbox'
 import { seniorSquad } from './aiSquad'
@@ -88,7 +89,7 @@ export function generateOpportunities(
   const nation = state.nations[club.nationId]
   if (!league) return []
 
-  const wageRoom = club.finances.wageBudget - totalWageBill(state, club)
+  const wageRoom = wageHeadroom(state, club)
   const squad = seniorSquad(state, club)
   const out: DeadlineOpportunity[] = []
 

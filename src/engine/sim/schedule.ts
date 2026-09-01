@@ -20,7 +20,7 @@ export const LAST_MATCH_WEEK = 44
  * Circle-method round-robin. Produces `n - 1` rounds in which every club plays
  * once, then mirrors them with reversed home advantage for the second half.
  */
-export function roundRobinRounds(clubIds: ID[]): { home: ID; away: ID }[][] {
+function roundRobinRounds(clubIds: ID[]): { home: ID; away: ID }[][] {
   const clubs = clubIds.slice()
   // Odd club counts get a bye marker so the rotation still works.
   const bye = '__bye__'
@@ -121,46 +121,7 @@ export const CUP_ROUND_NAMES = [
   'Quarter-final', 'Semi-final', 'Final',
 ]
 
-/** Pair up remaining entrants for a knockout round. */
-export function drawKnockoutRound(
-  rng: Rng,
-  ids: IdFactory,
-  competitionId: ID,
-  entrants: ID[],
-  round: number,
-  week: number,
-  season: number,
-  competitionType: 'cup' | 'continental',
-): Fixture[] {
-  const shuffled = rng.shuffle(entrants)
-  const fixtures: Fixture[] = []
-  for (let i = 0; i + 1 < shuffled.length; i += 2) {
-    fixtures.push({
-      id: ids.next(ID_PREFIX.fixture),
-      competitionId,
-      competitionType,
-      round,
-      week,
-      season,
-      homeClubId: shuffled[i],
-      awayClubId: shuffled[i + 1],
-    })
-  }
-  return fixtures
-}
-
-/**
- * Cup fields are rounded down to a power of two by giving the strongest clubs
- * a bye into the next round — the same shape as a real cup where the top
- * divisions enter later.
- */
-export function byesNeeded(entrantCount: number): number {
-  if (entrantCount <= 1) return 0
-  const nextPowerOfTwo = Math.pow(2, Math.ceil(Math.log2(entrantCount)))
-  return nextPowerOfTwo - entrantCount
-}
-
-export const SEASON_PHASE_WEEKS: { phase: string; from: number; to: number }[] = [
+const SEASON_PHASE_WEEKS: { phase: string; from: number; to: number }[] = [
   { phase: 'preseason', from: 1, to: 5 },
   { phase: 'earlySeason', from: 6, to: 14 },
   { phase: 'autumn', from: 15, to: 25 },

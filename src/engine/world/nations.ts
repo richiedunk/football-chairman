@@ -1193,5 +1193,3 @@ export const NATION_DEFS: NationDef[] = [
     ],
   },
 ]
-
-export const NATION_BY_ID = new Map(NATION_DEFS.map((n) => [n.id, n]))

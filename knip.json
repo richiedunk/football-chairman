@@ -1,0 +1,18 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+
+  "entry": [
+    "index.html",
+    "tests/**/*.test.ts",
+    "scripts/**/*.{ts,mjs}"
+  ],
+  "project": ["src/**/*.{ts,vue}", "tests/**/*.ts", "scripts/**/*.{ts,mjs}"],
+
+  "ignoreExportsUsedInFile": { "interface": true, "type": true },
+
+  "tags": ["-unwired"],
+
+  "ignoreDependencies": ["@capacitor/preferences"],
+
+  "vitest": { "config": ["vitest.config.ts"] }
+}

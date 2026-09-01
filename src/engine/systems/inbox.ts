@@ -93,19 +93,6 @@ export function addNews(
   return item
 }
 
-/** Convenience for the common two-option decision. */
-export function yesNo(
-  yesLabel: string,
-  yesHint: string,
-  noLabel: string,
-  noHint: string,
-): InboxOption[] {
-  return [
-    { id: 'yes', label: yesLabel, hint: yesHint, available: true },
-    { id: 'no', label: noLabel, hint: noHint, available: true },
-  ]
-}
-
 /** Items still awaiting a decision, which block the week from advancing. */
 export function blockingItems(state: GameState): InboxItem[] {
   return state.inbox.filter((i) => i.urgent && i.decision && i.decision.chosenId === null)

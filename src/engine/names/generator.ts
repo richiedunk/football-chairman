@@ -143,8 +143,3 @@ function applySuffix(base: string, suffix: string): string {
   const trimmed = /[aeiou]$/i.test(base) ? base.slice(0, -1) : base
   return trimmed + suffix
 }
-
-/** Staff and agents use the same machinery but never take mononyms. */
-export function formalName(name: GeneratedName): string {
-  return `${name.firstName} ${name.lastName}`
-}

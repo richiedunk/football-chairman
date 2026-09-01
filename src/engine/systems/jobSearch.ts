@@ -17,7 +17,7 @@
  * spell out genuinely costs you career.
  */
 
-import type { Club, GameState, ID, JobOffer } from '../types'
+import type { Club, GameState, JobOffer } from '../types'
 import { Rng } from '../rng'
 import type { IdFactory } from '../ids'
 import { ID_PREFIX } from '../ids'
@@ -176,4 +176,3 @@ function pitchFor(state: GameState, club: Club): string {
   return 'A quiet club looking for somebody to take it on.'
 }
 
-export type { ID }

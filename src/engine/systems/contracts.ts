@@ -332,7 +332,13 @@ export function expiringContracts(
     .sort((a, b) => b.importance - a.importance)
 }
 
-/** Whether the wage budget has room for a given weekly wage. */
+/**
+ * What is left of the wage budget after the squad is paid.
+ *
+ * Negative when the club is already over. Three callers worked this out for
+ * themselves and one of them, the board's wage-pressure reading, normalised it
+ * differently — so "can we afford him" had two answers depending on who asked.
+ */
 export function wageHeadroom(state: GameState, club: Club): number {
   return club.finances.wageBudget - totalWageBill(state, club)
 }

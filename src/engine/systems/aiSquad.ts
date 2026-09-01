@@ -33,7 +33,7 @@ import type { Club, Contract, GameState, Player } from '../types'
 export const TARGET_SENIOR_SQUAD = 24
 
 /** Below this a club is short enough to take what it can get. */
-export const THIN_SENIOR_SQUAD = 20
+const THIN_SENIOR_SQUAD = 20
 
 /**
  * The squad size a club will fill up to out of the free-agent pool.
@@ -82,7 +82,7 @@ export function seniorSquad(state: GameState, club: Club): Player[] {
  * Availability is a different question and still counts everybody: an
  * eighteen-year-old can play on Saturday, he just does not use up a place.
  */
-export function registrableSquad(state: GameState, club: Club): Player[] {
+function registrableSquad(state: GameState, club: Club): Player[] {
   return seniorSquad(state, club).filter((p) => p.age >= U21_AGE)
 }
 
@@ -327,7 +327,7 @@ export function promoteFromAcademy(state: GameState, club: Club, rng: Rng): Play
  * club considers "our level" comes from the same curve squad generation uses,
  * so a club short of players reaches down rather than sideways.
  */
-export function recruitFreeAgents(
+function recruitFreeAgents(
   state: GameState,
   ctx: AiSquadContext,
   club: Club,

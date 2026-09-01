@@ -4,7 +4,9 @@ import { useGameStore } from '../../stores/game'
 import AppSheet from '../components/AppSheet.vue'
 import MeterBar from '../components/MeterBar.vue'
 import PlayerRow from '../components/PlayerRow.vue'
-import { assignScout, describeAssignment, knowledgeLabel } from '../../engine/systems/scouting'
+import {
+  assignScout, describeAssignment, knowledgeLabel, unassignScout,
+} from '../../engine/systems/scouting'
 import { staffEffectiveness } from '../../engine/world/staffGen'
 import { facilityGrade } from '../../engine/systems/facilities'
 import type { Staff } from '../../engine/types'
@@ -40,6 +42,22 @@ function openEditor(scout: Staff) {
   targetId.value = current?.targetId ?? store.club?.leagueId ?? ''
   minAbility.value = current?.minAbility ?? 80
   maxAge.value = current?.maxAge ?? 30
+}
+
+/**
+ * Call him back in.
+ *
+ * A scout with no brief is not idle — he watches whatever is in front of him
+ * and files nothing specific — but it is the only way to stop paying attention
+ * to a league you have finished with, and until now there was no way to do it
+ * short of giving him another job.
+ */
+function recall() {
+  const scout = editing.value
+  if (!scout) return
+  unassignScout(scout)
+  store.commit()
+  editing.value = null
 }
 
 function apply() {
@@ -183,6 +201,11 @@ function apply() {
 
       <template #footer>
         <button class="btn btn--primary btn--block" @click="apply">Send him out</button>
+        <button
+          v-if="editing.assignment"
+          class="btn btn--ghost btn--block"
+          @click="recall"
+        >Call him back — no brief</button>
       </template>
     </AppSheet>
   </div>

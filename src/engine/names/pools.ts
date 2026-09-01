@@ -602,8 +602,6 @@ export const NAME_POOLS: Record<string, NamePool> = {
   },
 }
 
-export const POOL_IDS = Object.keys(NAME_POOLS)
-
 /**
  * Diminutive suffixes, per pool. These are language-specific: "-inho" is
  * Portuguese, so grafting it onto a Basque forename produces "Asierzinho",

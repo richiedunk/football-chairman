@@ -3,7 +3,9 @@ import { computed } from 'vue'
 import { useGameStore } from '../../stores/game'
 import MeterBar from '../components/MeterBar.vue'
 import { formatMoney, formatWage } from '../../engine/systems/valuation'
-import { ledgerBalance, ledgerExpenditure, ledgerIncome, weeklyRevenue } from '../../engine/systems/finance'
+import {
+  ledgerBalance, ledgerExpenditure, ledgerIncome, wageBreakdown, weeklyRevenue,
+} from '../../engine/systems/finance'
 import { committedWages, expiringContracts } from '../../engine/systems/contracts'
 import {
   projectedSquadCost, SANCTION_LABELS, SQUAD_COST_LIMIT, underEmbargo,
@@ -57,13 +59,14 @@ const ratioPercent = computed(() => {
 const sanctions = computed(() => club.value?.finances.regulation.sanctions ?? [])
 const embargoed = computed(() => (club.value ? underEmbargo(club.value) : false))
 
-const wageTable = computed(() =>
-  store.squad
-    .filter((p) => p.contract)
-    .slice()
-    .sort((a, b) => (b.contract?.wage ?? 0) - (a.contract?.wage ?? 0))
-    .slice(0, 12),
-)
+// The engine's own table, not a second one built here. The version this
+// replaced divided by `wageBudget` without guarding it, so a club whose budget
+// had been cut to nothing showed every earner at `Infinity%` of it.
+const wageTable = computed(() => {
+  const s = store.game
+  const c = club.value
+  return s && c ? wageBreakdown(s, c).slice(0, 12) : []
+})
 
 const expiring = computed(() => {
   const s = store.game
@@ -262,20 +265,20 @@ const committed = computed(() => {
     <div class="card">
       <div class="list">
         <button
-          v-for="p in wageTable"
-          :key="p.id"
+          v-for="row in wageTable"
+          :key="row.player.id"
           class="list__row"
-          @click="$router.push(`/player/${p.id}`)"
+          @click="$router.push(`/player/${row.player.id}`)"
         >
           <div class="list__main">
-            <div class="list__primary">{{ p.knownAs }}</div>
+            <div class="list__primary">{{ row.player.knownAs }}</div>
             <div class="list__secondary">
-              {{ Math.round(((p.contract?.wage ?? 0) / club.finances.wageBudget) * 100) }}% of the budget
+              {{ Math.round(row.shareOfBudget * 100) }}% of the budget
             </div>
           </div>
           <div class="list__trail">
-            <div class="list__value">{{ formatWage(p.contract?.wage ?? 0, store.currency) }}</div>
-            <div class="list__sub">{{ p.stats.appearances }} apps</div>
+            <div class="list__value">{{ formatWage(row.wage, store.currency) }}</div>
+            <div class="list__sub">{{ row.player.stats.appearances }} apps</div>
           </div>
         </button>
       </div>

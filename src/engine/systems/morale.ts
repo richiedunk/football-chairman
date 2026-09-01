@@ -17,7 +17,7 @@ const STATUS_RANK: Record<SquadStatus, number> = {
   star: 5, firstTeam: 4, rotation: 3, backup: 2, prospect: 1, surplus: 0,
 }
 
-export function statusRank(status: SquadStatus): number {
+function statusRank(status: SquadStatus): number {
   return STATUS_RANK[status] ?? 2
 }
 

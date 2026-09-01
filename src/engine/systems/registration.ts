@@ -38,7 +38,7 @@ export const U21_AGE = 21
  * practice, and modelling both would double the bookkeeping to change almost
  * no decisions.
  */
-export function isHomegrownIn(player: Player, nationId: ID): boolean {
+function isHomegrownIn(player: Player, nationId: ID): boolean {
   return (player.trainingYears[nationId] ?? 0) >= HOMEGROWN_YEARS
 }
 
@@ -47,7 +47,7 @@ export function isHomegrownFor(player: Player, club: Club): boolean {
 }
 
 /** Under-21s never need a place, so they never need registering. */
-export function needsRegistration(player: Player): boolean {
+function needsRegistration(player: Player): boolean {
   return player.age >= U21_AGE
 }
 
@@ -143,7 +143,7 @@ export type RegistrationError =
   | 'noHomegrownPlaces'
   | 'embargo'
 
-export const REGISTRATION_MESSAGES: Record<RegistrationError, string> = {
+const REGISTRATION_MESSAGES: Record<RegistrationError, string> = {
   closed: 'The registration window is closed. Squad lists are locked until it reopens.',
   notAtClub: 'That player is not available to this club.',
   alreadyRegistered: 'That player is already on the squad list.',
@@ -166,7 +166,7 @@ function fail(error: RegistrationError): RegistrationResult {
   return { ok: false, error, message: REGISTRATION_MESSAGES[error] }
 }
 
-export function canRegister(
+function canRegister(
   state: GameState,
   club: Club,
   player: Player,

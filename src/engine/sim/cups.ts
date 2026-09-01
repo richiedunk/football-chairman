@@ -61,7 +61,7 @@ export function cupWeeksFor(
 }
 
 /** Name a round by how far from the final it is, so "Semi-final" always fits. */
-export function roundName(roundIndex: number, totalRounds: number): string {
+function roundName(roundIndex: number, totalRounds: number): string {
   const fromEnd = totalRounds - roundIndex - 1
   if (fromEnd === 0) return 'Final'
   if (fromEnd === 1) return 'Semi-final'

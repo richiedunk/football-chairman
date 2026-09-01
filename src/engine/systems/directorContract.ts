@@ -250,7 +250,7 @@ export function signContract(
  * Record money paid to the director. Every payment routes through here so the
  * career-earnings total can never drift from what was actually paid.
  */
-export function recordEarning(
+function recordEarning(
   state: GameState,
   club: Club | null,
   amount: number,

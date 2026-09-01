@@ -43,13 +43,13 @@ export function storageName(): string {
  * from and can never be mistaken for one — `listSaves` filters them out, and
  * `listBackups` is how the UI would offer one back.
  */
-export const BACKUP_PREFIX = 'premigration:'
+const BACKUP_PREFIX = 'premigration:'
 
 export function backupSlotId(slotId: string, fromVersion: number): string {
   return `${BACKUP_PREFIX}${slotId}:v${fromVersion}`
 }
 
-export function isBackupSlot(id: string): boolean {
+function isBackupSlot(id: string): boolean {
   return id.startsWith(BACKUP_PREFIX)
 }
 

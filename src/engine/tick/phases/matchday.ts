@@ -2,9 +2,11 @@
 import { clamp, Rng } from '../../rng'
 import { quickSimulate, simulateMatch } from '../../sim/match'
 import { applyMatchFatigue } from '../../systems/injuries'
-import { drawNextRoundIfDue, settleRound } from '../../sim/cups'
+import { cupWeeksFor, drawNextRoundIfDue, settleRound } from '../../sim/cups'
+import { awardContinentalStanding } from '../../systems/continental'
 import { ELEVEN, canFieldEleven, fieldable, fixAiSquad } from '../../systems/matchday'
 import { boardRemark, scoredAgainstUs } from '../../systems/oneThatGotAway'
+import { positionGroup } from '../../world/attributes'
 import { addInboxItem, addNews } from '../../systems/inbox'
 import { paySeverance } from '../../systems/directorContract'
 import { dismissDirector } from '../../systems/jobSearch'
@@ -228,6 +230,24 @@ export const cupRounds = phase({
       const round = cup.rounds[cup.rounds.length - 1]
       if (!round || round.week !== week) continue
       const settled = settleRound(state, cup, round)
+
+      // What a European run is worth beyond the money.
+      //
+      // Wired here rather than inside `settleRound` because `continental.ts`
+      // already imports from `cups.ts`, and the orchestration layer is where
+      // one system is allowed to know about another. Everyone knocked out is
+      // credited with the rounds they actually survived; the winner is
+      // credited with all of them.
+      if (cup.type === 'continental') {
+        const totalRounds = Math.max(1, cupWeeksFor(cup.entrantIds.length || 2, cup.type).length)
+        for (const clubId of settled.eliminated) {
+          awardContinentalStanding(state, cup, clubId, round.round - 1, totalRounds)
+        }
+        if (settled.winnerId) {
+          awardContinentalStanding(state, cup, settled.winnerId, totalRounds, totalRounds)
+        }
+      }
+
       if (settled.winnerId === state.playerClubId) {
         addInboxItem(state, ids, {
           category: 'match',
@@ -389,8 +409,10 @@ function pushForm(form: ('W' | 'D' | 'L')[], outcome: 'W' | 'D' | 'L'): void {
   form.push(outcome)
   if (form.length > 6) form.shift()
 }
+/** Who a clean sheet belongs to: the goalkeeper and the back four. */
 function isDefensivePosition(player: Player): boolean {
-  return ['GK', 'DC', 'DL', 'DR'].includes(player.position)
+  const group = positionGroup(player.position)
+  return group === 'goalkeeper' || group === 'defender'
 }
 /**
  * Players serving a suspension this week, and tick down everyone else's.

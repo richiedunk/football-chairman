@@ -12,17 +12,11 @@ import { autoRegister } from '../systems/registration'
 import { createOwner, ownerName, startingOwnerKind } from '../systems/ownership'
 import { realClubsFor, type RealClub } from './realClubs'
 import { resetCup } from '../sim/cups'
-import {
-  createContinentalCups, refreshContinentalEntrants, stripUnplayablePlaces,
-} from '../systems/continental'
+import { createContinentalCups, refreshContinentalEntrants, stripUnplayablePlaces } from '../systems/continental'
 import { philosophyForAi, setPhilosophy } from '../systems/recruitment'
 import { SAVE_VERSION } from '../types'
 import { STARTING_AGE } from '../systems/directorCareer'
-import type {
-  Agent, BoardExpectation, BoardMandate, Club, ClubFinances, ClubStrategy, CupCompetition,
-  DirectorBackground, Facilities, GameState, ID, League, LeagueTableRow, MediaOutlet, Nation, Player,
-  Position, Staff, Stand, StandId, StandType,
-} from '../types'
+import type { Agent, BoardExpectation, BoardMandate, Club, ClubFinances, ClubStrategy, CupCompetition, DirectorBackground, Facilities, GameState, ID, League, LeagueTableRow, MediaOutlet, Nation, Player, Position, Stand, StandId, StandType } from '../types'
 
 /**
  * World generation.
@@ -856,13 +850,4 @@ export function emptyTableRow(clubId: ID): LeagueTableRow {
     points: 0,
     form: [],
   }
-}
-
-/** Convenience accessor used widely by the UI and the systems. */
-export function playersOf(state: GameState, club: Club): Player[] {
-  return club.squad.map((id) => state.players[id]).filter((p): p is Player => Boolean(p))
-}
-
-export function staffOf(state: GameState, club: Club): Staff[] {
-  return club.staff.map((id) => state.staff[id]).filter((s): s is Staff => Boolean(s))
 }

@@ -154,6 +154,15 @@ export interface AuthService {
   current(): AccountIdentity | null
 }
 
+/**
+ * The sign-in service.
+ *
+ * Every method is a stub that succeeds at doing nothing, and that is the
+ * point: `capabilities().signIn` is hard-false until a real provider is wired
+ * in, so `availableProviders()` returns an empty list and the settings screen
+ * shows no account section at all. The day a provider lands, the screen is
+ * already there.
+ */
 export const auth: AuthService = {
   availableProviders() {
     if (!capabilities().signIn) return []

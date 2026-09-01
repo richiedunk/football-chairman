@@ -1,27 +1,18 @@
 import { Rng } from '../rng'
 import { IdFactory } from '../ids'
 import { NameGenerator } from '../names/generator'
-import { sortTable } from '../systems/board'
 import type { TransferAttemptStats } from '../systems/transfers'
 import { guardedFacts, runPhases } from '../phases'
 import { academyIntake, openTheWeek, seasonClock } from './phases/calendar'
-import {
-  cupDraws, cupRounds, fixtureList, matchdayIntegrity, matches,
-} from './phases/matchday'
-import {
-  clubWeek, development, morale, squadWarning, worldRotation,
-} from './phases/clubWeek'
-import {
-  deadlineDay, frozenOutClients, registrationLock, scouting, takeovers, transfers, valuations,
-} from './phases/market'
-import {
-  internationalCallUps, internationalDuty, internationalTournament,
-} from './phases/international'
+import { cupDraws, cupRounds, fixtureList, matchdayIntegrity, matches } from './phases/matchday'
+import { clubWeek, development, morale, squadWarning, worldRotation } from './phases/clubWeek'
+import { deadlineDay, frozenOutClients, registrationLock, scouting, takeovers, transfers, valuations } from './phases/market'
+import { internationalCallUps, internationalDuty, internationalTournament } from './phases/international'
 import { contracts, dataDepartment } from './phases/backroom'
 import { press } from './phases/press'
 import { aiBoard, architects, boardAndCoach, housekeeping } from './phases/boardroom'
 import type { TickContext, TickFacts, TickPhase } from './context'
-import type { Fixture, GameState, ID, MatchResult } from '../types'
+import type { Fixture, GameState, MatchResult } from '../types'
 
 /**
  * The weekly tick.
@@ -159,9 +150,4 @@ export function advanceWeek(state: GameState, deps: TickDeps): TickResult {
   result.playerFixtures = facts.playerFixtures
 
   return result
-}
-
-/** Sorted league table for a competition, exported for the UI. */
-export function getTable(state: GameState, leagueId: ID) {
-  return sortTable(state.tables[leagueId] ?? [])
 }

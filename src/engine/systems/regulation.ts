@@ -50,7 +50,7 @@ export const SQUAD_COST_LIMIT = 0.7
 export const SANCTION_THRESHOLD = 0.85
 
 /** Above this the breach is severe enough to skip a step. */
-export const SEVERE_BREACH = 0.95
+const SEVERE_BREACH = 0.95
 
 export interface SquadCostAssessment {
   /** Wages, amortisation and agent fees. */
@@ -166,7 +166,7 @@ export function underEmbargo(club: Club): boolean {
  * emptied squad lists down to four players and turned a sanction into a
  * demolition.
  */
-export function embargoedSince(club: Club): number | null {
+function embargoedSince(club: Club): number | null {
   let season: number | null = null
   // The regulation record is created by the v4 migration, and the v2 step runs
   // before it — v2 rebuilds squad lists through `autoRegister`, which asks

@@ -1,9 +1,7 @@
 import { clamp, Rng } from '../rng'
-import type {
-  Contract, ID, Nation, Player, PlayerTrait, Position, SquadStatus,
-} from '../types'
+import type { Contract, ID, Nation, Player, PlayerTrait, Position, SquadStatus } from '../types'
 import { IdFactory, ID_PREFIX } from '../ids'
-import { generateAttributes, positionGroup } from './attributes'
+import { generateAttributes } from './attributes'
 import type { NameGenerator } from '../names/generator'
 
 /**
@@ -394,7 +392,7 @@ function rollSecondNationality(ctx: PlayerGenContext, primary: Nation): ID | nul
  * The curve allows a 22-year-old to be world class and a 19-year-old to be
  * very good, which is where the real ceiling sits.
  */
-export function maxAbilityForAge(age: number): number {
+function maxAbilityForAge(age: number): number {
   if (age >= 23) return 200
   return 70 + (age - 15) * 17
 }
@@ -409,7 +407,7 @@ export function maxAbilityForAge(age: number): number {
  * fourteen of them across a compact world, one rated 84 and his club's
  * fourth-best player.
  */
-export const MIN_SENIOR_AGE = 17
+const MIN_SENIOR_AGE = 17
 
 /** Youngest age at which `ability` is credible. Inverse of maxAbilityForAge. */
 export function minAgeForAbility(ability: number): number {
@@ -509,13 +507,4 @@ export function emptyStats() {
     ratingSum: 0,
     motmAwards: 0,
   }
-}
-
-/** Squad-shape audit used by the coach's requests and the squad screen. */
-export function countByPositionGroup(players: Player[]): Record<string, number> {
-  const counts: Record<string, number> = {
-    goalkeeper: 0, defender: 0, midfielder: 0, forward: 0,
-  }
-  for (const p of players) counts[positionGroup(p.position)]++
-  return counts
 }

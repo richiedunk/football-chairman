@@ -257,5 +257,7 @@ export function retrainPosition(
   const targetAbility = clamp(player.currentAbility * 0.94, 1, 200)
   player.attributes = generateAttributes(rng, newPosition, targetAbility, 0.5)
   player.currentAbility = ratingForPosition(player.attributes, newPosition)
-  invalidatePlayerRatings(player.attributes)
+  // No cache to invalidate: `generateAttributes` returned a new object, and
+  // the memo is keyed on the object rather than the player, so the old
+  // entries go when the old attributes do.
 }

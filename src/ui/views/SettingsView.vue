@@ -6,6 +6,7 @@ import {
   deleteSave, exportSave, importSave, listBackups, listSaves, saveGame, storageName, storageQuota,
 } from '../../storage/saves'
 import type { SaveSlotMeta } from '../../storage/adapter'
+import { auth, type AccountIdentity, type SignInProvider } from '../../platform/services'
 
 const store = useGameStore()
 const router = useRouter()
@@ -18,9 +19,61 @@ const saveName = ref('')
 const fileInput = ref<HTMLInputElement | null>(null)
 const busy = ref(false)
 
+/**
+ * The account, where this build has one to offer.
+ *
+ * `auth.availableProviders()` is the only thing that decides whether any of
+ * this appears, and today it returns nothing on every build: `capabilities()`
+ * reports `signIn: false` until a real provider is wired in, deliberately,
+ * because a capability that claims to exist and then throws is worse than one
+ * that says no. So this section is invisible for now and lights up the day the
+ * store work lands, rather than the service sitting in a file nothing calls.
+ *
+ * The provider list is computed rather than hard-coded because of Apple's
+ * rule: offer any third-party sign-in on iOS and Sign in with Apple has to be
+ * offered beside it.
+ */
+const providers = ref<SignInProvider[]>([])
+const account = ref<AccountIdentity | null>(null)
+
+const PROVIDER_LABELS: Record<SignInProvider, string> = {
+  apple: 'Sign in with Apple',
+  google: 'Sign in with Google',
+}
+
+async function signIn(provider: SignInProvider) {
+  busy.value = true
+  try {
+    account.value = await auth.signIn(provider)
+    notify?.(
+      account.value
+        ? `Signed in as ${account.value.displayName ?? 'your account'}.`
+        : 'That did not complete. Nothing has changed.',
+      account.value ? 'success' : 'error',
+    )
+  } finally {
+    busy.value = false
+  }
+}
+
+async function signOut() {
+  busy.value = true
+  try {
+    await auth.signOut()
+    account.value = auth.current()
+    notify?.('Signed out. Your saves stay on this device either way.', 'info')
+  } finally {
+    busy.value = false
+  }
+}
+
 const settings = computed(() => store.game?.settings ?? null)
 
-onMounted(refresh)
+onMounted(() => {
+  refresh()
+  providers.value = auth.availableProviders()
+  account.value = auth.current()
+})
 
 async function refresh() {
   saves.value = await listSaves()
@@ -179,6 +232,34 @@ function mb(bytes: number) {
         </div>
       </div>
     </div>
+
+    <template v-if="providers.length">
+      <div class="section-title">Account</div>
+      <div class="card">
+        <div class="card__body stack">
+          <p class="small muted" style="margin: 0">
+            Signing in does not move your saves. A career file still lives on this
+            device and a career file is still the copy you keep.
+          </p>
+          <template v-if="account">
+            <div class="row" style="justify-content: space-between">
+              <span>{{ account.displayName ?? 'Signed in' }}</span>
+              <span class="chip">{{ account.provider }}</span>
+            </div>
+            <button class="btn btn--ghost btn--sm" :disabled="busy" @click="signOut">Sign out</button>
+          </template>
+          <template v-else>
+            <button
+              v-for="p in providers"
+              :key="p"
+              class="btn btn--ghost btn--sm btn--block"
+              :disabled="busy"
+              @click="signIn(p)"
+            >{{ PROVIDER_LABELS[p] }}</button>
+          </template>
+        </div>
+      </div>
+    </template>
 
     <div class="section-title">Backup</div>
     <div class="card">

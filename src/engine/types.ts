@@ -657,6 +657,7 @@ export interface SeasonHistory {
 
 export type Position = 'GK' | 'DC' | 'DL' | 'DR' | 'DM' | 'MC' | 'ML' | 'MR' | 'AM' | 'ST'
 
+/** The four broad shapes of a footballer. */
 export type PositionGroup = 'goalkeeper' | 'defender' | 'midfielder' | 'forward'
 
 export interface PlayerAttributes {

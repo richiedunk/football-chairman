@@ -67,7 +67,7 @@ export const ROLE_LABELS: Record<StaffRole, string> = {
 }
 
 /** Which attributes actually matter for each role, for hiring and effects. */
-export const ROLE_KEY_ATTRIBUTES: Record<StaffRole, (keyof StaffAttributes)[]> = {
+const ROLE_KEY_ATTRIBUTES: Record<StaffRole, (keyof StaffAttributes)[]> = {
   headCoach: ['coaching', 'manManagement', 'tactical', 'mediaHandling'],
   assistantCoach: ['coaching', 'manManagement', 'judgingAbility'],
   scout: ['judgingAbility', 'judgingPotential', 'negotiating'],
@@ -81,7 +81,7 @@ export const ROLE_KEY_ATTRIBUTES: Record<StaffRole, (keyof StaffAttributes)[]> =
   setPieceCoach: ['tactical', 'coaching', 'dataAnalysis'],
 }
 
-export function generateStaff(
+function generateStaff(
   ctx: StaffGenContext,
   role: StaffRole,
   clubId: ID | null,

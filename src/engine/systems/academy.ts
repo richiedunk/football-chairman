@@ -6,6 +6,7 @@ import type { Club, GameState, Player, Staff } from '../types'
 import type { IdFactory } from '../ids'
 import type { NameGenerator } from '../names/generator'
 import { adjustForPlayer } from './agents'
+import { releaseRegistration, U21_AGE } from './registration'
 
 /**
  * The academy.
@@ -122,11 +123,35 @@ export function promoteToSenior(
   return { ok: true }
 }
 
-/** Send a player back to the academy — rarely a good idea, but available. */
-export function demoteToAcademy(player: Player): void {
-  if (player.age > 21) return
+/**
+ * Send a player back to the academy.
+ *
+ * Buys a registration place — academy players do not take one — at the cost of
+ * treating a professional as a boy again. Only available while he still is
+ * one: past twenty-one nobody would believe it, and the league would not wear
+ * it either.
+ *
+ * Says why it refused rather than doing nothing, so a screen can tell the
+ * difference between "not allowed" and "done".
+ */
+export function demoteToAcademy(
+  club: Club,
+  player: Player,
+): { ok: true } | { ok: false; error: string } {
+  if (player.isAcademy) return { ok: false, error: `${player.knownAs} is already an academy player.` }
+  if (player.clubId !== club.id) return { ok: false, error: 'That player is not at this club.' }
+  if (player.age > U21_AGE) {
+    return {
+      ok: false,
+      error: `${player.knownAs} is ${player.age}. Only an under-${U21_AGE} can go back to the academy.`,
+    }
+  }
   player.isAcademy = true
   player.squadStatus = 'prospect'
+  player.desiredStatus = 'prospect'
+  // His place on the squad list is the whole point of doing this.
+  releaseRegistration(club, player.id)
+  return { ok: true }
 }
 
 /**
@@ -177,21 +202,4 @@ function hashForPlayer(id: string): number {
     h = Math.imul(h, 16777619) >>> 0
   }
   return (h >>> 8) / 16777216
-}
-
-/** Academy players eligible for release, with the reason. */
-export function releaseCandidates(state: GameState, club: Club): { player: Player; reason: string }[] {
-  return club.squad
-    .map((id) => state.players[id])
-    .filter((p): p is Player => Boolean(p) && p.isAcademy)
-    .filter((p) => p.age >= 18)
-    .map((p) => {
-      const assessment = academyAssessment(state, club, p)
-      return { player: p, assessment }
-    })
-    .filter((entry) => entry.assessment.starRating <= 2)
-    .map((entry) => ({
-      player: entry.player,
-      reason: entry.assessment.verdict,
-    }))
 }

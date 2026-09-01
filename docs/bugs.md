@@ -13,6 +13,44 @@ will break next.
 
 ## Open
 
+### ~~Seven features are written, documented, and never called~~ — wired in
+Found by `knip`. All seven are connected now, and the register is empty.
+
+| what | where it went |
+|---|---|
+| `awardContinentalStanding` | Called from the `cupRounds` phase when a continental tie settles — everyone knocked out credited with the rounds they survived, the winner with all of them. Measured over four seasons: before, the clubs whose continental reputation sat above their domestic one were Peterborough, Fleetwood and Harrogate, which is rounding drift in clubs that never leave England. After, they are Köln, Augsburg, Brentford, Nice and Chelsea. |
+| `retrainPosition` | A sheet on the player screen. Permanent, costs him about six per cent, keeps the old position as one he can still cover, and is refused into or out of goal because that is a different job. |
+| `unassignScout` | "Call him back — no brief" on the scout's assignment sheet. Until now the only way to take a scout off a league was to give him another one. |
+| `demoteToAcademy` | A button on the player screen, for an under-21 senior. It now frees his registration place, which is the only reason a director would ever do it, and says why it refused instead of silently doing nothing. |
+| `wageBreakdown` | The finance screen's highest-earners table, which had its own copy that divided by `wageBudget` unguarded — a club whose budget had been cut to nothing showed every earner at `Infinity%` of it. |
+| `wageHeadroom` | Both callers that did the subtraction themselves. |
+| `auth` | The settings screen, behind `auth.availableProviders()`. Renders nothing today by design: `capabilities().signIn` is hard-false until a real provider exists, so the section is invisible and lights up when one lands. |
+
+`PositionGroup` has a consumer again too — one `positionGroup()` in `attributes.ts`
+replacing two mappings spelled out by hand, in the position badge and the
+clean-sheet rule.
+
+**Left open by this, and worth its own look:** the board's `reduceWageBill`
+mandate scores you on a wage bill it computes itself — raw squad contract
+wages, no staff, and a player loaned out still counted at his full wage. Every
+other system in the game reads `totalWageBill`, which counts staff and splits a
+loan by the agreed share. So loaning out an expensive player, the obvious way
+to answer that mandate, moves the number the board is *not* looking at.
+
+
+### An unused Capacitor plugin is wired into both native projects
+`@capacitor/preferences` is in `package.json` and no code imports it, but
+`ios/App/Podfile` and `android/capacitor.settings.gradle` both point at it in
+`node_modules`. Removing it is `npm uninstall` **and** `npx cap sync`, and the
+iOS half of that wants CocoaPods on a Mac.
+
+Left installed rather than half-removed — dropping it from `package.json` alone
+leaves two native projects referencing a directory that is not there. Worth
+deciding: durable key-value storage on a phone is a real need (a WKWebView can
+evict localStorage), so this may be a plugin installed for an adapter that was
+never written rather than one to throw away.
+
+
 ### Seventeen fields of the world model are read by nothing
 Found by `scripts/dialcheck.ts`, enforced by `tests/dials.test.ts`. Two kinds,
 wanting opposite fixes, and none of them touched yet because both change the
@@ -41,7 +79,23 @@ field fails the test, and so does leaving one on the register after wiring it
 up.
 
 
-### Housekeeping refreshes the squad of the club that just sacked you
+### ~~Housekeeping refreshes the squad of the club that just sacked you~~ — fixed, with nothing to show for it
+The fix is in `tick/phases/boardroom.ts`: the phase that ends the director's
+employment writes `playerClub = null`, so the head coach no longer files a
+weekly relationship update against a man he no longer works with and the squad
+of the club that just sacked him no longer gets its labels rewritten.
+
+**Measured, and it changed nothing observable.** `scripts/sackweek.ts`, eight
+careers of two hundred and sixty weeks, five dismissals between them: coach
+mail in the sacking week 0 before and 0 after, squad labels rewritten 0 and 0,
+and the same eight kinds of item landing in the inbox either way.
+
+That is a weak result and it is stated as one. The script counts symptoms —
+messages and label changes — and the stale writes it was meant to catch are
+mostly silent: `processCoachRelations` moves `dofRelationship` whether or not
+it has anything to say, and `refreshSquadStatuses` recomputes labels that are
+usually already right. So this is a correctness fix with no evidence behind it
+of a behaviour change, rather than a fix that was shown to matter.
 `tick/phases/boardroom.ts`. The board's verdict can end the director's
 employment, and `housekeeping` ten lines later calls `refreshSquadStatuses` on
 `playerClub` — which is the value from the top of the week, i.e. the club he

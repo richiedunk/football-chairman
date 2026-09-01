@@ -1,5 +1,5 @@
 import { clamp, Rng } from '../rng'
-import type { City, Club, GameState, League, Owner, OwnerKind } from '../types'
+import type { City, Owner, OwnerKind } from '../types'
 
 /**
  * Club ownership.
@@ -24,7 +24,7 @@ export const OWNER_LABELS: Record<OwnerKind, string> = {
   fanOwned: 'Supporter-owned',
 }
 
-export const OWNER_DESCRIPTIONS: Record<OwnerKind, string> = {
+const OWNER_DESCRIPTIONS: Record<OwnerKind, string> = {
   legacyFamily:
     'The same family have held the club for decades. They are not going to transform it and they are not going to sell it either.',
   localBusiness:
@@ -56,7 +56,7 @@ interface OwnerProfile {
   youthBelief: [number, number]
 }
 
-export const OWNER_PROFILES: Record<OwnerKind, OwnerProfile> = {
+const OWNER_PROFILES: Record<OwnerKind, OwnerProfile> = {
   legacyFamily: {
     wealth: [20, 55], patience: [60, 90], ambition: [30, 60],
     interference: [30, 60], leverage: [20, 50], youthBelief: [40, 70],
@@ -255,14 +255,4 @@ export function ownerTraits(owner: Owner): string[] {
   if (owner.leverage <= 20) traits.push('Debt-averse')
   else if (owner.leverage >= 70) traits.push('Comfortable with borrowing')
   return traits
-}
-
-/** Clubs whose owner has held them long enough to be assessed for a sale. */
-export function ownerTenure(state: GameState, club: Club): number {
-  return state.date.season - club.board.owner.sinceSeason
-}
-
-/** Convenience for screens: the club's league, for phrasing expectations. */
-export function leagueOf(state: GameState, club: Club): League | null {
-  return state.leagues[club.leagueId] ?? null
 }

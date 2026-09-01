@@ -1,10 +1,8 @@
-import { clamp, Rng } from '../rng'
+import { clamp } from '../rng'
 import { IdFactory, ID_PREFIX } from '../ids'
 import { sortTable } from './board'
 import { roundsRequired } from '../sim/cups'
-import type {
-  Club, Confederation, ContinentalTier, CupCompetition, GameState, ID,
-} from '../types'
+import type { Confederation, ContinentalTier, CupCompetition, GameState, ID } from '../types'
 
 /**
  * Continental competition.
@@ -318,4 +316,3 @@ export function continentalResultFor(
   return '—'
 }
 
-export type { Club, Rng }

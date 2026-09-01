@@ -24,7 +24,7 @@ import type {
 const KNOWLEDGE_PER_WEEK = 9
 
 /** Knowledge above which a report is considered complete. */
-export const FULL_KNOWLEDGE = 100
+const FULL_KNOWLEDGE = 100
 
 /** Weeks after which a report is flagged stale and needs refreshing. */
 const STALE_AFTER_WEEKS = 26
@@ -410,6 +410,7 @@ export function assignScout(
   scout.assignment = { ...assignment, weeksOnAssignment: 0 }
 }
 
+/** Take a scout off his brief. He watches whatever is in front of him. */
 export function unassignScout(scout: Staff): void {
   scout.assignment = null
 }

@@ -23,7 +23,7 @@ export interface Field {
 }
 
 /** Every field declared at the top level of an interface or type in a file. */
-export function declaredFields(source: string): Field[] {
+function declaredFields(source: string): Field[] {
   const fields: Field[] = []
   const lines = source.split('\n')
   let owner = ''
@@ -49,7 +49,7 @@ export function declaredFields(source: string): Field[] {
 }
 
 /** Somewhere in `source` that consults the field rather than setting it. */
-export function isRead(name: string, source: string): boolean {
+function isRead(name: string, source: string): boolean {
   // `.field`, but not `.field =`. `=>`, `==` and `===` are not assignment;
   // `+=` and its family are, but they read as well as write, so they count.
   const dotted = new RegExp(`\\.${name}\\b(?!\\s*=(?![=>]))`)

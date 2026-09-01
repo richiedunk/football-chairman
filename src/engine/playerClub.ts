@@ -11,8 +11,3 @@ import type { Club, GameState } from './types'
 export function playerClub(state: GameState): Club | null {
   return state.playerClubId ? state.clubs[state.playerClubId] ?? null : null
 }
-
-/** True while the director has no club — sacked, or not yet appointed. */
-export function isBetweenJobs(state: GameState): boolean {
-  return state.playerClubId === null
-}
