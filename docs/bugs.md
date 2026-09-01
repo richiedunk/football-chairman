@@ -100,6 +100,70 @@ this is the seventh measurement that has changed the answer.
 correction below.
 
 
+### A player with no club never got any worse, and it froze the lower leagues
+**The supply half of the drift, and a correction to the entry below it.**
+
+**What the last entry got wrong.** It said the wage gate was the binding
+constraint, on a world-wide count of 5.37 million budget rejections against the
+ability ceiling's 3.28 million. That is true and it is misleading: 144 of the
+238 clubs are in the top flight, so a world-wide count is mostly a report on
+the one tier that was already working. Split by division, the binding gate
+**flips**:
+
+| tier | attempts finding nobody | rejected "too good" | rejected on budget |
+|---|---|---|---|
+| 1 | 38% | 517,845 | **3,308,245** |
+| 3 | 67% | 447,978 | 714,095 |
+| 4 | 78% | **907,842** | 443,484 |
+| 5 | **88%** | **1,227,359** | 175,306 |
+
+At the bottom of the pyramid the ability ceiling rejects seven candidates for
+every one the budget rejects, and only **four attempts a season** are blocked
+for want of a squad place. This is the measurement `aiSquad.ts` demands in its
+own comment before anybody touches that ceiling again — and the answer is not
+to lift it. It is that the pool is full of players too good for the clubs that
+need them.
+
+**Why the pool stayed too good.** `developPlayer` returns immediately for a
+player with no club, so an unattached player's ability was **frozen for ever**.
+A twenty-six-year-old released by a second-tier side sat at his old rating
+indefinitely: too good for the fourth tier to sign, not wanted by the second.
+Fourteen hundred of them accumulated.
+
+The wage demand already softened 7% every four weeks — the mechanism that is
+supposed to let a released player end up in non-league. Softening the price
+without softening the player was half a mechanism. A man out of the game does
+not stay the player he was.
+
+He now loses 1% of his ability on the same four-week cadence, floored at 30 —
+about twelve per cent over a season unattached, which brings a man released by
+the second tier within reach of the fourth inside a year. That is the rate
+careers really do come down the pyramid at.
+
+| tier 5 | before | after |
+|---|---|---|
+| attempts finding nobody | 88% | 84% |
+| rejected "too good" | 1,227,359 | **808,142** |
+| signings a season | 39 | **50** |
+| players aged 24–27 | 1.6 | **2.9** |
+| players aged 24–31 | 3.6 | **4.9** |
+
+Tier 4's 24–31 band goes 5.6 to 6.2 and its signings 47 to 55. Tier 1 is
+unmoved.
+
+**It does not reach the acceptance test and is not claimed to.** The roadmap
+asks for eight or more players aged 24–31 at tiers 4 and 5; this gets tier 5 to
+4.9 and tier 4 to 6.2. Tier 3 is fractionally worse (7.3 to 6.5). It is real
+movement on the right axis rather than a finished job.
+
+**One hypothesis tested and discarded on the way.** `promoteFromAcademy` runs
+before `recruitFreeAgents` every week, so the free seventeen-year-old takes the
+place before the market is consulted — an obvious ratchet. Swapping the order
+did essentially nothing and made tier 5 slightly worse: its 24–31 band went 3.6
+to 3.4 and promotions actually *rose*, 2.99 to 3.15, because recruitment
+declines most weeks by design and promotion fires anyway. Reverted.
+
+
 ### An unused Capacitor plugin is wired into both native projects
 `@capacitor/preferences` is in `package.json` and no code imports it, but
 `ios/App/Podfile` and `android/capacitor.settings.gradle` both point at it in

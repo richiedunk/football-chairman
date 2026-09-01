@@ -4,6 +4,7 @@ import { abilityCeilingFor } from '../world/playerGen'
 import { isTransferWindowOpen } from '../sim/schedule'
 import { ratingForPositionCached } from '../world/attributes'
 import { promoteToSenior } from './academy'
+import { invalidatePlayerRatings } from '../world/attributes'
 import { targetSquadFor } from './recruitment'
 import { U21_AGE } from './registration'
 import { suggestRenewal } from './contracts'
@@ -71,8 +72,20 @@ export interface AiSquadContext {
   recruitStats?: RecruitStats
 }
 
-/** A tally of why a club did or did not sign a free agent. */
+/**
+ * A tally of why a club did or did not sign a free agent, split by division.
+ *
+ * World-wide totals are useless here and the first version of this produced
+ * them: 144 of 238 clubs sit in the top flight, so a world-wide count is
+ * mostly a report on the one tier that is working. The tier is what the
+ * question is about.
+ */
 export interface RecruitStats {
+  byTier: Map<number, Tally>
+}
+
+/** One division's counts. */
+export interface Tally {
   /** Chances to sign at all. */
   passes: number
   /** No registration place free, so it never looked. */
@@ -98,6 +111,10 @@ export interface RecruitStats {
 }
 
 export function newRecruitStats(): RecruitStats {
+  return { byTier: new Map() }
+}
+
+function newTally(): Tally {
   return {
     passes: 0, squadFull: 0, didNotBother: 0, poolEmpty: 0, aboveCeiling: 0,
     belowFloor: 0, unaffordable: 0, unwilling: 0, signed: 0, signedAdult: 0,
@@ -140,6 +157,25 @@ function registrableSquad(state: GameState, club: Club): Player[] {
  * in the world for each of 238 clubs would cost more than the rest of the tick
  * put together.
  */
+/**
+ * How much sharpness a month without a club costs.
+ *
+ * Applied on the same four-week cadence as the wage softening beside it, so a
+ * full season unattached takes about twelve per cent off a player — enough to
+ * bring a man released by the second tier within reach of the fourth inside a
+ * year, which is the rate careers really do come down the pyramid at.
+ */
+const UNATTACHED_DECLINE = 0.01
+
+/**
+ * Below this, further decline is not modelling anything.
+ *
+ * A player this far down is out of the professional game whatever his rating
+ * says, and letting the number fall to nothing would only produce a pool of
+ * unsignable ghosts.
+ */
+const UNATTACHED_FLOOR = 30
+
 export function runAiSquadManagement(state: GameState, ctx: AiSquadContext): void {
   const freeAgents: Player[] = []
 
@@ -148,8 +184,27 @@ export function runAiSquadManagement(state: GameState, ctx: AiSquadContext): voi
     player.weeksUnattached += 1
     // Demands soften the longer nobody calls. This is the mechanism that lets
     // a player released by a second-tier club end up playing non-league.
+    //
+    // **And so does the player.** `developPlayer` returns immediately for
+    // anyone without a club, so an unattached player's ability used to be
+    // frozen for ever: a twenty-six-year-old released by a second-tier side
+    // sat at his old rating indefinitely, too good for the clubs that needed
+    // him and unwanted by the ones that could afford him. Fourteen hundred of
+    // them accumulated, and `scripts/recruitgates.ts` measured what that did —
+    // at the fifth tier, 88% of attempts to sign anybody ended with the club
+    // reading the whole list and finding nobody, and the ability ceiling
+    // rejected seven candidates for every one the budget rejected.
+    //
+    // Softening the price without softening the player was half a mechanism.
+    // A man out of the game does not stay the player he was; he loses his
+    // edge, and that is precisely how a career comes down the divisions.
     if (player.weeksUnattached % 4 === 0) {
       player.wageDemand = Math.max(90, Math.round(player.wageDemand * 0.93))
+      player.currentAbility = Math.max(
+        UNATTACHED_FLOOR,
+        player.currentAbility * (1 - UNATTACHED_DECLINE),
+      )
+      invalidatePlayerRatings(player.attributes)
     }
     freeAgents.push(player)
   }
@@ -414,8 +469,13 @@ function recruitOne(
   // to sign it. Outside a window a club with nineteen players cannot buy
   // anyone, so declining a free agent is choosing to be short until February.
   // Which is exactly why real clubs sign free agents in October.
-  const stats = ctx.recruitStats
-  if (stats) stats.passes += 1
+  let stats: Tally | null = null
+  if (ctx.recruitStats) {
+    const tier = state.leagues[club.leagueId]?.tier ?? 0
+    stats = ctx.recruitStats.byTier.get(tier) ?? newTally()
+    ctx.recruitStats.byTier.set(tier, stats)
+    stats.passes += 1
+  }
   const squad = seniorSquad(state, club)
   // Places for the ceiling, bodies for the emergency — the same distinction the
   // registration rules make, and the reason under-21s never blocked a signing

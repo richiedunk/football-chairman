@@ -42,19 +42,17 @@ for (let s = 0; s < SEASONS - SETTLE; s++) {
 }
 
 const seasons = SEASONS - SETTLE
-const per = (n: number) => (n / seasons).toFixed(0).padStart(9)
-const share = (n: number) => `${((n / Math.max(1, stats.passes)) * 100).toFixed(1)}%`.padStart(7)
 
-console.log(`seasons ${SETTLE + 1}-${SEASONS}, seed ${SEED}, world-wide, per season\n`)
-console.log(`  chances to sign                 ${per(stats.passes)}`)
-console.log(`  ...no registration place free   ${per(stats.squadFull)}  ${share(stats.squadFull)}`)
-console.log(`  ...did not bother this week     ${per(stats.didNotBother)}  ${share(stats.didNotBother)}`)
-console.log(`  ...looked, found nobody at all  ${per(stats.poolEmpty)}  ${share(stats.poolEmpty)}`)
-console.log(`  ...SIGNED SOMEBODY              ${per(stats.signed)}  ${share(stats.signed)}`)
-console.log(`        of them aged 21+          ${per(stats.signedAdult)}`)
-console.log(`  emergencies (budget suspended)  ${per(stats.emergencies)}`)
-console.log('\n  rejections, counted per candidate looked at rather than per pass:')
-console.log(`    too good for the club         ${per(stats.aboveCeiling)}`)
-console.log(`    beneath the club's standard   ${per(stats.belowFloor)}`)
-console.log(`    WAGE WOULD NOT FIT BUDGET     ${per(stats.unaffordable)}`)
-console.log(`    would not come                ${per(stats.unwilling)}`)
+console.log(`seasons ${SETTLE + 1}-${SEASONS}, seed ${SEED}, per season, BY TIER\n`)
+console.log('tier  chances  no place  skipped  FOUND NOBODY   signed  of them 21+ |'
+  + '   rejected: too good   unaffordable   would not come')
+for (const tier of [...stats.byTier.keys()].sort((a, b) => a - b)) {
+  const t = stats.byTier.get(tier)!
+  const n = (x: number) => (x / seasons).toFixed(0).padStart(7)
+  const pc = (x: number) => `${((x / Math.max(1, t.passes)) * 100).toFixed(0)}%`.padStart(4)
+  console.log(
+    `${String(tier).padStart(4)} ${n(t.passes)}   ${n(t.squadFull)}  ${n(t.didNotBother)}`
+    + `  ${n(t.poolEmpty)} ${pc(t.poolEmpty)}  ${n(t.signed)}      ${n(t.signedAdult)} |`
+    + `   ${n(t.aboveCeiling)}      ${n(t.unaffordable)}      ${n(t.unwilling)}`,
+  )
+}
