@@ -175,92 +175,13 @@ This file already carries two entries about small samples in this project, and
 that is now three.
 
 
-### The season roll digs a hole the world takes longer and longer to climb out of
-Measured with `scripts/churn.ts`, standard world, 492 clubs, twelve seasons,
-sampling squad size twice a year — deep mid-season at week 26, and at the roll.
+### The world drifts young and the roll never heals — one defect, and it is the wage budget
+Two entries for years; one cause. Measured by `scripts/wagedrift.ts` and
+`scripts/rollcheck.ts`, twelve to fourteen seasons each.
 
-| season | mid-season | at the roll | gap | expiries |
-|---|---|---|---|---|
-| 1 | 26.2 | 25.9 | 0.3 | 175 |
-| 3 | 26.7 | 26.3 | 0.4 | 670 |
-| 4 | 26.9 | 24.1 | **2.8** | **2,019** |
-| 8 | 25.0 | 22.7 | 2.3 | 1,424 |
-| 12 | **24.4** | **21.3** | **3.1** | 1,647 |
-
-**Correction, because this was reported wrong twice.** The "seventeen per cent
-decline in contracted players" was measured entirely at week 1, immediately
-after `processPlayerYearEnd` empties every expiring contract on one afternoon.
-That is the worst moment of the year to count a squad, before renewals or a
-single free-agent signing have had a week to work. The roadmap already said as
-much and the measurement re-derived it without noticing.
-
-What is actually true is smaller and different:
-
-- **Mid-season squads decline from 26.2 to 24.4 over twelve seasons** — about
-  seven per cent, not seventeen — and are still drifting down at season twelve
-  rather than settling.
-- **The rollover trough deepens, and that is the more interesting number.** The
-  gap between mid-season and the roll goes from 0.3 players to 3.1. The world
-  is taking longer to recover from each roll than it did from the last one.
-- **A synchronised expiry wave in season four** — 670 expiries to 2,019, with
-  academy releases going 998 to 2,197 in the same season — is where it starts.
-  That is the founding cohort's contracts running out together, because
-  generation hands out contract lengths without spreading the years.
-
-Everything below the table in a week-1 sample is a trough figure and should be
-read as such: the 30 clubs "below the emergency floor" are 30 clubs below it in
-the week after the roll, which matches the roadmap's note that the smallest
-club can be as low as seven for a few weeks before signings catch up.
-
-**Two hypotheses tested and disproved, so nobody retests them:**
-
-1. *`FREE_AGENT_TARGET` (21) is capping squads below `TARGET_SENIOR_SQUAD`
-   (24).* No. Clubs exceed 21 routinely — at season twelve, 135 are at or above
-   24 and 105 sit in the gap between the two constants. Academy promotion and
-   fee transfers fill it, which is what the gap was for. Transfers run at 8.7 a
-   club a season against a 6-8 target, so the volume that cap protects is
-   healthy; raising it would have cost that for nothing.
-2. *Starving clubs cannot sign because `recruitOne` keeps the ability ceiling
-   in an emergency, and the free-agent pool is fed by better clubs.* No.
-   `scripts/stuckclubs.ts`: of 30 clubs below the floor, **zero** have nobody
-   under their ceiling, and the median has 1,119 signable free agents. Cardiff
-   City sit on eleven players with 2,720 available.
-
-**A third diagnosis, also wrong, recorded so it counts as a third.** The
-absorption theory: that `FREE_AGENT_TARGET` parks clubs at 21 and the ability
-ceiling blocks the ones below the floor. Both are hypothesis 1 and hypothesis 2
-above, already disproved here, and they were changed in code anyway before this
-file was re-read — the ceiling lift has since been reverted, with the reason
-written at the line so nobody lifts it a third time. The window-gating of the
-reserve gap was kept, because outside a window a short club genuinely cannot
-buy anybody, but it should be understood as a realism change and not as a fix:
-measured over ten seasons it moved mid-season squads from 24.1 to 24.3.
-
-**What the season-four cliff actually is.** `scripts/churn.ts`, compact world,
-six seasons: senior releases run 84, 210, 501, then **1,312** in season four.
-The keep-or-release threshold was a staircase in age — rank 24 up to age 24,
-20 to 28, 15 to 31, 8 above — applied to a world whose players age in lockstep
-from a mean of 24.4. The whole distribution crosses 28 in the same summer and
-31 in the same summer. It is a slope now, and contract lengths carry a
-per-player jitter so the world stops re-synchronising its expiries.
-
-**And the headline number was the wrong one all along.** Mid-season squads
-settle at 24.3, which is `TARGET_SENIOR_SQUAD`. The rollover figure this entry
-is built on is sampled at week 1 — five weeks before the first fixture, before
-recruiting has run once — and by week 15 the smallest club in the world is at
-the emergency floor. `scripts/namedcheck.ts` closed the other half: `named`
-tracks the count of players aged 21 and over almost exactly, 19.9/19.9 at
-kick-off to 17.2/17.2 at season ten, and at worst 37 of 238 clubs hit any
-registration limit. What is really happening is that the world **drifts
-young** — 21+ players 19.9 to 17.2, homegrown 13.4 to 8.1 — which is a
-different defect and is recorded in the roadmap under Known defects.
-
-### The world drifts young — measured, and it is the wage budget
-**Diagnosed.** Five fixes failed because every one of them was aimed at
-recruitment, and the constraint is money. `scripts/wagedrift.ts`, fourteen
-seasons, sampled deep mid-season at week 26 so the roll cannot flatter it.
-
-The wage bill is pinned to the budget within two seasons and stays there:
+**1. The bill is pinned to the budget within two seasons, and adults get
+priced out.** Sampled deep mid-season at week 26, where the roll cannot flatter
+it:
 
 | tier | bill as % of budget, s1 → s14 | adults per club | wage per adult |
 |---|---|---|---|
@@ -270,40 +191,62 @@ The wage bill is pinned to the budget within two seasons and stays there:
 | 4 | 37.4% → 109.6% | 20.0 → 10.9 | **+92.5%** |
 | 5 | 39.3% → 116.8% | 19.7 → 9.0 | **+60.7%** |
 
-**Read the last two columns together and the whole thing falls out.** In the
-lower tiers the number of adult professionals roughly halves while the price of
-one nearly doubles. Total adult spend is close to flat — the club can afford
-the same *money* every year, so as each professional gets dearer it affords
-fewer of them, and the places go to the only players who are cheap, which is
-the academy. The world drifts young because adults are being priced out of it.
+Read the last two columns together. In the lower tiers the number of adult
+professionals halves while the price of one nearly doubles: total adult spend
+is roughly flat, so a club affords the same *money* every year and fewer and
+fewer men for it. The places go to whoever is cheap, which is the academy.
 
-Nothing in `aiSquad.ts` could ever have fixed that, which is exactly what the
-five failed attempts were telling us: each raised the inflow, the wage bill
-absorbed it, and the outflow rose to match.
+Behind that, budgets fall faster than revenue — tier 1 revenue −8.7% against a
+budget down 29.7%, tier 5 revenue −19.6% against a budget down 71.2% — and
+revenue itself declines in every tier. A world economy that shrinks for
+fourteen years is its own defect and is probably the root of the rest.
 
-Two things drive it, and both are in finance rather than recruitment:
+**2. The roll's recovery slows because clubs run out of money, not players.**
+The hole at week one grows from 1.1 players a club in season two to 4.8 by
+season twelve, and the time to climb back within one player of that season's
+own peak goes 2 weeks → 10 → 14.
 
-1. **Budgets fall faster than revenue.** Tier 1 revenue −8.7% over fourteen
-   seasons, budget −29.7%; budget as a share of revenue drops 80% → 62%. Tier 5
-   is worse: revenue −19.6%, budget −71.2%.
-2. **Revenue itself declines.** Every tier ends the run poorer than it started,
-   tier 5 by a fifth. A world economy that shrinks for fourteen years is its own
-   defect and probably the root of the first.
+The refill curve flattens at week 10–13 every year. So does the free-agent
+pool, and that is the tell:
 
-**Two smaller faults the same run exposed:**
+| season | unattached at wk 1 | still unattached at wk 16 | of those, 21+ | their mean demand |
+|---|---|---|---|---|
+| 2 | 75 | **0** | — | — |
+| 3 | 168 | 5 | 4 | — |
+| 5 | 1,621 | **1,373** | 678 (49%) | £16,341 |
+| 7 | 2,322 | **1,860** | 1,202 (65%) | £10,624 |
+| 12 | 1,936 | **1,502** | 834 (56%) | £12,270 |
+
+In the early seasons the market clears completely — every free agent is signed
+within five weeks. From season five it stops dead with **fourteen hundred
+players still on the shelf**, over half of them adults, while squads sit four
+to five short.
+
+**It is not supply and it is not willingness.** It is price. Those leftover
+adults want about £10,600 a week; a tier-3 club pays its own adults £7,008 and
+a tier-4 club £2,096. The unattached professionals are asking more than the
+clubs who need them pay anybody. Only 26 of 238 clubs are at their budget in
+week one — they have room, they spend it in ten weeks, and then they stop.
+
+**So the five failed fixes were all aimed at the wrong system**, exactly as
+this entry has suspected since attempt five: each raised the inflow, the wage
+bill absorbed it, and the outflow rose to match. Nothing in `aiSquad.ts` was
+ever going to move it.
+
+**Two smaller faults the same runs exposed:**
 
 - **Season one's budget is a fantasy.** Tiers 3, 4 and 5 open at 128%, 143% and
-  158% of revenue, then collapse by ~60% in season two once a real ledger
-  exists. Clubs get one year of imaginary money and a cliff.
-- **Lower-tier clubs are permanently over budget.** Tier 4 and 5 sit at
-  105–136% of budget from season two onwards. `recalculateBudgets` floors the
-  budget at committed wages, so this can only mean the bill grows *after* the
-  budget is set and is not re-floored until the next roll — leaving those clubs
-  unable to sign anyone for the rest of the season, every season.
+  158% of revenue, then collapse by about 60% in season two once a real ledger
+  exists. One year of imaginary money, then a cliff.
+- **Lower-tier clubs are permanently over budget mid-season**, 105–136% from
+  season two on, while being comfortably inside it in week one. The bill grows
+  after the budget is set and is not re-floored until the next roll, so those
+  clubs cannot sign anyone for most of the season, every season.
 
-**Nothing has been changed on the back of this.** It is a diagnosis, and the
-five previous confident diagnoses in this entry are the reason for stopping to
-write it down first. The next move is the economy, not the market.
+**Nothing has been changed on the back of this.** Five confident diagnoses in
+this entry have already been wrong, which is why it is written down first. The
+next move is the economy — why revenue shrinks, and why wage demands inflate
+against it — not the market.
 
 ## Fixed
 
