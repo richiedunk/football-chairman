@@ -37,7 +37,17 @@ const t0 = Date.now()
 for (let w = 0; w < WEEKS; w++) advanceWeek(state, deps)
 const ms = Date.now() - t0
 
-const json = JSON.stringify(state)
+// Timestamps are wall clock, not simulation. The first version of this hashed
+// them and reported that two identical runs produced different worlds, which
+// looked briefly like a serious determinism bug in the engine and was in fact
+// a bug in this script.
+const { createdAt, savedAt, ...simulated } = state as typeof state & {
+  createdAt?: number
+  savedAt?: number
+}
+void createdAt
+void savedAt
+const json = JSON.stringify(simulated)
 const hash = crypto.createHash('sha256').update(json).digest('hex').slice(0, 24)
 
 console.log(`seed ${SEED}  ${WEEKS} weeks  ${SIZE}`)

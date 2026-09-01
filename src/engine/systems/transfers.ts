@@ -924,10 +924,19 @@ export function processAiTransfers(state: GameState, ctx: TransferContext): void
         // tax everybody charges a rich buyer — so a filter using the flat
         // figure waved through candidates the club then could not afford, and
         // roughly a third of all attempts died at the final step.
+        // Wages before price, because the wage is the cheaper question.
+        //
+        // Both filters have to pass and neither depends on the other, so the
+        // order changes nothing about who ends up a candidate — only how much
+        // work is done finding out. An asking price runs the seller's stance,
+        // the player's importance to them and the buyer's wealth through
+        // `computeAskingPrice`; a wage demand is arithmetic on the player. It
+        // was paying for the expensive one first and then discarding the
+        // candidate on the cheap one.
+        if (computeWageDemand(p, league, nation) > wageRoom) continue
         const seller = p.clubId ? state.clubs[p.clubId] ?? null : null
         const price = seller ? Math.round(computeAskingPrice(state, p, seller, club) * 0.95) : 0
         if (price > club.finances.transferBudget) continue
-        if (computeWageDemand(p, league, nation) > wageRoom) continue
         candidates.push(p)
         if (candidates.length >= 40) break
       }
