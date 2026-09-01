@@ -7,6 +7,7 @@ import { headerBand } from '../colour'
 import { confidenceLabel } from '../../engine/systems/board'
 import { formatMoney } from '../../engine/systems/valuation'
 import { isAwayOnDuty } from '../../engine/systems/international'
+import type { Fixture, MatchResult } from '../../engine/types'
 import { ratingForPositionCached } from '../../engine/world/attributes'
 import FormRun from '../components/FormRun.vue'
 import Chevron from '../components/Chevron.vue'
@@ -120,6 +121,28 @@ const away = computed(() => {
   if (!s) return 0
   return store.squad.filter((p) => isAwayOnDuty(p, s.date.week)).length
 })
+/**
+ * The headline for a result in the feed.
+ *
+ * Most of these carry a written verdict, but not all of them: a match played
+ * before the director took this job was simulated in bulk and stripped down to
+ * its score, and a fixture from an older save may have been too. Falling
+ * straight through to `summary` left those rows blank — a result with no words
+ * and no scoreline, which reads as a bug because it is one.
+ */
+function resultLine(entry: { fixture: Fixture; result: MatchResult }): string {
+  if (entry.result.summary) return entry.result.summary
+  const c = club.value
+  const home = store.clubById(entry.fixture.homeClubId)
+  const away = store.clubById(entry.fixture.awayClubId)
+  const isHome = entry.fixture.homeClubId === c?.id
+  const us = isHome ? entry.result.homeGoals : entry.result.awayGoals
+  const them = isHome ? entry.result.awayGoals : entry.result.homeGoals
+  const verdict = us > them ? 'Beat' : us < them ? 'Lost to' : 'Drew with'
+  const opponent = (isHome ? away : home)?.name ?? 'them'
+  return `${verdict} ${opponent}, ${us}-${them}`
+}
+
 const unavailable = computed(() => {
   const bits: string[] = []
   if (injured.value) bits.push(`${injured.value} OUT`)
@@ -438,13 +461,15 @@ const hub = computed(() => {
           @click="router.push(`/match/${entry.fixture.id}`)"
         >
           <div class="list__main">
-            <div class="list__primary">{{ entry.result.summary }}</div>
+            <div class="list__primary">{{ resultLine(entry) }}</div>
             <div class="list__secondary">
               W{{ entry.fixture.week }} ·
               {{ entry.fixture.competitionType === 'league'
                 ? 'LEAGUE'
                 : (store.game?.cups[entry.fixture.competitionId]?.name ?? 'CUP').toUpperCase() }}
-              · {{ (entry.result.attendance ?? 0).toLocaleString() }} IN
+              <template v-if="entry.result.attendance">
+                · {{ entry.result.attendance.toLocaleString() }} IN
+              </template>
             </div>
           </div>
           <Chevron :size="14" />

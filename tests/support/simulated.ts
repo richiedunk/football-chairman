@@ -43,7 +43,9 @@ function hashEngine(): string {
       const full = path.join(dir, entry.name)
       if (entry.isDirectory()) walk(full)
       else if (entry.name.endsWith('.ts')) {
-        hash.update(entry.name)
+        // The path, not the basename: `systems/finance.ts` and
+        // `world/finance.ts` are different files and must hash differently.
+        hash.update(path.relative(root, full))
         hash.update(fs.readFileSync(full))
       }
     }
@@ -78,7 +80,15 @@ export function simulated<T>(key: string, build: () => T): T {
   // Gzipped: a simulated world is 28MB of JSON and a dozen of these would eat
   // a container's disk allowance. It compresses about fourteen to one, and
   // unzipping costs less than a tenth of what parsing does.
-  const file = path.join(CACHE_DIR, `${key}-${hashEngine()}.json.gz`)
+  // Keyed on the work as well as the engine.
+  //
+  // Hashing only `src/engine` meant a test could change its own seed, its
+  // season count or its logic entirely and still be handed the world it built
+  // yesterday — passing against a simulation it no longer describes. The
+  // source of the closure is exactly what the caller asked for, so it goes in
+  // the key.
+  const shape = crypto.createHash('sha1').update(build.toString()).digest('hex').slice(0, 8)
+  const file = path.join(CACHE_DIR, `${key}-${hashEngine()}-${shape}.json.gz`)
 
   if (fs.existsSync(file)) {
     try {
@@ -101,7 +111,7 @@ export function simulated<T>(key: string, build: () => T): T {
     fs.renameSync(temp, file)
     // Anything from an older engine is dead weight now.
     for (const name of fs.readdirSync(CACHE_DIR)) {
-      if (name.startsWith(`${key}-`) && !name.startsWith(`${key}-${hashEngine()}`)) {
+      if (name.startsWith(`${key}-`) && name !== path.basename(file)) {
         fs.rmSync(path.join(CACHE_DIR, name), { force: true })
       }
     }

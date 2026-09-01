@@ -34,7 +34,23 @@ import type {
 interface BoardIndex {
   season: number
   week: number
-  transferCount: number
+  /**
+   * What the index was built against.
+   *
+   * Not a count. `completedTransfers` is capped at 400, so once a busy world
+   * reaches the cap its length never changes again and an index keyed on it
+   * would never rebuild — a club could sell its best player and the crowd
+   * would not notice until the following week. The newest transfer's id moves
+   * on every deal, capped or not.
+   *
+   * The fixture count is here because cup rounds are drawn in one section of
+   * the tick and played in a later one: an index built before the draw does
+   * not contain the ties, so a club knocked out on the day would still be
+   * collecting "Still in the cup" from a list that had never heard of the
+   * match.
+   */
+  latestTransferId: string
+  fixtureCount: number
   fixturesById: Map<ID, Fixture>
   cupByNation: Map<ID, CupCompetition>
   soldBy: Map<ID, CompletedTransfer[]>
@@ -45,12 +61,20 @@ interface BoardIndex {
 const boardIndexes = new WeakMap<GameState, BoardIndex>()
 
 function boardIndex(state: GameState): BoardIndex {
+  // Newest first: `executeTransfer` unshifts and then truncates the tail, so
+  // the front of the list is the most recent deal and the back is the oldest
+  // one still kept. Reading the back would have been reading a transfer that
+  // never changes — the same bug in a different costume.
+  const latestTransferId = state.completedTransfers.length > 0
+    ? state.completedTransfers[0].id
+    : ''
   const existing = boardIndexes.get(state)
   if (
     existing
     && existing.season === state.date.season
     && existing.week === state.date.week
-    && existing.transferCount === state.completedTransfers.length
+    && existing.latestTransferId === latestTransferId
+    && existing.fixtureCount === state.fixtures.length
   ) {
     return existing
   }
@@ -102,7 +126,8 @@ function boardIndex(state: GameState): BoardIndex {
   const built: BoardIndex = {
     season,
     week: state.date.week,
-    transferCount: state.completedTransfers.length,
+    latestTransferId,
+    fixtureCount: state.fixtures.length,
     fixturesById,
     cupByNation,
     soldBy,

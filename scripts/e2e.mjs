@@ -291,8 +291,12 @@ await step('advance 10 weeks', async () => {
   if (floored < 950) throw new Error(`loading screen flashed by in ${floored}ms`)
 
   // The rest of the walkthrough reads nothing, so it need not wait to be read.
-  // Off by default: a run that has not asked for it behaves exactly as a
-  // player's browser does, which is what makes this suite worth trusting.
+  //
+  // On by default, because the floor costs this suite most of a minute for an
+  // animation no machine looks at. `E2E_FAST=0` puts it back for a run that
+  // wants to behave exactly as a player's browser does — which is how the
+  // aborted-reload failure was pinned on the floor rather than on flakiness.
+  // The comment here used to claim the opposite of what the line does.
   const fast = process.env.E2E_FAST !== '0'
   if (fast) {
     const noFloor = () => { window.__dofNoLoadingFloor = true }
