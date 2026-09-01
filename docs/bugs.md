@@ -96,7 +96,8 @@ That is the next step, and it is a supply problem rather than a money one:
 guessed at, because six diagnoses of this defect have already been wrong and
 this is the seventh measurement that has changed the answer.
 
-**Also still true:** loans remain 0.0 per club in every tier.
+**Not true, though it was claimed here twice:** loans are not dead. See the
+correction below.
 
 
 ### An unused Capacitor plugin is wired into both native projects
@@ -331,10 +332,33 @@ smaller lower-league squads would have made the game agree with a number that
 is wrong. The work is at the bottom of the economy: a tier 4 or 5 club has to
 be able to keep about twenty players, most of them grown men.
 
-**A separate finding from the same run: the loan system does nothing.** Players
-loaned out and loaned in are **0.0 per club in every tier** at equilibrium.
-Loans are the obvious way a young player gets games and a thin club gets
-cover, and at twelve seasons in there are none anywhere in the world.
+**A claim from the same run that was wrong, and is corrected here.** This
+entry said "the loan system does nothing — players loaned out and loaned in are
+0.0 per club in every tier at equilibrium".
+
+That was a sampling artefact, and the same one this file already records for
+squad size. The measurement ran whole seasons and read the world at the end of
+the last one — which is immediately after the season roll, and the roll returns
+every loan. Loans are created with `loanUntilSeason: state.date.season`, so
+they all expire at the next roll by design. The one moment of the year when
+the number is guaranteed to be zero is the moment it was read.
+
+Watched across a season instead, world-wide, 238 clubs:
+
+| week | 2 | 5 | 9 | 29 | 45 | 49 | roll |
+|---|---|---|---|---|---|---|---|
+| out on loan | 29 | 137 | 170 | 253 | 306 | 325 | **0** |
+
+And they do their job. `processAiTransfers` picks a player aged 22 or under
+with **fewer than three appearances** and sends him somewhere he will play. At
+week 45 of season eleven, 307 such players were out on loan on a mean of
+**13.7 appearances**, with 135 of them past ten. They were chosen for not
+playing and they ended the season playing.
+
+The one honest observation left is a calibration one rather than a defect: 325
+loans across 238 clubs is about 1.4 per club at the peak, which is on the low
+side against real football. Not acted on — there is no evidence it is wrong,
+only that it is small.
 
 **A related oddity the same run turned up:** clubs are hoarding enormous sums.
 Mean balance after twelve seasons is £207m in the top flight and £30m in tier
