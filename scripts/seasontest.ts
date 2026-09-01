@@ -14,7 +14,7 @@ for (const c of setup.candidates) {
 }
 
 const state = startCareerAt(setup, setup.candidates[0].id)
-const club = state.clubs[state.playerClubId]
+const club = state.clubs[state.playerClubId!]
 console.log(`\nTaking over at ${club.name}. Target: ${club.board.expectation.description} (${club.board.expectation.leaguePosition}th)`)
 console.log(`Wage budget £${club.finances.wageBudget.toLocaleString()}/wk, transfer budget £${club.finances.transferBudget.toLocaleString()}`)
 
@@ -26,7 +26,7 @@ for (let season = 0; season < 3; season++) {
     advanceWeek(state, deps)
     weeks++
   }
-  const c = state.clubs[state.playerClubId]
+  const c = state.clubs[state.playerClubId!]
   const hist = c.history[c.history.length-1]
   const lvl = levelFor(state.director.xp)
   console.log(`\n--- End of ${hist?.season ?? '?'} ---`)
@@ -42,12 +42,12 @@ console.log(`inbox: ${state.inbox.length}, news: ${state.newsFeed.length}, trans
 console.log(`scout reports: ${Object.keys(state.scoutReports).length}`)
 console.log(`save size: ${(JSON.stringify(state).length/1024/1024).toFixed(1)}MB`)
 
-const table = sortTable(state.tables[state.clubs[state.playerClubId].leagueId])
+const table = sortTable(state.tables[state.clubs[state.playerClubId!].leagueId])
 console.log('\nCurrent table top 6:')
 for (const r of table.slice(0,6)) {
   console.log(`  ${state.clubs[r.clubId].shortName.padEnd(16)} P${r.played} ${r.points}pts ${r.goalsFor}:${r.goalsAgainst}`)
 }
-const squad = state.clubs[state.playerClubId].squad.map(id=>state.players[id]).filter(p=>p&&!p.isAcademy)
+const squad = state.clubs[state.playerClubId!].squad.map(id=>state.players[id]).filter(p=>p&&!p.isAcademy)
   .sort((a,b)=>b!.currentAbility-a!.currentAbility).slice(0,5)
 console.log('\nBest players:')
 for (const p of squad) console.log(`  ${p!.knownAs} (${p!.position}) ${p!.age}y CA${Math.round(p!.currentAbility)} form ${Math.round(p!.form)} morale ${Math.round(p!.morale)} £${p!.contract?.wage}/wk`)

@@ -81,7 +81,7 @@ describe('set pieces are a situation, not an attribute nobody reads', () => {
       const r = simulateMatch(
         state, state.clubs[ids[0]], state.clubs[ids[1]], rng, { suspendedIds: new Set() }, false,
       )
-      shots += r.shots.home + r.shots.away
+      shots += r.shots!.home + r.shots!.away
       n++
     }
     expect(shots / n).toBeGreaterThan(22)

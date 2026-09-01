@@ -30,7 +30,7 @@ if (semi) {
     const t = f.legOf!.tieId
     byTie.set(t, [...(byTie.get(t) ?? []), f])
   }
-  for (const [tieId, legs] of byTie) {
+  for (const [, legs] of byTie) {
     const agg = tieAggregate(legs)!
     const l1 = legs.find(l => l.legOf.leg === 1), l2 = legs.find(l => l.legOf.leg === 2)
     console.log(

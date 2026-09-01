@@ -12,7 +12,7 @@ const setup = prepareNewGame({
 })
 const club0 = setup.candidates.find(c => canTakeJobAt(setup.state.director, c))!
 const state = startCareerAt(setup, club0.id)
-const club = state.clubs[state.playerClubId]
+const club = state.clubs[state.playerClubId!]
 const st = club.facilities.stadium
 
 console.log(`${club.name} — ${st.name} (${st.owned ? 'owned' : 'TENANT'}), built ${st.builtYear}`)

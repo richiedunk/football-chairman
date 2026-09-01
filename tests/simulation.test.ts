@@ -286,7 +286,7 @@ describe('season simulation', () => {
       return world
     })
 
-    const club = state.clubs[state.playerClubId]
+    const club = state.clubs[state.playerClubId!]
     // Doing nothing should not bankrupt a club inside one season — the game
     // has to be survivable for a player who is still learning it.
     expect(club.finances.balance).toBeGreaterThanOrEqual(0)
@@ -462,7 +462,7 @@ describe('loans', () => {
       worldSize: 'compact', homeNationId: 'eng', startingSeason: 2025,
     })
     const state = startCareerAt(setup, firstEligible(setup))
-    const parent = state.clubs[state.playerClubId]
+    const parent = state.clubs[state.playerClubId!]
     const player = parent.squad
       .map((id) => state.players[id])
       .filter((p): p is NonNullable<typeof p> => Boolean(p) && !p.isAcademy && !p.injury)
@@ -497,7 +497,7 @@ describe('loans', () => {
       worldSize: 'compact', homeNationId: 'eng', startingSeason: 2025,
     })
     const state = startCareerAt(setup, firstEligible(setup))
-    const parent = state.clubs[state.playerClubId]
+    const parent = state.clubs[state.playerClubId!]
     // A fringe player: the sort a club actually loans out, and one who will
     // not refuse the move.
     const player = parent.squad

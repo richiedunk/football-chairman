@@ -1,6 +1,5 @@
 import { prepareNewGame, startCareerAt } from '../src/engine/newGame'
 import { advanceWeek } from '../src/engine/tick'
-import { weeklyRevenue } from '../src/engine/systems/finance'
 
 for (const seed of ['CR1', 'CR2', 'CR3']) {
   const setup = prepareNewGame({
@@ -8,7 +7,7 @@ for (const seed of ['CR1', 'CR2', 'CR3']) {
     worldSize: 'compact', homeNationId: 'eng', startingSeason: 2025,
   })
   const state = startCareerAt(setup, setup.candidates[0].id)
-  const club = state.clubs[state.playerClubId]
+  const club = state.clubs[state.playerClubId!]
   const name = club.name
   for (let w = 0; w < 51; w++) advanceWeek(state, { ids: setup.ids, names: setup.names })
   const all = Object.values(state.clubs)

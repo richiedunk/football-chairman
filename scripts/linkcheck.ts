@@ -61,7 +61,7 @@ const seen = new Set<string>()
 const byView = new Map<string, { total: number; unroutable: number; dangling: number }>()
 const examples: string[] = []
 
-function record(state: GameState, id: string, subject: string, link?: { view: string; id?: string }) {
+function record(state: GameState, id: string, subject: string, link?: { view: string; id?: string } | null) {
   if (!link || seen.has(id)) return
   seen.add(id)
   const u = url(link)

@@ -20,7 +20,6 @@ import { readRoom, roomLabel } from '../src/engine/systems/dressingRoom'
 import { seniorSquad } from '../src/engine/systems/aiSquad'
 import type { GameState, PlayerTrait } from '../src/engine/types'
 
-const SEASONS = Number(process.env.SEASONS ?? 3)
 const SEED = process.env.SEED ?? 'ROOM1'
 
 /**

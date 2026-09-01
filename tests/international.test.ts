@@ -11,7 +11,7 @@ import {
 import { computeValue, computeWageDemand } from '../src/engine/systems/valuation'
 import { isAvailable } from '../src/engine/sim/selection'
 import { FIRST_MATCH_WEEK, LAST_MATCH_WEEK } from '../src/engine/sim/schedule'
-import type { Club, GameState, Player } from '../src/engine/types'
+import type { Club, GameState } from '../src/engine/types'
 
 let state: GameState
 let club: Club

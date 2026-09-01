@@ -12,7 +12,6 @@ const deps = { ids: setup.ids, names: setup.names }
 for (let i=0;i<10;i++) advanceWeek(state, deps)
 
 const profile = new Map<string, number>()
-const origNow = Date.now
 ;(globalThis as any).__prof = profile
 
 // Crude sampling: wrap the hot modules by monkey-patching via import side effects

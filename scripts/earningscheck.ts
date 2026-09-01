@@ -23,7 +23,7 @@ console.log(`\nSigned: £${state.director.contract!.salary}/wk for ${state.direc
 for (let season = 0; season < 3; season++) {
   for (let w = 0; w < 52; w++) advanceWeek(state, { ids: setup.ids, names: setup.names })
   const d = state.director
-  const c = state.clubs[state.playerClubId]
+  const c = state.clubs[state.playerClubId!]
   console.log(
     `after season ${season + 1}: career earnings £${Math.round(d.careerEarnings).toLocaleString().padStart(9)} ` +
     `| club £${Math.round(c.finances.balance).toLocaleString().padStart(9)} | XP ${d.xp}`

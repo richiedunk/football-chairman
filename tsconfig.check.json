@@ -1,0 +1,25 @@
+{
+  // A second pass that covers the whole repository, not just what ships.
+  //
+  // `tsconfig.json` covers `src/` because that is what Vite builds. That left
+  // `tests/` and `scripts/` unchecked, and it cost a green typecheck on a
+  // broken import: splitting `season.ts` into a directory dropped a re-export
+  // that only the tests and the measurement scripts used, and nothing said a
+  // word until the suite failed two and a half minutes later. Scripts are how
+  // every calibration decision in this project gets made and tests are how it
+  // stays made; neither is throwaway, so neither should be exempt.
+  //
+  // Deliberately looser than the app's own config, and only here. Test and
+  // script files index the world by hand a great deal — `state.clubs[playerClubId]`
+  // where the id is nullable, a hundred times over — and under strict null
+  // checks that alone produced ninety errors that are not faults in anything.
+  // Burying a broken import under ninety non-faults is how a check gets
+  // ignored, and a check that gets ignored is worse than no check.
+  //
+  // What this pass is for is the class of failure that crosses a file
+  // boundary: an import that no longer exists, a signature that changed under
+  // its callers, a name that moved. That is what it catches, and `npm run
+  // typecheck` runs it after the strict pass over `src/`.
+  "extends": "./tsconfig.json",
+  "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.vue", "tests/**/*.ts", "scripts/**/*.ts"]
+}

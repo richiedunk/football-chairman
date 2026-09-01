@@ -48,7 +48,7 @@ time(`computeValue x${players.length}`, () => {
   }
 })
 time('processScouting (player club)', () => {
-  processScouting(state, state.clubs[state.playerClubId], { rng, week: 20, season: 2025 })
+  processScouting(state, state.clubs[state.playerClubId!], { rng, week: 20, season: 2025 })
 })
 time('processAiTransfers (whole world)', () => {
   processAiTransfers(state, { rng, ids: setup.ids })

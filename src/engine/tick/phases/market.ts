@@ -63,8 +63,8 @@ export const valuations = phase({
 
 export const transfers = phase({
   name: 'transfers',
-  run({ state, ids, rng }) {
-    const transferCtx = { rng: rng.fork('transfers'), ids }
+  run({ state, ids, rng, transferStats }) {
+    const transferCtx = { rng: rng.fork('transfers'), ids, stats: transferStats }
     const negotiationNotices = processNegotiations(state, transferCtx)
     for (const notice of negotiationNotices) {
       addInboxItem(state, ids, {

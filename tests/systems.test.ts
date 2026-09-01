@@ -27,7 +27,7 @@ import { clearRatingCache } from '../src/engine/world/attributes'
 import { compress, decompress, MemoryAdapter } from '../src/storage/adapter'
 import { loadGame, saveGame, setStorageAdapter } from '../src/storage/saves'
 import {
-  accrueTrainingYear, autoRegister, isHomegrownFor, isRegisteredFor, NON_HOMEGROWN_LIMIT,
+  accrueTrainingYear, isHomegrownFor, isRegisteredFor, NON_HOMEGROWN_LIMIT,
   reconcileRegistration, registerOrDisplace, registerPlayer, registrablePool, squadRegistration,
   SQUAD_LIMIT, U21_AGE, unregisterPlayer,
 } from '../src/engine/systems/registration'
@@ -48,7 +48,7 @@ import {
 import {
   assessClub, assessSquadCost, underEmbargo,
 } from '../src/engine/systems/regulation'
-import { accrueAmortisation, processFinances, weeklyRevenue } from '../src/engine/systems/finance'
+import { accrueAmortisation, processFinances } from '../src/engine/systems/finance'
 import {
   createOwner, debtTolerance, impatienceFactor, lossCoverage, OWNER_LABELS, reserveRelease,
   wageBudgetShare,
@@ -63,7 +63,6 @@ import {
 } from '../src/engine/systems/deadlineDay'
 import { isTransferWindowOpen } from '../src/engine/sim/schedule'
 import { churnCandidatesForTest } from '../src/engine/systems/transfers'
-import { SQUAD_LIMIT, U21_AGE } from '../src/engine/systems/registration'
 import {
   adjustRelationship, agentFee, agentWillingness, decayRelationships, introductions,
   RELATIONSHIP_EVENTS, STANDING_LABELS, STANDING_NOTES, standingFor,
@@ -83,7 +82,7 @@ function freshWorld(seed = 'SYSTEMS'): GameState {
     directorName: 'Test Director', background: 'analyst',
   })
   state.playerClubId = Object.values(state.clubs).find((c) => c.reputation < 30)!.id
-  state.clubs[state.playerClubId].isPlayerClub = true
+  state.clubs[state.playerClubId!].isPlayerClub = true
   return state
 }
 
@@ -195,7 +194,7 @@ describe('transfers', () => {
 describe('scouting', () => {
   it('narrows its estimate as knowledge grows', () => {
     const state = freshWorld('SCOUT')
-    const club = state.clubs[state.playerClubId]
+    const club = state.clubs[state.playerClubId!]
     const scout = Object.values(state.staff).find((s) => s.role === 'scout')!
     const target = Object.values(state.players).find(
       (p) => p.clubId && p.clubId !== club.id && !p.isAcademy,
@@ -215,7 +214,7 @@ describe('scouting', () => {
 
   it('brackets the truth once knowledge is complete', () => {
     const state = freshWorld('SCOUT2')
-    const club = state.clubs[state.playerClubId]
+    const club = state.clubs[state.playerClubId!]
     const scout = Object.values(state.staff).find((s) => s.role === 'scout')!
     scout.attributes.judgingAbility = 95
     const ctx = { rng: new Rng('bracket'), week: 10, season: 2025 }
@@ -245,7 +244,7 @@ describe('scouting', () => {
 
   it('gives a worse scout a wider range', () => {
     const state = freshWorld('SCOUT3')
-    const club = state.clubs[state.playerClubId]
+    const club = state.clubs[state.playerClubId!]
     const scouts = Object.values(state.staff).filter((s) => s.role === 'scout')
     const good = { ...scouts[0], attributes: { ...scouts[0].attributes, judgingAbility: 95 } }
     const poor = { ...scouts[0], attributes: { ...scouts[0].attributes, judgingAbility: 15 } }
@@ -262,7 +261,7 @@ describe('scouting', () => {
 describe('contracts', () => {
   it('accepts a fair offer and rejects a derisory one', () => {
     const state = freshWorld('CONTRACT')
-    const club = state.clubs[state.playerClubId]
+    const club = state.clubs[state.playerClubId!]
     const player = state.players[club.squad.find((id) => !state.players[id].isAcademy)!]
     const rng = new Rng('renewal')
 
@@ -278,7 +277,7 @@ describe('contracts', () => {
 
   it('collapses a player\'s value as his contract runs down', () => {
     const state = freshWorld('EXPIRY')
-    const club = state.clubs[state.playerClubId]
+    const club = state.clubs[state.playerClubId!]
     const league = state.leagues[club.leagueId]
     const nation = state.nations[club.nationId]
     const player = state.players[club.squad.find((id) => !state.players[id].isAcademy)!]
@@ -398,7 +397,7 @@ describe('persistence', () => {
     expect(loaded!.seed).toBe(state.seed)
     expect(loaded!.playerClubId).toBe(state.playerClubId)
     expect(Object.keys(loaded!.players).length).toBe(Object.keys(state.players).length)
-    expect(loaded!.clubs[loaded!.playerClubId].name).toBe(state.clubs[state.playerClubId].name)
+    expect(loaded!.clubs[loaded!.playerClubId!].name).toBe(state.clubs[state.playerClubId!].name)
   })
 
   it('refuses a save written by a newer build rather than corrupting it', async () => {
@@ -422,7 +421,7 @@ describe('formatting', () => {
 
   it('sums a wage bill across players and staff', () => {
     const state = freshWorld('WAGES')
-    const club = state.clubs[state.playerClubId]
+    const club = state.clubs[state.playerClubId!]
     const total = totalWageBill(state, club)
     const players = club.squad.reduce(
       (sum, id) => sum + (state.players[id]?.contract?.wage ?? 0), 0,
@@ -446,7 +445,7 @@ describe('staff hiring', () => {
 
   it('offers every club at least one candidate for each role', () => {
     const state = freshWorld('HIRING2')
-    const club = state.clubs[state.playerClubId]
+    const club = state.clubs[state.playerClubId!]
     for (const role of ['headCoach', 'scout', 'physio', 'analyst'] as const) {
       expect(
         availableStaff(state, club, role).length,
@@ -457,7 +456,7 @@ describe('staff hiring', () => {
 
   it('hires a scout and adds him to the wage bill', () => {
     const state = freshWorld('HIRING3')
-    const club = state.clubs[state.playerClubId]
+    const club = state.clubs[state.playerClubId!]
     const before = totalWageBill(state, club)
     const candidate = availableStaff(state, club, 'scout')[0]
 
@@ -470,7 +469,7 @@ describe('staff hiring', () => {
 
   it('refuses a lowball offer and a club that is too small', () => {
     const state = freshWorld('HIRING4')
-    const club = state.clubs[state.playerClubId]
+    const club = state.clubs[state.playerClubId!]
     const candidate = availableStaff(state, club, 'scout')[0]
 
     const lowball = hireStaff(state, club, candidate, 1, 2)
@@ -484,7 +483,7 @@ describe('staff hiring', () => {
 
   it('dismisses a staff member and pays up their contract', () => {
     const state = freshWorld('HIRING5')
-    const club = state.clubs[state.playerClubId]
+    const club = state.clubs[state.playerClubId!]
     club.finances.balance = 5_000_000
     const scout = club.staff.map((id) => state.staff[id]).find((s) => s.role === 'scout')!
 
@@ -498,7 +497,7 @@ describe('staff hiring', () => {
 
   it('will not let the head coach be dismissed without a replacement', () => {
     const state = freshWorld('HIRING6')
-    const club = state.clubs[state.playerClubId]
+    const club = state.clubs[state.playerClubId!]
     const coach = state.staff[club.headCoachId!]
     const result = dismissStaff(state, club, coach)
     expect(result.ok).toBe(false)
@@ -525,7 +524,7 @@ describe('director contract and earnings', () => {
 
   it('refuses a package with every term at the ceiling', () => {
     const state = freshWorld('GREEDY')
-    const club = state.clubs[state.playerClubId]
+    const club = state.clubs[state.playerClubId!]
     const { ceiling } = contractTermsFor(state, club, state.director)
     const result = negotiateContract(state, club, state.director, {
       ...ceiling, seasons: 5,
@@ -571,7 +570,7 @@ describe('director contract and earnings', () => {
 
   it('pays salary from the club and adds it to career earnings', () => {
     const state = freshWorld('PAY')
-    const club = state.clubs[state.playerClubId]
+    const club = state.clubs[state.playerClubId!]
     signContract(state, club, contractTermsFor(state, club, state.director).opening)
 
     const clubBefore = club.finances.balance
@@ -591,7 +590,7 @@ describe('fan mood', () => {
     // The previous model nudged mood on every result with nothing anchoring
     // it, so every club in the world sank over a season.
     const state = freshWorld('MOOD')
-    const club = state.clubs[state.playerClubId]
+    const club = state.clubs[state.playerClubId!]
     const { target } = assessFanMood(state, club)
 
     club.fanMood = target
@@ -601,7 +600,7 @@ describe('fan mood', () => {
 
   it('converges on the assessed target from either direction', () => {
     const state = freshWorld('CONVERGE')
-    const club = state.clubs[state.playerClubId]
+    const club = state.clubs[state.playerClubId!]
     const { target } = assessFanMood(state, club)
 
     for (const start of [1, 100]) {
@@ -613,7 +612,7 @@ describe('fan mood', () => {
 
   it('explains itself', () => {
     const state = freshWorld('EXPLAIN')
-    const club = state.clubs[state.playerClubId]
+    const club = state.clubs[state.playerClubId!]
     club.finances.inCrisis = true
     const { factors } = assessFanMood(state, club)
     expect(factors.some((f) => f.label.includes('crisis'))).toBe(true)
@@ -624,7 +623,7 @@ describe('fan mood', () => {
 describe('operating costs', () => {
   it('itemises every cost and the parts sum to the total', () => {
     const state = freshWorld('COSTS')
-    const club = state.clubs[state.playerClubId]
+    const club = state.clubs[state.playerClubId!]
     const costs = operatingCosts(state, club)
 
     const parts =
@@ -638,7 +637,7 @@ describe('operating costs', () => {
 
   it('charges training and medical per player', () => {
     const state = freshWorld('PERPLAYER')
-    const club = state.clubs[state.playerClubId]
+    const club = state.clubs[state.playerClubId!]
     const before = operatingCosts(state, club)
 
     // Remove five players and the per-head costs must fall.
@@ -694,7 +693,7 @@ describe('operating costs', () => {
 describe('board requests', () => {
   it('offers every request with a reason when it is unavailable', () => {
     const state = freshWorld('REQUESTS')
-    const club = state.clubs[state.playerClubId]
+    const club = state.clubs[state.playerClubId!]
     const options = availableRequests(state, club)
 
     expect(options.length).toBeGreaterThan(5)
@@ -707,7 +706,7 @@ describe('board requests', () => {
 
   it('rate-limits requests so asking is a decision', () => {
     const state = freshWorld('COOLDOWN')
-    const club = state.clubs[state.playerClubId]
+    const club = state.clubs[state.playerClubId!]
     state.date.week = 20
     club.board.confidence = 95
 
@@ -733,7 +732,7 @@ describe('board requests', () => {
     let granted = 0
     let refused = 0
     for (let i = 0; i < 60; i++) {
-      const club = trusting.clubs[trusting.playerClubId]
+      const club = trusting.clubs[trusting.playerClubId!]
       club.board.confidence = 95
       club.board.lastRequestWeek = -99
       club.board.requestsThisSeason = 0
@@ -742,7 +741,7 @@ describe('board requests', () => {
         granted++
       }
 
-      const cold = wary.clubs[wary.playerClubId]
+      const cold = wary.clubs[wary.playerClubId!]
       cold.board.confidence = 12
       cold.board.lastRequestWeek = -99
       cold.board.requestsThisSeason = 0
@@ -757,7 +756,7 @@ describe('board requests', () => {
 
   it('costs confidence when refused', () => {
     const state = freshWorld('COST')
-    const club = state.clubs[state.playerClubId]
+    const club = state.clubs[state.playerClubId!]
     club.board.confidence = 5
     club.board.lastRequestWeek = -99
     const before = club.board.confidence
@@ -776,7 +775,7 @@ describe('board requests', () => {
 
   it('actually moves the thing it granted', () => {
     const state = freshWorld('GRANT')
-    const club = state.clubs[state.playerClubId]
+    const club = state.clubs[state.playerClubId!]
     club.board.confidence = 100
     club.finances.balance = 10_000_000
     club.finances.inCrisis = false
@@ -799,7 +798,7 @@ describe('board requests', () => {
 
   it('will not lower an expectation that is already survival', () => {
     const state = freshWorld('SURVIVAL')
-    const club = state.clubs[state.playerClubId]
+    const club = state.clubs[state.playerClubId!]
     const clubCount = state.leagues[club.leagueId].clubIds.length
     club.board.expectation.leaguePosition = clubCount
     club.board.lastRequestWeek = -99
@@ -839,7 +838,7 @@ describe('stadium', () => {
 
   it('values a covered seat above a terrace place, and a box above both', () => {
     const state = freshWorld('PERHEAD')
-    const club = state.clubs[state.playerClubId]
+    const club = state.clubs[state.playerClubId!]
     const stadium = club.facilities.stadium
 
     for (const stand of stadium.stands) {
@@ -859,7 +858,7 @@ describe('stadium', () => {
 
   it('closes places when a stand is left to rot, and reopens them on repair', () => {
     const state = freshWorld('SAFETY')
-    const club = state.clubs[state.playerClubId]
+    const club = state.clubs[state.playerClubId!]
     const stand = club.facilities.stadium.stands[0]
     stand.condition = 12
 
@@ -905,7 +904,7 @@ describe('stadium', () => {
 
   it('produces a spread of quotes rather than one rounded figure', () => {
     const state = freshWorld('SPREAD')
-    const club = state.clubs[state.playerClubId]
+    const club = state.clubs[state.playerClubId!]
     const stand = club.facilities.stadium.stands[0]
     stand.condition = 40
 
@@ -921,7 +920,7 @@ describe('stadium', () => {
 
   it('completes a repair, restoring condition and reopening closed places', () => {
     const state = freshWorld('REPAIR')
-    const club = state.clubs[state.playerClubId]
+    const club = state.clubs[state.playerClubId!]
     club.facilities.stadium.owned = true
     club.finances.balance = 50_000_000
     const stand = club.facilities.stadium.stands[0]
@@ -944,7 +943,7 @@ describe('stadium', () => {
 
   it('refuses a second project while one is running', () => {
     const state = freshWorld('ONEATATIME')
-    const club = state.clubs[state.playerClubId]
+    const club = state.clubs[state.playerClubId!]
     club.facilities.stadium.owned = true
     club.finances.balance = 50_000_000
     const spec = { kind: 'repair' as const, standId: club.facilities.stadium.stands[0].id }
@@ -958,7 +957,7 @@ describe('stadium', () => {
 
   it('lets a tenant maintain its ground but not alter it', () => {
     const state = freshWorld('TENANT')
-    const club = state.clubs[state.playerClubId]
+    const club = state.clubs[state.playerClubId!]
     club.facilities.stadium.owned = false
     club.finances.balance = 50_000_000
     const standId = club.facilities.stadium.stands[0].id
@@ -982,7 +981,7 @@ describe('stadium', () => {
 
   it('charges a tenant more in ground rent than an owner', () => {
     const state = freshWorld('RENT')
-    const club = state.clubs[state.playerClubId]
+    const club = state.clubs[state.playerClubId!]
     club.facilities.stadium.owned = true
     const owned = operatingCosts(state, club).groundRent
     club.facilities.stadium.owned = false
@@ -992,7 +991,7 @@ describe('stadium', () => {
 
   it('lets a club borrow for work it could never pay for in cash', () => {
     const state = freshWorld('BORROW')
-    const club = state.clubs[state.playerClubId]
+    const club = state.clubs[state.playerClubId!]
     club.facilities.stadium.owned = true
     club.finances.balance = 1000
     const spec = { kind: 'repair' as const, standId: club.facilities.stadium.stands[0].id }
@@ -1010,7 +1009,7 @@ describe('stadium', () => {
 
   it('marks the architect busy for the duration of the job', () => {
     const state = freshWorld('BUSY')
-    const club = state.clubs[state.playerClubId]
+    const club = state.clubs[state.playerClubId!]
     club.facilities.stadium.owned = true
     club.finances.balance = 50_000_000
     const spec = { kind: 'repair' as const, standId: club.facilities.stadium.stands[0].id }
@@ -1043,7 +1042,7 @@ describe('squad registration', () => {
 
   it('leaves under-21s off the list and eligible anyway', () => {
     const state = freshWorld('REG-B')
-    const club = state.clubs[state.playerClubId]
+    const club = state.clubs[state.playerClubId!]
     const view = squadRegistration(state, club)
     for (const kid of view.exempt) {
       expect(kid.age).toBeLessThan(U21_AGE)
@@ -1054,7 +1053,7 @@ describe('squad registration', () => {
 
   it('refuses an eighteenth foreign-trained player but still takes a homegrown one', () => {
     const state = freshWorld('REG-C')
-    const club = state.clubs[state.playerClubId]
+    const club = state.clubs[state.playerClubId!]
     state.date.week = 1 // window open
 
     // Fill the list with players trained abroad, and nothing else.
@@ -1083,7 +1082,7 @@ describe('squad registration', () => {
 
   it('locks the list when the window is shut', () => {
     const state = freshWorld('REG-D')
-    const club = state.clubs[state.playerClubId]
+    const club = state.clubs[state.playerClubId!]
     state.date.week = 15 // mid-season, window closed
     const [named] = club.registeredIds
     const player = state.players[named]!
@@ -1093,7 +1092,7 @@ describe('squad registration', () => {
 
   it('bars an unregistered senior from selection', () => {
     const state = freshWorld('REG-E')
-    const club = state.clubs[state.playerClubId]
+    const club = state.clubs[state.playerClubId!]
     const dropped = squadRegistration(state, club).registered
       .slice()
       .sort((a, b) => b.currentAbility - a.currentAbility)[0]!
@@ -1148,7 +1147,7 @@ describe('squad registration', () => {
 
   it('credits a training year only to players under 21', () => {
     const state = freshWorld('REG-G')
-    const club = state.clubs[state.playerClubId]
+    const club = state.clubs[state.playerClubId!]
     const kid = club.squad.map((id) => state.players[id]!).find((p) => p.age < U21_AGE)!
     const adult = club.squad.map((id) => state.players[id]!).find((p) => p.age > 25)!
     const kidBefore = kid.trainingYears[club.nationId] ?? 0
@@ -1163,7 +1162,7 @@ describe('squad registration', () => {
 
   it('keeps the human directors choices when the list is reconciled', () => {
     const state = freshWorld('REG-H')
-    const club = state.clubs[state.playerClubId]
+    const club = state.clubs[state.playerClubId!]
     state.date.week = 1
     club.registeredIds = []
     const weakest = registrablePool(state, club)
@@ -1268,7 +1267,7 @@ describe('AI squad management', () => {
 
   it('stops a player nobody has called in two seasons, at any age', () => {
     const state = freshWorld('AI-RETIRE')
-    const club = state.clubs[state.playerClubId]
+    const club = state.clubs[state.playerClubId!]
     const player = seniorSquad(state, club)[0]!
     player.age = 24 // young enough that age alone would never end a career
 
@@ -1282,7 +1281,7 @@ describe('AI squad management', () => {
 
   it('lets a career end for reasons other than age', () => {
     const state = freshWorld('AI-EARLY')
-    const club = state.clubs[state.playerClubId]
+    const club = state.clubs[state.playerClubId!]
     const player = seniorSquad(state, club).find((p) => p.age >= 28 && p.age < 31)
       ?? seniorSquad(state, club)[0]!
     player.age = 29
@@ -1348,7 +1347,7 @@ describe('achievements', () => {
 
   it('reads milestones off the career record', () => {
     const state = freshWorld('ACH-B')
-    const club = state.clubs[state.playerClubId]
+    const club = state.clubs[state.playerClubId!]
     state.director.careerHistory = [{
       clubId: club.id,
       clubName: club.name,
@@ -1373,7 +1372,7 @@ describe('achievements', () => {
 
   it('recognises promotion from the club record, not the director record', () => {
     const state = freshWorld('ACH-C')
-    const club = state.clubs[state.playerClubId]
+    const club = state.clubs[state.playerClubId!]
     const tiers = Object.values(state.leagues)
       .filter((l) => l.nationId === club.nationId)
       .sort((a, b) => b.tier - a.tier)
@@ -1487,7 +1486,7 @@ describe('financial regulation', () => {
     // with a quarter of clubs outside it. Sanctioning a director in his first
     // year for the squad he inherited is not a rule, it is an ambush.
     const state = freshWorld('REG-GRACE')
-    const club = state.clubs[state.playerClubId]
+    const club = state.clubs[state.playerClubId!]
     const ids = new IdFactory(state.nextId)
 
     // Far outside the limit — severe enough to skip straight to hard
@@ -1504,7 +1503,7 @@ describe('financial regulation', () => {
 
   it('monitors a marginal overspend rather than punishing it', () => {
     const state = freshWorld('REG-MARGIN')
-    const club = state.clubs[state.playerClubId]
+    const club = state.clubs[state.playerClubId!]
     const ids = new IdFactory(state.nextId)
     // 74% — over the limit, inside what the authorities will accept.
     const marginal = () => ledgerWith({ tvIncome: 1_000_000, wagesPaid: 740_000 })
@@ -1523,7 +1522,7 @@ describe('financial regulation', () => {
 
   it('escalates warning, then fine, then embargo, then points', () => {
     const state = freshWorld('REG-ESC')
-    const club = state.clubs[state.playerClubId]
+    const club = state.clubs[state.playerClubId!]
     const ids = new IdFactory(state.nextId)
     // Beyond the acceptable deviation, or nothing escalates at all.
     const breaching = () => ledgerWith({ tvIncome: 1_000_000, wagesPaid: 880_000 })
@@ -1557,7 +1556,7 @@ describe('financial regulation', () => {
 
   it('forgives a club that comes back inside the limit', () => {
     const state = freshWorld('REG-FORGIVE')
-    const club = state.clubs[state.playerClubId]
+    const club = state.clubs[state.playerClubId!]
     const ids = new IdFactory(state.nextId)
 
     // The grace year is a baseline and does not count against the club, so a
@@ -1577,7 +1576,7 @@ describe('financial regulation', () => {
 
   it('bars a player signed since the embargo, not the squad already there', () => {
     const state = freshWorld('REG-EMB')
-    const club = state.clubs[state.playerClubId]
+    const club = state.clubs[state.playerClubId!]
     const ids = new IdFactory(state.nextId)
     state.date.week = 1
 
@@ -1733,7 +1732,7 @@ describe('agents', () => {
     expect(adjustRelationship(state, other.id, agent, 'releasedClient')).toBe(0)
     expect(agent.relationship).toBe(50)
 
-    expect(adjustRelationship(state, state.playerClubId, agent, 'releasedClient')).toBeLessThan(0)
+    expect(adjustRelationship(state, state.playerClubId!, agent, 'releasedClient')).toBeLessThan(0)
     expect(agent.relationship).toBeLessThan(50)
   })
 
@@ -1765,7 +1764,7 @@ describe('agents', () => {
 
   it('introduces clients only to a director an agent trusts', () => {
     const state = freshWorld('AGENT-INTRO')
-    const club = state.clubs[state.playerClubId]
+    const club = state.clubs[state.playerClubId!]
     for (const agent of Object.values(state.agents)) agent.relationship = 50
     expect(introductions(state, club)).toEqual([])
 
@@ -1826,7 +1825,7 @@ describe('ownership', () => {
 
   it('hands the club over and resets what the director had built', () => {
     const state = freshWorld('OWN-TAKE')
-    const club = state.clubs[state.playerClubId]
+    const club = state.clubs[state.playerClubId!]
     const ids = new IdFactory(state.nextId)
     club.board.confidence = 90
     club.board.warnings = 2
@@ -1853,7 +1852,7 @@ describe('ownership', () => {
 
   it('never sacks the director in the season of a takeover', () => {
     const state = freshWorld('OWN-GRACE')
-    const club = state.clubs[state.playerClubId]
+    const club = state.clubs[state.playerClubId!]
     club.board.graceUntilSeason = state.date.season
     club.board.confidence = 2
     club.board.warnings = 2
@@ -1883,7 +1882,7 @@ describe('ownership', () => {
 
   it('turns a good pitch into backing and a bad one into a warning shot', () => {
     const state = freshWorld('OWN-PITCH')
-    const club = state.clubs[state.playerClubId]
+    const club = state.clubs[state.playerClubId!]
     club.board.owner = createOwner(new Rng('p'), 'foreignFund', 'A Fund', state.date.season)
     club.board.owner.ambition = 98
     club.board.owner.patience = 5
@@ -1939,7 +1938,7 @@ describe('deadline day', () => {
 
   it('discounts hardest where the contract is shortest', () => {
     const state = freshWorld('DL-DISCOUNT')
-    const club = state.clubs[state.playerClubId]
+    const club = state.clubs[state.playerClubId!]
     const player = seniorSquad(state, club)[0]!
     player.squadStatus = 'rotation'
     player.transferRequested = false
@@ -1960,7 +1959,7 @@ describe('deadline day', () => {
 
   it('discounts a player his club has given up on', () => {
     const state = freshWorld('DL-SURPLUS')
-    const club = state.clubs[state.playerClubId]
+    const club = state.clubs[state.playerClubId!]
     const player = seniorSquad(state, club)[0]!
     player.contract!.expiresSeason = state.date.season + 3
     player.squadStatus = 'rotation'
@@ -1971,7 +1970,7 @@ describe('deadline day', () => {
 
   it('only offers players the club could actually sign', () => {
     const state = freshWorld('DL-OFFERS')
-    const club = state.clubs[state.playerClubId]
+    const club = state.clubs[state.playerClubId!]
     state.date.week = SUMMER_DEADLINE_WEEK
     club.finances.transferBudget = 8_000_000
     club.finances.wageBudget = totalWageBill(state, club) + 40_000
@@ -1989,7 +1988,7 @@ describe('deadline day', () => {
 
   it('runs the clock down across the offers', () => {
     const state = freshWorld('DL-CLOCK')
-    const club = state.clubs[state.playerClubId]
+    const club = state.clubs[state.playerClubId!]
     state.date.week = SUMMER_DEADLINE_WEEK
     club.finances.transferBudget = 50_000_000
     club.finances.wageBudget = totalWageBill(state, club) + 200_000
@@ -2069,7 +2068,7 @@ describe('debt that cannot be repaid', () => {
     // it. Without this, clubs sat in financial crisis for thirteen and fifteen
     // seasons — a dead club occupying a division.
     const state = freshWorld('WRITEOFF')
-    const club = state.clubs[state.playerClubId]
+    const club = state.clubs[state.playerClubId!]
     const revenue = weeklyRevenue(state, club)
     const tolerated = revenue * debtTolerance(club.board.owner)
 
@@ -2090,7 +2089,7 @@ describe('debt that cannot be repaid', () => {
 
   it('leaves a serviceable debt alone', () => {
     const state = freshWorld('NO-WRITEOFF')
-    const club = state.clubs[state.playerClubId]
+    const club = state.clubs[state.playerClubId!]
     const tolerated = weeklyRevenue(state, club) * debtTolerance(club.board.owner)
 
     // Over the line, but not by the multiple that makes it hopeless.

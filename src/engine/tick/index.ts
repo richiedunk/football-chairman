@@ -2,7 +2,8 @@ import { Rng } from '../rng'
 import { IdFactory } from '../ids'
 import { NameGenerator } from '../names/generator'
 import { sortTable } from '../systems/board'
-import { createFacts, type Phase } from './context'
+import type { TransferAttemptStats } from '../systems/transfers'
+import { guardedFacts, runPhases } from '../phases'
 import { academyIntake, openTheWeek, seasonClock } from './phases/calendar'
 import {
   cupDraws, cupRounds, fixtureList, matchdayIntegrity, matches,
@@ -19,6 +20,7 @@ import {
 import { contracts, dataDepartment } from './phases/backroom'
 import { press } from './phases/press'
 import { aiBoard, architects, boardAndCoach, housekeeping } from './phases/boardroom'
+import type { TickContext, TickFacts, TickPhase } from './context'
 import type { Fixture, GameState, ID, MatchResult } from '../types'
 
 /**
@@ -65,6 +67,17 @@ export interface TickResult {
 export interface TickDeps {
   ids: IdFactory
   names: NameGenerator
+  /**
+   * A tally for the AI transfer market, when something is counting.
+   *
+   * Absent in the game and in every test. `scripts/attemptcheck.ts` passes one
+   * in to find out which of five conditions is actually binding, a question
+   * that has been guessed wrong twice. It threads through the tick because the
+   * alternative — a module variable in `transfers.ts`, which is what this was
+   * — is state shared by every world in the process and switched on from
+   * somewhere else entirely.
+   */
+  transferStats?: TransferAttemptStats
 }
 
 /**
@@ -74,7 +87,7 @@ export interface TickDeps {
  * week means adding a phase and putting it here; there is no longer a
  * six-hundred-line procedure to find the right place inside.
  */
-export const WEEK: readonly Phase[] = [
+export const WEEK: readonly TickPhase[] = [
   openTheWeek,
   academyIntake,
 
@@ -115,20 +128,22 @@ export const WEEK: readonly Phase[] = [
 ]
 
 export function advanceWeek(state: GameState, deps: TickDeps): TickResult {
-  const { ids, names } = deps
+  const { ids, names, transferStats } = deps
   const week = state.date.week
   const rng = new Rng(`${state.seed}:${state.date.season}:${week}`)
 
   const result: TickResult = { playerFixtures: [], seasonEnded: false, sacked: false }
-  const { facts, enter } = createFacts()
+  const guard = guardedFacts<TickFacts>()
+  const { facts } = guard
 
-  const ctx = {
+  const ctx: TickContext = {
     state,
     ids,
     names,
     rng,
     week,
     facts,
+    transferStats,
     sack: (message: string) => {
       result.sacked = true
       result.sackMessage = message
@@ -136,11 +151,11 @@ export function advanceWeek(state: GameState, deps: TickDeps): TickResult {
     endSeason: () => { result.seasonEnded = true },
   }
 
-  for (const p of WEEK) {
-    enter(p)
-    p.run(ctx)
-  }
-  enter({ name: 'after the week', reads: ['playerFixtures'], run: () => {} })
+  runPhases(WEEK, guard, ctx)
+
+  // The results screen is the one thing the caller gets back, so it is read
+  // out under a phase of its own rather than by reaching past the guard.
+  guard.enter({ name: 'after the week', reads: ['playerFixtures'] })
   result.playerFixtures = facts.playerFixtures
 
   return result

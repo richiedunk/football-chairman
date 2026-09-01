@@ -8,7 +8,7 @@ const setup = prepareNewGame({
   worldSize: 'compact', homeNationId: 'eng', startingSeason: 2025,
 })
 const state = startCareerAt(setup, setup.candidates.find(c => canTakeJobAt(setup.state.director, c))!.id)
-const club = state.clubs[state.playerClubId]
+const club = state.clubs[state.playerClubId!]
 
 // Give this club the means, so the mechanics rather than the economics are
 // under test.

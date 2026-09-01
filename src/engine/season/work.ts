@@ -1,365 +1,31 @@
-import { clamp, Rng } from './rng'
-import { IdFactory, ID_PREFIX } from './ids'
-import { NameGenerator } from './names/generator'
-import { scheduleLeague } from './sim/schedule'
-import { emptyTableRow } from './world/worldGen'
-import { ageOneYear } from './systems/development'
-import { mustRetire } from './systems/directorCareer'
-import { awardSeasonPrizeMoney, negotiateSponsorship, recalculateBudgets, rollOverLedger } from './systems/finance'
-import { setSeasonExpectation, setSeasonMandates, sortTable } from './systems/board'
-import { awardXp, closeCareerEntry, eligibleClubs, levelFor, ordinal, seasonEndXp } from './systems/career'
-import { computeValue, computeWageDemand } from './systems/valuation'
-import { addInboxItem, addNews } from './systems/inbox'
-import { emptyStats } from './world/playerGen'
-import { cupResultFor, resetCup } from './sim/cups'
-import { continentalResultFor, refreshContinentalEntrants } from './systems/continental'
-import { clauseUpside, clausesHeldBy } from './systems/buyBack'
-import { TOURNAMENT_STOCK_DECAY } from './systems/international'
-import { accrueTrainingYear, autoRegister, releaseRegistration } from './systems/registration'
-import { writeOffBookValue } from './systems/finance'
-import { adjustForPlayer, decayRelationships } from './systems/agents'
-import {
-  applyPointsDeductions, assessClub, SANCTION_LABELS, SQUAD_COST_LIMIT,
-  type RegulationOutcome,
-} from './systems/regulation'
-import { PATIENCE_WEEKS } from './systems/aiSquad'
-import {
-  contractTermsFor, paySeasonBonuses, signContract, type ContractOffer,
-} from './systems/directorContract'
-import type { Club, GameState, ID, JobOffer, League, Player, SeasonHistory } from './types'
-import { playerClub as clubInCharge } from './playerClub'
+import { clamp, Rng } from '../rng'
+import { IdFactory, ID_PREFIX } from '../ids'
+import { ageOneYear } from '../systems/development'
+import { sortTable } from '../systems/board'
+import { eligibleClubs, levelFor } from '../systems/career'
+import { computeValue, computeWageDemand } from '../systems/valuation'
+import { addInboxItem, addNews } from '../systems/inbox'
+import { accrueTrainingYear, releaseRegistration } from '../systems/registration'
+import { writeOffBookValue } from '../systems/finance'
+import { adjustForPlayer } from '../systems/agents'
+import { SANCTION_LABELS, SQUAD_COST_LIMIT, type RegulationOutcome } from '../systems/regulation'
+import { PATIENCE_WEEKS } from '../systems/aiSquad'
+import type { Club, GameState, ID, JobOffer, League, Player } from '../types'
+import { playerClub as clubInCharge } from '../playerClub'
+import type { RolloverDeps } from './context'
 
 /**
- * Season rollover.
+ * The work the season roll's phases call into.
  *
- * Promotion and relegation, prize money, contract expiry, ageing, retirements,
- * a new fixture list, and — the part that matters for the meta-game — the XP
- * award and the job offers it unlocks. This is the one point in the year where
- * the whole world moves at once, so it runs as a single explicit sequence.
+ * Promotion and relegation, the contract-expiry and retirement sweep, academy
+ * churn, the job market and the regulator's letter. Split out from the phase
+ * list next door so that reading the manifest tells you what a roll *is*
+ * without four hundred lines of how in the way.
  */
-
-export interface RolloverDeps {
-  ids: IdFactory
-  names: NameGenerator
-  rng: Rng
-}
-
-export function runSeasonRollover(state: GameState, deps: RolloverDeps): void {
-  const { ids, rng } = deps
-  const season = state.date.season
-
-  // --- 1. Final tables, prize money, history --------------------------------
-  const finalPositions = new Map<ID, number>()
-
-  for (const league of Object.values(state.leagues)) {
-    const table = sortTable(state.tables[league.id] ?? [])
-    table.forEach((row, index) => {
-      const position = index + 1
-      finalPositions.set(row.clubId, position)
-      const club = state.clubs[row.clubId]
-      if (!club) return
-
-      const prize = awardSeasonPrizeMoney(club, league, position)
-      const closed = rollOverLedger(club)
-
-      // Judged on the books just closed, not on live figures — a rule
-      // assessed against a moving number is one nobody can plan against.
-      const verdict = assessClub(state, club, closed, ids)
-      if (club.id === state.playerClubId) reportRegulation(state, ids, verdict)
-
-      const domesticCup = Object.values(state.cups).find((c) => c.nationId === club.nationId)
-
-      const history: SeasonHistory = {
-        season,
-        leagueId: league.id,
-        leagueName: league.name,
-        position,
-        played: row.played,
-        points: row.points,
-        goalsFor: row.goalsFor,
-        goalsAgainst: row.goalsAgainst,
-        cupResult: domesticCup ? cupResultFor(state, domesticCup, club.id) : '—',
-        // Read before the entrants are re-drawn for next season, which is why
-        // the history is written in step 1 and the refresh happens in step 6.
-        continentalResult: continentalResultFor(state, club.id),
-        netSpend: closed.transfersIn - closed.transfersOut,
-        finalBalance: club.finances.balance,
-        headCoachName: club.headCoachId
-          ? state.staff[club.headCoachId]?.knownAs ?? 'Vacant'
-          : 'Vacant',
-      }
-      club.history.push(history)
-      if (club.history.length > 40) club.history.shift()
-
-      if (club.id === state.playerClubId) {
-        addNews(state, ids, 'league',
-          `Season ${season}/${(season + 1) % 100} finished ${position}${ordinal(position)} in ${league.name}. Prize money: ${prize.toLocaleString()}.`,
-          null, club.id)
-      }
-    })
-  }
-
-  // --- 2. Director XP -------------------------------------------------------
-  // Awarded before promotion is applied, so the XP reflects the division the
-  // work was actually done in.
-  const playerClub = clubInCharge(state)
-  if (playerClub) {
-    const league = state.leagues[playerClub.leagueId]
-    const position = finalPositions.get(playerClub.id) ?? 20
-    if (league) {
-      for (const award of seasonEndXp(state, playerClub, league, position)) {
-        awardXp(state.director, award.amount, award.reason, award.category, season, state.date.week)
-      }
-    }
-    const entry = state.director.careerHistory.find(
-      (e) => e.clubId === playerClub.id && e.toSeason === null,
-    )
-    if (entry) {
-      entry.bestFinish = Math.min(entry.bestFinish, position)
-      entry.xpEarned += state.director.xpThisSeason
-      const trophiesWon: string[] = []
-      for (const cup of Object.values(state.cups)) {
-        if (cup.winnerId === playerClub.id) {
-          trophiesWon.push(cup.name)
-          entry.trophies.push(`${cup.name} ${season}`)
-          awardXp(
-            state.director, Math.round(500 * (0.5 + (league?.reputation ?? 40) / 100 * 1.5)),
-            `Won the ${cup.name}`, 'trophies', season, state.date.week,
-          )
-        }
-      }
-
-      // Contract bonuses are paid before promotion is applied, so "promoted"
-      // means promoted this season rather than "is now in a higher division".
-      const promoted = league ? position <= league.promotionPlaces && league.promotionPlaces > 0 : false
-      const bonuses = paySeasonBonuses(state, playerClub, position, promoted, trophiesWon)
-      if (bonuses > 0) {
-        addInboxItem(state, ids, {
-          category: 'finance',
-          subject: `Contract bonuses: ${bonuses.toLocaleString()}`,
-          from: 'Your representative',
-          body: 'Your performance bonuses for the season have been settled.',
-          link: { view: 'career' },
-        })
-      }
-    }
-    playerClub.board.tenureSeasons += 1
-  }
-
-  // --- 3. Promotion and relegation ------------------------------------------
-  applyPromotionAndRelegation(state, finalPositions)
-
-  // --- 4. Contracts, ageing, retirement -------------------------------------
-  processPlayerYearEnd(state, deps)
-
-  // --- 4b. Academy churn ----------------------------------------------------
-  releaseUnpromotedYouth(state, deps)
-
-  // Agents drift back towards indifference between seasons. Without it a
-  // single bad window follows a director for a whole career.
-  decayRelationships(state)
-
-  // --- 4c. Squad registration ----------------------------------------------
-  // Lists are rebuilt from scratch each summer. Promotion, relegation, expiry
-  // and retirement have all just torn through the squads, and last season's
-  // list would be half made of players who no longer exist.
-  for (const club of Object.values(state.clubs)) autoRegister(state, club)
-
-  // --- 4d. International reset ----------------------------------------------
-  // Duty flags are week numbers against a clock that has just gone back to
-  // one, so a player left flagged would be away from his club for the whole of
-  // next season. The tournament premium decays here too: a year is roughly how
-  // long the market remembers a good summer, and a club that did not sell in
-  // that window finds the number gone — which is the cruellest honest thing in
-  // this market and happens every other year.
-  for (const player of Object.values(state.players)) {
-    player.internationalUntilWeek = null
-    if (player.tournamentStock) {
-      const remaining = player.tournamentStock * TOURNAMENT_STOCK_DECAY
-      player.tournamentStock = remaining < 0.01 ? 0 : remaining
-    }
-  }
-
-  // --- 5. Club housekeeping -------------------------------------------------
-  for (const club of Object.values(state.clubs)) {
-    const league = state.leagues[club.leagueId]
-    if (!league) continue
-
-    // Reputation tracks results over time, so a promoted club genuinely grows
-    // and a relegated one genuinely shrinks — the reason a long project pays.
-    const position = finalPositions.get(club.id) ?? 10
-    const clubCount = Math.max(1, league.clubIds.length)
-    const performance = 1 - (position - 1) / clubCount
-    const target = league.reputation * (0.75 + performance * 0.5)
-    club.reputation = Math.round(clamp(club.reputation + (target - club.reputation) * 0.22, 3, 99))
-    club.continentalReputation = Math.round(
-      clamp(club.continentalReputation + (club.reputation - club.continentalReputation) * 0.3, 3, 99),
-    )
-
-    if (club.finances.sponsorship.expiresSeason <= season) {
-      negotiateSponsorship(state, club, deps.rng.fork(`sponsor:${club.id}`))
-    }
-
-    // A new season, a fresh hearing: boards stop counting last year's asks.
-    club.board.requestsThisSeason = 0
-    setSeasonExpectation(state, club, league)
-    setSeasonMandates(state, club)
-    recalculateBudgets(state, club)
-    club.board.confidence = clamp(club.board.confidence * 0.85 + 40 * 0.15, 0, 100)
-  }
-
-  // League reputation follows its member clubs, so a division that keeps
-  // producing strong sides slowly becomes a stronger division.
-  for (const league of Object.values(state.leagues)) {
-    const clubs = league.clubIds.map((id) => state.clubs[id]).filter(Boolean) as Club[]
-    if (clubs.length === 0) continue
-    const avg = clubs.reduce((sum, c) => sum + c.reputation, 0) / clubs.length
-    league.reputation = Math.round(clamp(league.reputation + (avg - league.reputation) * 0.15, 3, 99))
-  }
-
-  // --- 6. New season --------------------------------------------------------
-  state.date.season += 1
-  state.date.week = 1
-  state.phase = 'preseason'
-
-  state.fixtures = []
-  // Who is in Europe next season is decided by the tables that have just been
-  // closed, so this runs before `resetCup` reads the field — and before the
-  // tables below are wiped for the new season.
-  refreshContinentalEntrants(state)
-  for (const cup of Object.values(state.cups)) resetCup(state, cup)
-  for (const league of Object.values(state.leagues)) {
-    state.fixtures.push(
-      ...scheduleLeague(rng.fork(`fixtures:${league.id}`), ids, league.id, league.clubIds, state.date.season),
-    )
-    state.tables[league.id] = league.clubIds.map((clubId) => emptyTableRow(clubId))
-  }
-
-  // Points deductions land on the fresh tables, so every screen that reads a
-  // table sees them without knowing regulation exists.
-  for (const { club, points } of applyPointsDeductions(state)) {
-    if (club.id === state.playerClubId) {
-      addInboxItem(state, ids, {
-        category: 'board',
-        subject: `${points}-point deduction`,
-        from: 'The League',
-        body: `The club begins the season on minus ${points} points following repeated breaches of the squad-cost rules. `
-          + 'The board have made their view of this known.',
-        urgent: true,
-        link: { view: 'finance' },
-      })
-      club.board.confidence = clamp(club.board.confidence - 14, 0, 100)
-    }
-  }
-
-  // Reset seasonal player statistics after they have been archived.
-  for (const player of Object.values(state.players)) {
-    player.stats = emptyStats()
-    player.suspendedWeeks = 0
-  }
-
-  // Buy-backs that have just opened, and ones that have just gone.
-  //
-  // Both are worth a message and the second one more than the first: a clause
-  // that lapses unexercised is the regret the mechanism exists to create, and
-  // it should not happen quietly.
-  const owner = clubInCharge(state)
-  if (owner) {
-    for (const player of clausesHeldBy(state, owner.id)) {
-      const clause = player.buyBack
-      if (!clause) continue
-      if (clause.fromSeason === state.date.season) {
-        const upside = clauseUpside(player)
-        addInboxItem(state, ids, {
-          category: 'transfer',
-          subject: `Your buy-back on ${player.knownAs} is live`,
-          from: 'Recruitment',
-          body: `We sold ${player.knownAs} to ${state.clubs[player.clubId ?? '']?.name ?? 'another club'} `
-            + `for ${clause.soldFor.toLocaleString()} and kept the right to bring him back for `
-            + `${clause.price.toLocaleString()}. He is valued at ${player.value.toLocaleString()} now. `
-            + (upside > 0
-              ? `That is ${upside.toLocaleString()} of value for nothing but the fee and the squad place.`
-              : 'He has not kicked on the way we hoped, so the right is not worth much today.')
-            + ` It runs until the end of ${clause.untilSeason}.`,
-          link: { view: 'player', id: player.id },
-        })
-      } else if (clause.untilSeason < state.date.season) {
-        addInboxItem(state, ids, {
-          category: 'transfer',
-          subject: `The buy-back on ${player.knownAs} has lapsed`,
-          from: 'Recruitment',
-          body: `Our right to buy ${player.knownAs} back for ${clause.price.toLocaleString()} `
-            + `expired at the end of last season. He is valued at ${player.value.toLocaleString()}.`,
-          link: { view: 'player', id: player.id },
-        })
-        player.buyBack = null
-      }
-    }
-  }
-
-  // Everyone else's lapse quietly, but they do lapse — a clause nothing ever
-  // clears is a right that lasts for ever.
-  for (const player of Object.values(state.players)) {
-    if (player.buyBack && player.buyBack.untilSeason < state.date.season) player.buyBack = null
-  }
-
-  // --- 7. Job offers --------------------------------------------------------
-  state.director.jobOffers = generateJobOffers(state, deps)
-  if (state.director.jobOffers.length > 0) {
-    addInboxItem(state, ids, {
-      category: 'board',
-      subject: `${state.director.jobOffers.length} club${state.director.jobOffers.length === 1 ? ' has' : 's have'} approached you`,
-      from: 'Your representative',
-      body: state.director.jobOffers
-        .map((o) => `${o.clubName} (${o.leagueName}) — ${o.pitch}`)
-        .join('\n\n'),
-      link: { view: 'career' },
-      expiresInWeeks: 4,
-    })
-  }
-
-  const level = levelFor(state.director.xp)
-  addInboxItem(state, ids, {
-    category: 'board',
-    subject: `Season review — ${state.director.xpThisSeason.toLocaleString()} XP earned`,
-    from: 'Your representative',
-    body: `You finished the season on ${state.director.xp.toLocaleString()} career XP, which puts you at ${level.title}. ${level.description}`,
-    link: { view: 'career' },
-  })
-
-  state.director.xpThisSeason = 0
-  state.director.xpLog = []
-  state.director.earningsThisSeason = 0
-
-  // --- 8. A year older -----------------------------------------------------
-  //
-  // After the review, so the season just finished is counted as worked at the
-  // age it was worked at. The last season anyone works is the one during which
-  // they turn sixty-five: they see it out, then they go.
-  state.director.age += 1
-  if (mustRetire(state.director)) {
-    state.director.retiredAtSeason = state.date.season
-    state.director.retiredBecause = 'age'
-    // No offers for a man who has finished. Leaving them on the table would
-    // dangle a career the rules have already ended.
-    state.director.jobOffers = []
-    addInboxItem(state, ids, {
-      category: 'board',
-      subject: `That is the end of it — you are ${state.director.age}`,
-      from: 'Your representative',
-      body:
-        'Nobody works past sixty-five in this game, and there are no exceptions '
-        + 'made — not for you and not for anyone.\n\n'
-        + 'Your record is on the career screen. It is the only part of the job '
-        + 'that outlasts it.',
-      link: { view: 'career' },
-    })
-  }
-}
 
 // ---------------------------------------------------------------------------
 
-function applyPromotionAndRelegation(state: GameState, positions: Map<ID, number>): void {
+export function applyPromotionAndRelegation(state: GameState, positions: Map<ID, number>): void {
   const byNation = new Map<ID, League[]>()
   for (const league of Object.values(state.leagues)) {
     const list = byNation.get(league.nationId) ?? []
@@ -435,7 +101,7 @@ function moveClub(state: GameState, clubId: ID, toLeague: League): void {
 }
 
 /** Contract expiry, ageing, development recalibration and retirement. */
-function processPlayerYearEnd(state: GameState, deps: RolloverDeps): void {
+export function processPlayerYearEnd(state: GameState, deps: RolloverDeps): void {
   const { rng, ids } = deps
   const season = state.date.season
   const retiring: Player[] = []
@@ -648,7 +314,7 @@ function survivalChance(player: Player): number {
   return clamp(0.12 + (player.potentialAbility - 90) / 170, 0.06, 0.9)
 }
 
-function releaseUnpromotedYouth(state: GameState, deps: RolloverDeps): void {
+export function releaseUnpromotedYouth(state: GameState, deps: RolloverDeps): void {
   const { rng, ids } = deps
   const season = state.date.season
 
@@ -748,7 +414,7 @@ export function retirementProbability(player: Player): number {
  * Offers come from clubs that are both within your band and plausibly
  * interested — a club does not approach a director whose season was a disaster.
  */
-function generateJobOffers(state: GameState, deps: RolloverDeps): JobOffer[] {
+export function generateJobOffers(state: GameState, deps: RolloverDeps): JobOffer[] {
   const { rng, ids } = deps
   const currentClub = clubInCharge(state)
   if (!currentClub) return []
@@ -808,7 +474,7 @@ function generateJobOffers(state: GameState, deps: RolloverDeps): JobOffer[] {
  * it failed learns nothing it can act on; a club shown that two thirds of the
  * problem is amortisation on three signings knows to stop signing people.
  */
-function reportRegulation(
+export function reportRegulation(
   state: GameState,
   ids: IdFactory,
   outcome: RegulationOutcome,
@@ -858,55 +524,4 @@ function writePitch(club: Club, levelTitle: string, overperformance: number): st
     return `${club.name} are in trouble and need someone who can trade their way out of it. It is not a glamorous job, but it is a bigger one.`
   }
   return `${club.name} are looking for a director of football to take charge of recruitment and squad planning. They think you are ready for the step up.`
-}
-
-/** Accept a job offer: leave the current club and take over the new one. */
-export function acceptJobOffer(
-  state: GameState,
-  offerId: ID,
-  contract?: ContractOffer,
-): { ok: boolean; message: string } {
-  const offer = state.director.jobOffers.find((o) => o.id === offerId)
-  if (!offer) return { ok: false, message: 'That offer is no longer available.' }
-  // The UI does not offer a barred post, but the rule belongs here rather than
-  // in a template: a listing you cannot apply for must be un-takeable however
-  // the call arrives.
-  if (offer.barred) {
-    return { ok: false, message: offer.barredReason ?? 'They will not consider you.' }
-  }
-  const newClub = state.clubs[offer.clubId]
-  if (!newClub) return { ok: false, message: 'That club no longer exists.' }
-
-  const oldClub = clubInCharge(state)
-  if (oldClub) {
-    oldClub.isPlayerClub = false
-    closeCareerEntry(state.director, oldClub.id, state.date.season, 'Left for another club')
-  }
-
-  state.playerClubId = newClub.id
-  newClub.isPlayerClub = true
-  newClub.board.tenureSeasons = 0
-  newClub.board.warnings = 0
-  state.director.jobOffers = []
-  state.director.careerHistory.push({
-    clubId: newClub.id,
-    clubName: newClub.name,
-    fromSeason: state.date.season,
-    toSeason: null,
-    outcome: 'In post',
-    bestFinish: 99,
-    trophies: [],
-    netSpend: 0,
-    xpEarned: 0,
-  })
-
-  // A new club means a clean scouting slate — the reports belonged to the
-  // previous employer's recruitment department, not to you.
-  state.scoutReports = {}
-  state.shortlist = []
-  state.negotiations = []
-
-  signContract(state, newClub, contract ?? contractTermsFor(state, newClub, state.director).opening)
-
-  return { ok: true, message: `You are now director of football at ${newClub.name}.` }
 }

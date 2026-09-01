@@ -16,7 +16,7 @@ for (const tier of [1, 3, 5]) {
   const debt = clubs.map(c => c.finances.debt)
   const inCrisis = clubs.filter(c => c.finances.inCrisis).length
   const avg = (a: number[]) => Math.round(a.reduce((x, y) => x + y, 0) / a.length)
-  const net = clubs.map((c, i) => rev[i] - wages[i] - upkeep[i])
+  const net = clubs.map((_, i) => rev[i] - wages[i] - upkeep[i])
   rows.push(
     `${league.name.padEnd(20)} rev ${avg(rev).toLocaleString().padStart(8)}/wk  ` +
     `wages ${avg(wages).toLocaleString().padStart(7)}  upkeep ${avg(upkeep).toLocaleString().padStart(7)}  ` +

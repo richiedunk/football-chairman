@@ -25,9 +25,11 @@ for (const league of [topFlight, bottom]) {
     const r = simulateMatch(state, home, away, rng, { suspendedIds: new Set() }, true)
     if (r.homeGoals>r.awayGoals) hw++; else if (r.homeGoals===r.awayGoals) d++; else aw++
     goals += r.homeGoals + r.awayGoals
-    shots += r.shots.home + r.shots.away
-    sot += r.shotsOnTarget.home + r.shotsOnTarget.away
-    att += r.attendance
+    // Detailed results always carry these; they are optional on the type
+    // only because a trimmed result has had them deleted.
+    shots += r.shots!.home + r.shots!.away
+    sot += r.shotsOnTarget!.home + r.shotsOnTarget!.away
+    att += r.attendance!
     n++
     for (const e of r.events) {
       if (e.type === 'penaltyScored') { penGoals++; pensAwarded++; eventGoals++ }
@@ -61,7 +63,7 @@ const ids = rng.sample(topFlight.clubIds, 2)
 const home = state.clubs[ids[0]], away = state.clubs[ids[1]]
 const r = simulateMatch(state, home, away, rng, { suspendedIds: new Set() }, true)
 console.log(`\n=== ${home.name} ${r.homeGoals}-${r.awayGoals} ${away.name} ===`)
-console.log(r.summary, `| poss ${r.possession}% | att ${r.attendance.toLocaleString()}`)
+console.log(r.summary, `| poss ${r.possession}% | att ${r.attendance!.toLocaleString()}`)
 for (const e of r.events.slice(0, 14)) console.log(`  ${e.minute}' [${e.type}] ${e.text}`)
 const top = Object.entries(r.ratings).sort((a,b)=>b[1]-a[1]).slice(0,5)
 console.log('  top ratings:', top.map(([id,v])=>`${state.players[id].knownAs} ${v.toFixed(1)}`).join(', '))

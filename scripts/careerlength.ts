@@ -56,7 +56,7 @@ function considerOffers(): void {
   const best = ranked[0]
   if (!best) return
 
-  const current = state.playerClubId ? state.clubs[state.playerClubId] : null
+  const current = state.playerClubId ? state.clubs[state.playerClubId!] : null
   if (current && best.club!.reputation < current.reputation + AMBITION_GAP) return
 
   const result = acceptJobOffer(state, best.offer.id)
@@ -79,7 +79,7 @@ while (state.director.retiredAtSeason === undefined && weeks < 52 * 40) {
   considerOffers()
   if (state.director.age !== lastAge) {
     lastAge = state.director.age
-    const club = state.playerClubId ? state.clubs[state.playerClubId] : null
+    const club = state.playerClubId ? state.clubs[state.playerClubId!] : null
     const league = club ? state.leagues[club.leagueId] : null
     if (state.director.age % 5 === 0 || state.director.age >= RETIREMENT_AGE - 1) {
       console.log(
