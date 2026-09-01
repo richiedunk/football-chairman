@@ -215,6 +215,49 @@ mean balance £155.3m → **£165.9m**, and clubs in crisis **5 of 238 → 2**. 
 seats pay for the repairs several times over, which is why real clubs do it
 without being asked.
 
+**Then measured again, and the remainder is a different question.**
+
+Affordability is not what stops the poorest clubs. After twelve seasons a tier
+5 club holds £3.98m against a cheapest repair of £29,955, and 22 of 22 can
+cover one outright. Worst-stand condition sits at 58–62 in every tier, above
+the threshold that calls the builders — the maintenance is working.
+
+And the residual decline is **front-loaded, not ongoing**. Adults per club by
+season, after the fix:
+
+| tier | s1 | s3 | s7 | s10 | s12 | s14 |
+|---|---|---|---|---|---|---|
+| 3 | 20.3 | 21.3 | 16.3 | 15.3 | 14.8 | 14.0 |
+| 4 | 19.5 | 19.7 | 16.5 | 12.5 | 11.3 | 12.2 |
+| 5 | 19.8 | 14.0 | 10.9 | 11.5 | 12.4 | 11.1 |
+
+Tier 5 stops falling at season seven and holds around eleven. Tier 4 settles
+near twelve. Tier 5's matchday income does the same thing: 21,856 down to
+17,715 by season four, then back up to 18,111 by season fourteen — the −17%
+headline is an initial settling with ten stable seasons behind it.
+
+**So the world is generated richer than its own economy can sustain, and
+spends six to twelve seasons finding its level.** That is a different defect
+from a drift, and it wants a different answer:
+
+- either **world generation is wrong** — a tier 5 club should start with about
+  twelve adult professionals and a bigger academy, not twenty, in which case
+  the equilibrium is right and the opening position is a fiction;
+- or **the bottom of the economy is too poor** — non-league clubs should be
+  able to sustain eighteen professionals, in which case revenue down there
+  needs raising.
+
+Worth noting which is realistic: a real non-league side carries sixteen to
+twenty players and most of them are part-time. Eleven full-time adults plus an
+academy may be the more honest world. This is a design decision rather than a
+bug, and it is the next thing to settle.
+
+**A related oddity the same run turned up:** clubs are hoarding enormous sums.
+Mean balance after twelve seasons is £207m in the top flight and £30m in tier
+3. Nothing in the game makes a club spend down a balance that size, so the
+squad-cost rule and the wage budget are the only brakes and the cash just
+accumulates.
+
 **Still open, and stated plainly: this does not finish the job.** The top two
 tiers are close to flat now, but the bottom three still shed six to nine adults
 over fourteen seasons and tier 5's matchday income still falls 17%. The roll
