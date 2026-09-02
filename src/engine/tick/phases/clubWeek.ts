@@ -6,7 +6,7 @@ import { updateFanMood } from '../../systems/board'
 import { developPlayer } from '../../systems/development'
 import { processFinances } from '../../systems/finance'
 import { progressProjects } from '../../systems/facilities'
-import { decayStadium, maintainStadium, progressStadiumWork } from '../../systems/stadium'
+import { decayStadium, expandStadium, maintainStadium, progressStadiumWork } from '../../systems/stadium'
 import { canFieldEleven, warnHuman } from '../../systems/matchday'
 import { addInboxItem, addNews } from '../../systems/inbox'
 import { payDirectorSalary } from '../../systems/directorContract'
@@ -75,7 +75,15 @@ export const clubWeek = phase({
       // Until this existed nothing in the world ever repaired a stand, so
       // every stadium bar the player's slowly closed itself down — see
       // `maintainStadium`, which is the largest single thing that was missing.
-      if (club.id !== state.playerClubId) maintainStadium(state, club, ids, clubRng)
+      //
+      // Building, likewise: a club that keeps selling out and has the money in
+      // the bank puts up a bigger stand. Repairs come first because a club
+      // with a stand closed on safety grounds is not expanding the other one,
+      // and both are refused while a project is already under way.
+      if (club.id !== state.playerClubId) {
+        maintainStadium(state, club, ids, clubRng)
+        expandStadium(state, club, ids, clubRng)
+      }
 
       if (club.id === state.playerClubId) {
         reportInjuries(state, ids, newInjuries)

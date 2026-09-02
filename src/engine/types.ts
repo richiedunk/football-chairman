@@ -378,6 +378,15 @@ export interface Stadium {
    * so rather than leaving an unexplained collapse.
    */
   relocatedSeason: number | null
+  /**
+   * Home matches this season the ground filled.
+   *
+   * The only honest record of demand the game has. `computeAttendance` clamps
+   * fill at capacity and throws the excess away, so the supporters a club
+   * turns away are unknowable after the fact — but the fact that it turned
+   * some away is not, and that is what a board acts on. Reset at the roll.
+   */
+  selloutsThisSeason: number
 }
 
 // ---------------------------------------------------------------------------
@@ -1595,4 +1604,4 @@ export interface GameSettings {
   hapticsEnabled: boolean
 }
 
-export const SAVE_VERSION = 16
+export const SAVE_VERSION = 17

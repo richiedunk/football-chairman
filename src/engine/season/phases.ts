@@ -254,6 +254,8 @@ export const clubHousekeeping = phase({
 
       // A new season, a fresh hearing: boards stop counting last year's asks.
       club.board.requestsThisSeason = 0
+      // Last year's full houses do not justify this year's building work.
+      club.facilities.stadium.selloutsThisSeason = 0
       setSeasonExpectation(state, club, league)
       setSeasonMandates(state, club)
       recalculateBudgets(state, club)

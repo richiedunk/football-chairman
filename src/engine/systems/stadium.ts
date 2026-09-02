@@ -860,3 +860,80 @@ export function maintainStadium(
   const chosen = bids.reduce((best, b) => (b.cost < best.cost ? b : best))
   awardContract(state, club, ids, spec, chosen.architectId, 'cash')
 }
+
+/**
+ * Building a bigger ground.
+ *
+ * The other half of why AI clubs hoard. Twelve seasons in, a top-flight club
+ * holds two years of turnover and has spent £44,000 of a £106m income on its
+ * stadium — not because it decided against building, but because nothing ever
+ * asked it to. Wage budgets are a share of revenue, so a bank balance is
+ * invisible to every other spending decision in the game; capital work is the
+ * only thing that can touch it.
+ *
+ * The trigger is the one a real board uses: the ground keeps selling out.
+ * `selloutsThisSeason` is counted on matchday because `computeAttendance`
+ * clamps fill at capacity and the excess demand is unrecoverable afterwards.
+ *
+ * This only ever fires where the demand is. Measured across every
+ * fixture-shaped pairing in the world, tier 1 runs at 0.868 mean fill with a
+ * p90 of 0.992, tier 2 at 0.802 — and tiers 3-5 at 0.69, 0.60 and 0.54 never
+ * come close, which is roughly right for real lower-league football. A club in
+ * front of half-empty stands does not build, and the gate below leaves it
+ * alone rather than needing a tier check to say so.
+ */
+
+/** Full houses in a season before a board will look at the drawings. */
+const AI_EXPAND_SELLOUTS = 6
+
+/**
+ * How much of the balance goes into an expansion.
+ *
+ * Larger than the repair share because this is the deliberate act rather than
+ * the maintenance, and because the whole point is to move a balance that
+ * nothing else in the game can move. Still short of everything: a club that
+ * empties its account to build cannot then sign anybody.
+ */
+const AI_EXPAND_SHARE = 0.45
+
+/** Places added, as a share of the current ground. */
+const AI_EXPAND_STEP = 0.18
+
+export function expandStadium(
+  state: GameState,
+  club: Club,
+  ids: IdFactory,
+  rng: Rng,
+): void {
+  if (club.facilities.stadiumProject) return
+  if (club.finances.inCrisis) return
+  // A tenant cannot alter somebody else's property. `awardContract` refuses
+  // this too; checking here saves tendering for work that cannot be awarded.
+  if (!club.facilities.stadium.owned) return
+  if (club.facilities.stadium.selloutsThisSeason < AI_EXPAND_SELLOUTS) return
+
+  // Rebuild the smallest stand larger. It is the cheapest to demolish, it is
+  // usually the oldest, and it is how grounds actually grow — one side at a
+  // time, over years, rather than all at once.
+  let smallest: Stand | null = null
+  for (const stand of club.facilities.stadium.stands) {
+    if (!smallest || stand.capacity < smallest.capacity) smallest = stand
+  }
+  if (!smallest) return
+
+  // Boards do not all move in the same week, and a stadium project runs for
+  // most of two years — so this is rarer than the repair check by design.
+  if (!rng.chance(0.06)) return
+
+  const added = Math.round(club.facilities.stadium.capacity * AI_EXPAND_STEP)
+  if (added < 500) return
+
+  const spec: WorkSpec = { kind: 'expand', standId: smallest.id, capacity: added }
+  const affordable = club.finances.balance * AI_EXPAND_SHARE
+  const bids = inviteTenders(state, club, spec)
+    .filter((b) => b.available && b.cost <= affordable)
+  if (bids.length === 0) return
+
+  const chosen = bids.reduce((best, b) => (b.cost < best.cost ? b : best))
+  awardContract(state, club, ids, spec, chosen.architectId, 'cash')
+}

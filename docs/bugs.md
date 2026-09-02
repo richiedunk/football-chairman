@@ -13,6 +13,85 @@ will break next.
 
 ## Open
 
+### Clubs sit on years of turnover and nothing ever asks them to spend it
+`scripts/hoardcheck.ts`, twelve seasons, sampled at week 50 before the roll
+resets the ledger. Every tier runs a persistent surplus of 3–14% of income and
+the balance climbs without limit — measured in weeks of revenue, so the figure
+means something:
+
+| tier | balance, season 1 | balance, season 12 | season 12 income | of which, on the ground |
+|---|---|---|---|---|
+| 1 | 4 weeks | 94 weeks | £105.9m | £44,204 |
+| 2 | 6 weeks | 115 weeks | £59.4m | £96,774 |
+| 3 | 9 weeks | 141 weeks | £17.9m | £9,611 |
+| 4 | — | 140 weeks | £6.1m | £4,601 |
+| 5 | — | 134 weeks | £2.5m | £3,591 |
+
+A tier 1 club earns £105.9m a season and spends £44,204 of it on the ground —
+four hundredths of one per cent. That is not a club deciding not to build; it
+is a club nothing has ever asked to. Wage budgets are capped as a share of
+*revenue*, so a bank account holding two and a half years of turnover is
+invisible to every other spending decision in the game, and capital work is
+the only thing that can touch it.
+
+**And the demand signal I said did not exist, does.** The obvious trigger is
+"build when the ground is full", so I wrote `expandStadium` on the demand
+implied by `computeAttendance`, which clamps fill at capacity and throws the
+excess away. I then measured the clamp with a hand-rolled copy of the formula,
+got a maximum fill of 0.925 anywhere in the world, concluded no club ever sells
+out, and reverted the change as unfireable code. That measurement was wrong: it
+left out `opponentDraw`, which is worth up to +0.12 and is near its ceiling for
+most top-flight fixtures. `computeAttendance` is now exported so the diagnostic
+calls the real function, and the second half of `hoardcheck.ts` samples it
+across every fixture-shaped pairing in every league:
+
+| tier | mean fill | p90 | max | mean fanbase | pairings over 0.95 |
+|---|---|---|---|---|---|
+| 1 | 0.868 | 0.992 | 1.000 | 67.6 | **518** |
+| 2 | 0.802 | 0.914 | 1.000 | 56.6 | 23 |
+| 3 | 0.692 | 0.777 | 0.906 | 44.0 | 0 |
+| 4 | 0.595 | 0.679 | 0.785 | 33.0 | 0 |
+| 5 | 0.535 | 0.628 | 0.686 | 22.5 | 0 |
+
+Top-flight grounds sell out routinely — a p90 of 0.992 and 518 fixtures at or
+over 0.95 — and the clamp at 1.000 is silently turning supporters away. Tiers
+3–5 at 0.69 / 0.60 / 0.54 never fill and are roughly right for real lower-league
+football, which is the correct answer for them: those clubs should not be
+building.
+
+So the demand signal is real, it is where it should be, and `expandStadium`
+was reverted for a reason that did not survive being measured properly. The
+lesson is the one this project keeps relearning: measure through the real
+function, not a copy of it.
+
+**What the wired version does, measured.** `Stadium.selloutsThisSeason` counts
+home matches the ground filled — recorded on matchday, because the clamp
+destroys the excess demand and it cannot be recovered afterwards — and
+`expandStadium` rebuilds the smallest stand 18% larger when a club has six full
+houses, the money in the bank and no other work under way. Twelve seasons,
+`scripts/buildcheck.ts`:
+
+| tier | clubs | full houses per club per season | expansions started | capacity vs start |
+|---|---|---|---|---|
+| 1 | 144 | 1.3 | 35 | +2.1% |
+| 2 | 24 | 0.2 | 1 | −0.7% |
+| 3 | 24 | 0.0 | 0 | −0.4% |
+| 4 | 24 | 0.0 | 0 | 0.0% |
+| 5 | 22 | 0.0 | 0 | −0.5% |
+
+It works, it only fires where it should, and it is far too weak to matter: 35
+projects across 144 clubs in twelve seasons, and the balances are untouched.
+
+**And that is the same defect one layer down.** A top-flight club here fills its
+ground 1.3 times a season. A real Premier League club sells out essentially
+every home match. The mean fill of 0.868 against a real 95-98% is not a
+rounding difference — it is why the top flight is permanently short of matchday
+income, *and* why it almost never has a reason to build, from one line of
+arithmetic. Lowering the gate below six would only paper over it: a board that
+expands after one full house is not modelling anything. **The fix is the
+attendance curve in `computeAttendance`, and that is a calibration change
+awaiting a decision.**
+
 ### ~~Seven features are written, documented, and never called~~ — wired in
 Found by `knip`. All seven are connected now, and the register is empty.
 

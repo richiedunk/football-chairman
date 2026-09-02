@@ -188,6 +188,15 @@ export const matches = phase({
       playedClubs.add(away.id)
       gateReceipts.set(home.id, matchResult.attendance ?? 0)
 
+      // Did they have to turn people away? `computeAttendance` clamps fill at
+      // capacity, so the excess demand is gone by the time anyone could read
+      // it — but a full ground is a fact worth keeping, and it is the only
+      // reason a club ever has to build a bigger one.
+      const capacity = home.facilities.stadium.capacity
+      if (capacity > 0 && (matchResult.attendance ?? 0) >= capacity) {
+        home.facilities.stadium.selloutsThisSeason++
+      }
+
       // Trimmed after the week has taken what it needs, not before: the gate
       // receipts above are the last reader of a match nobody will open.
       if (!detailed) slimResult(matchResult)

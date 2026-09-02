@@ -454,6 +454,7 @@ function createClub(
       owned: reputation > 30 || rng.chance(0.75),
       pitchCondition: clamp(rng.normalInt(60 + reputation * 0.3, 12, 25, 99), 25, 99),
       relocatedSeason: null,
+      selloutsThisSeason: 0,
     },
     stadiumProject: null,
     trainingGround: facilityLevel(rng, reputation),

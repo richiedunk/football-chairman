@@ -441,6 +441,20 @@ function migrate(state: GameState): GameState {
     state.version = 16
   }
 
+  // `Stadium.selloutsThisSeason` — the count of home matches the ground filled,
+  // and the only reason an AI club ever builds a bigger one. A save made before
+  // it existed has no history to reconstruct, so it starts at nothing and fills
+  // up over the season it is loaded into.
+  if (state.version < 17) {
+    for (const club of Object.values(state.clubs ?? {})) {
+      const stadium = club?.facilities?.stadium
+      if (stadium && typeof stadium.selloutsThisSeason !== 'number') {
+        stadium.selloutsThisSeason = 0
+      }
+    }
+    state.version = 17
+  }
+
   state.version = SAVE_VERSION
   return state
 }

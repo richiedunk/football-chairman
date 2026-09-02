@@ -757,7 +757,12 @@ function computeRatings(
   rate(away, awayGoals, homeGoals)
 }
 
-function computeAttendance(
+/**
+ * Exported for `scripts/hoardcheck.ts`, which measures how full grounds
+ * actually get across a career. The answer decides whether a club ever has a
+ * reason to build, so the diagnostic must call this and not a copy of it.
+ */
+export function computeAttendance(
   homeClub: Club,
   awayClub: Club,
   rng: Rng,
