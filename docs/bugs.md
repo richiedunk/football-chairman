@@ -13,6 +13,57 @@ will break next.
 
 ## Open
 
+### Every club in the world was permanently out of wage room
+The rest of the hoard, and not where I said it was. I put it down to the wage
+budget being a share of *revenue* and therefore blind to the bank — true, but
+`recalculateBudgets` already released 15-75% of reserves into the **transfer**
+budget, so on paper these clubs were handed a fortune every year. So
+`scripts/spendcheck.ts` counts rather than reasons. At equilibrium:
+
+| tier | budget granted | actually spent | wage bill vs allowance | clubs with no wage room |
+|---|---|---|---|---|
+| 1 | £72.0m | £25.1m (35%) | 99% | **91%** |
+| 2 | £29.4m | £5.1m (17%) | 98% | 89% |
+| 3 | £12.3m | £2.0m (16%) | 104% | 94% |
+| 4 | £5.1m | £0.7m (13%) | 105% | 99% |
+| 5 | £1.7m | £0.1m (9%) | **114%** | **100%** |
+
+A transfer budget is worthless to a club that cannot fit another wage in, and
+91-100% of clubs in every tier could not. Tiers 3 to 5 were over their
+allowance outright. And tiers 2 to 5 recouped more than they spent — forced
+net sellers, banking the difference where nothing in the game could reach it.
+
+The fix is that reserves fund wages. A club with money behind it can carry a
+bill this year's income would not support, because the reserves cover the gap;
+that is what having money *is*. Half a season of turnover is kept back as a
+buffer and a fifth of the surplus above it becomes wage capacity each year,
+added to **both** the allowance and the revenue ceiling — adding it to the
+allowance alone would have the ceiling clip it straight back off, which is the
+change that would have looked like it worked while doing nothing.
+
+It is self-limiting: spending the reserves down shrinks the release, which
+returns the club to what it earns.
+
+| tier | balance before | after | transfer spend before | after | wage bill |
+|---|---|---|---|---|---|
+| 1 | £187.7m | £105.0m | £25.1m | £31.2m | +25% |
+| 2 | £76.3m | £61.5m | £5.1m | £12.3m | +22% |
+| 3 | £30.1m | £15.7m | £2.0m | £1.7m | +5% |
+| 4 | £14.0m | £6.7m | £0.7m | £1.1m | +39% |
+| 5 | £4.8m | £3.1m | £0.15m | £0.31m | +19% |
+
+Financial crisis at 0-1% of clubs and debt still negligible, so the money is
+being spent rather than gambled. Tier 1 now buys more than it sells for the
+first time.
+
+**Still open.** Balances are down 19-52% but a top-flight club still holds
+about 58 weeks of revenue against a real club's ten to thirty. The release
+rate is deliberately slow — a board emptying the account into contracts it
+must honour for years is how clubs actually die, and the wage floor means a
+bill once raised cannot be cut — so this is a dial that can be turned further
+once there is evidence the world survives it. Lower-league clubs also remain
+net sellers, which is realistic but keeps their balances drifting up.
+
 ### Clubs sit on years of turnover and nothing ever asks them to spend it
 `scripts/hoardcheck.ts`, twelve seasons, sampled at week 50 before the roll
 resets the ledger. Every tier runs a persistent surplus of 3–14% of income and

@@ -419,6 +419,35 @@ export function weeklyRevenue(state: GameState, club: Club): number {
 const WAGE_BUDGET_CEILING = 0.68
 
 /**
+ * Reserves a board keeps back before it will fund wages out of the bank.
+ *
+ * Half a season of turnover. Below this the club is spending money it may
+ * need, and no board would sanction it.
+ */
+const WAGE_RESERVE_BUFFER_WEEKS = 26
+
+/**
+ * How much of the surplus above that buffer becomes wage capacity in a year.
+ *
+ * The wage budget was a share of *revenue* alone, which meant a bank balance
+ * could not affect it however large it grew — and measured at equilibrium,
+ * 91-100% of clubs in every tier had no wage room at all. Their bills sat at
+ * 98-114% of the allowance while they were handed transfer budgets of up to
+ * £72m and spent 9-35% of them, because a transfer budget is worthless to a
+ * club that cannot fit another wage in. Tiers 2 to 5 were forced net sellers,
+ * banking the difference where nothing could ever spend it.
+ *
+ * A club with money behind it can carry a bill this year's income would not
+ * support, because the reserves cover the gap; that is what having money *is*,
+ * and it is the outlet the economy was missing. It is self-limiting by
+ * construction: spending the reserves down shrinks the release, which returns
+ * the club to what it earns. A fifth a year is deliberately slow — a board
+ * emptying the account into contracts it must honour for years is how clubs
+ * actually die, and the wage floor means a bill once raised cannot be cut.
+ */
+const WAGE_RESERVE_RELEASE = 0.2
+
+/**
  * Board-set budgets, recalculated at the start of each season and when the
  * club changes division. The board is not generous: it allocates from
  * projected revenue, and it holds a reserve back.
@@ -453,10 +482,18 @@ export function recalculateBudgets(state: GameState, club: Club): void {
   // What share of the money left over goes on wages is the owner's call, and
   // it is the single number that most decides what kind of club this is to
   // work for.
+  // What the bank will bear on top of what the club earns. Both the allowance
+  // and the ceiling get it: adding it to the allowance alone would have the
+  // revenue ceiling clip it straight back off, which is the mistake that would
+  // make this look like it worked while changing nothing.
+  const weekly = weeklyRevenue(state, club)
+  const spendable = Math.max(0, club.finances.balance - weekly * WAGE_RESERVE_BUFFER_WEEKS)
+  const wagesFromReserves = (spendable * WAGE_RESERVE_RELEASE) / 52
   const wageAllowance = Math.round(
-    (Math.max(0, revenue - runningCosts) * wageBudgetShare(club.board.owner) * cautionFactor) / 52,
+    (Math.max(0, revenue - runningCosts) * wageBudgetShare(club.board.owner) * cautionFactor) / 52
+    + wagesFromReserves,
   )
-  const ceiling = Math.round((weeklyRevenue(state, club)) * WAGE_BUDGET_CEILING)
+  const ceiling = Math.round(weekly * WAGE_BUDGET_CEILING + wagesFromReserves)
   club.finances.wageBudget = Math.max(
     Math.min(Math.max(Math.round(weeklyWages * 1.05), wageAllowance), ceiling),
     // Never below what is already committed, or the club cannot pay its own
