@@ -72,6 +72,17 @@ function stripToVersion(state: GameState, version: number): GameState {
     if (s.director.contract) bag(s.director.contract).signedSeason = 2025
   }
 
+  if (version < 18) {
+    for (const club of Object.values(s.clubs)) {
+      delete (club as { citySize?: number }).citySize
+    }
+  }
+  if (version < 17) {
+    for (const club of Object.values(s.clubs)) {
+      delete (club.facilities.stadium as { selloutsThisSeason?: number }).selloutsThisSeason
+    }
+  }
+
   if (version < 14) {
     for (const player of Object.values(s.players)) {
       delete (player as { academyRelease?: unknown }).academyRelease
@@ -159,7 +170,7 @@ async function loadFrom(version: number, slotId: string): Promise<GameState> {
   return loaded!
 }
 
-const HISTORICAL = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+const HISTORICAL = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
 
 describe('every historical format still loads', () => {
   for (const version of HISTORICAL) {
@@ -234,6 +245,26 @@ describe('every historical format still loads', () => {
       'v16: dead owner field survived',
     ).toBeUndefined()
     await deleteSave('mig-v16')
+  }, 60_000)
+
+  it('recovers the catchment rather than guessing at it', async () => {
+    // v18 moved city size onto the club so the attendance model need not look
+    // it up every fixture. The migration has to find the real figure: a club
+    // silently defaulted to the middle of the range would draw the wrong crowd
+    // for ever, and nothing else in the game would ever contradict it.
+    const loaded = await loadFrom(17, 'mig-v18')
+    let checked = 0
+    for (const club of Object.values(loaded.clubs)) {
+      const real = loaded.nations[club.nationId]?.cities.find((c) => c.name === club.city)
+      if (!real) continue
+      expect(club.citySize, `v18: ${club.name} lost its catchment`).toBe(real.size)
+      checked++
+    }
+    expect(checked, 'v18: no club had a city to check against').toBeGreaterThan(20)
+
+    const stadium = Object.values(loaded.clubs)[0].facilities.stadium
+    expect(typeof stadium.selloutsThisSeason, 'v17: no sellout counter').toBe('number')
+    await deleteSave('mig-v18')
   }, 60_000)
 
   it('refuses a save from a newer build rather than mangling it', async () => {

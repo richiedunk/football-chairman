@@ -30,6 +30,7 @@ import { advanceWeek } from '../src/engine/tick'
 import { startingClubCandidates } from '../src/engine/systems/career'
 import { computeAttendance } from '../src/engine/sim/match'
 import { clamp, Rng } from '../src/engine/rng'
+import { naturalCapacity } from '../src/engine/systems/stadium'
 import type { Club, GameState } from '../src/engine/types'
 
 const SEED = process.env.SEED ?? 'HOARD1'
@@ -61,20 +62,34 @@ const SHIPPED: Curve = {
   label: 'shipped', base: 0.42, fan: 0.4, curve: 1, mood: 0.16, top: 0.3, topCurve: 4,
 }
 
-/** `demand` is the same number before the clamp — what the club could sell. */
+/**
+ * `demand` is the crowd the club could draw, as a multiple of its ground —
+ * above 1 means supporters turned away, which is the only thing that makes a
+ * club build.
+ */
 function fillFor(home: Club, away: Club, noise: number, c: Curve): { fill: number; demand: number } {
   const f = home.fanbase / 100
-  const base = c.base + Math.pow(f, c.curve) * c.fan + Math.pow(f, c.topCurve) * c.top
+  const support = naturalCapacity(home.reputation, home.citySize)
+  const share = c.base + Math.pow(f, c.curve) * c.fan + Math.pow(f, c.topCurve) * c.top
     + (home.fanMood / 100) * c.mood
   const opponentDraw = clamp((away.reputation - 40) / 260, -0.04, 0.12)
-  const demand = base + opponentDraw + noise
-  return { fill: clamp(demand, 0.18, 1), demand }
+  const wanted = support * Math.max(0.18, share + opponentDraw + noise)
+  const capacity = home.facilities.stadium.capacity
+  return { fill: Math.min(capacity, wanted) / capacity, demand: wanted / capacity }
 }
 
 /**
  * The mirror has to be the same function. Checked against the real one on real
  * clubs, drawing the same noise from the same stream, before anything else runs.
  */
+/** The shipped expression, spelled out once so the check below is exact. */
+function mirrorShare(home: Club, away: Club, noise: number): number {
+  const f = home.fanbase / 100
+  return SHIPPED.base + Math.pow(f, SHIPPED.curve) * SHIPPED.fan
+    + Math.pow(f, SHIPPED.topCurve) * SHIPPED.top + (home.fanMood / 100) * SHIPPED.mood
+    + clamp((away.reputation - 40) / 260, -0.04, 0.12) + noise
+}
+
 function verifyMirror(state: GameState): void {
   const clubs = Object.values(state.clubs)
   let checked = 0
@@ -85,8 +100,12 @@ function verifyMirror(state: GameState): void {
     // Two identically seeded streams, so `normal` yields the same draw to both.
     const real = computeAttendance(home, away, new Rng(`mirror:${i}`), false)
     const noise = new Rng(`mirror:${i}`).normal(0, 0.05)
-    const mine = Math.round(
-      home.facilities.stadium.capacity * fillFor(home, away, noise, SHIPPED).fill,
+    const mine = Math.min(
+      home.facilities.stadium.capacity,
+      Math.round(
+        naturalCapacity(home.reputation, home.citySize)
+        * Math.max(0.18, mirrorShare(home, away, noise)),
+      ),
     )
     if (real !== mine) {
       throw new Error(

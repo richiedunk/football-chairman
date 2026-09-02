@@ -190,6 +190,12 @@ export interface Club {
   nickname: string
   nationId: ID
   city: string
+  /**
+   * The size of that city, 0-100, carried on the club so the attendance model
+   * does not have to find it in the nation's city list on every fixture. It is
+   * the club's catchment: how many people could plausibly come.
+   */
+  citySize: number
   leagueId: ID
   founded: number
   colors: { primary: string; secondary: string }
@@ -1604,4 +1610,4 @@ export interface GameSettings {
   hapticsEnabled: boolean
 }
 
-export const SAVE_VERSION = 17
+export const SAVE_VERSION = 18

@@ -76,6 +76,21 @@ export function naturalCapacity(reputation: number, citySize: number): number {
   return capacityBase * cityFactor
 }
 
+/**
+ * The crowd at a typical fixture, before the opponent and the night's luck.
+ *
+ * The one definition of how many people a club draws. `computeAttendance`
+ * builds the matchday figure on it, and `expandStadium` sizes a new stand
+ * against it — which is only possible at all because attendance became a
+ * headcount: a club cannot build for its demand while demand is defined as a
+ * share of whatever it has already built.
+ */
+export function typicalCrowd(club: Club): number {
+  const f = club.fanbase / 100
+  const share = 0.42 + f * 0.4 + Math.pow(f, 4) * 0.3 + (club.fanMood / 100) * 0.16
+  return naturalCapacity(club.reputation, club.citySize) * share
+}
+
 /** Places actually usable this week, allowing for closures and ongoing works. */
 export function usableCapacity(stadium: Stadium, project: StadiumProject | null): number {
   const built = stadium.stands.reduce(
@@ -913,26 +928,31 @@ const AI_EXPAND_SELLOUTS = 6
  */
 const AI_EXPAND_SHARE = 0.45
 
-/** Places added, as a share of the current ground. */
-const AI_EXPAND_STEP = 0.18
+/**
+ * How much bigger than the ordinary crowd a club builds.
+ *
+ * Sized against the demand rather than as a share of the existing ground. A
+ * fixed step cannot help overshooting — 18% of the stadium when the club was
+ * only 10% oversubscribed left the top flight settling at 0.81 fill, below
+ * where it started and well below the real thing.
+ *
+ * A little over the typical crowd, so the big fixtures still sell out and an
+ * ordinary Saturday is nearly full, which is what the real Premier League
+ * looks like at 97.6-98.8%.
+ */
+const AI_EXPAND_TARGET = 1.05
 
 /**
- * How far past its catchment a club will build.
+ * The largest a football ground gets.
  *
- * Without this the whole thing runs away, and the measurement was unambiguous:
- * over thirty seasons the average top-flight ground reached 103,849 places,
- * larger than any stadium on earth. The cause is structural rather than a
- * mis-set number — `computeAttendance` returns a *share* of capacity, so a
- * ground that doubles fills to the same fraction, sells out again and is
- * expanded again, for ever. Nothing in that loop can ever be satisfied.
- *
- * The honest repair is an absolute demand model: a headcount that a bigger
- * ground actually serves. Short of that, the catchment is the real limit and
- * the world model already states it — a big club in a small city is capped by
- * the town it plays in. A club may build somewhat past it, because ambitious
- * clubs do, and no further.
+ * Nothing else bounds expansion now, and nothing else needs to: attendance is
+ * a headcount against the club's catchment rather than a share of whatever has
+ * been built, so a ground that outgrows its support stops selling out and the
+ * club stops building of its own accord. This is only the physical limit —
+ * the same one generation has always used, and about where the biggest club
+ * grounds in the world actually sit.
  */
-const AI_EXPAND_HEADROOM = 1.15
+export const MAX_STADIUM = 82_000
 
 export function expandStadium(
   state: GameState,
@@ -960,17 +980,12 @@ export function expandStadium(
   // most of two years — so this is rarer than the repair check by design.
   if (!rng.chance(0.06)) return
 
-  // Not past what the town will fill. Reputation is in here, so a club that
-  // climbs the pyramid earns a bigger ceiling rather than being held to the
-  // one it was generated with.
-  const nation = state.nations[club.nationId]
-  const citySize = nation?.cities.find((c) => c.name === club.city)?.size ?? 50
-  const ceiling = naturalCapacity(club.reputation, citySize) * AI_EXPAND_HEADROOM
-  if (club.facilities.stadium.capacity >= ceiling) return
+  if (club.facilities.stadium.capacity >= MAX_STADIUM) return
 
-  // Never overshoot the ceiling with the step itself.
-  const step = Math.round(club.facilities.stadium.capacity * AI_EXPAND_STEP)
-  const added = Math.min(step, Math.round(ceiling - club.facilities.stadium.capacity))
+  const target = Math.min(MAX_STADIUM, Math.round(typicalCrowd(club) * AI_EXPAND_TARGET))
+  const added = target - club.facilities.stadium.capacity
+  // Not worth demolishing a stand for. A club this close to its demand waits
+  // until support grows rather than building a few hundred seats.
   if (added < 500) return
 
   const spec: WorkSpec = { kind: 'expand', standId: smallest.id, capacity: added }

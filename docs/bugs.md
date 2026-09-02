@@ -136,11 +136,59 @@ ground at generation and to stop `expandStadium` building more than 15% past
 it. Reputation is an input, so a club that climbs the pyramid earns a bigger
 ceiling rather than being held to the one it started with.
 
-**Still open underneath it:** attendance has no absolute demand. A headcount
-that a bigger ground genuinely serves would make expansion self-limiting on its
-own, make an over-built ground actually run empty, and let a club know how many
-supporters it is turning away rather than only that it is turning some away.
-The catchment ceiling is a bound on the symptom.
+**Fixed properly rather than bounded.** Attendance is now a headcount. Demand
+is computed against the crowd the club could draw — its catchment and its
+standing, via `naturalCapacity` — and the ground only ever limits it:
+
+```
+support = naturalCapacity(reputation, citySize)
+wanted  = support * (0.42 + f*0.4 + f^4*0.3 + mood*0.16 + opponentDraw + noise)
+crowd   = min(capacity, wanted)
+```
+
+A club whose ground is the size its catchment implies draws exactly the crowd
+it always did, so the calibration above is untouched — but a club with a small
+stadium now sells out and turns people away, a club that has over-built plays
+in front of empty seats, and closing a stand costs real income instead of
+quietly reducing demand to match.
+
+The catchment ceiling came back out. It is not needed: the loop closes on its
+own, which is visible in the one number that could never move before —
+
+| | expansions | capacity at 30 seasons | full houses per season |
+|---|---|---|---|
+| share of capacity, uncapped | 610 | 103,849 (+199.2%) | 7.0 |
+| share of capacity, ceiling bolted on | 227 | 39,564 (+17.0%) | 6.9 |
+| **headcount** | 294 | 45,258 (+33.7%) | **3.2** |
+
+Under the old model clubs sold out seven times a season for thirty seasons no
+matter how much they built, because building could not satisfy demand. Now
+full houses *fall as grounds grow*, which is what a working feedback loop looks
+like. The only remaining bound is `MAX_STADIUM`, the physical size of the
+largest grounds in the world, which generation was already using.
+
+It also reaches down the pyramid for the first time: tier 3 clubs started
+expansions of their own, which is a club whose support outgrew its ground
+rather than one that happens to be in the top flight.
+
+**And a club can now build for its demand, which it never could before.** The
+expansion step was 18% of the existing ground — a fixed fraction, because
+under the old model there was no demand figure to aim at. It could only
+overshoot: a club 10% oversubscribed added 18%, and the top flight settled at
+0.81 fill, *below* where it started. `typicalCrowd` is now the single
+definition of how many people a club draws — `computeAttendance` builds the
+matchday figure on it and `expandStadium` sizes the stand against it, at 1.05
+times the ordinary crowd, so the big fixtures still sell out and a normal
+Saturday is nearly full:
+
+| expansion sized as | capacity at 30 seasons | tier 1 fill after 12 |
+|---|---|---|
+| 18% of the existing ground | +33.7% | 0.809 |
+| 1.05 x the crowd it draws | **+11.5%** | **0.915** |
+
+`tests/attendance.test.ts` pins the property. Four of its five assertions were
+checked against the old model and fail there — the fifth is marked in the file
+as true under both, because a test that passes either way is worth nothing.
 
 ### ~~Seven features are written, documented, and never called~~ — wired in
 Found by `knip`. All seven are connected now, and the register is empty.

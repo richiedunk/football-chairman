@@ -3,6 +3,7 @@ import type {
   Club, GameState, ID, MatchEvent, MatchResult, Player, Position, Staff,
 } from '../types'
 import { staffEffectiveness } from '../world/staffGen'
+import { naturalCapacity, typicalCrowd } from '../systems/stadium'
 import { selectTeam, type AvailabilityContext, type SelectedTeam } from './selection'
 
 /**
@@ -758,9 +759,36 @@ function computeRatings(
 }
 
 /**
- * Exported for `scripts/hoardcheck.ts`, which measures how full grounds
- * actually get across a career. The answer decides whether a club ever has a
- * reason to build, so the diagnostic must call this and not a copy of it.
+ * How many people come.
+ *
+ * A headcount, not a share of the ground. That distinction is the whole model:
+ * for a long time this returned a *fraction* of capacity, which meant a club
+ * that doubled its stadium filled the same fraction of it, sold out again, and
+ * expanded again — AI grounds ran away to an average of 103,849 places over
+ * thirty seasons, and no ground could ever be too big for its club because
+ * demand grew to fit whatever was built.
+ *
+ * So demand is now computed against the crowd the club could draw — its
+ * catchment and its standing, via `naturalCapacity` — and the actual ground
+ * only ever limits it. A club with a small stadium sells out and turns people
+ * away; a club that has over-built plays in front of empty seats and stops
+ * building; closing a stand on safety grounds now costs real income rather
+ * than quietly reducing demand to match.
+ *
+ * The curve itself is unchanged and stays calibrated where it was measured:
+ * a club whose ground is the size its catchment implies draws the same crowd
+ * it always did. The fourth-power term is the difference between a big club
+ * and a large one — worth 0.001 at a fanbase of 20 and 0.06 at 50 — and it is
+ * there because England's top flight was selling out 31% of fixtures against a
+ * real Premier League that runs at 97.6-98.8% and sells out nearly every week,
+ * while the divisions below it already matched real attendance over real
+ * capacity.
+ *
+ * Exported for `scripts/hoardcheck.ts` and `scripts/attendancefit.ts`, which
+ * measure how full grounds get across a career. That answer decides whether a
+ * club ever has a reason to build, so the diagnostics must call this and not a
+ * copy of it — a hand-rolled copy that dropped one term previously reported
+ * that no ground in the world ever filled.
  */
 export function computeAttendance(
   homeClub: Club,
@@ -768,29 +796,20 @@ export function computeAttendance(
   rng: Rng,
   neutral: boolean,
 ): number {
-  const capacity = homeClub.facilities.stadium.capacity
-  const fanbase = homeClub.fanbase / 100
-  // Base turnout from the fanbase, lifted by good form and by the visitors
-  // being worth watching.
-  //
-  // The fourth-power term is the difference between a big club and a large
-  // one. Measured against the real thing, the linear part alone put England's
-  // top flight at 0.95 mean fill with 31% of fixtures sold out, where the real
-  // Premier League runs at 97.6-98.8% and sells out nearly every week — while
-  // the divisions below it were already about right. A term at this exponent
-  // is worth 0.001 at a fanbase of 20 and 0.06 at 50, so it corrects the top
-  // flight and leaves the rest of the pyramid where it was.
-  //
-  // It deliberately pushes demand past capacity: a typical top-flight fixture
-  // now wants about 1.10 of the ground. That surplus is the point rather than
-  // a side effect — the clamp below is the club turning supporters away, which
-  // is what a full ground *is*, and it is the only signal `expandStadium` has
-  // that a bigger one is wanted.
-  const base = 0.42 + fanbase * 0.4 + Math.pow(fanbase, 4) * 0.3
-    + (homeClub.fanMood / 100) * 0.16
+  // The crowd this club could draw if the ground were built for it, and the
+  // catchment that sets the scale of a good night and a bad one.
+  const support = naturalCapacity(homeClub.reputation, homeClub.citySize)
   const opponentDraw = clamp((awayClub.reputation - 40) / 260, -0.04, 0.12)
-  const fill = clamp(base + opponentDraw + rng.normal(0, 0.05), 0.18, 1)
-  return Math.round(capacity * fill * (neutral ? 0.85 : 1))
+  const wanted = Math.max(
+    support * 0.18,
+    typicalCrowd(homeClub) + support * (opponentDraw + rng.normal(0, 0.05)),
+  )
+  // The ground is the limit, never the definition. `capacity` is already net of
+  // closures and building work, so both cost gate money exactly as they should.
+  return Math.min(
+    homeClub.facilities.stadium.capacity,
+    Math.round(wanted * (neutral ? 0.85 : 1)),
+  )
 }
 
 function buildSummary(

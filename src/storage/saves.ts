@@ -455,6 +455,19 @@ function migrate(state: GameState): GameState {
     state.version = 17
   }
 
+  // `Club.citySize` — the catchment, carried on the club so the attendance
+  // model need not search the nation's city list on every fixture. Recovered
+  // exactly from the city the club already names; a club whose city has since
+  // gone from the nation falls back to the middle of the range.
+  if (state.version < 18) {
+    for (const club of Object.values(state.clubs ?? {})) {
+      if (typeof club.citySize === 'number') continue
+      const nation = state.nations?.[club.nationId]
+      club.citySize = nation?.cities?.find((c) => c.name === club.city)?.size ?? 50
+    }
+    state.version = 18
+  }
+
   state.version = SAVE_VERSION
   return state
 }

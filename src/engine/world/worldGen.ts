@@ -8,7 +8,7 @@ import { generateBackroom, generateFreeAgentStaff } from './staffGen'
 import { computeValue, computeWageDemand } from '../systems/valuation'
 import { emptyLedger, recalculateBudgets } from '../systems/finance'
 import { scheduleLeague } from '../sim/schedule'
-import { generateArchitects, naturalCapacity } from '../systems/stadium'
+import { generateArchitects, naturalCapacity, MAX_STADIUM } from '../systems/stadium'
 import { autoRegister } from '../systems/registration'
 import { createOwner, ownerName, startingOwnerKind } from '../systems/ownership'
 import { realClubsFor, type RealClub } from './realClubs'
@@ -429,7 +429,7 @@ function createClub(
   // Grounds are built stand by stand, with condition and type reflecting the
   // club's standing: a non-league ground is a terrace with a roof over one
   // side, a top-flight one is four covered stands and a row of boxes.
-  const totalCapacity = clamp(capacity, 800, 82_000)
+  const totalCapacity = clamp(capacity, 800, MAX_STADIUM)
   const stands = generateStands(rng, totalCapacity, reputation, season)
 
   // Stands are each rounded to the nearest fifty, so the ground's capacity is
@@ -497,6 +497,7 @@ function createClub(
       graceUntilSeason: null,
     },
     history: [],
+    citySize,
     fanbase: clamp(Math.round(reputation * 0.7 + citySize * 0.3), 4, 99),
     fanMood: rng.normalInt(62, 10, 30, 90),
   }
