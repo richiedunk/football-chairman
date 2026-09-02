@@ -769,9 +769,25 @@ export function computeAttendance(
   neutral: boolean,
 ): number {
   const capacity = homeClub.facilities.stadium.capacity
+  const fanbase = homeClub.fanbase / 100
   // Base turnout from the fanbase, lifted by good form and by the visitors
   // being worth watching.
-  const base = 0.42 + (homeClub.fanbase / 100) * 0.4 + (homeClub.fanMood / 100) * 0.16
+  //
+  // The fourth-power term is the difference between a big club and a large
+  // one. Measured against the real thing, the linear part alone put England's
+  // top flight at 0.95 mean fill with 31% of fixtures sold out, where the real
+  // Premier League runs at 97.6-98.8% and sells out nearly every week — while
+  // the divisions below it were already about right. A term at this exponent
+  // is worth 0.001 at a fanbase of 20 and 0.06 at 50, so it corrects the top
+  // flight and leaves the rest of the pyramid where it was.
+  //
+  // It deliberately pushes demand past capacity: a typical top-flight fixture
+  // now wants about 1.10 of the ground. That surplus is the point rather than
+  // a side effect — the clamp below is the club turning supporters away, which
+  // is what a full ground *is*, and it is the only signal `expandStadium` has
+  // that a bigger one is wanted.
+  const base = 0.42 + fanbase * 0.4 + Math.pow(fanbase, 4) * 0.3
+    + (homeClub.fanMood / 100) * 0.16
   const opponentDraw = clamp((awayClub.reputation - 40) / 260, -0.04, 0.12)
   const fill = clamp(base + opponentDraw + rng.normal(0, 0.05), 0.18, 1)
   return Math.round(capacity * fill * (neutral ? 0.85 : 1))

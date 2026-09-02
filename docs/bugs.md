@@ -82,15 +82,65 @@ houses, the money in the bank and no other work under way. Twelve seasons,
 It works, it only fires where it should, and it is far too weak to matter: 35
 projects across 144 clubs in twelve seasons, and the balances are untouched.
 
-**And that is the same defect one layer down.** A top-flight club here fills its
-ground 1.3 times a season. A real Premier League club sells out essentially
-every home match. The mean fill of 0.868 against a real 95-98% is not a
-rounding difference — it is why the top flight is permanently short of matchday
-income, *and* why it almost never has a reason to build, from one line of
-arithmetic. Lowering the gate below six would only paper over it: a board that
-expands after one full house is not modelling anything. **The fix is the
-attendance curve in `computeAttendance`, and that is a calibration change
-awaiting a decision.**
+**And that is the same defect one layer down — but not where I said it was.**
+I put the shortfall at "0.868 mean fill against a real 95-98%". That figure is
+tier 1 *worldwide*: 144 clubs, the top flight of every nation in the game, with
+fanbases from 35 to 99. Comparing its mean to the Premier League is
+meaningless, and it is the second time in this investigation that an
+aggregation over the wrong population produced a confident wrong answer.
+
+Split out properly by `scripts/attendancefit.ts`, England's top flight was
+already at **0.95** mean fill. The real gap was never the mean — it was the
+*shape*. The real Premier League runs at
+[97.6-98.8% utilisation](https://www.insideworldfootball.com/2025/12/10/match-week-15-premier-league-stadium-capacities-average-97-55-full/)
+and sells out nearly every week; the game sold out 31% of fixtures. And the
+divisions below were already about right against real attendance over real
+capacity, so a correction had to reach the top flight without touching them:
+
+| curve | eng t1 | other t1 | t2 | t3 | t4 | t5 |
+|---|---|---|---|---|---|---|
+| real world | 0.98 | ~0.80 | 0.79 | 0.67 | 0.61 | ~0.47 |
+| before | 0.95 (31% full) | 0.87 | 0.80 | 0.72 | 0.63 | 0.57 |
+| steepen the whole curve | 0.98 (73%) | 0.87 | 0.74 | **0.58** | **0.45** | **0.38** |
+| add a `fanbase^4` term | 0.99 (72%) | 0.91 | 0.83 | 0.73 | 0.63 | 0.57 |
+
+Steepening the existing term fixes one division by wrecking four. A separate
+term at the fourth power is worth 0.001 at a fanbase of 20 and 0.06 at 50, so
+it lands almost entirely on the clubs that were wrong. That is what shipped,
+and it deliberately pushes top-flight demand to about 1.10 of the ground:
+the surplus is the point, because the clamp turning supporters away is the
+only signal `expandStadium` has.
+
+Top-flight full houses went from 1.3 a season to 6.7, expansions over twelve
+seasons from 35 to 258, and tier 1 facilities spend from £44,204 to
+**£6,823,480** against a season income of £128.1m.
+
+### AI stadium expansion ran away, because demand is a share of capacity
+Caught by extending `scripts/buildcheck.ts` from twelve seasons to thirty
+before shipping the curve above. Top-flight grounds reached an *average* of
+**103,849 places** — larger than any stadium on earth — having grown 199%:
+
+| | expansions | capacity after 30 seasons | vs start |
+|---|---|---|---|
+| uncapped | 610 | 103,849 | +199.2% |
+| capped at the catchment | 227 | 39,564 | +17.0% |
+
+The cause is structural, not a mis-set number. `computeAttendance` returns a
+*share* of capacity, so a ground that doubles fills to the same fraction, sells
+out again, and is expanded again. Nothing in that loop can ever be satisfied.
+
+The stopgap is the limit the world model already states — "a big club in a
+small city is capped by its catchment" — which was previously inlined in
+`worldGen` and is now `naturalCapacity` in `stadium.ts`, used both to size a
+ground at generation and to stop `expandStadium` building more than 15% past
+it. Reputation is an input, so a club that climbs the pyramid earns a bigger
+ceiling rather than being held to the one it started with.
+
+**Still open underneath it:** attendance has no absolute demand. A headcount
+that a bigger ground genuinely serves would make expansion self-limiting on its
+own, make an over-built ground actually run empty, and let a club know how many
+supporters it is turning away rather than only that it is turning some away.
+The catchment ceiling is a bound on the symptom.
 
 ### ~~Seven features are written, documented, and never called~~ — wired in
 Found by `knip`. All seven are connected now, and the register is empty.

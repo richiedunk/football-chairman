@@ -59,6 +59,23 @@ const HOSPITALITY_BOX_MULTIPLIER = 34
 // Derived stadium state
 // ---------------------------------------------------------------------------
 
+/**
+ * The ground this club would have if it had built for its own catchment.
+ *
+ * Capacity is driven by both club standing and the size of the town it sits
+ * in: a big club in a small city is capped by its catchment. Generation sizes
+ * every stadium from this, and `expandStadium` will not build past it — which
+ * is the only thing stopping AI expansion running away, because attendance is
+ * modelled as a *share* of capacity and so a bigger ground fills to the same
+ * fraction and sells out all over again. Reputation rises with success, so the
+ * ceiling rises with the club rather than being fixed at what it started as.
+ */
+export function naturalCapacity(reputation: number, citySize: number): number {
+  const capacityBase = 2_000 + Math.pow(reputation / 100, 2.1) * 62_000
+  const cityFactor = 0.55 + (citySize / 100) * 0.75
+  return capacityBase * cityFactor
+}
+
 /** Places actually usable this week, allowing for closures and ongoing works. */
 export function usableCapacity(stadium: Stadium, project: StadiumProject | null): number {
   const built = stadium.stands.reduce(
@@ -899,6 +916,24 @@ const AI_EXPAND_SHARE = 0.45
 /** Places added, as a share of the current ground. */
 const AI_EXPAND_STEP = 0.18
 
+/**
+ * How far past its catchment a club will build.
+ *
+ * Without this the whole thing runs away, and the measurement was unambiguous:
+ * over thirty seasons the average top-flight ground reached 103,849 places,
+ * larger than any stadium on earth. The cause is structural rather than a
+ * mis-set number — `computeAttendance` returns a *share* of capacity, so a
+ * ground that doubles fills to the same fraction, sells out again and is
+ * expanded again, for ever. Nothing in that loop can ever be satisfied.
+ *
+ * The honest repair is an absolute demand model: a headcount that a bigger
+ * ground actually serves. Short of that, the catchment is the real limit and
+ * the world model already states it — a big club in a small city is capped by
+ * the town it plays in. A club may build somewhat past it, because ambitious
+ * clubs do, and no further.
+ */
+const AI_EXPAND_HEADROOM = 1.15
+
 export function expandStadium(
   state: GameState,
   club: Club,
@@ -925,7 +960,17 @@ export function expandStadium(
   // most of two years — so this is rarer than the repair check by design.
   if (!rng.chance(0.06)) return
 
-  const added = Math.round(club.facilities.stadium.capacity * AI_EXPAND_STEP)
+  // Not past what the town will fill. Reputation is in here, so a club that
+  // climbs the pyramid earns a bigger ceiling rather than being held to the
+  // one it was generated with.
+  const nation = state.nations[club.nationId]
+  const citySize = nation?.cities.find((c) => c.name === club.city)?.size ?? 50
+  const ceiling = naturalCapacity(club.reputation, citySize) * AI_EXPAND_HEADROOM
+  if (club.facilities.stadium.capacity >= ceiling) return
+
+  // Never overshoot the ceiling with the step itself.
+  const step = Math.round(club.facilities.stadium.capacity * AI_EXPAND_STEP)
+  const added = Math.min(step, Math.round(ceiling - club.facilities.stadium.capacity))
   if (added < 500) return
 
   const spec: WorkSpec = { kind: 'expand', standId: smallest.id, capacity: added }

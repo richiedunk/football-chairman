@@ -8,7 +8,7 @@ import { generateBackroom, generateFreeAgentStaff } from './staffGen'
 import { computeValue, computeWageDemand } from '../systems/valuation'
 import { emptyLedger, recalculateBudgets } from '../systems/finance'
 import { scheduleLeague } from '../sim/schedule'
-import { generateArchitects } from '../systems/stadium'
+import { generateArchitects, naturalCapacity } from '../systems/stadium'
 import { autoRegister } from '../systems/registration'
 import { createOwner, ownerName, startingOwnerKind } from '../systems/ownership'
 import { realClubsFor, type RealClub } from './realClubs'
@@ -424,11 +424,7 @@ function createClub(
     season - rng.int(1, 14),
   )
 
-  // Stadium capacity is driven by both club standing and the size of the town
-  // it sits in: a big club in a small city is capped by its catchment.
-  const capacityBase = 2_000 + Math.pow(reputation / 100, 2.1) * 62_000
-  const cityFactor = 0.55 + (citySize / 100) * 0.75
-  const capacity = Math.round((capacityBase * cityFactor) / 250) * 250
+  const capacity = Math.round(naturalCapacity(reputation, citySize) / 250) * 250
 
   // Grounds are built stand by stand, with condition and type reflecting the
   // club's standing: a non-league ground is a terrace with a roof over one
