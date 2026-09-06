@@ -13,6 +13,76 @@ will break next.
 
 ## Open
 
+### The discount that let a released pro drop down never reached a single AI club
+The oldest open failure, and most of it turned out to be the economy. Before
+touching anything, `scripts/ageprofile.ts` re-measured the age profile at
+equilibrium: the wage work had already carried tier 4 from 6.2 prime-age
+players to 8.2 and **four of five divisions now meet the target of eight aged
+24-31**. Only tier 5 was short, at 5.7 in a 22.9-man squad with 10.8 under-21s
+— 47% teenagers, in a division whose real counterpart is mostly full-time
+professionals.
+
+`recruitOne` carries an instruction from the last time this was attempted:
+
+> It was lifted here once... That is co-occurrence, not cause... **Do not lift
+> it again without a measurement that says which clubs it blocks.**
+
+`scripts/primesupply.ts` is that measurement. The rejection tallies in
+`recruitgates.ts` cannot answer it — they count rejections across repeated
+scans of one pool, so a single unsignable player rejected a thousand times
+looks like a thousand problems. This counts *distinct players* against a
+*specific club*, gate by gate:
+
+| tier | free agents 24-31 | under the ability ceiling | affordable | wage room |
+|---|---|---|---|---|
+| 1 | 95 | 81 | 41 | +£43,780 |
+| 3 | 95 | 62 | 12 | −£4,637 |
+| 4 | 95 | 45 | 6 | −£3,275 |
+| 5 | 95 | 35 | **2** | −£2,647 |
+
+**The ceiling is not the blocker.** For a fifth-tier club it removes 60 of 95;
+affordability then removes 33 of the 35 left, leaving two signable players in
+the world. Lifting the ceiling would have been the wrong fix a second time, and
+the warning in the code was right.
+
+**What was actually broken.** `runAiSquadManagement` knocked 7% off
+`player.wageDemand` every fourth week a player went unsigned, described there
+as "the mechanism that lets a player released by a second-tier club end up
+playing non-league". It was not that mechanism, because the one place it had to
+be read never read it: `recruitOne` prices every candidate through
+`computeWageDemand`, which is derived from ability and league and had never
+heard of `wageDemand`. The field reached the transfer screen, the contract
+talks and the morale check — so a **human** director was quoted the softened
+price while every AI club in the world was quoted the full one.
+
+The other half of the same mechanism worked, which is why it was never
+noticed: an unattached player also loses his edge, and `recruitOne` reads
+`currentAbility` directly.
+
+The softening now lives in `computeWageDemand` as `unattachedDiscount`, applied
+last so it discounts the whole figure, floored at 45% so a man unwanted for a
+decade does not sign for nothing. `runAiSquadManagement` recomputes the stored
+field rather than multiplying it down, so the figure a human is quoted and the
+figure an AI club pays are the same number.
+
+| tier | signable prime free agents | prime players per squad |
+|---|---|---|
+| 3 | 12 → **27** | 10.7 → 10.9 |
+| 4 | 6 → **21** | 8.2 → **9.8** |
+| 5 | 2 → **6** | 5.7 → **6.6** |
+
+Wage room turned positive in tiers 3, 4 and 5, all of which had been running
+over their allowance with nothing signable.
+
+**Still short: tier 5, by 1.4.** The remaining cause is measured and is not
+recruitment. `scripts/squadflow.ts` has a fifth-tier club promoting 2.89
+academy players a season at an average age of 17.3; held until they turn 21
+that is 11.6 under-21s, against 10.8 observed — the teenage bulge is *entirely*
+academy promotion volume, and they do not block signings because under-21s sit
+outside the registered squad. Real non-league clubs do not promote three
+academy players a year; most have no academy at all. Reducing intake at the
+bottom of the pyramid is a data change and needs a decision.
+
 ### Every club in the world was permanently out of wage room
 The rest of the hoard, and not where I said it was. I put it down to the wage
 budget being a share of *revenue* and therefore blind to the bank — true, but

@@ -127,6 +127,35 @@ const LEAGUE_WAGE_CURVE = 1.35
  */
 const LEAGUE_WAGE_SCALE = 5.63
 
+/** The least a man will come down to, however long nobody calls. */
+const UNATTACHED_PRICE_FLOOR = 0.45
+
+/**
+ * What being out of work does to a man's asking price.
+ *
+ * This existed before, as `player.wageDemand *= 0.93` every fourth week in
+ * `runAiSquadManagement`, described there as "the mechanism that lets a player
+ * released by a second-tier club end up playing non-league". It was not that,
+ * because the one place it had to be read never read it: `recruitOne` prices
+ * every candidate through `computeWageDemand`, which is computed from ability
+ * and league and had never heard of `wageDemand`. The stored field reached the
+ * transfer screen and the contract talks, so a *human* director was quoted the
+ * softened price while every AI club in the world was quoted the full one.
+ *
+ * The other half of the same mechanism — that an unattached player also loses
+ * his edge — did work, because `recruitOne` reads `currentAbility` directly.
+ * Measured with `scripts/primesupply.ts`: of 95 free agents aged 24-31, a
+ * fifth-tier club could sign **two**. The ability ceiling took 60 of them and
+ * affordability took 33 of the 35 that were left.
+ *
+ * So it lives here now, where every caller goes through it and there is one
+ * definition of what a man is asking.
+ */
+function unattachedDiscount(weeksUnattached: number): number {
+  if (weeksUnattached <= 0) return 1
+  return Math.max(UNATTACHED_PRICE_FLOOR, Math.pow(0.93, Math.floor(weeksUnattached / 4)))
+}
+
 export function computeWageDemand(
   player: Player,
   league: League | null,
@@ -195,6 +224,10 @@ export function computeWageDemand(
   if (player.traits.includes('loyal')) wage *= 0.9
   if (player.ambitionVsMoney > 70) wage *= 1.12
   if (player.ambitionVsMoney < 30) wage *= 0.94
+
+  // Last, so it discounts everything above it: a man nobody has called for a
+  // year comes down on the whole figure, not on part of it.
+  wage *= unattachedDiscount(player.weeksUnattached ?? 0)
 
   return Math.max(250, Math.round(wage / 50) * 50)
 }

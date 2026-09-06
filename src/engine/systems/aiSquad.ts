@@ -199,12 +199,22 @@ export function runAiSquadManagement(state: GameState, ctx: AiSquadContext): voi
     // A man out of the game does not stay the player he was; he loses his
     // edge, and that is precisely how a career comes down the divisions.
     if (player.weeksUnattached % 4 === 0) {
-      player.wageDemand = Math.max(90, Math.round(player.wageDemand * 0.93))
       player.currentAbility = Math.max(
         UNATTACHED_FLOOR,
         player.currentAbility * (1 - UNATTACHED_DECLINE),
       )
       invalidatePlayerRatings(player.attributes)
+      // Recomputed rather than multiplied down. The softening itself now lives
+      // in `computeWageDemand` as `unattachedDiscount`, because multiplying
+      // this field was not the mechanism it was described as: `recruitOne`
+      // prices candidates through `computeWageDemand` and never read it, so
+      // the discount reached the transfer screen and the contract talks and
+      // never once reached an AI club. Recomputing keeps the figure a human is
+      // quoted and the figure an AI club pays the same number.
+      player.wageDemand = Math.max(
+        90,
+        Math.round(computeWageDemand(player, null, state.nations[player.nationalityId] ?? null)),
+      )
     }
     freeAgents.push(player)
   }
