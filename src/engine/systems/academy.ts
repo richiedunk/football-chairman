@@ -27,6 +27,18 @@ export interface AcademyContext {
   season: number
 }
 
+/**
+ * The standard of facility below which an academy produces nobody.
+ *
+ * Not a punishment — a description. A club with a field and a shed does not
+ * run an intake, and pretending otherwise is where the lower leagues got their
+ * teenagers from.
+ */
+const ACADEMY_MIN_LEVEL = 3.4
+
+/** Players a season per level of facility above that. */
+const ACADEMY_PER_LEVEL = 0.625
+
 /** Generate this season's intake for a club. */
 export function produceIntake(
   state: GameState,
@@ -41,9 +53,24 @@ export function produceIntake(
 
   // Intake size scales with facilities: a better academy simply sees more
   // players, which matters as much as the quality of the ones it sees.
+  //
+  // **Below a threshold it sees nobody, and that is the point.** The old
+  // formula floored at two a year for every club in the world regardless of
+  // what it had to work with, and `scripts/squadflow.ts` measured what that
+  // did at the bottom: a fifth-tier club promoted 2.89 academy players a
+  // season at an average age of 17.3, which held until they turn 21 is 11.6
+  // under-21s — against 10.8 actually observed. The teenage bulge in non-league
+  // football was *entirely* this line. Most real clubs at that level have no
+  // academy at all; the ones that do run a scholarship scheme, not a
+  // production line.
+  //
+  // Calibrated on the levels clubs actually have (a top-flight academy is 13,
+  // a non-league one 5, on a 1-20 scale) so the top of the pyramid is
+  // unchanged and the bottom stops manufacturing a squad it never signed.
   const count = clamp(
-    Math.round(2 + club.facilities.youthFacilities / 3 + ctx.rng.normal(0, 1)),
-    2,
+    Math.round((club.facilities.youthFacilities - ACADEMY_MIN_LEVEL) * ACADEMY_PER_LEVEL
+      + ctx.rng.normal(0, 0.8)),
+    0,
     9,
   )
 

@@ -69,16 +69,14 @@ const results = computed<Player[]>(() => {
 
         <div class="field">
           <label class="field__label">Position</label>
-          <div class="table__scroll">
-            <div class="segmented" style="min-width: 660px">
-              <button
-                v-for="p in positions"
-                :key="p"
-                class="segmented__item"
-                :class="{ 'is-active': position === p }"
-                @click="position = p"
-              >{{ p }}</button>
-            </div>
+          <div class="segmented segmented--wrap">
+            <button
+              v-for="p in positions"
+              :key="p"
+              class="segmented__item"
+              :class="{ 'is-active': position === p }"
+              @click="position = p"
+            >{{ p }}</button>
           </div>
         </div>
 

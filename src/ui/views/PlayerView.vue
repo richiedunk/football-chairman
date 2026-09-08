@@ -597,16 +597,14 @@ const internationalLine = computed(() => {
           </button>
           <div>
             <div class="field__label">Tell him his role</div>
-            <div class="table__scroll">
-              <div class="segmented" style="min-width: 460px">
-                <button
-                  v-for="s in statuses"
-                  :key="s"
-                  class="segmented__item"
-                  :class="{ 'is-active': player.desiredStatus === s }"
-                  @click="setStatus(s)"
-                >{{ SQUAD_STATUS_LABELS[s] }}</button>
-              </div>
+            <div class="segmented segmented--wrap">
+              <button
+                v-for="s in statuses"
+                :key="s"
+                class="segmented__item"
+                :class="{ 'is-active': player.desiredStatus === s }"
+                @click="setStatus(s)"
+              >{{ SQUAD_STATUS_LABELS[s] }}</button>
             </div>
             <div class="field__hint">
               A promise you break is remembered. Under-promising keeps him quiet but cheap to replace.
@@ -707,16 +705,14 @@ const internationalLine = computed(() => {
           He plays {{ player.position }} now, and can already fill
           {{ player.altPositions.length ? player.altPositions.join(', ') : 'nothing else' }}
         </label>
-        <div class="table__scroll">
-          <div class="segmented" style="min-width: 560px">
-            <button
-              v-for="pos in retrainOptions"
-              :key="pos"
-              class="segmented__item"
-              :class="{ 'is-active': retrainTo === pos }"
-              @click="retrainTo = pos"
-            >{{ pos }}</button>
-          </div>
+        <div class="segmented segmented--wrap">
+          <button
+            v-for="pos in retrainOptions"
+            :key="pos"
+            class="segmented__item"
+            :class="{ 'is-active': retrainTo === pos }"
+            @click="retrainTo = pos"
+          >{{ pos }}</button>
         </div>
         <div class="field__hint">
           The coaches rebuild him for the new role. He comes out of it a little under

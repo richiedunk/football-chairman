@@ -194,16 +194,14 @@ const fieldableNow = computed(() => {
     </div>
 
     <div class="section-title">Sort by</div>
-    <div class="table__scroll mb">
-      <div class="segmented" style="min-width: 640px">
-        <button
-          v-for="key in (['position','ability','age','value','wage','form','morale','contract','apps'] as SortKey[])"
-          :key="key"
-          class="segmented__item"
-          :class="{ 'is-active': sort === key }"
-          @click="sort = key"
-        >{{ key === 'apps' ? 'Games' : key.charAt(0).toUpperCase() + key.slice(1) }}</button>
-      </div>
+    <div class="segmented segmented--wrap">
+      <button
+        v-for="key in (['position','ability','age','value','wage','form','morale','contract','apps'] as SortKey[])"
+        :key="key"
+        class="segmented__item"
+        :class="{ 'is-active': sort === key }"
+        @click="sort = key"
+      >{{ key === 'apps' ? 'Games' : key.charAt(0).toUpperCase() + key.slice(1) }}</button>
     </div>
 
     <div class="card">

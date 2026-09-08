@@ -13,6 +13,79 @@ will break next.
 
 ## Open
 
+### The lower leagues were half academy, and the sort picker hid four of its nine options
+Two things, one measured in the engine and one measured in a browser.
+
+**Academy intake had a floor of two a year for every club in the world.**
+`clamp(2 + youthFacilities / 3, 2, 9)` — so a non-league side with a field and a
+shed ran an intake, and `scripts/squadflow.ts` had it promoting 2.89 players a
+season at an average age of 17.3. Held until they turn 21 that is 11.6
+under-21s, against 10.8 observed: the teenage bulge in non-league football was
+*entirely* this line. Intake now scales from a minimum standard of facility
+(`ACADEMY_MIN_LEVEL`), calibrated on the levels clubs actually have — a
+top-flight academy is 13 on a 1-20 scale, a non-league one 5 — so the top of
+the pyramid is unchanged and the bottom stops manufacturing a squad it never
+signed.
+
+| tier | intake before | after | prime players (24-31) |
+|---|---|---|---|
+| 1 | 6/yr | 6/yr | 14.5 → 14.8 |
+| 3 | 5/yr | 3/yr | 10.9 → 11.9 |
+| 4 | 4/yr | 2/yr | 9.8 → 10.3 |
+| 5 | 4/yr | **1/yr** | 6.6 → **8.3** |
+
+**All five divisions now meet the target**, and tier 5's under-21s fall 9.8 →
+5.7 while the squad holds at 23.0.
+
+**The safety check, and three wrong versions of it.** The requirement was that
+no club is ever left without a side. Across five seeds and 173,000 club-matches
+**no club in any division was ever below sixteen players**. Twenty club-weeks
+showed a club unable to raise eleven, and getting that number to mean anything
+took three attempts:
+
+1. Sampling once a season gave "1.0%" off four readings — noise.
+2. Weekly, but every club, counted clubs short in weeks they had no fixture.
+3. Weekly and after the tick, counted clubs that fielded a side and then lost
+   men *in that match*.
+
+Read properly — clubs with a fixture, before the week is played — the twenty
+survive, and they are the *input* to `fixAiSquad`, not a failure of it. That
+runs during the same tick, before kick-off, for exactly these clubs, and
+promotes, signs or conjures until a side exists. 0.012% of club-matches, about
+one injury crisis per division per decade. The old code read zero only because
+squads carried four more academy teenagers as padding.
+
+Softening the cut was tested and rejected: `ACADEMY_MIN_LEVEL` at 2.4 gave 18
+incidents instead of 20 — no safety gain — while losing the target in two of
+five seeds.
+
+**The sort picker hid four of its nine options.** `.segmented` lays its options
+out in one row (`grid-auto-flow: column`), so the squad screen's nine sort keys
+were given `min-width: 640px` inside a horizontally scrolling box. Measured in
+Chromium at 390x844 (iPhone 14 portrait): **five options visible, four
+off-screen**, and the row ends flush at the edge so it looks like a complete
+set of five. Form, morale, contract and games were unreachable unless you
+happened to swipe a control that gives no sign of being swipeable. A table that
+scrolls sideways is understood; a row of choices that scrolls sideways just
+looks like a shorter row of choices.
+
+There is now a `.segmented--wrap` modifier that wraps onto as many lines as it
+needs. Same page, same viewport: 9 of 9 visible, 42px tall becomes 118px, and
+the page still does not scroll sideways. Applied to the four pickers that were
+over-wide — squad sort (640px), search position (660px), squad status (460px)
+and retrain position (560px) — and the now-pointless `.table__scroll` wrappers
+around them removed.
+
+**Reviewed and not changed: everything else.** Across all 33 screens only
+`PlayerView` is dense, and it is the only one with more than three full-width
+actions at rest — it has twelve. A director looking at his own player gets
+eight stacked buttons, six of them visually identical ghosts, with "Make
+available for loan" and "Release (pay up contract)" carrying the same weight.
+Navigation is sound: five tabs, a six-item hub, one "Everything" escape hatch.
+The fix is a design decision rather than a defect, so it is written down rather
+than done: pair the two advertise-him toggles into one availability control,
+and put retrain, demote and release behind a disclosure.
+
 ### The discount that let a released pro drop down never reached a single AI club
 The oldest open failure, and most of it turned out to be the economy. Before
 touching anything, `scripts/ageprofile.ts` re-measured the age profile at

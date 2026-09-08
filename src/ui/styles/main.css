@@ -713,6 +713,29 @@ button, input, select, textarea {
 }
 .segmented__item.is-active { background: var(--bg-raised-2); color: var(--text); }
 
+/*
+ * A picker that wraps instead of scrolling sideways.
+ *
+ * `.segmented` puts every option in one row, so a set of nine sort keys was
+ * given `min-width: 640px` inside a horizontally scrolling box — on a 390px
+ * phone that shows five of them and hides four, with nothing to say they are
+ * there. A table that scrolls sideways is understood; a row of choices that
+ * scrolls sideways just looks like a row of five choices.
+ *
+ * So the options wrap onto as many lines as they need. Nothing is hidden,
+ * nothing scrolls inside a page that already scrolls, and the control gets
+ * taller instead of secretly wider.
+ */
+.segmented--wrap {
+  display: flex;
+  flex-wrap: wrap;
+}
+.segmented--wrap .segmented__item {
+  flex: 1 1 auto;
+  min-width: 4.5rem;
+  padding: 0 10px;
+}
+
 /* ----------------------------------------------------------------- table - */
 
 .table { width: 100%; border-collapse: collapse; font-size: 0.78rem; font-family: var(--font-num); }

@@ -23,6 +23,7 @@ import { prepareNewGame, startCareerAt } from '../src/engine/newGame'
 import { advanceWeek } from '../src/engine/tick'
 import { startingClubCandidates } from '../src/engine/systems/career'
 import { seniorSquad } from '../src/engine/systems/aiSquad'
+import { canFieldEleven } from '../src/engine/systems/matchday'
 import type { GameState, Player } from '../src/engine/types'
 
 const SEASONS = Number(process.env.SEASONS ?? 14)
@@ -46,11 +47,24 @@ interface Tally {
   late: number
   veteran: number
   wageRoom: number
+  /**
+   * The safety net. Cutting academy intake is only sound if free agents
+   * replace what the academy stops producing — so these are reported beside
+   * the age bands rather than checked afterwards. A division of correctly-aged
+   * squads that cannot raise a side is a worse game than one full of
+   * teenagers.
+   */
+  youth: number
+  smallest: number
+  belowSixteen: number
+  cannotFieldEleven: number
+  academy: number
 }
 
 const tallies = new Map<number, Tally>()
 const blank = (): Tally => ({
   samples: 0, squad: 0, u21: 0, early: 0, prime: 0, late: 0, veteran: 0, wageRoom: 0,
+  youth: 0, smallest: Infinity, belowSixteen: 0, cannotFieldEleven: 0, academy: 0,
 })
 
 /**
@@ -82,6 +96,11 @@ function sample(state: GameState): void {
       else t.veteran++
     }
     t.wageRoom += club.finances.wageBudget
+    t.youth += club.facilities.youthFacilities
+    t.academy += club.squad.filter((id) => state.players[id]?.isAcademy).length
+    t.smallest = Math.min(t.smallest, squad.length)
+    if (squad.length < 16) t.belowSixteen++
+    if (!canFieldEleven(state, club, state.date.week)) t.cannotFieldEleven++
     tallies.set(tier, t)
   }
   const all = Object.values(state.players)
@@ -96,11 +115,65 @@ function sample(state: GameState): void {
   poolSamples++
 }
 
+/**
+ * Squad health is checked every week, not four times a career.
+ *
+ * The age bands are a slow-moving average and a mid-season reading is enough.
+ * "Can this club raise a side" is not: it is a transient caused by a bad week
+ * of injuries, so sampling it once a season is how you get a 1% reading that
+ * means nothing and a 0% reading that means no more. Every settled week of
+ * every club, against the same rule matchday uses.
+ */
+let weeksChecked = 0
+let weeksShort = 0
+let weeksNoEleven = 0
+const shortByTier = new Map<number, { weeks: number; short: number; noEleven: number }>()
+
+/**
+ * Only clubs that actually had a match, checked BEFORE it is played.
+ *
+ * A first version checked every club every week and reported twenty
+ * club-weeks unable to raise eleven — all of them clubs with no fixture, in a
+ * week they were never asked to play. `fixAiSquad` runs for the clubs playing
+ * that week and promotes, signs or conjures until a side exists, so a club
+ * short in a blank week is not a defect and had already been repaired by the
+ * time it needed to be. Measuring a squad at a moment it never has to answer
+ * for is the mistake this project has been caught by three times.
+ *
+ * And it has to be read before the week is ticked, not after. Read afterwards
+ * it counts clubs that fielded a side and then lost men *in that match* —
+ * which is not a club without a team, it is a club with an injury list and a
+ * week to do something about it.
+ */
+function checkSquadHealth(state: GameState): void {
+  const playing = new Set<string>()
+  for (const f of state.fixtures) {
+    if (f.season === state.date.season && f.week === state.date.week) {
+      playing.add(f.homeClubId)
+      playing.add(f.awayClubId)
+    }
+  }
+  for (const club of Object.values(state.clubs)) {
+    const tier = state.leagues[club.leagueId]?.tier
+    if (!tier || !playing.has(club.id)) continue
+    const row = shortByTier.get(tier) ?? { weeks: 0, short: 0, noEleven: 0 }
+    const size = seniorSquad(state, club).length
+    row.weeks++
+    weeksChecked++
+    if (size < 16) { row.short++; weeksShort++ }
+    if (!canFieldEleven(state, club, state.date.week)) { row.noEleven++; weeksNoEleven++ }
+    shortByTier.set(tier, row)
+  }
+}
+
 for (let s = 0; s < SEASONS; s++) {
   for (let w = 1; w <= 52; w++) {
+    // Read first: this is the squad each club will have to raise a side from.
+    if (s >= SETTLE && w >= 6 && w <= 44) checkSquadHealth(state)
     advanceWeek(state, { ids: setup.ids, names: setup.names })
+    if (s < SETTLE) continue
     // Mid-season, well away from the roll and both windows.
-    if (s >= SETTLE && w === 30) sample(state)
+    if (w === 30) sample(state)
   }
 }
 
@@ -121,3 +194,20 @@ console.log(
   + `${avg(pool.academy)} in academies, ${avg(pool.total)} unattached`,
 )
 console.log(`unattached aged 24-31: ${avg(pool.prime)}`)
+
+console.log('\ncan every club still raise a side? (only clubs with a fixture that week)')
+console.log('  per club:  academy  youth facilities  |  smallest squad'
+  + '   club-weeks under 16   club-weeks with no XI')
+for (const [tier, t] of [...tallies].sort((a, b) => a[0] - b[0])) {
+  const row = shortByTier.get(tier) ?? { weeks: 1, short: 0, noEleven: 0 }
+  const pc = (v: number, n: number) => `${((v / Math.max(1, n)) * 100).toFixed(2)}%`.padStart(21)
+  console.log(
+    `  tier ${tier}   ${(t.academy / t.samples).toFixed(1).padStart(6)}`
+    + `${(t.youth / t.samples).toFixed(0).padStart(18)}  |`
+    + `${String(t.smallest).padStart(16)}${pc(row.short, row.weeks)}${pc(row.noEleven, row.weeks)}`,
+  )
+}
+console.log(
+  `  ${weeksChecked.toLocaleString()} club-weeks checked — `
+  + `${weeksShort} under sixteen, ${weeksNoEleven} unable to raise eleven`,
+)
