@@ -463,6 +463,26 @@ await step('player profile', async () => {
   await tap('.list__row >> nth=0')
   await page.waitForSelector('text=Attributes', { timeout: 10000 })
   await page.screenshot({ path: `${SHOT}/09-player.png`, fullPage: true })
+
+  // The availability picker replaced two toggle buttons, and it is derived
+  // rather than stored: it reads the pair of flags the engine acts on. Written
+  // as a `computed` it set them correctly and then never moved its own
+  // highlight, because `commit()` leaves `players[id]` at the same reference
+  // and a computed that re-evaluates to the same value stops propagating. That
+  // is invisible in the code and obvious here, so the check lives here.
+  const shown = async () => await page.evaluate(() => {
+    const pickers = [...document.querySelectorAll('.segmented')]
+    const p = pickers[pickers.length - 1]
+    return [...p.querySelectorAll('.segmented__item')]
+      .find((b) => b.classList.contains('is-active'))?.textContent.trim()
+  })
+  for (const label of ['For sale', 'Loan only', 'Sale or loan', 'Not available']) {
+    await page.locator(`.segmented__item:has-text("${label}")`).first().click()
+    await page.waitForTimeout(200)
+    const now = await shown()
+    if (now !== label) throw new Error(`availability picker stuck: chose ${label}, shows ${now}`)
+  }
+  console.log('   availability picker: all four states hold')
 })
 
 await step('league table', async () => {

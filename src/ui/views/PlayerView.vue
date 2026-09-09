@@ -13,7 +13,7 @@ import { SQUAD_STATUS_LABELS } from '../../engine/systems/morale'
 import { suggestRenewal, type RenewalOffer } from '../../engine/systems/contracts'
 import { injuryDescription } from '../../engine/systems/injuries'
 import { loanSuitorsFor } from '../../engine/systems/loans'
-import type { AttributeKey, Position, SquadStatus } from '../../engine/types'
+import type { AttributeKey, Player, Position, SquadStatus } from '../../engine/types'
 import { fullName, nickname } from '../playerName'
 import { clauseState, clauseUpside } from '../../engine/systems/buyBack'
 import { U21_AGE } from '../../engine/systems/registration'
@@ -242,6 +242,59 @@ function submitBid() {
 }
 
 const statuses: SquadStatus[] = ['star', 'firstTeam', 'rotation', 'backup', 'prospect', 'surplus']
+
+/**
+ * Whether the club is inviting offers for him, and of what kind.
+ *
+ * Two independent flags — `listedForTransfer` and `listedForLoan` — read
+ * separately by the transfer market, the loan market, morale and
+ * registration. They were two toggle buttons stacked in a column of eight,
+ * which is a poor way to ask one question: a director wants to say what a
+ * player is available for, not tick two boxes and work out what the
+ * combination means. The four options below are the four states those two
+ * booleans can be in, so nothing is lost and nothing new is stored.
+ */
+const AVAILABILITY = [
+  { id: 'none', label: 'Not available', transfer: false, loan: false },
+  { id: 'loan', label: 'Loan only', transfer: false, loan: true },
+  { id: 'transfer', label: 'For sale', transfer: true, loan: false },
+  { id: 'both', label: 'Sale or loan', transfer: true, loan: true },
+] as const
+
+/**
+ * Deliberately a function, not a `computed`.
+ *
+ * `commit()` refreshes the identity of the state root and of the player's own
+ * club, but `players[id]` stays the same object — so a computed whose only
+ * dependency is `player.value` re-evaluates to the same reference and, since
+ * Vue 3.4, stops propagating. Written as a computed this picker set both flags
+ * correctly and then never moved its own highlight, which an e2e check caught
+ * and reading the code would not have. A function called from the template
+ * re-runs with the render, which is exactly how the two toggle buttons this
+ * replaced read the same flags.
+ */
+function availabilityOf(p: Player): typeof AVAILABILITY[number]['id'] {
+  return AVAILABILITY.find((a) => a.transfer === p.listedForTransfer && a.loan === p.listedForLoan)?.id
+    ?? 'none'
+}
+
+function setAvailability(id: typeof AVAILABILITY[number]['id']) {
+  const p = player.value
+  const choice = AVAILABILITY.find((a) => a.id === id)
+  if (!p || !choice) return
+  if (p.listedForTransfer !== choice.transfer) store.setTransferListed(p.id, choice.transfer)
+  if (p.listedForLoan !== choice.loan) store.setLoanListed(p.id, choice.loan)
+}
+
+/**
+ * The three things you rarely do and cannot undo.
+ *
+ * Retraining costs him a chunk of his ability, demotion takes his squad place
+ * away, and releasing him pays up a contract for nothing. Stacked in line with
+ * "Make available for loan" they carried the same weight as a toggle, which is
+ * how a screen ends up with eight identical buttons and no hierarchy.
+ */
+const moreOpen = ref(false)
 
 function setStatus(status: SquadStatus) {
   const p = player.value
@@ -569,12 +622,6 @@ const internationalLine = computed(() => {
         <template v-if="isOurs">
           <button class="btn btn--primary btn--block" @click="openRenewal">Offer new contract</button>
           <button
-            class="btn btn--ghost btn--block"
-            @click="store.setTransferListed(player.id, !player.listedForTransfer)"
-          >
-            {{ player.listedForTransfer ? 'Remove from transfer list' : 'List for transfer' }}
-          </button>
-          <button
             v-if="player.loanClubId"
             class="btn btn--ghost btn--block"
             @click="doRecall"
@@ -589,12 +636,7 @@ const internationalLine = computed(() => {
           >
             {{ store.transferWindow.open ? 'Send out on loan' : 'Loans: window closed' }}
           </button>
-          <button
-            class="btn btn--ghost btn--block"
-            @click="store.setLoanListed(player.id, !player.listedForLoan)"
-          >
-            {{ player.listedForLoan ? 'Remove from loan list' : 'Make available for loan' }}
-          </button>
+
           <div>
             <div class="field__label">Tell him his role</div>
             <div class="segmented segmented--wrap">
@@ -610,21 +652,53 @@ const internationalLine = computed(() => {
               A promise you break is remembered. Under-promising keeps him quiet but cheap to replace.
             </div>
           </div>
+
+          <div>
+            <div class="field__label">Are you listening to offers?</div>
+            <div class="segmented segmented--wrap">
+              <button
+                v-for="a in AVAILABILITY"
+                :key="a.id"
+                class="segmented__item"
+                :class="{ 'is-active': availabilityOf(player) === a.id }"
+                @click="setAvailability(a.id)"
+              >{{ a.label }}</button>
+            </div>
+            <div class="field__hint">
+              Saying so out loud brings offers in, and tells him where he stands.
+            </div>
+          </div>
+
+          <!--
+            Everything below is rare, consequential and hard to undo. Behind a
+            disclosure so the screen opens on the things a director does weekly
+            rather than on a wall of eight identical buttons.
+          -->
           <button
-            v-if="!player.isAcademy && player.position !== 'GK'"
-            class="btn btn--ghost btn--block"
-            @click="retrainOpen = true"
+            class="btn btn--ghost btn--block row row--between"
+            :aria-expanded="moreOpen"
+            @click="moreOpen = !moreOpen"
           >
-            Retrain in a new position
+            <span>Bigger decisions</span>
+            <span class="faint">{{ moreOpen ? '▾' : '▸' }}</span>
           </button>
-          <button
-            v-if="canDemote"
-            class="btn btn--ghost btn--block"
-            @click="doDemote"
-          >
-            Send back to the academy
-          </button>
-          <button class="btn btn--danger btn--block" @click="doRelease">Release (pay up contract)</button>
+          <template v-if="moreOpen">
+            <button
+              v-if="!player.isAcademy && player.position !== 'GK'"
+              class="btn btn--ghost btn--block"
+              @click="retrainOpen = true"
+            >
+              Retrain in a new position
+            </button>
+            <button
+              v-if="canDemote"
+              class="btn btn--ghost btn--block"
+              @click="doDemote"
+            >
+              Send back to the academy
+            </button>
+            <button class="btn btn--danger btn--block" @click="doRelease">Release (pay up contract)</button>
+          </template>
         </template>
 
         <template v-else>

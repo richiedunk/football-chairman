@@ -76,15 +76,34 @@ over-wide — squad sort (640px), search position (660px), squad status (460px)
 and retrain position (560px) — and the now-pointless `.table__scroll` wrappers
 around them removed.
 
-**Reviewed and not changed: everything else.** Across all 33 screens only
-`PlayerView` is dense, and it is the only one with more than three full-width
-actions at rest — it has twelve. A director looking at his own player gets
-eight stacked buttons, six of them visually identical ghosts, with "Make
-available for loan" and "Release (pay up contract)" carrying the same weight.
-Navigation is sound: five tabs, a six-item hub, one "Everything" escape hatch.
-The fix is a design decision rather than a defect, so it is written down rather
-than done: pair the two advertise-him toggles into one availability control,
-and put retrain, demote and release behind a disclosure.
+**And `PlayerView`, which was the only dense screen in the app.** Across all 33
+it was the only one with more than three full-width actions at rest — it had
+twelve, and a director looking at his own player got eight stacked buttons, six
+of them visually identical ghosts, with "Make available for loan" carrying the
+same weight as "Release (pay up contract)". Navigation was never the problem:
+five tabs, a six-item hub, one "Everything" escape hatch.
+
+Two changes. `listedForTransfer` and `listedForLoan` were separate toggles,
+which is a poor way to ask one question — a director wants to say what a player
+is available for, not tick two boxes and work out what the pair means. They are
+now one four-option picker (Not available / Loan only / For sale / Sale or
+loan), which is exactly the four states those two booleans can hold, so nothing
+is lost and nothing new is stored. Retrain, demote and release — the three
+things you rarely do and cannot undo — sit behind a "Bigger decisions"
+disclosure. Measured in the running app at 390x844: **three visible block
+buttons at rest, down from eight**, with one primary action in green and the
+one destructive action in red behind the disclosure.
+
+**The picker silently did not work, and only the browser said so.** Written as
+a `computed` it set both flags correctly and then never moved its own
+highlight. `commit()` refreshes the identity of the state root and of the
+player's own club, but `players[id]` stays the same object — so a computed
+whose only dependency is `player.value` re-evaluates to the same reference and,
+since Vue 3.4, stops propagating. The two toggle buttons it replaced were
+immune because they read the flags inline in the template, which re-renders for
+other reasons. It is a function now, and `scripts/e2e.mjs` clicks all four
+states and asserts each one holds, because this class of fault is invisible in
+the code and obvious in a browser.
 
 ### The discount that let a released pro drop down never reached a single AI club
 The oldest open failure, and most of it turned out to be the economy. Before
