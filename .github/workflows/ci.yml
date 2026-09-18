@@ -1,0 +1,75 @@
+name: CI
+
+# Everything that has to be true before a change is allowed near main.
+#
+# Until now all of it was run by hand, which worked only because the same
+# person ran it every time. The suite is quick enough that there is no reason
+# to split it: the unit tests are the long pole at two to four minutes.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # Two passes: the app under strict settings, then the whole repo
+      # including tests and scripts. A diagnostic that does not compile is a
+      # diagnostic nobody will run.
+      - name: Typecheck
+        run: npm run typecheck
+
+      # Dead code is the most expensive class of bug in this project — a
+      # feature that is written, documented and called by nothing.
+      - name: Knip
+        run: npx knip
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Build
+        run: npx vite build
+
+      # The browser catches what the code cannot say. A reactivity bug that
+      # typechecks, renders and screenshots correctly still fails here.
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      # Waited for with curl rather than a wait-on dependency: the repo keeps a
+      # short dependency list on purpose and knip enforces it.
+      - name: End-to-end
+        run: |
+          npx vite preview --port 4173 &
+          for i in $(seq 1 60); do
+            curl -sf -o /dev/null http://127.0.0.1:4173/ && break
+            sleep 1
+          done
+          curl -sf -o /dev/null http://127.0.0.1:4173/ || { echo "preview never came up"; exit 1; }
+          node scripts/e2e.mjs
+
+      - name: Keep the screenshots when it breaks
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-screenshots
+          path: /tmp/dof-e2e-shots
+          if-no-files-found: ignore
+          retention-days: 7

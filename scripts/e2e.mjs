@@ -7,7 +7,14 @@ import { chromium } from 'playwright'
 // literally called "undefined" in the project root.
 const SHOT = process.env.SHOT ?? `${os.tmpdir()}/dof-e2e-shots`
 fs.mkdirSync(SHOT, { recursive: true })
-const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' })
+// The dev sandbox ships Chromium at a fixed path and blocks the download that
+// Playwright would otherwise do; CI installs it and resolves it itself. Asking
+// for a path that is not there fails with a browser-not-found error that reads
+// like a missing dependency, so look before leaping.
+const SANDBOX_CHROMIUM = '/opt/pw-browsers/chromium'
+const browser = await chromium.launch(
+  fs.existsSync(SANDBOX_CHROMIUM) ? { executablePath: SANDBOX_CHROMIUM } : {},
+)
 const page = await browser.newPage({
   viewport: { width: 390, height: 844 },   // iPhone 14 portrait
   deviceScaleFactor: 2,

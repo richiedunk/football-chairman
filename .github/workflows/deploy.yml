@@ -1,0 +1,61 @@
+name: Deploy
+
+# Ship main to bunny.net edge storage.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Never two deploys at once. Uploads are not transactional, and a half-written
+# index.html pointing at chunks that have not landed yet is a broken site.
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # Rebuilt here rather than downloaded from the CI run: a deploy that
+      # builds the commit it is deploying cannot ship a stale artefact.
+      # `npm run build` typechecks first and fails the deploy if it does not.
+      - name: Build
+        run: npm run build
+
+      - name: Deploy to bunny.net
+        uses: ayeressian/bunnycdn-storage-deploy@v2.4.6
+        with:
+          source: dist
+          storageZoneName: ${{ secrets.BUNNY_STORAGE_ZONE }}
+          storagePassword: ${{ secrets.BUNNY_STORAGE_PASSWORD }}
+          accessKey: ${{ secrets.BUNNY_API_KEY }}
+          pullZoneId: ${{ secrets.BUNNY_PULL_ZONE_ID }}
+          upload: "true"
+          # Deliberately NOT "true", which wipes the zone before uploading.
+          #
+          # Two reasons. It opens a window where the site is partly or wholly
+          # missing, on a deploy that is otherwise seamless. And every asset
+          # filename carries a content hash, so old files are not litter — a
+          # player who loaded the page a minute before the deploy is still
+          # fetching chunks by their old names, and deleting them breaks that
+          # session. Nothing links to them once index.html is replaced, they
+          # cost fractions of a penny, and the whole build is 1.3MB.
+          remove: "false"
+          purgePullZone: "true"
+          # Uploads replicate across regions in a couple of seconds; purging
+          # sooner can pull a stale file straight back into cache.
+          purgePullZoneDelay: "15"
+          maxRetries: "5"
