@@ -21,6 +21,7 @@
  * Run: `npx tsx scripts/academycheck.ts` (SIZE, SEASONS, SEED)
  */
 import { prepareNewGame, startCareerAt } from '../src/engine/newGame'
+import { careerAppearances } from '../src/engine/systems/careerRecord'
 import { advanceWeek } from '../src/engine/tick'
 import { startingClubCandidates } from '../src/engine/systems/career'
 import type { GameState, Player } from '../src/engine/types'
@@ -62,7 +63,7 @@ function scan(season: number) {
     if (!p.isAcademy && fate.promotedSeason === null && p.clubId) fate.promotedSeason = season
     // A senior appearance is the only thing that makes an academy worth having.
     const apps = p.stats.appearances
-      + p.careerStats.reduce((sum, r) => sum + r.appearances, 0)
+      + p.careerStats.reduce((sum, r) => sum + careerAppearances(r), 0)
     if (apps > 0) fate.playedSenior = true
     if (!p.clubId && fate.leftSeason === null && fate.promotedSeason === null) {
       fate.leftSeason = season
@@ -114,7 +115,7 @@ if (years.length) {
 // Who is actually unemployed out there?
 const free = Object.values(state.players).filter((p) => !p.clubId && !p.isAcademy)
 const neverPlayed = free.filter((p: Player) =>
-  p.stats.appearances + p.careerStats.reduce((s, r) => s + r.appearances, 0) === 0)
+  p.stats.appearances + p.careerStats.reduce((s, r) => s + careerAppearances(r), 0) === 0)
 console.log(`\nfree agents right now: ${free.length}`)
 console.log(`  never played a senior game: ${neverPlayed.length}`
   + ` (${((neverPlayed.length / Math.max(1, free.length)) * 100).toFixed(0)}%)`)

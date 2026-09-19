@@ -1,4 +1,4 @@
-import { SAVE_VERSION, type GameState, type PlayerTrait } from '../engine/types'
+import { SAVE_VERSION, type GameState, type PlayerCareerRecord, type PlayerTrait } from '../engine/types'
 import { autoRegister } from '../engine/systems/registration'
 import { createOwner, ownerName, startingOwnerKind } from '../engine/systems/ownership'
 import { Rng } from '../engine/rng'
@@ -466,6 +466,35 @@ function migrate(state: GameState): GameState {
       club.citySize = nation?.cities?.find((c) => c.name === club.city)?.size ?? 50
     }
     state.version = 18
+  }
+
+  // `Player.careerStats` became a tuple. It was 35% of the save's raw JSON and
+  // two thirds of that was the field names repeated on every record; the shape
+  // is the only thing that changed, so every value is carried across and the
+  // order here is the order the type declares. Anything unrecognisable is
+  // dropped rather than guessed at — a career record read wrong is a player's
+  // goals silently becoming his assists.
+  if (state.version < 19) {
+    for (const player of Object.values(state.players ?? {})) {
+      const records = player?.careerStats
+      if (!Array.isArray(records)) continue
+      player.careerStats = records
+        .map((r: unknown): PlayerCareerRecord | null => {
+          if (Array.isArray(r)) return r as unknown as PlayerCareerRecord
+          if (!r || typeof r !== 'object') return null
+          const o = r as Record<string, number | string | undefined>
+          const n = (v: unknown, fallback = 0) => (typeof v === 'number' ? v : fallback)
+          const t = (v: unknown) => (typeof v === 'string' ? v : '')
+          return [
+            n(o.season), t(o.clubId), t(o.clubName), t(o.leagueName),
+            n(o.appearances), n(o.starts), n(o.minutes), n(o.goals),
+            n(o.assists), n(o.cleanSheets), n(o.yellowCards), n(o.redCards),
+            n(o.ratingSum), n(o.motmAwards),
+          ]
+        })
+        .filter((r): r is PlayerCareerRecord => r !== null)
+    }
+    state.version = 19
   }
 
   state.version = SAVE_VERSION

@@ -6,6 +6,7 @@ import {
   loadGame, saveGame,
 } from '../src/storage/saves'
 import { SAVE_VERSION, type GameState } from '../src/engine/types'
+import { makeCareerRecord, readCareerRecord } from '../src/engine/systems/careerRecord'
 
 /**
  * The migration safety net.
@@ -72,6 +73,22 @@ function stripToVersion(state: GameState, version: number): GameState {
     if (s.director.contract) bag(s.director.contract).signedSeason = 2025
   }
 
+  if (version < 19) {
+    // Career records were objects before they were tuples.
+    for (const player of Object.values(s.players)) {
+      const records = player.careerStats as unknown[]
+      if (!Array.isArray(records)) continue
+      ;(player as { careerStats: unknown }).careerStats = records.map((r) => {
+        const t = r as unknown[]
+        return {
+          season: t[0], clubId: t[1], clubName: t[2], leagueName: t[3],
+          appearances: t[4], starts: t[5], minutes: t[6], goals: t[7],
+          assists: t[8], cleanSheets: t[9], yellowCards: t[10], redCards: t[11],
+          ratingSum: t[12], motmAwards: t[13],
+        }
+      })
+    }
+  }
   if (version < 18) {
     for (const club of Object.values(s.clubs)) {
       delete (club as { citySize?: number }).citySize
@@ -170,7 +187,7 @@ async function loadFrom(version: number, slotId: string): Promise<GameState> {
   return loaded!
 }
 
-const HISTORICAL = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
+const HISTORICAL = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]
 
 describe('every historical format still loads', () => {
   for (const version of HISTORICAL) {
@@ -265,6 +282,45 @@ describe('every historical format still loads', () => {
     const stadium = Object.values(loaded.clubs)[0].facilities.stadium
     expect(typeof stadium.selloutsThisSeason, 'v17: no sellout counter').toBe('number')
     await deleteSave('mig-v18')
+  }, 60_000)
+
+  it('turns career records into tuples without transposing a field', async () => {
+    // The danger in v19 is not that it fails, it is that it succeeds and is
+    // wrong: every slot but two is a number, so a pair swapped in the
+    // migration typechecks, round-trips the right count of fields, and turns a
+    // player's goals into his assists for the rest of his career.
+    //
+    // The world fixture is freshly created and nobody has played a season, so
+    // every `careerStats` is empty and a test written against it would pass
+    // having checked nothing. The records are planted here, with every field a
+    // different number, so a transposition has nowhere to hide.
+    const seeded = JSON.parse(JSON.stringify(base)) as GameState
+    const ids = Object.keys(seeded.players).slice(0, 3)
+    const planted = ids.map((id, n) => ({
+      id,
+      record: makeCareerRecord(
+        {
+          appearances: 31 + n, starts: 27 + n, minutes: 2431 + n, goals: 12 + n,
+          assists: 7 + n, cleanSheets: 3 + n, yellowCards: 5 + n, redCards: 1 + n,
+          ratingSum: 219.4 + n, motmAwards: 4 + n,
+        },
+        2029 + n, `club-${n}`, `Club ${n}`, `League ${n}`,
+      ),
+    }))
+    for (const { id, record } of planted) seeded.players[id].careerStats = [record]
+
+    const old = stripToVersion(seeded, 18)
+    await saveGame(old, 'mig-v19')
+    const loaded = await loadGame('mig-v19')
+    expect(loaded, 'v18 with career records would not load').toBeTruthy()
+
+    for (const { id, record } of planted) {
+      const got = loaded!.players[id].careerStats
+      expect(Array.isArray(got[0]), `v19: ${id}'s record is not a tuple`).toBe(true)
+      expect(readCareerRecord(got[0]), `v19: ${id} came back changed`)
+        .toEqual(readCareerRecord(record))
+    }
+    await deleteSave('mig-v19')
   }, 60_000)
 
   it('refuses a save from a newer build rather than mangling it', async () => {

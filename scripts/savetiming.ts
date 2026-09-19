@@ -36,12 +36,21 @@
  * `void autosave()` does not help: not awaiting a synchronous stringify does
  * not stop it blocking.
  *
- * Which reframes the case for turning `careerStats` into a tuple. It is worth
- * about 35% of the raw JSON and a tuple takes a record from ~235 bytes to
- * ~90, so roughly a fifth off the whole save: 594ms becomes about 465ms. Real,
- * and nowhere near the biggest lever. Autosaving every fourth week instead of
- * every week is four times the win for one line, and moving serialisation to a
- * worker takes the blocking cost to zero.
+ * Which reframed the case for turning `careerStats` into a tuple, and both
+ * changes have since landed. Re-measured on the same world and seed:
+ *
+ *   raw JSON 71.8MB -> 56.1MB        stringify 594ms -> 406ms
+ *   gzipped   7.26MB ->  6.76MB      parse     271ms -> 247ms
+ *
+ * A third off the blocking cost, against a fifth predicted — the tuple beat
+ * the estimate. The gzipped size barely moved, which is the whole point: the
+ * bytes on disk were never the problem, compression had already dealt with
+ * them, and what was won back was main-thread time.
+ *
+ * Autosave now runs every fourth week rather than every week, which is another
+ * four times on top. What remains, and is the only way to reach zero, is
+ * moving serialisation off the main thread — and that should be measured on a
+ * real phone before anyone commits to it.
  *
  * All of the above is a laptop. Before anyone commits to the worker, measure
  * it on a phone.

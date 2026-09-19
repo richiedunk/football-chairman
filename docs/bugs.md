@@ -13,6 +13,45 @@ will break next.
 
 ## Open
 
+### A career history nothing has ever shown
+`careerStats` is written for every player at every season roll, capped at 25
+records, and it was **35% of the save's raw JSON** — 25.4MB of a 46.4MB player
+table. Nothing in `src/ui` reads it. No screen displays a player's career. The
+only readers in the repository are two diagnostic scripts.
+
+The unread-field guard in `tests/dials.test.ts` is quiet about it, and that is
+the limit the test already documents: the check is textual across the whole
+repo, and `scripts/academycheck.ts` mentions the field, so something "reads"
+it. A diagnostic is not a consumer.
+
+It has been turned into a tuple rather than deleted, because a career history
+is plainly intended and a football manager without one would be poorer — but
+it is being paid for and not yet used, and the screen that justifies it does
+not exist. Worth either building or binning.
+
+### Autosave wrote the whole game every week
+`scripts/savetiming.ts` timed the pipeline on a standard world, twelve seasons
+in: `JSON.stringify` 594ms, against a week tick of ~275ms. The save cost more
+than twice the week it was saving, every week.
+
+Compression is asynchronous and does not hold the main thread; stringify does,
+and `void autosave()` does not help — not awaiting a synchronous call does not
+stop it blocking. `scripts/savememory.ts` has the other half: the state graph
+is 122MB at rest and a save adds **+141MB** transient for the string, so a
+write briefly needs 2.2x the memory the game sits at. On a phone that is how a
+tab gets killed rather than merely slowed.
+
+Autosave now runs every fourth week, and forces a save regardless on a season
+roll, a sacking or retirement — the weeks worth more than the cost. The
+backgrounding hook in `App.vue` already covered the case that actually ends a
+session. With the tuple as well, stringify is 406ms and fires a quarter as
+often.
+
+**Still open:** serialisation is on the main thread. A worker would take the
+blocking cost to zero, and the 141MB spike is unaddressed by anything done so
+far. Both want measuring on a real device first — every figure above is a
+laptop.
+
 ### The lower leagues were half academy, and the sort picker hid four of its nine options
 Two things, one measured in the engine and one measured in a browser.
 

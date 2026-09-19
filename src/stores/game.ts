@@ -561,6 +561,24 @@ export const useGameStore = defineStore('game', () => {
   const lastTick = ref<ReturnType<typeof advanceWeek> | null>(null)
 
   /**
+   * How often the game writes itself to disk while a player advances weeks.
+   *
+   * It used to be every week, and `scripts/savetiming.ts` measured what that
+   * costs: `JSON.stringify` on a standard world twelve seasons in takes 594ms
+   * against a tick of ~275ms, so the save was more than twice the work of the
+   * week it was saving. Compression is asynchronous and does not hold the main
+   * thread, but stringify does, and writing it as `void autosave()` changes
+   * nothing — not awaiting a synchronous call does not stop it blocking.
+   *
+   * Four weeks is a quarter of the cost for an hour of football at risk in the
+   * worst case, and the worst case is already covered: `App.vue` saves when
+   * the app is backgrounded or the tab hidden, which is how a phone actually
+   * ends a session, and the weeks that matter force a save regardless below.
+   */
+  const AUTOSAVE_EVERY_WEEKS = 4
+  let weeksSinceAutosave = 0
+
+  /**
    * Advance one week. Refuses while urgent decisions are outstanding — that
    * refusal is what stops the game being played by mashing one button.
    */
@@ -605,7 +623,16 @@ export const useGameStore = defineStore('game', () => {
       }
 
       if (s.settings.autosave) {
-        void autosave()
+        weeksSinceAutosave += 1
+        const tick = lastTick.value
+        // Some weeks are not worth risking whatever the cadence says. A season
+        // roll is the single heaviest thing the engine does, and being sacked
+        // or retiring is the end of the career — replaying either because the
+        // save was four weeks stale would be infuriating in a way that
+        // replaying a quiet February is not.
+        const mustKeep = tick.seasonEnded || tick.sacked
+          || s.director.retiredAtSeason !== undefined
+        if (mustKeep || weeksSinceAutosave >= AUTOSAVE_EVERY_WEEKS) void autosave()
       }
       return { ok: true }
     })
@@ -625,6 +652,10 @@ export const useGameStore = defineStore('game', () => {
   async function autosave(): Promise<void> {
     const s = state.value
     if (!s) return
+    // Reset here rather than at the call site, so the cadence is measured from
+    // the last save that actually happened — including the one `App.vue` fires
+    // when the app is backgrounded.
+    weeksSinceAutosave = 0
     try {
       s.nextId = ids.value
       await saveGame(s, AUTOSAVE_SLOT)

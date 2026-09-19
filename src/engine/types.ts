@@ -900,7 +900,44 @@ export interface PlayerSeasonStats {
   motmAwards: number
 }
 
-export interface PlayerCareerRecord extends PlayerSeasonStats {
+/**
+ * One season of a player's career, stored as a tuple.
+ *
+ * The one place in the save where the shape is chosen for size rather than for
+ * readability, because it is the one place where it matters. Every player
+ * carries up to 25 of these and they came to 25.4MB of a 46.4MB player table —
+ * 35% of the entire save's raw JSON — of which roughly two thirds was the
+ * field names, repeated on all 99,711 records. `scripts/savetiming.ts` has the
+ * consequence: `JSON.stringify` is synchronous, it blocks the main thread, and
+ * it was the largest single cost of writing a save.
+ *
+ * As a tuple a record goes from about 235 bytes to about 75. The labels below
+ * are TypeScript's named tuple elements, so the compiler shows `season` and
+ * `goals` at each position and a reader is not counting commas. Use
+ * `readCareerRecord` rather than indexing by hand.
+ *
+ * Nothing else in the model is stored this way and nothing else should be.
+ * This is a deliberate exception with a measurement behind it, not a style.
+ */
+export type PlayerCareerRecord = readonly [
+  season: number,
+  clubId: ID,
+  clubName: string,
+  leagueName: string,
+  appearances: number,
+  starts: number,
+  minutes: number,
+  goals: number,
+  assists: number,
+  cleanSheets: number,
+  yellowCards: number,
+  redCards: number,
+  ratingSum: number,
+  motmAwards: number,
+]
+
+/** A career record expanded back into something worth reading. */
+export interface PlayerCareerSeason extends PlayerSeasonStats {
   season: number
   clubId: ID
   clubName: string
@@ -1610,4 +1647,4 @@ export interface GameSettings {
   hapticsEnabled: boolean
 }
 
-export const SAVE_VERSION = 18
+export const SAVE_VERSION = 19

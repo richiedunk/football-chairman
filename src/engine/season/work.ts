@@ -1,6 +1,7 @@
 import { clamp, Rng } from '../rng'
 import { IdFactory, ID_PREFIX } from '../ids'
 import { ageOneYear } from '../systems/development'
+import { makeCareerRecord } from '../systems/careerRecord'
 import { sortTable } from '../systems/board'
 import { eligibleClubs, levelFor } from '../systems/career'
 import { computeValue, computeWageDemand } from '../systems/valuation'
@@ -218,13 +219,13 @@ export function processPlayerYearEnd(state: GameState, deps: RolloverDeps): void
     // Career stats archive.
     if (player.stats.appearances > 0) {
       const club = player.clubId ? state.clubs[player.clubId] : null
-      player.careerStats.push({
-        ...player.stats,
+      player.careerStats.push(makeCareerRecord(
+        player.stats,
         season,
-        clubId: club?.id ?? '',
-        clubName: club?.name ?? 'Free agent',
-        leagueName: club ? state.leagues[club.leagueId]?.name ?? '' : '',
-      })
+        club?.id ?? '',
+        club?.name ?? 'Free agent',
+        club ? state.leagues[club.leagueId]?.name ?? '' : '',
+      ))
       if (player.careerStats.length > 25) player.careerStats.shift()
     }
 
