@@ -46,20 +46,5 @@ jobs:
           upload: "true"
           remove: "false"
           purgePullZone: "true"
-          purgePullZoneDelay: "5"
-          maxRetries: "5"
-          # Deliberately NOT "true", which wipes the zone before uploading.
-          #
-          # Two reasons. It opens a window where the site is partly or wholly
-          # missing, on a deploy that is otherwise seamless. And every asset
-          # filename carries a content hash, so old files are not litter — a
-          # player who loaded the page a minute before the deploy is still
-          # fetching chunks by their old names, and deleting them breaks that
-          # session. Nothing links to them once index.html is replaced, they
-          # cost fractions of a penny, and the whole build is 1.3MB.
-          remove: "false"
-          purgePullZone: "true"
-          # Uploads replicate across regions in a couple of seconds; purging
-          # sooner can pull a stale file straight back into cache.
           purgePullZoneDelay: "15"
           maxRetries: "5"
