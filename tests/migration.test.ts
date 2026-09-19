@@ -3,8 +3,9 @@ import { prepareNewGame, startCareerAt } from '../src/engine/newGame'
 import { startingClubCandidates } from '../src/engine/systems/career'
 import {
   backupSlotId, deleteSave, exportSave, firstIntegrityProblem, importSave, listBackups, listSaves,
-  loadGame, saveGame,
+  loadGame, saveGame, setStorageAdapter,
 } from '../src/storage/saves'
+import { MemoryAdapter, compressValue } from '../src/storage/adapter'
 import { SAVE_VERSION, type GameState } from '../src/engine/types'
 import { makeCareerRecord, readCareerRecord } from '../src/engine/systems/careerRecord'
 
@@ -25,8 +26,14 @@ import { makeCareerRecord, readCareerRecord } from '../src/engine/systems/career
  */
 
 let base: GameState
+/**
+ * Held rather than taken from the default, so one test can write bytes
+ * straight into the store the way an older build would have.
+ */
+const memory = new MemoryAdapter()
 
 beforeAll(() => {
+  setStorageAdapter(memory)
   const setup = prepareNewGame({
     seed: 'MIGRATE', directorName: 'T', background: 'scout',
     worldSize: 'compact', homeNationId: 'eng', startingSeason: 2025,
@@ -309,8 +316,26 @@ describe('every historical format still loads', () => {
     }))
     for (const { id, record } of planted) seeded.players[id].careerStats = [record]
 
+    // Written straight to the adapter rather than through `saveGame`.
+    //
+    // `saveGame` now lifts career records out of the game and into a part of
+    // the save record, so writing a "v18 save" with it would produce something
+    // no v18 build ever wrote — with the records already moved, and still in
+    // the old object shape, so the migration under test would find nothing to
+    // do and the test would pass having checked nothing. A real v18 save has
+    // them in the main blob, which is what this puts there.
     const old = stripToVersion(seeded, 18)
-    await saveGame(old, 'mig-v19')
+    const { data } = await compressValue(old)
+    await memory.write('mig-v19', { main: data }, {
+      id: 'mig-v19',
+      name: 'v18',
+      savedAt: Date.now(),
+      size: data.length,
+      summary: {
+        directorName: 'T', clubName: '', leagueName: '',
+        season: old.date.season, week: old.date.week, level: 1, xp: 0,
+      },
+    })
     const loaded = await loadGame('mig-v19')
     expect(loaded, 'v18 with career records would not load').toBeTruthy()
 
@@ -394,7 +419,8 @@ describe('the integrity check', () => {
 
 describe('taking a career off the device', () => {
   it('exports and imports the same career', async () => {
-    const blob = await exportSave(base)
+    await saveGame(base, 'export-slot')
+    const blob = await exportSave(base, 'export-slot')
     const file = new File([blob], 'career.dof')
     const back = await importSave(file)
 
@@ -403,13 +429,44 @@ describe('taking a career off the device', () => {
     expect(Object.keys(back.clubs).length).toBe(Object.keys(base.clubs).length)
     expect(back.playerClubId).toBe(base.playerClubId)
     expect(firstIntegrityProblem(back)).toBeNull()
+    await deleteSave('export-slot')
+  }, 60_000)
+
+  it('carries career history, which is not on the players any more', async () => {
+    // The risk in moving history into a part of the save record: an export
+    // that reads only the live state hands over a file where every career is
+    // blank, and nobody finds out until they have changed phones and deleted
+    // the original.
+    const seeded = JSON.parse(JSON.stringify(base)) as GameState
+    const id = Object.keys(seeded.players)[0]
+    const record = makeCareerRecord(
+      {
+        appearances: 31, starts: 27, minutes: 2431, goals: 12, assists: 7,
+        cleanSheets: 3, yellowCards: 5, redCards: 1, ratingSum: 219.4, motmAwards: 4,
+      },
+      2029, 'club-7', 'Harrogate Town', 'League Two',
+    )
+    seeded.players[id].careerStats = [record]
+
+    // Saving persists it into the part and clears it off the player, which is
+    // exactly the state an export has to cope with.
+    await saveGame(seeded, 'hist-slot')
+    expect(seeded.players[id].careerStats, 'save did not clear the pending record').toEqual([])
+
+    const blob = await exportSave(seeded, 'hist-slot')
+    const back = await importSave(new File([blob], 'career.dof'))
+    expect(back.players[id].careerStats.map(readCareerRecord))
+      .toEqual([readCareerRecord(record)])
+    await deleteSave('hist-slot')
   }, 60_000)
 
   it('exports compressed, not raw JSON', async () => {
     // Uncompressed this is a 50 MB download for a 5 MB save.
-    const blob = await exportSave(base)
+    await saveGame(base, 'export-slot2')
+    const blob = await exportSave(base, 'export-slot2')
     const raw = JSON.stringify(base).length
     expect(blob.size).toBeLessThan(raw / 2)
+    await deleteSave('export-slot2')
   }, 60_000)
 
   it('still reads an uncompressed career file', async () => {

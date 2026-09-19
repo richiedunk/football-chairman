@@ -3,7 +3,8 @@ import { computed, inject, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useGameStore } from '../../stores/game'
 import {
-  deleteSave, exportSave, importSave, listBackups, listSaves, saveGame, storageName, storageQuota,
+  AUTOSAVE_SLOT, deleteSave, exportSave, importSave, listBackups, listSaves, saveGame,
+  storageName, storageQuota,
 } from '../../storage/saves'
 import type { SaveSlotMeta } from '../../storage/adapter'
 import { auth, type AccountIdentity, type SignInProvider } from '../../platform/services'
@@ -95,7 +96,13 @@ async function exportToFile() {
   if (!state || busy.value) return
   busy.value = true
   try {
-    const blob = await exportSave(state)
+    // Written first, then read back. Career history lives in a part of the
+    // save record rather than on the players, and `exportSave` needs a slot it
+    // can trust holds *this* game's history — saving to the autosave slot is
+    // what makes that true, and it also flushes anything the season roll has
+    // appended but not yet persisted.
+    await saveGame(state, AUTOSAVE_SLOT)
+    const blob = await exportSave(state, AUTOSAVE_SLOT)
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url

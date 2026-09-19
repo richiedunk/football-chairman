@@ -32,14 +32,45 @@ export interface SaveSlotMeta {
   }
 }
 
+/**
+ * A save, in parts.
+ *
+ * `main` is the game — everything needed to put the world back on screen.
+ * Anything else is a named part that is written with it and read only when
+ * something asks for it, which is how a table nothing displays stops being
+ * loaded into memory at all.
+ *
+ * Parts of one save are written in a single transaction on every adapter, so
+ * a save slot cannot end up half old and half new. That is the whole reason
+ * they are parts of a record rather than rows in a second store: two stores
+ * would need keeping in step, and a career whose history belonged to a
+ * different save would be worse than no history.
+ */
+export interface SavePayload {
+  main: Uint8Array
+  parts?: Record<string, Uint8Array>
+}
+
 export interface StorageAdapter {
   readonly name: string
   list(): Promise<SaveSlotMeta[]>
   read(id: string): Promise<Uint8Array | null>
-  write(id: string, data: Uint8Array, meta: SaveSlotMeta): Promise<void>
+  /** A named part, or null if this save has none. Fetched on demand. */
+  readPart(id: string, part: string): Promise<Uint8Array | null>
+  write(id: string, payload: SavePayload, meta: SaveSlotMeta): Promise<void>
   remove(id: string): Promise<void>
   /** Bytes available, or null when the platform will not say. */
   quota(): Promise<{ used: number; available: number } | null>
+}
+
+/**
+ * Key for a part, alongside the save it belongs to.
+ *
+ * A separator that cannot occur in a slot id, so a part can never collide with
+ * a save and `remove` can find every part by prefix.
+ */
+function partKey(id: string, part: string): string {
+  return `${id}\u0000part:${part}`
 }
 
 // ---------------------------------------------------------------------------
@@ -149,10 +180,18 @@ class IndexedDbAdapter implements StorageAdapter {
   }
 
   async read(id: string): Promise<Uint8Array | null> {
+    return this.readKey(id)
+  }
+
+  async readPart(id: string, part: string): Promise<Uint8Array | null> {
+    return this.readKey(partKey(id, part))
+  }
+
+  private async readKey(key: string): Promise<Uint8Array | null> {
     const db = await openDatabase()
     try {
       const tx = db.transaction(SAVES_STORE, 'readonly')
-      const value = await promisify(tx.objectStore(SAVES_STORE).get(id))
+      const value = await promisify(tx.objectStore(SAVES_STORE).get(key))
       if (!value) return null
       return value instanceof Uint8Array ? value : new Uint8Array(value as ArrayBuffer)
     } finally {
@@ -160,11 +199,17 @@ class IndexedDbAdapter implements StorageAdapter {
     }
   }
 
-  async write(id: string, data: Uint8Array, meta: SaveSlotMeta): Promise<void> {
+  async write(id: string, payload: SavePayload, meta: SaveSlotMeta): Promise<void> {
     const db = await openDatabase()
     try {
+      // One transaction for the game and every part of it. A slot that was
+      // half written would pair one career with another's history.
       const tx = db.transaction([SAVES_STORE, META_STORE], 'readwrite')
-      tx.objectStore(SAVES_STORE).put(data, id)
+      const saves = tx.objectStore(SAVES_STORE)
+      saves.put(payload.main, id)
+      for (const [part, bytes] of Object.entries(payload.parts ?? {})) {
+        saves.put(bytes, partKey(id, part))
+      }
       tx.objectStore(META_STORE).put(meta, id)
       await new Promise<void>((resolve, reject) => {
         tx.oncomplete = () => resolve()
@@ -180,7 +225,11 @@ class IndexedDbAdapter implements StorageAdapter {
     const db = await openDatabase()
     try {
       const tx = db.transaction([SAVES_STORE, META_STORE], 'readwrite')
-      tx.objectStore(SAVES_STORE).delete(id)
+      const saves = tx.objectStore(SAVES_STORE)
+      saves.delete(id)
+      // Every part of it too, found by prefix — a part left behind would be
+      // read back by the next save that happened to take the same slot id.
+      saves.delete(IDBKeyRange.bound(partKey(id, ''), partKey(id, '\uffff')))
       tx.objectStore(META_STORE).delete(id)
       await new Promise<void>((resolve, reject) => {
         tx.oncomplete = () => resolve()
@@ -249,11 +298,28 @@ class LocalStorageAdapter implements StorageAdapter {
     return base64ToBytes(raw)
   }
 
-  async write(id: string, data: Uint8Array, meta: SaveSlotMeta): Promise<void> {
+  async readPart(id: string, part: string): Promise<Uint8Array | null> {
+    const raw = localStorage.getItem(this.prefix + partKey(id, part))
+    if (!raw) return null
+    return base64ToBytes(raw)
+  }
+
+  async write(id: string, payload: SavePayload, meta: SaveSlotMeta): Promise<void> {
+    // localStorage has no transaction, so the parts go down first and the game
+    // last. A failure part-way leaves the previous save readable with a newer
+    // history beside it, which is survivable; the other order would leave a
+    // game pointing at history that was never written.
+    const written: string[] = []
     try {
-      localStorage.setItem(this.prefix + id, bytesToBase64(data))
+      for (const [part, bytes] of Object.entries(payload.parts ?? {})) {
+        const key = this.prefix + partKey(id, part)
+        localStorage.setItem(key, bytesToBase64(bytes))
+        written.push(key)
+      }
+      localStorage.setItem(this.prefix + id, bytesToBase64(payload.main))
       localStorage.setItem(this.metaPrefix + id, JSON.stringify(meta))
     } catch (error) {
+      for (const key of written) localStorage.removeItem(key)
       throw new Error(
         'Not enough browser storage to save. Delete an old save and try again.',
         { cause: error },
@@ -264,6 +330,10 @@ class LocalStorageAdapter implements StorageAdapter {
   async remove(id: string): Promise<void> {
     localStorage.removeItem(this.prefix + id)
     localStorage.removeItem(this.metaPrefix + id)
+    const partPrefix = this.prefix + partKey(id, '')
+    for (const key of Object.keys(localStorage)) {
+      if (key.startsWith(partPrefix)) localStorage.removeItem(key)
+    }
   }
 
   async quota(): Promise<{ used: number; available: number } | null> {
@@ -292,12 +362,21 @@ export class MemoryAdapter implements StorageAdapter {
   async read(id: string): Promise<Uint8Array | null> {
     return this.saves.get(id) ?? null
   }
-  async write(id: string, data: Uint8Array, meta: SaveSlotMeta): Promise<void> {
-    this.saves.set(id, data)
+  async readPart(id: string, part: string): Promise<Uint8Array | null> {
+    return this.saves.get(partKey(id, part)) ?? null
+  }
+  async write(id: string, payload: SavePayload, meta: SaveSlotMeta): Promise<void> {
+    this.saves.set(id, payload.main)
+    for (const [part, bytes] of Object.entries(payload.parts ?? {})) {
+      this.saves.set(partKey(id, part), bytes)
+    }
     this.metas.set(id, meta)
   }
   async remove(id: string): Promise<void> {
     this.saves.delete(id)
+    for (const key of [...this.saves.keys()]) {
+      if (key.startsWith(partKey(id, ''))) this.saves.delete(key)
+    }
     this.metas.delete(id)
   }
   async quota(): Promise<{ used: number; available: number } | null> {

@@ -1,11 +1,18 @@
-import { compress as compressInline, decompress as decompressInline } from './adapter'
+import { decompress as decompressInline } from './adapter'
 
 /**
- * Client for the compression worker, with a synchronous fallback.
+ * Client for the decompression worker, with a synchronous fallback.
  *
  * Workers are unavailable in a few real situations — headless Node tests, a
  * strict CSP, an older WebView — so every call falls back to doing the work
- * inline rather than failing. The game must always be able to save.
+ * inline rather than failing. The game must always be able to load.
+ *
+ * It used to compress here too. That path took a string, encoded it and copied
+ * the bytes again to transfer them, which is three large allocations to avoid
+ * blocking on a `CompressionStream` that does not block anyway. Saving now
+ * streams straight into one — see `compressValue` — so only the reading half
+ * still has a reason to be here. The worker's compress branch stays for the
+ * message shape; nothing sends it.
  */
 
 type PendingResolve = (data: Uint8Array) => void
@@ -66,17 +73,6 @@ function run(op: 'compress' | 'decompress', bytes: Uint8Array): Promise<Uint8Arr
   })
   active.postMessage({ id, op, data: copy.buffer }, [copy.buffer])
   return promise
-}
-
-export async function compressAsync(text: string): Promise<Uint8Array> {
-  const bytes = new TextEncoder().encode(text)
-  const viaWorker = run('compress', bytes)
-  if (!viaWorker) return compressInline(text)
-  try {
-    return await viaWorker
-  } catch {
-    return compressInline(text)
-  }
 }
 
 export async function decompressAsync(data: Uint8Array): Promise<string> {

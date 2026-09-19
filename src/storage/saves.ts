@@ -1,11 +1,16 @@
-import { SAVE_VERSION, type GameState, type PlayerCareerRecord, type PlayerTrait } from '../engine/types'
+import {
+  SAVE_VERSION, type GameState, type ID, type PlayerCareerRecord, type PlayerTrait,
+} from '../engine/types'
 import { autoRegister } from '../engine/systems/registration'
 import { createOwner, ownerName, startingOwnerKind } from '../engine/systems/ownership'
 import { Rng } from '../engine/rng'
 import { clearRatingCache } from '../engine/world/attributes'
 import { levelFor } from '../engine/systems/career'
 import { compressValue, createStorageAdapter, type SaveSlotMeta, type StorageAdapter } from './adapter'
-import { compressAsync, decompressAsync } from './compression'
+import { decompressAsync } from './compression'
+import {
+  HISTORY_PART, compressHistory, hasPendingHistory, mergeHistory, pendingHistory, readHistory,
+} from './careerHistory'
 import { RETIREMENT_AGE, STARTING_AGE } from '../engine/systems/directorCareer'
 import { playerClub } from '../engine/playerClub'
 import { IdFactory } from '../engine/ids'
@@ -70,6 +75,30 @@ export async function saveGame(
   name?: string,
 ): Promise<SaveSlotMeta> {
   state.savedAt = Date.now()
+
+  // Career history goes into its own part of the record, and only when there
+  // is something new to put there. `player.careerStats` holds what the season
+  // roll has appended and not yet persisted, which is nothing on most saves —
+  // so most saves write the game alone and leave the stored history alone.
+  const parts: Record<string, Uint8Array> = {}
+  const pending = hasPendingHistory(state)
+  let held: Map<ID, PlayerCareerRecord[]> | null = null
+  if (pending) {
+    const records = pendingHistory(state)
+    parts[HISTORY_PART] = await compressHistory(
+      mergeHistory(await readHistory(adapter, slotId), records),
+    )
+    // Taken off the players *before* the game is serialised, or the same
+    // records go into the main save as well — and come back on the next load
+    // looking pending again, to be appended a second time. Held so they can be
+    // put back if the write fails.
+    held = new Map()
+    for (const [id, list] of Object.entries(records)) {
+      held.set(id, list)
+      state.players[id].careerStats = []
+    }
+  }
+
   // Streamed rather than stringified. The old path built a 56MB string, encoded
   // a full copy of it, then copied it again to transfer to the compression
   // worker — three large allocations on the main thread, against a resting
@@ -95,7 +124,16 @@ export async function saveGame(
     },
   }
 
-  await adapter.write(slotId, data, meta)
+  try {
+    await adapter.write(slotId, { main: data, parts }, meta)
+  } catch (error) {
+    // Put them back. A failed save must leave the records pending so the next
+    // one picks them up, rather than dropping a season of everybody's career.
+    if (held) {
+      for (const [id, list] of held) state.players[id].careerStats = list
+    }
+    throw error
+  }
   return meta
 }
 
@@ -161,7 +199,7 @@ async function writeBackup(
   try {
     if (await adapter.read(id)) return // already kept from an earlier attempt
     const club = playerClub(state)
-    await adapter.write(id, data, {
+    await adapter.write(id, { main: data }, {
       id,
       name: `Before update to format ${SAVE_VERSION}`,
       savedAt: Date.now(),
@@ -548,9 +586,29 @@ function highestId(state: GameState): number {
  * download where the save itself is 5 MB, which is a rotten thing to hand
  * somebody over a phone connection to save a career that fits in a photo.
  */
-export async function exportSave(state: GameState): Promise<Blob> {
-  const packed = await compressAsync(JSON.stringify(state))
-  return new Blob([packed as BlobPart], { type: 'application/octet-stream' })
+/**
+ * A career as one self-contained file.
+ *
+ * History is stored in a part of the save record rather than on the players,
+ * so exporting the live state alone would hand somebody a file with every
+ * career blank — and they would not find out until they had moved phones and
+ * deleted the original. So it is read back out of `slotId` and put on the
+ * players for the file only; the live state is left as it is.
+ *
+ * The caller must have written `slotId` from this same game first, or the
+ * history belongs to somebody else's career.
+ */
+export async function exportSave(state: GameState, slotId: string): Promise<Blob> {
+  const history = mergeHistory(await readHistory(adapter, slotId), pendingHistory(state))
+
+  const players: GameState['players'] = {}
+  for (const [id, player] of Object.entries(state.players)) {
+    const records = history[id]
+    players[id] = records && records.length > 0 ? { ...player, careerStats: records } : player
+  }
+
+  const { data } = await compressValue({ ...state, players })
+  return new Blob([data as BlobPart], { type: 'application/octet-stream' })
 }
 
 export async function importSave(file: File): Promise<GameState> {
