@@ -35,15 +35,19 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Deploy to bunny.net
+      - name: Deploy to BunnyCDN
         uses: ayeressian/bunnycdn-storage-deploy@v2.4.6
         with:
-          source: dist
-          storageZoneName: ${{ secrets.BUNNY_STORAGE_ZONE }}
-          storagePassword: ${{ secrets.BUNNY_STORAGE_PASSWORD }}
-          accessKey: ${{ secrets.BUNNY_API_KEY }}
-          pullZoneId: ${{ secrets.BUNNY_PULL_ZONE_ID }}
+          source: "dist"
+          storageZoneName: "${{ secrets.BUNNY_STORAGE_ZONE }}"
+          storagePassword: "${{ secrets.BUNNY_STORAGE_PASSWORD }}"
+          accessKey: "${{ secrets.BUNNY_API_KEY }}"
+          pullZoneId: "${{ secrets.BUNNY_PULL_ZONE_ID }}"
           upload: "true"
+          remove: "false"
+          purgePullZone: "true"
+          purgePullZoneDelay: "5"
+          maxRetries: "5"
           # Deliberately NOT "true", which wipes the zone before uploading.
           #
           # Two reasons. It opens a window where the site is partly or wholly
