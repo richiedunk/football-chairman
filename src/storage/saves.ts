@@ -4,7 +4,7 @@ import { createOwner, ownerName, startingOwnerKind } from '../engine/systems/own
 import { Rng } from '../engine/rng'
 import { clearRatingCache } from '../engine/world/attributes'
 import { levelFor } from '../engine/systems/career'
-import { createStorageAdapter, type SaveSlotMeta, type StorageAdapter } from './adapter'
+import { compressValue, createStorageAdapter, type SaveSlotMeta, type StorageAdapter } from './adapter'
 import { compressAsync, decompressAsync } from './compression'
 import { RETIREMENT_AGE, STARTING_AGE } from '../engine/systems/directorCareer'
 import { playerClub } from '../engine/playerClub'
@@ -70,8 +70,11 @@ export async function saveGame(
   name?: string,
 ): Promise<SaveSlotMeta> {
   state.savedAt = Date.now()
-  const json = JSON.stringify(state)
-  const data = await compressAsync(json)
+  // Streamed rather than stringified. The old path built a 56MB string, encoded
+  // a full copy of it, then copied it again to transfer to the compression
+  // worker — three large allocations on the main thread, against a resting
+  // heap of 122MB. `compressValue` produces the same bytes a player at a time.
+  const { data, rawLength } = await compressValue(state)
 
   const club = playerClub(state)
   const league = club ? state.leagues[club.leagueId] : null
@@ -80,7 +83,7 @@ export async function saveGame(
     id: slotId,
     name: name ?? defaultSaveName(state),
     savedAt: state.savedAt,
-    size: json.length,
+    size: rawLength,
     summary: {
       directorName: state.director.name,
       clubName: club?.name ?? 'Unemployed',

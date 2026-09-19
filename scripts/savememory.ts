@@ -21,6 +21,7 @@
 import { prepareNewGame, startCareerAt } from '../src/engine/newGame'
 import { advanceWeek } from '../src/engine/tick'
 import { startingClubCandidates } from '../src/engine/systems/career'
+import { streamJson } from '../src/storage/streamJson'
 
 const SIZE = (process.env.SIZE ?? 'standard') as 'compact' | 'standard' | 'large'
 const SEASONS = Number(process.env.SEASONS ?? 12)
@@ -53,18 +54,36 @@ console.log(`  heap before anything exists   ${mb(baseline)}`)
 console.log(`  heap with a played career     ${mb(atRest)}`)
 console.log(`  the state graph costs roughly ${mb(atRest - baseline)}`)
 
-// Now the transient cost of writing one save, stage by stage. Held in
-// variables on purpose: the point is what coexists, not what each costs alone.
+// The old path, for comparison: build the whole string, then a byte copy of
+// it. Held in variables on purpose — the point is what coexists.
 const json = JSON.stringify(state)
 const afterString = heap()
 const bytes = new TextEncoder().encode(json)
 const afterEncode = heap()
 
-console.log(`\nwriting one save, on top of that`)
+console.log(`\nthe old way — stringify the lot`)
 console.log(`  after JSON.stringify          ${mb(afterString)}   (+${mb(afterString - atRest)} for a ${(json.length / 1e6).toFixed(0)}MB string)`)
 console.log(`  after TextEncoder.encode      ${mb(afterEncode)}   (+${mb(afterEncode - afterString)} for the byte copy)`)
 console.log(`  peak over resting state       +${mb(afterEncode - atRest)}`)
-console.log(`\n  a save briefly needs ${((afterEncode - baseline) / Math.max(1, atRest - baseline)).toFixed(1)}x the memory the game sits at.`)
+console.log(`  a save briefly needs ${((afterEncode - baseline) / Math.max(1, atRest - baseline)).toFixed(1)}x the memory the game sits at.`)
 
 // Keep them alive to here so nothing is collected mid-measurement.
 if (json.length === 0 || bytes.length === 0) console.log('unreachable')
+
+// The streaming path. Same output, one piece at a time — so the peak should be
+// the largest single chunk rather than the whole save.
+settle()
+const beforeStream = heap()
+let peak = beforeStream
+let produced = 0
+for (const chunk of streamJson(state)) {
+  produced += chunk.length
+  const now = heap()
+  if (now > peak) peak = now
+}
+settle()
+
+console.log(`\nthe new way — stream it in pieces`)
+console.log(`  heap before                   ${mb(beforeStream)}`)
+console.log(`  peak while streaming ${(produced / 1e6).toFixed(0)}MB    ${mb(peak)}   (+${mb(peak - beforeStream)})`)
+console.log(`  against the old peak of       +${mb(afterEncode - atRest)}`)

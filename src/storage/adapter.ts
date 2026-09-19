@@ -12,6 +12,8 @@
  * `StorageAdapter`, not a change to any game system.
  */
 
+import { jsonByteStream } from './streamJson'
+
 export interface SaveSlotMeta {
   id: string
   name: string
@@ -56,6 +58,34 @@ export async function compress(text: string): Promise<Uint8Array> {
   const stream = new Blob([bytes as BlobPart]).stream().pipeThrough(new CompressionStream('gzip'))
   const buffer = await new Response(stream).arrayBuffer()
   return new Uint8Array(buffer)
+}
+
+/**
+ * Compress a value without ever serialising it whole.
+ *
+ * The same bytes as `compress(JSON.stringify(value))` and a fraction of the
+ * memory: the JSON is produced in pieces and consumed by compression as it
+ * goes, so the largest thing alive at once is a player rather than the entire
+ * save. See `streamJson` for why that matters and what guarantees the output
+ * is identical.
+ *
+ * Falls back to the string path where there is no `CompressionStream`, which
+ * is the same platform that gets no compression at all — building the string
+ * there is not a regression, it is what already happened.
+ */
+export async function compressValue(
+  value: unknown,
+): Promise<{ data: Uint8Array; rawLength: number }> {
+  if (!hasCompressionStream) {
+    const json = JSON.stringify(value)
+    return { data: await compress(json), rawLength: json.length }
+  }
+
+  let rawLength = 0
+  const source = jsonByteStream(value, (n) => { rawLength = n })
+  const stream = source.pipeThrough(new CompressionStream('gzip'))
+  const buffer = await new Response(stream).arrayBuffer()
+  return { data: new Uint8Array(buffer), rawLength }
 }
 
 export async function decompress(data: Uint8Array): Promise<string> {
