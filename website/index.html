@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Undisclosed Football — coming soon</title>
+    <meta
+      name="description"
+      content="A football management game where you are the director of football, not the manager. You never see a player's true attributes — only a range that narrows as your scouts work. Coming soon to browser, iOS and Android."
+    />
+    <meta name="theme-color" content="#08090B" />
+    <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg" />
+    <link rel="apple-touch-icon" href="./assets/apple-touch-icon.png" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Undisclosed Football" />
+    <meta
+      property="og:description"
+      content="Run recruitment, contracts, the academy and the wage bill. Someone else picks the team. Coming soon."
+    />
+    <meta property="og:image" content="./assets/logo.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <!-- Fonts are progressive enhancement: the stack below falls back to the
+         system faces, so the page reads correctly if Google Fonts is blocked
+         or slow. Nothing else on the page is fetched from a third party. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;600&display=swap"
+    />
+
+    <style>
+      /* The game's own palette: near-black, one lime accent, mono for
+         anything that reads as a label or a number. */
+      :root {
+        --ink: #08090b;
+        --ink-raised: #101215;
+        --line: #23262b;
+        --text: #f2f4f6;
+        --muted: #9aa1ab;
+        --accent: #c8ff4d;
+        --sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+        --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      }
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        padding: 0 16px;
+        background: var(--ink);
+        color: var(--text);
+        font-family: var(--sans);
+        font-size: 17px;
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      /* A single lime wash behind the badge, so the top of the page has depth
+         without an image to download. */
+      body::before {
+        content: "";
+        position: fixed;
+        inset: -30vh 0 auto 0;
+        height: 80vh;
+        background: radial-gradient(
+          ellipse 60% 50% at 50% 50%,
+          rgba(200, 255, 77, 0.09),
+          transparent 70%
+        );
+        pointer-events: none;
+        z-index: -1;
+      }
+
+      .page {
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 72px 0 96px;
+      }
+
+      /* Hero */
+
+      .hero {
+        text-align: center;
+      }
+
+      /* The logo is supplied on its own near-black plate rather than on
+         transparency; `lighten` drops that plate into the page background
+         instead of leaving a visible rectangle around the badge. */
+      .hero img {
+        width: min(320px, 78%);
+        height: auto;
+        display: block;
+        margin: 0 auto;
+        mix-blend-mode: lighten;
+      }
+
+      .status {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 28px;
+        padding: 6px 14px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: var(--ink-raised);
+        font-family: var(--mono);
+        font-size: 12px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--accent);
+      }
+
+      .status .dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--accent);
+        box-shadow: 0 0 0 4px rgba(200, 255, 77, 0.15);
+      }
+
+      .tagline {
+        margin: 24px auto 0;
+        max-width: 34ch;
+        font-size: clamp(26px, 6vw, 34px);
+        font-weight: 800;
+        line-height: 1.25;
+        letter-spacing: -0.02em;
+      }
+
+      .tagline em {
+        font-style: normal;
+        color: var(--accent);
+      }
+
+      .lede {
+        margin: 20px auto 0;
+        max-width: 56ch;
+        color: var(--muted);
+      }
+
+      .note {
+        margin: 20px 0 0;
+        max-width: 56ch;
+        color: var(--muted);
+      }
+
+      /* Overview */
+
+      .rule {
+        height: 1px;
+        margin: 56px 0;
+        border: 0;
+        background: var(--line);
+      }
+
+      h2 {
+        margin: 0 0 20px;
+        font-family: var(--mono);
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+
+      .points {
+        display: grid;
+        gap: 2px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        overflow: hidden;
+        background: var(--line);
+      }
+
+      .points li {
+        padding: 20px 22px;
+        background: var(--ink-raised);
+      }
+
+      .points h3 {
+        margin: 0 0 6px;
+        font-size: 17px;
+        font-weight: 600;
+      }
+
+      .points p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 15.5px;
+      }
+
+      /* Platforms */
+
+      .platforms {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .platforms li {
+        padding: 8px 14px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--ink-raised);
+        font-family: var(--mono);
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      /* Footer */
+
+      footer {
+        margin-top: 64px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        color: var(--muted);
+        font-family: var(--mono);
+        font-size: 12px;
+      }
+
+      footer img {
+        width: 28px;
+        height: auto;
+        opacity: 0.8;
+      }
+
+      @media (max-width: 560px) {
+        .page {
+          padding: 48px 0 64px;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <main class="page">
+      <header class="hero">
+        <img src="./assets/logo.png" alt="Undisclosed Football" />
+
+        <p class="status"><span class="dot" aria-hidden="true"></span>In development</p>
+
+        <h1 class="tagline">You are the director of football, <em>not the manager</em>.</h1>
+
+        <p class="lede">
+          Run recruitment, contracts, the academy, facilities, the wage bill and the press.
+          Someone else picks the team — and if he doesn't rate your signing, your signing
+          doesn't play.
+        </p>
+      </header>
+
+      <hr class="rule" />
+
+      <section aria-labelledby="overview">
+        <h2 id="overview">The idea</h2>
+        <ul class="points">
+          <li>
+            <h3>Every signing is made on incomplete information</h3>
+            <p>
+              You never see a player's true attributes, only a range that narrows as your
+              scouts spend time on him. The name is the phrase every transfer announcement
+              ends on — <em>for an undisclosed fee</em> — and it is also the central mechanic.
+            </p>
+          </li>
+          <li>
+            <h3>The head coach has his own opinions</h3>
+            <p>
+              He has a formation, a style, a view on youth, and a relationship with you. He
+              picks the team. Buy a player who doesn't fit what he wants and you own an
+              expensive bench-warmer whose value is falling.
+            </p>
+          </li>
+          <li>
+            <h3>A transfer is three parties who want different things</h3>
+            <p>
+              The selling club wants money, the player wants status and minutes, the agent
+              wants his cut and will blow up a deal over it. Deals resolve over weeks, so a
+              window is a planning problem rather than a shopping trip.
+            </p>
+          </li>
+          <li>
+            <h3>The press is a system you can play</h3>
+            <p>
+              Leak genuine interest in a rival's unsettled striker to depress his price, or
+              fabricate it more cheaply and risk exposure. Credibility decides whether
+              journalists run you at all; goodwill decides how they cover you when it goes wrong.
+            </p>
+          </li>
+          <li>
+            <h3>You start unproven, and the board is always watching</h3>
+            <p>
+              Only clubs nobody else wants will interview you, so the opening choice is which
+              mess to inherit. From there the board judges you on results against their
+              expectation, on the books, and on whether you did what they asked.
+            </p>
+          </li>
+        </ul>
+      </section>
+
+      <hr class="rule" />
+
+      <section aria-labelledby="platforms">
+        <h2 id="platforms">Coming to</h2>
+        <ul class="platforms">
+          <li>Browser</li>
+          <li>iOS</li>
+          <li>Android</li>
+        </ul>
+        <p class="note">
+          Portrait-first, saves held on your own device, no account to create. A date will be
+          announced here.
+        </p>
+      </section>
+
+      <footer>
+        <img src="./assets/badge.svg" alt="" />
+        <span>Undisclosed Football — an independent game in development</span>
+      </footer>
+    </main>
+  </body>
+</html>
