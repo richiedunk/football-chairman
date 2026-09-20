@@ -31,7 +31,7 @@
     <!-- The bar. Solid, level, and slightly wider than the head, the way a
          redaction is made by somebody who does not care how it looks. -->
     <rect x="228" y="164" width="184" height="36" fill="#08090B"/>
-    <rect x="228" y="164" width="184" height="36" fill="none" stroke="#C8FF4D" stroke-width="3"/>
+    <rect x="228" y="164" width="184" height="36" fill="none" stroke="#C8FF4D" stroke-width="9"/>
   </g>
   <path d="M320 12 L622 118 L612 300 C592 396 468 480 320 556 C172 480 48 396 28 300 L18 118 Z" fill="none" stroke="url(#lime)" stroke-width="25" stroke-linejoin="round"/>
 </svg>
