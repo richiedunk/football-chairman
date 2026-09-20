@@ -6,6 +6,7 @@ import { readCareerRecord } from '../../engine/systems/careerRecord'
 import { isAwayOnDuty } from '../../engine/systems/international'
 import PosBadge from '../components/PosBadge.vue'
 import MeterBar from '../components/MeterBar.vue'
+import Dossier from '../components/Dossier.vue'
 import AppSheet from '../components/AppSheet.vue'
 import { formatMoney, formatWage } from '../../engine/systems/valuation'
 import { ATTRIBUTE_GROUPS, ATTRIBUTE_LABELS } from '../../engine/world/attributes'
@@ -501,29 +502,9 @@ const internationalLine = computed(() => {
         </span>
       </div>
       <div class="card__body">
-        <template v-if="report">
-          <p class="small">{{ report.verdict }}</p>
-          <div v-if="report.stale" class="chip chip--warn mb">Report is out of date</div>
-          <div class="row row--between small">
-            <span class="muted">Estimated fee</span>
-            <span class="num">
-              {{ formatMoney(report.estimatedFee[0], store.currency) }}–{{ formatMoney(report.estimatedFee[1], store.currency) }}
-            </span>
-          </div>
-          <div class="row row--between small">
-            <span class="muted">Estimated wage</span>
-            <span class="num">
-              {{ formatWage(report.estimatedWage[0], store.currency) }}–{{ formatWage(report.estimatedWage[1], store.currency) }}/wk
-            </span>
-          </div>
-          <div class="mt">
-            <div class="row row--between" style="margin-bottom: 4px">
-              <span class="small muted">Recommendation</span>
-              <span class="small num">{{ report.recommendation }}/100</span>
-            </div>
-            <MeterBar :value="report.recommendation" />
-          </div>
-        </template>
+        <!-- A scout files, he does not chat. The document register: authored,
+             dated, numbered, and not repliable. -->
+        <Dossier v-if="report" :report="report" />
         <p v-else class="small muted">
           Your scouts have not watched this player. Send one to build a picture before committing money.
         </p>

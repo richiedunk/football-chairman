@@ -3,7 +3,7 @@ import { generateWorld } from '../src/engine/world/worldGen'
 import { Rng } from '../src/engine/rng'
 import { IdFactory } from '../src/engine/ids'
 import { executeTransfer, moveAppeal } from '../src/engine/systems/transfers'
-import { buildReport, starsForLeague } from '../src/engine/systems/scouting'
+import { assignScout, buildReport, processScouting, starsForLeague } from '../src/engine/systems/scouting'
 import { evaluateRenewal, suggestRenewal } from '../src/engine/systems/contracts'
 import { awardXp, CAREER_LEVELS, canTakeJobAt, levelFor, levelProgress } from '../src/engine/systems/career'
 import {
@@ -2106,5 +2106,83 @@ describe('debt that cannot be repaid', () => {
     // It may be paid down, but it must never be written off.
     expect(club.finances.debt).toBeGreaterThan(tolerated * 0.5)
     expect(club.finances.debt).toBeLessThanOrEqual(before * 1.6)
+  })
+})
+
+/**
+ * A scout report is a document that gets revised.
+ *
+ * A report is replaced wholesale every time a scout files again, so before
+ * this the only thing a reader could see was the current range — and a range
+ * on its own says nothing about how it was arrived at. Knowledge is bought
+ * with weeks of a scout's time, and a revision that has narrowed is the only
+ * place the game can show it was.
+ */
+describe('scout report revisions', () => {
+  function watchedPlayer() {
+    const state = freshWorld('REVISION')
+    const club = state.clubs[state.playerClubId!]
+    // The club's own scout. `processScouting` walks `club.staff`, so a scout
+    // found anywhere in the world is one this club never sends out.
+    const scout = club.staff
+      .map((id) => state.staff[id])
+      .find((member) => member?.role === 'scout')!
+    const target = Object.values(state.players).find(
+      (p) => p.clubId && p.clubId !== club.id && !p.isAcademy,
+    )!
+    assignScout(scout, { type: 'player', targetId: target.id, minAbility: 0, maxAge: 40 })
+    return { state, club, scout, target }
+  }
+
+  it('numbers each filing, starting at one', () => {
+    const { state, club, target } = watchedPlayer()
+
+    processScouting(state, club, { rng: new Rng('wk1'), week: 1, season: 2025 })
+    expect(state.scoutReports[target.id]?.revision).toBe(1)
+
+    processScouting(state, club, { rng: new Rng('wk2'), week: 2, season: 2025 })
+    processScouting(state, club, { rng: new Rng('wk3'), week: 3, season: 2025 })
+    expect(state.scoutReports[target.id]?.revision).toBe(3)
+  })
+
+  it('has no predecessor on a first look', () => {
+    const { state, club, target } = watchedPlayer()
+    processScouting(state, club, { rng: new Rng('first'), week: 1, season: 2025 })
+    expect(state.scoutReports[target.id]?.previousAbilityRange).toBeNull()
+  })
+
+  it('carries the previous reading across a filing', () => {
+    // The whole point: the report is replaced, so the continuity has to be
+    // copied over deliberately or the comparison is gone.
+    const { state, club, target } = watchedPlayer()
+
+    processScouting(state, club, { rng: new Rng('wk1'), week: 1, season: 2025 })
+    const first = state.scoutReports[target.id]!.abilityRange
+
+    processScouting(state, club, { rng: new Rng('wk2'), week: 2, season: 2025 })
+    expect(state.scoutReports[target.id]!.previousAbilityRange).toEqual(first)
+  })
+
+  it('narrows the range it reports as the weeks go in', () => {
+    // The claim the revision number is there to make visible. Asserted over
+    // several weeks rather than one, because a single week's gain is small
+    // enough to be lost in the scout's own stable bias.
+    const { state, club, target } = watchedPlayer()
+
+    processScouting(state, club, { rng: new Rng('w1'), week: 1, season: 2025 })
+    const opening = state.scoutReports[target.id]!.abilityRange
+    const openingWidth = opening[1] - opening[0]
+
+    for (let week = 2; week <= 14; week++) {
+      processScouting(state, club, { rng: new Rng(`w${week}`), week, season: 2025 })
+    }
+    const settled = state.scoutReports[target.id]!
+    const settledWidth = settled.abilityRange[1] - settled.abilityRange[0]
+
+    expect(settledWidth).toBeLessThan(openingWidth)
+    expect(settled.revision).toBeGreaterThan(1)
+    // And it never becomes certainty, which would remove the risk that makes
+    // a signing a decision.
+    expect(settledWidth).toBeGreaterThan(0)
   })
 })

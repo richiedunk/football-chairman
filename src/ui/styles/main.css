@@ -1199,6 +1199,246 @@ button, input, select, textarea {
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* Wider screens: centre the phone-shaped column rather than stretching it. */
+/* ---------------------------------------------------------------------------
+   Conversations
+
+   Four elements and no more: what they said, what you said, the week rule, and
+   the composer. The settled visual language is "nothing is boxed", and the
+   fault it was fixing was sections boxed against sections — six bordered panels
+   on one screen with nothing louder than anything else. A thread has no
+   competing sections: one column, one conversation, in time order. So their
+   messages are not boxed at all, and the single bubble on the screen is the one
+   thing you said, in the one accent, which is how the accent is already used
+   everywhere else.
+   --------------------------------------------------------------------------- */
+
+.thread {
+  padding: 4px 0 8px;
+}
+
+/* A week rule, not a date. The calendar is an engine detail; the gaps in a
+   conversation are where the football happened. */
+.thread__break {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 18px 0 12px;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--text-fainter);
+}
+.thread__break::before,
+.thread__break::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--hairline);
+}
+
+/* Theirs. Flush to the gutter with a hairline above, which is denser than a
+   bubble and unmistakably not you. */
+.thread__said {
+  padding: 12px 0 14px;
+  border-top: 1px solid var(--hairline);
+}
+.thread__who {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin-bottom: 5px;
+}
+.thread__body {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text);
+  white-space: pre-line;
+}
+
+/* Yours. The one saturated accent, used once, for the thing you did. */
+.thread__mine {
+  margin: 10px 0 14px auto;
+  max-width: 82%;
+  padding: 10px 13px;
+  border-radius: var(--radius) var(--radius) 3px var(--radius);
+  background: var(--accent-wash);
+  border: 1px solid rgba(200, 255, 77, 0.22);
+}
+.thread__mine .thread__body {
+  color: var(--accent);
+}
+
+/* The question, held under the message that asked it, so a thread scrolled
+   back through still shows which message is the one waiting. */
+.thread__asking {
+  margin-top: 10px;
+  padding-left: 10px;
+  border-left: 2px solid var(--warn);
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--warn);
+}
+
+/* An attachment rather than a button: it belongs to the message above it. */
+.thread__attach {
+  margin-top: 10px;
+  min-height: 36px;
+  padding: 0 12px;
+  background: var(--bg-raised);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--text-dim);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.thread__attach:active {
+  background: var(--bg-raised-2);
+}
+
+/* The line under a thread's name in the list: what was said, not what it was
+   filed as. */
+.thread__preview {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+  margin: 2px 0 3px;
+}
+
+/* The composer. Sticky rather than fixed: the advance bar and the tab bar own
+   the bottom of the shell, and a second fixed layer would sit on top of them. */
+.composer {
+  position: sticky;
+  bottom: 0;
+  padding: 10px 0 4px;
+  background: linear-gradient(to top, var(--bg) 62%, transparent);
+}
+.composer__open {
+  gap: 8px;
+}
+.composer__urgent {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  opacity: 0.8;
+}
+.composer__sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background: var(--bg-raised);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+/* One option per row, label and consequence both. The hint is the information
+   the decision is made on: a row of four bare labels is a prettier screen that
+   asks the reader to choose blind. */
+.composer__option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  width: 100%;
+  min-height: var(--tap);
+  padding: 10px 12px;
+  text-align: left;
+  background: var(--bg-raised-2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+.composer__option:active {
+  border-color: var(--accent-dim);
+}
+.composer__option:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.composer__label {
+  font-size: 13px;
+  font-weight: 600;
+}
+.composer__hint {
+  font-size: 10.5px;
+  line-height: 1.4;
+  color: var(--text-faint);
+  white-space: normal;
+}
+
+/* ---------------------------------------------------------------------------
+   Documents
+
+   The second register: a department reporting to you. A document is authored,
+   dated, numbered and cannot be argued with, and that is what has to be
+   visible — not a typeface. The design system has Inter and JetBrains Mono and
+   nothing else, so the idiom is structural: a letterhead with a rule under it,
+   a filing stamp in mono, the verdict as prose, and the reading set apart from
+   the prose that justifies it.
+   --------------------------------------------------------------------------- */
+
+.dossier__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 7px;
+  border-bottom: 1px solid var(--border-strong);
+}
+.dossier__author {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+.dossier__filed {
+  font-size: 10px;
+  letter-spacing: 0.07em;
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+
+/* The filing stamp. A document knows which revision of itself it is. */
+.dossier__stamp {
+  margin-top: 7px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.dossier__superseded {
+  color: var(--warn);
+}
+
+.dossier__verdict {
+  margin: 10px 0 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text);
+}
+
+/* The reading, set apart from the prose that justifies it. */
+.dossier__reading {
+  padding: 9px 0;
+  border-top: 1px solid var(--hairline);
+  border-bottom: 1px solid var(--hairline);
+  margin-bottom: 10px;
+}
+/* The line the revision number exists for: what weeks of a scout's time
+   bought. Accent, because it is the one thing on the document that is news. */
+.dossier__change {
+  margin-top: 5px;
+  font-size: 10px;
+  letter-spacing: 0.07em;
+  color: var(--accent-dim);
+}
+
 @media (min-width: 620px) {
   body { background: #030405; }
   #app {

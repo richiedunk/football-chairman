@@ -555,6 +555,19 @@ function migrate(state: GameState): GameState {
     state.version = 19
   }
 
+  // v20: a scout report says which revision it is and what the previous one
+  // reported, so a narrowing range can be shown as the thing it is — weeks of
+  // a scout's time, bought. An existing report is whatever has been filed so
+  // far, which is at least one look, and has no recorded predecessor.
+  if (state.version < 20) {
+    for (const report of Object.values(state.scoutReports ?? {})) {
+      if (!report) continue
+      if (typeof report.revision !== 'number') report.revision = 1
+      if (report.previousAbilityRange === undefined) report.previousAbilityRange = null
+    }
+    state.version = 20
+  }
+
   state.version = SAVE_VERSION
   return state
 }
@@ -646,10 +659,10 @@ export async function importSave(file: File): Promise<GameState> {
   try {
     state = JSON.parse(text) as GameState
   } catch {
-    throw new Error('That file is not a Director of Football career.')
+    throw new Error('That file is not an Undisclosed Football career.')
   }
   if (typeof state.version !== 'number' || !state.players) {
-    throw new Error('That file is not a Director of Football career.')
+    throw new Error('That file is not an Undisclosed Football career.')
   }
   clearRatingCache()
   const migrated = migrate(state)

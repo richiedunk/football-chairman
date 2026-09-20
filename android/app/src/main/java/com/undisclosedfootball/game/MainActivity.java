@@ -1,4 +1,4 @@
-package com.directoroffootball.game;
+package com.undisclosedfootball.game;
 
 import com.getcapacitor.BridgeActivity;
 

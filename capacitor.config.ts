@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli'
 
 const config: CapacitorConfig = {
-  appId: 'com.directoroffootball.game',
-  appName: 'Director of Football',
+  appId: 'com.undisclosedfootball.game',
+  appName: 'Undisclosed Football',
   webDir: 'dist',
   ios: {
     contentInset: 'always',

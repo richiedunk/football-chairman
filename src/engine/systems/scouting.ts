@@ -157,6 +157,11 @@ function advanceKnowledge(
   const knowledge = clamp(previousKnowledge + gain * scoutFactor * dataFactor, 0, FULL_KNOWLEDGE)
 
   const report = buildReport(state, club, scout, player, knowledge, ctx, dataLevel)
+  // A report is replaced wholesale, so the continuity has to be carried across
+  // deliberately. `buildReport` stays a pure function of knowledge and knows
+  // nothing about what came before it; this is the only place that does.
+  report.revision = (existing?.revision ?? 0) + 1
+  report.previousAbilityRange = existing ? existing.abilityRange : null
   state.scoutReports[player.id] = report
   return report
 }
@@ -259,6 +264,11 @@ export function buildReport(
     weekFiled: ctx.week,
     seasonFiled: ctx.season,
     stale: false,
+    // A first look, unless the caller knows better. Only `advanceKnowledge`
+    // does: this function is a pure function of knowledge and is called
+    // directly by tests that have no previous report to carry forward.
+    revision: 1,
+    previousAbilityRange: null,
   }
 }
 

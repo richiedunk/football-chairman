@@ -136,6 +136,19 @@ export async function decompress(data: Uint8Array): Promise<string> {
 // IndexedDB — the primary store in a browser and in a Capacitor WebView
 // ---------------------------------------------------------------------------
 
+/*
+ * Deliberately still the old name, and it must stay that way.
+ *
+ * This is not a label, it is where the saves are. IndexedDB keys a database by
+ * its name, so renaming this does not move anything — it opens a second, empty
+ * database and leaves every existing career in the first one, where nothing
+ * will ever look for it again. A player would see an empty save list and
+ * conclude the update ate their thirty-season career.
+ *
+ * The same goes for the `dof:` key prefixes in the localStorage fallback
+ * below. Renaming either is a migration, not a rename, and nothing about the
+ * game being called something else now requires one.
+ */
 const DB_NAME = 'director-of-football'
 const DB_VERSION = 1
 const SAVES_STORE = 'saves'
@@ -262,6 +275,8 @@ class IndexedDbAdapter implements StorageAdapter {
  */
 class LocalStorageAdapter implements StorageAdapter {
   readonly name = 'localStorage'
+  // Old prefixes, kept for the reason the database name is kept: they are
+  // where the saves are, not what the game is called.
   private prefix = 'dof:save:'
   private metaPrefix = 'dof:meta:'
 

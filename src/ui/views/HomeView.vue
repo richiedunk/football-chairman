@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useGameStore } from '../../stores/game'
+import { threadKey } from '../threads'
 import { ordinal } from '../../engine/systems/career'
 import { headerBand } from '../colour'
 import { confidenceLabel } from '../../engine/systems/board'
@@ -175,7 +176,10 @@ const waiting = computed(() => {
           : 'NEEDS AN ANSWER'
         : item.from.toUpperCase(),
       tone: item.urgent ? 'var(--danger)' : 'var(--warn)',
-      to: '/inbox',
+      // Into the conversation, not the list of them. The dashboard names one
+      // specific thing that is waiting, and landing on the list would ask the
+      // reader to find again the message they have just been shown.
+      to: `/inbox/${encodeURIComponent(threadKey(item.from))}`,
     })
   }
 

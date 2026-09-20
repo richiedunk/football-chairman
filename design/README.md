@@ -36,5 +36,5 @@
 
 `canvas.json` lays all nine out. To rebuild the canvas after editing an
 artboard, re-seed a fresh copy of the design payload from these files and
-republish it — the seeded `director-of-football-ui.html` is generated and
+republish it — the seeded `undisclosed-football-ui.html` is generated and
 is not committed.

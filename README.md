@@ -1,4 +1,4 @@
-# Director of Football
+# Undisclosed Football
 
 A football management game where you are the **director of football**, not the manager.
 You run recruitment, contracts, the academy, facilities, the wage bill and the press.
@@ -6,6 +6,11 @@ Someone else picks the team — and if he doesn't rate your signing, your signin
 
 Browser-based, portrait-first, saves locally. Ships to iOS and Android through Capacitor
 from the same codebase.
+
+The name is the phrase every transfer announcement ends on — *for an undisclosed fee* —
+and it is also the game's central mechanic. You never see a player's true attributes,
+only a range that narrows as your scouts spend time on him. Every signing is made on
+undisclosed information.
 
 ---
 
