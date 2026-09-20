@@ -186,6 +186,17 @@ function mb(bytes: number) {
           <span class="small">Haptic feedback</span>
           <input v-model="settings.hapticsEnabled" type="checkbox" @change="store.commit()" />
         </label>
+        <!-- Off unless asked for. A timer is the one kind of pressure the
+             game should not hand somebody who did not want it, and a save
+             made before this existed must behave as it always did. -->
+        <label class="row row--between" style="min-height: var(--tap)">
+          <span class="small">Deadline day runs to a clock</span>
+          <input v-model="settings.liveDeadline" type="checkbox" @change="store.commit()" />
+        </label>
+        <p class="tiny faint" style="margin: 0 0 4px">
+          The last day of the window plays out over six real minutes. Offers
+          expire while you read them. You can shut it early at any point.
+        </p>
         <div class="field mt">
           <label class="field__label">Currency</label>
           <select v-model="settings.currency" class="select" @change="store.commit()">

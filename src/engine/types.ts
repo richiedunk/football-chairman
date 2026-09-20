@@ -1710,6 +1710,15 @@ export interface GameSettings {
   /** Skip confirmation dialogs on routine actions. */
   fastAdvance: boolean
   hapticsEnabled: boolean
+  /**
+   * Run the last day of the window against a real clock.
+   *
+   * Optional and off by default, which is deliberate twice over: a save made
+   * before this existed reads as `undefined` and behaves exactly as it always
+   * did, and a timer is the one kind of pressure a player should have to ask
+   * for rather than be given. See `systems/deadlineClock.ts`.
+   */
+  liveDeadline?: boolean
 }
 
 export const SAVE_VERSION = 21
