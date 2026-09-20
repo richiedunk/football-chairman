@@ -1,88 +1,110 @@
-# Deploying
+# Releasing
 
-The game is a static site. That is the whole of it: no server, no database,
-no API keys in the client, no environment variables, and nothing to scale.
-`npm run build` produces `dist/`, about 1.3MB across seventy files, and any
-host that serves files can serve it.
+The game ships as an Android APK attached to a GitHub release. There is no web
+deploy: the browser build still exists and is what `npm run dev` and the
+end-to-end test drive, but it is not a target anybody installs from any more.
 
-Two things make that true and are worth not breaking:
+## Cutting a release
+
+```bash
+git tag v0.2.0
+git push origin v0.2.0
+```
+
+That is the whole process. `release.yml` picks the tag up, runs the unit tests,
+builds the web bundle, syncs it into the Android project, assembles the APK and
+creates the release with the APK attached.
+
+A tag rather than a push to main, because a release is a deliberate act with a
+number on it. Every green commit minting a release would make the tag list
+meaningless and the version number arbitrary.
+
+`workflow_dispatch` rebuilds without a tag for when something went wrong with
+the run rather than with the commit. It versions itself `0.0.0-dev.<run>` and
+publishes as a prerelease, so a rebuild cannot be mistaken for a real version.
+
+## What the version comes from
+
+| | Source | Why |
+| --- | --- | --- |
+| `versionName` | the tag, minus its `v` | What people see. `v0.2.0` → `0.2.0`. |
+| `versionCode` | the workflow run number | Must be an integer and must only ever increase. A date works until you release twice in a day; a semver is not an integer at all. |
+
+Both arrive as environment variables and `android/app/build.gradle` falls back
+to the template's `1.0` / `1` when they are absent, so opening the project in
+Android Studio still builds.
+
+One consequence of taking `versionCode` from the run number: renaming or
+recreating the workflow file restarts that counter, and a `versionCode` that
+goes backwards cannot be installed over what is already on the device. If the
+workflow is ever replaced rather than edited, the replacement needs an offset.
+
+**`src/version.ts` is not wired to any of this.** The about screen reads
+`APP_VERSION`, which is still maintained by hand, so it will disagree with the
+release the APK came from unless somebody bumps it in the same commit as the
+tag. Worth fixing — the about screen is where a bug report gets its version
+number from — but it is not fixed today.
+
+## The signing key, and what it costs
+
+`android/debug.keystore` is committed, and the APK is debug-signed with it.
+
+That is not an accident and it is not a secret. A debug keystore is normally
+created on demand in `~/.android`, which is fine on one machine and wrong on
+CI: a fresh runner has no such file, so every release would be signed with a
+different throwaway key, and Android refuses to install an APK over one signed
+by a different key. Every release would mean uninstall-and-reinstall, and
+uninstalling takes the player's saves with it. Pinning the key is what makes
+the releases a series rather than a set of unrelated apps.
+
+What it costs is real and worth stating plainly:
+
+- **Anybody can sign an APK with this key**, because the keystore and its
+  password are both in the repository. It identifies the build, it does not
+  authenticate it.
+- **Android will warn on install.** Expected for anything not coming from Play.
+- **Moving to a real key is a one-time break.** A release signed with a proper
+  upload key cannot install over a debug-signed one. Every existing install has
+  to be removed first, saves included. The longer debug-signed releases go on,
+  the more people that affects.
+
+When that move happens: generate a keystore, put it and its three passwords in
+repository secrets, add a `release` signing config that reads them, and switch
+the workflow to `assembleRelease`. Say loudly in the release notes that it is a
+clean install.
+
+## Google Play
+
+The APK here is for sideloading and Play does not accept it — Play wants an
+Android App Bundle. The Capacitor 8 upgrade cleared the technical bar (the
+store requires API 36 and the project now targets it), but a Play submission
+additionally needs `./gradlew bundleRelease`, a real upload key, and Play App
+Signing enabled. None of that is wired up, on purpose: it is a different
+distribution channel with a different key, not a flag on this workflow.
+
+The trademark question in the About screen's legal notice is unresolved and is
+a Play and App Store policy matter rather than a build one.
+
+## Two build settings worth not breaking
+
+Both exist so the same `dist/` works in a browser and inside the native shell,
+which is what keeps one artefact honest across targets:
 
 - **Hash routing** (`createWebHashHistory`). Every route lives after the `#`,
-  so the host never sees a path it has to rewrite. A history-mode router would
-  need a catch-all rewrite to `index.html` on every host, which is exactly the
-  kind of config that works in dev and 404s in production.
+  so nothing has to rewrite paths — including the `file://`-like origin the
+  Capacitor shell serves from.
 - **`base: './'`** in `vite.config.ts`. Asset paths are relative, so the build
-  works from the root of a domain, a subdirectory, or a `file://` URL inside a
-  Capacitor app shell — the same artefact for all three.
-
-## What runs, and when
-
-| Workflow | Trigger | What it does |
-|---|---|---|
-| `ci.yml` | every pull request and push to `main` | typecheck (both passes), knip, unit tests, build, end-to-end in Chromium |
-| `deploy.yml` | push to `main` | rebuilds, uploads to bunny.net edge storage, then purges the pull zone |
-
-The deploy rebuilds from the commit it is deploying rather than downloading
-CI's artefact, so it cannot ship something stale, and `npm run build`
-typechecks before it emits anything.
-
-## Bunny setup
-
-Deploying uses [`ayeressian/bunnycdn-storage-deploy`](https://github.com/ayeressian/bunnycdn-storage-deploy),
-pinned to a version rather than a floating tag — the step holds a key with
-write access to the whole storage zone, so it should not be able to change
-under us without a commit saying so.
-
-Create a **storage zone** and a **pull zone** in front of it, then add these
-repository secrets (Settings → Secrets and variables → Actions):
-
-| Secret | Where it comes from |
-|---|---|
-| `BUNNY_STORAGE_ZONE` | The storage zone's name. |
-| `BUNNY_STORAGE_PASSWORD` | Storage zone → FTP & API Access → Password. Read/write on that one zone. |
-| `BUNNY_API_KEY` | Account settings → API. Account-wide, and needed only for the cache purge. |
-| `BUNNY_PULL_ZONE_ID` | The pull zone's numeric id, from its URL in the dashboard. |
-
-The two credentials are deliberately different things: the storage password
-can write to one zone, the account API key can do anything to the account.
-
-If the storage zone's main region is not Falkenstein, add
-`storageEndpoint:` to the step — the regions are prefixed (`ny.`, `la.`,
-`uk.`, `sg.`, `syd.`) and it must match the zone.
-
-### Nothing is deleted
-
-`remove` is set to `"false"` on purpose. Setting it to `"true"` empties the
-storage zone before uploading, which opens a window where the site is partly
-or wholly missing on a deploy that is otherwise seamless.
-
-It would also throw away files that are still wanted. Every asset filename
-carries a content hash, so old ones are not litter: a player who loaded the
-page a minute before a deploy is still fetching chunks by their old names, and
-deleting them breaks that session mid-game. Once `index.html` is replaced
-nothing links to them, the whole build is 1.3MB, and storage is charged by the
-gigabyte.
-
-If they ever do need clearing out, it is a one-off by hand rather than
-something to do on every deploy.
-
-### Cache headers
-
-Set these on the pull zone, not here:
-
-- `index.html` — no cache, or a few seconds. It is the only file that changes
-  in place, and a cached one pins players to an old build.
-- `assets/*` — cache hard and far. The names are content-hashed, so a given
-  URL's contents can never change.
+  works from the root of a domain, a subdirectory, or the native shell without
+  rebuilding.
 
 ## Saves never leave the device
 
-Saves go to IndexedDB, with localStorage as a fallback, and Capacitor
-Preferences on native. They are gzipped through the platform's own
-`CompressionStream`. Nothing is uploaded anywhere, which is why there is no
-backend to run and no personal data to hold.
+Saves go to IndexedDB, with localStorage as a fallback and Capacitor
+Preferences on native, gzipped through the platform's own `CompressionStream`.
+Nothing is uploaded anywhere, which is why there is no backend to run and no
+personal data to hold — and why uninstalling the app destroys the career.
 
-Two things would need one, and both are deliberately stubbed rather than
+Two things would need a backend, and both are deliberately stubbed rather than
 half-built: cloud saves (`platform/services.ts` reports `signIn: false` until a
 real provider exists, and the settings screen renders nothing) and any
 LLM-backed feature, which cannot ship an API key to a client.

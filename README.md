@@ -69,6 +69,12 @@ Two consequences worth knowing before the first native build:
   beside `AppDelegate.swift` and a `UIApplicationSceneManifest` in `Info.plist`. Nothing
   in the game touches either.
 
+#### Releasing
+
+Pushing a `v*` tag builds an Android APK and publishes it as a GitHub release. There is
+no web deploy. `docs/deploy.md` covers the version numbering, the committed debug signing
+key and what swapping it for a real one will cost.
+
 ---
 
 ## How it plays
