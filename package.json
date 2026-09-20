@@ -15,7 +15,8 @@
     "cap:ios": "npm run cap:sync && cap open ios",
     "cap:android": "npm run cap:sync && cap open android",
     "mutation": "stryker run",
-    "mutation:quick": "stryker run --mutate src/ui/colour.ts,src/ui/playerName.ts,src/ui/link.ts,src/ui/advance.ts"
+    "mutation:quick": "stryker run --mutate src/ui/colour.ts,src/ui/playerName.ts,src/ui/link.ts,src/ui/advance.ts",
+    "icons": "node scripts/icons.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^6.2.0",
