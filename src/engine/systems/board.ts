@@ -6,6 +6,7 @@ import { auditSquadDepth } from '../sim/selection'
 import { ordinal } from './career'
 import { expectedWage } from '../world/staffGen'
 import { expectationLift, impatienceFactor } from './ownership'
+import { totalWageBill } from './valuation'
 import type {
   BoardMandate, Club, CompletedTransfer, CupCompetition, Fixture, GameState, ID, League,
   LeagueTableRow, Player, SquadRequest, Staff, StaffRole,
@@ -274,10 +275,14 @@ function mandateProgress(
   const league = state.leagues[club.leagueId]
   switch (mandate) {
     case 'reduceWageBill': {
-      const bill = club.squad.reduce((sum, id) => {
-        const p = state.players[id]
-        return sum + (p?.contract?.wage ?? 0)
-      }, 0)
+      // The same number the rest of the game uses. It used to add up the
+      // squad's raw contract wages here — no staff, and a player out on loan
+      // still counted at his full wage — so the obvious way to answer the
+      // mandate moved a figure the board was not looking at. Measured over
+      // eight seasons of a 678-club world (`scripts/mandatecheck.ts`): 490
+      // clubs had somebody out on loan, worth £3.17m a week off the real bill
+      // and nothing at all off this one.
+      const bill = totalWageBill(state, club)
       return clamp((club.finances.wageBudget - bill) / Math.max(1, club.finances.wageBudget), -1, 1)
     }
     case 'balanceBooks':
@@ -878,6 +883,20 @@ export function setSeasonExpectation(state: GameState, club: Club, league: Leagu
   }
 }
 
+/**
+ * The share of its allowance a club's wage bill has to pass before the board
+ * says something.
+ *
+ * Unchanged from when it was introduced, and worth revisiting rather than
+ * quietly retuning here. It was set against a sum that left staff out and
+ * counted loaned-out players at full wage, so it was being applied to a number
+ * roughly a tenth too small — which is why correcting the sum takes the
+ * mandate from 65 clubs to 303 without the threshold moving at all. Whether
+ * 95% is still the right line against an honest bill is a calibration
+ * question, not a bug, and it needs a decision rather than a guess.
+ */
+const WAGE_MANDATE_SHARE = 0.95
+
 /** Refresh mandates at the start of a season based on the club's situation. */
 export function setSeasonMandates(state: GameState, club: Club): void {
   const mandates: BoardMandate[] = []
@@ -885,8 +904,14 @@ export function setSeasonMandates(state: GameState, club: Club): void {
 
   if (club.finances.inCrisis || club.finances.debt > 0) mandates.push('balanceBooks')
 
-  const wageBill = club.squad.reduce((sum, id) => sum + (state.players[id]?.contract?.wage ?? 0), 0)
-  if (wageBill > club.finances.wageBudget * 0.95) mandates.push('reduceWageBill')
+  // Set on the same number it is scored on. These were two different sums: on
+  // the board's figure 65 clubs looked over their allowance, on the real one
+  // 303 were, and the two disagreed about 240 of 678 — a third of the world
+  // either told to fix a problem it did not have, or left alone with one it
+  // did.
+  if (totalWageBill(state, club) > club.finances.wageBudget * WAGE_MANDATE_SHARE) {
+    mandates.push('reduceWageBill')
+  }
 
   if (club.board.expectation.youthImportance > 60) mandates.push('developYouth')
   // An owner who does not believe in borrowing says so every season, not only
