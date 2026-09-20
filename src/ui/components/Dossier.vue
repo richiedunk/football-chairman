@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useGameStore } from '../../stores/game'
 import MeterBar from './MeterBar.vue'
+import AppDocument from './AppDocument.vue'
 import { formatMoney, formatWage } from '../../engine/systems/valuation'
 import type { ScoutReport } from '../../engine/types'
 
@@ -65,17 +66,14 @@ const range = computed(() => {
 </script>
 
 <template>
-  <div class="dossier">
-    <div class="dossier__head">
-      <div class="dossier__author">{{ author }}</div>
-      <div class="dossier__filed num">{{ filed }}</div>
-    </div>
-
-    <div class="dossier__stamp num">
-      {{ ordinal }} report
-      <span v-if="report.stale" class="dossier__superseded">· DUE A FRESH LOOK</span>
-    </div>
-
+  <AppDocument
+    class="dossier"
+    :author="author"
+    :filed="filed"
+    :stamp="`${ordinal} report`"
+    :status="report.stale ? 'DUE A FRESH LOOK' : undefined"
+    status-warn
+  >
     <p class="dossier__verdict">{{ report.verdict }}</p>
 
     <div class="dossier__reading">
@@ -109,5 +107,5 @@ const range = computed(() => {
       </div>
       <MeterBar :value="report.recommendation" />
     </div>
-  </div>
+  </AppDocument>
 </template>

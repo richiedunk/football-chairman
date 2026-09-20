@@ -8,6 +8,7 @@ import {
 } from '../../engine/systems/dataDepartment'
 import { philosophyOf } from '../../engine/systems/recruitment'
 import MeterBar from '../components/MeterBar.vue'
+import AppDocument from '../components/AppDocument.vue'
 import Chevron from '../components/Chevron.vue'
 import { listName } from '../playerName'
 
@@ -38,6 +39,49 @@ const findings = computed(() =>
       }
     })
     .filter((row): row is NonNullable<typeof row> => row !== null))
+
+/**
+ * When the model last ran, and how long ago that was.
+ *
+ * It runs every four weeks. Until now the screen presented its output as
+ * though it were true this morning, which is the difference between a
+ * document and a dashboard: a dashboard is current by definition, a report is
+ * current as of the day it was filed. The engine has always stamped each
+ * finding with the week it was made and the UI threw it away.
+ */
+const run = computed(() => {
+  const s = store.game
+  const latest = (s?.dataFindings ?? []).reduce<{ week: number; season: number } | null>(
+    (best, f) => (!best || f.season > best.season || (f.season === best.season && f.week > best.week)
+      ? { week: f.week, season: f.season }
+      : best),
+    null,
+  )
+  if (!s || !latest) return null
+  const weeksAgo = (s.date.season - latest.season) * 52 + (s.date.week - latest.week)
+  return { ...latest, weeksAgo }
+})
+
+/**
+ * What the market has done since the report was filed.
+ *
+ * The finding records what the selling club wanted *at the time*. Four weeks
+ * later that number may have moved, and if it has moved up the edge the model
+ * found may be gone — which is a thing the reader has to be told, because the
+ * document itself cannot know it. This is the behavioural difference the
+ * register is for: a document can be out of date, and this one says by how
+ * much.
+ */
+function drift(finding: { playerId: string; marketValue: number; modelValue: number }) {
+  const player = store.player(finding.playerId)
+  if (!player) return null
+  const now = player.value
+  const moved = now - finding.marketValue
+  // A few percent is the market breathing, not news.
+  if (Math.abs(moved) < finding.marketValue * 0.08) return null
+  const gone = now >= finding.modelValue
+  return { now, moved, gone }
+}
 
 /** How wrong a department this size can be, said plainly. */
 const errorBand = computed(() => Math.round(modelNoise(level.value) * 100))
@@ -78,6 +122,17 @@ function tone(confidence: number): string {
 
     <div class="section-title">Underpriced, it reckons</div>
     <div class="card">
+      <!-- The run, as the document it is: filed by a department, on a date,
+           and superseded by the next one rather than updated in place. -->
+      <div v-if="run" class="card__body" style="padding-bottom: 6px">
+        <AppDocument
+          author="Data Department"
+          :filed="`WEEK ${run.week} · ${run.season}`"
+          :stamp="run.weeksAgo <= 0 ? 'This week\u2019s run' : `Run ${run.weeksAgo} week${run.weeksAgo === 1 ? '' : 's'} ago`"
+          :status="run.weeksAgo >= DATA_REFRESH_WEEKS ? 'A NEW RUN IS DUE' : undefined"
+          status-warn
+        />
+      </div>
       <div v-if="findings.length === 0" class="empty">
         Nothing this run. The model does not invent names to fill a list.
       </div>
@@ -102,6 +157,19 @@ function tone(confidence: number): string {
               · <span :style="{ color: tone(row.finding.confidence) }">
                 {{ Math.round(row.finding.confidence * 100) }}% CONFIDENT
               </span>
+            </div>
+            <!-- The price the report quotes is the price on the day it was
+                 filed. If it has moved since, the reader is the only one who
+                 can know that — the document cannot. -->
+            <div v-if="drift(row.finding)" class="doc__moved num">
+              <template v-if="drift(row.finding)!.gone">
+                MARKET HAS CAUGHT UP — {{ formatMoney(drift(row.finding)!.now, store.currency) }} NOW.
+                THE EDGE IS GONE
+              </template>
+              <template v-else>
+                MARKET NOW {{ formatMoney(drift(row.finding)!.now, store.currency) }},
+                {{ drift(row.finding)!.moved > 0 ? 'UP' : 'DOWN' }} SINCE FILING
+              </template>
             </div>
           </div>
           <Chevron />

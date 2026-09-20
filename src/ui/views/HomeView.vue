@@ -132,6 +132,8 @@ const coachSays = computed(() => {
   return {
     name: store.headCoach?.knownAs ?? 'The coach',
     headline,
+    // Empty when he has nothing to say, and the block carries the count
+    // alone rather than a sentence that repeats until it is wallpaper.
     line: verdict.line,
     leftOut: leftOut.length > 3 ? [...leftOut.slice(0, 3), `${leftOut.length - 3} more`] : leftOut,
     tone: !n || !last ? 'var(--text-faint)'
@@ -418,7 +420,7 @@ const hub = computed(() => {
         <span class="dash-coach__who">{{ coachSays.name.toUpperCase() }}</span>
         <span class="dash-coach__count" :style="{ color: coachSays.tone }">{{ coachSays.headline }}</span>
       </span>
-      <span class="dash-coach__line">“{{ coachSays.line }}”</span>
+      <span v-if="coachSays.line" class="dash-coach__line">“{{ coachSays.line }}”</span>
       <span v-if="coachSays.leftOut.length" class="dash-coach__out">
         LEFT OUT · {{ coachSays.leftOut.join(', ').toUpperCase() }}
       </span>

@@ -8,6 +8,7 @@ import { ELEVEN, canFieldEleven, fieldable, fixAiSquad } from '../../systems/mat
 import { boardRemark, scoredAgainstUs } from '../../systems/oneThatGotAway'
 import { positionGroup } from '../../world/attributes'
 import { addInboxItem, addNews } from '../../systems/inbox'
+import { applySnubs } from '../../systems/snub'
 import { phrase } from '../../systems/voice'
 import { paySeverance } from '../../systems/directorContract'
 import { dismissDirector } from '../../systems/jobSearch'
@@ -211,6 +212,19 @@ export const matches = phase({
 
       if (home.id === state.playerClubId || away.id === state.playerClubId) {
         playerFixtures.push({ fixture, result: matchResult })
+
+        // The men who were good enough to start and did not. Applied here,
+        // in the week the team was picked, because a snub is about one
+        // teamsheet and the squad is rebuilt by the time anything else runs.
+        const weAreHome = home.id === state.playerClubId
+        applySnubs(
+          state,
+          weAreHome ? home : away,
+          (weAreHome ? matchResult.homeLineup : matchResult.awayLineup) ?? [],
+          (weAreHome ? matchResult.homeSnubbed : matchResult.awaySnubbed) ?? [],
+          ids,
+          matchRng.fork('snub'),
+        )
 
         // Did one of ours score against us?
         //
@@ -421,6 +435,8 @@ function slimResult(result: MatchResult): void {
   delete result.shotsOnTarget
   delete result.attendance
   delete result.summary
+  delete result.homeSnubbed
+  delete result.awaySnubbed
 }
 function pushForm(form: ('W' | 'D' | 'L')[], outcome: 'W' | 'D' | 'L'): void {
   form.push(outcome)

@@ -210,39 +210,85 @@ export interface SigningsVerdict {
   line: string
 }
 
+/**
+ * What he says, and — more often — what he does not.
+ *
+ * `scripts/voicecheck.ts` played a season and read these in order, which is
+ * the only way this kind of fault shows up: every line passes a unit test on
+ * its own call. It found the coach saying "Nothing of yours to pick from yet"
+ * twenty-four times, "No signings yet. Noted." twenty-three times, and the
+ * identical sentence seven weeks running. A pool of two is a pool of one by
+ * March.
+ *
+ * The fix is not more lines. It is that **he only speaks when something
+ * happened.** No signings is not news, and the headline beside him already
+ * says so in three words. All of them starting is not news either — it is the
+ * week going as you hoped. What is news is a man you paid for watching from
+ * the bench, which is the thing this whole screen exists to surface, and that
+ * is the only case with a pool behind it now.
+ */
 const LINES = {
-  none: {
-    warm: ['Waiting to see what you bring me. No pressure.', 'Bring me someone and I will find him a game.'],
-    brisk: ['Nothing of yours to pick from yet.', 'No signings yet. Noted.'],
-    terse: ['Nothing to say.', 'Nobody to talk about.'],
-    pointed: ['Sign somebody and I will have an opinion.', 'Still waiting on you, then.'],
-  },
   noMatch: {
-    warm: ['Ask me after Saturday.', 'Give me a game to judge them on.'],
-    brisk: ['No match yet.', 'Ask me after a game.'],
-    terse: ['Not yet.', 'Saturday.'],
-    pointed: ['Ask me after Saturday. If you are still here.', 'I have seen them train. Ask me after a match.'],
-  },
-  all: {
-    warm: ['Your lads all started. Told you I would give them a go.', 'Every one of yours played. Good business, that.'],
-    brisk: ['All of them started.', 'All of yours played.'],
-    terse: ['They played.', 'All in.'],
-    pointed: ['Your signings started. We will see if that lasts.', 'I picked them. Do not read too much into it.'],
+    warm: [
+      'Ask me after Saturday.',
+      'Give me a game to judge them on.',
+      'I have seen them train. Training is not Saturday.',
+    ],
+    brisk: ['No match yet.', 'Ask me after a game.', 'Nothing to judge yet.'],
+    terse: ['Not yet.', 'Saturday.', 'Ask me later.'],
+    pointed: [
+      'Ask me after Saturday. If you are still here.',
+      'I have seen them train. Ask me after a match.',
+      'No game, no opinion. That is how it works.',
+    ],
   },
   some: {
-    warm: ['{name} needs a bit longer. Not a knock on you.', '{name} will get his chance. Just not this week.'],
-    brisk: ['{name} was not ready.', 'Left {name} out. Nothing personal.'],
-    terse: ['Left {name} out.', '{name}: no.'],
+    warm: [
+      '{name} needs a bit longer. Not a knock on you.',
+      '{name} will get his chance. Just not this week.',
+      'Left {name} out. He took it well, which tells you something about him.',
+      '{name} is close. One more week in that shape and he is in.',
+      'No room for {name} today. That is on the shape, not on him.',
+    ],
+    brisk: [
+      '{name} was not ready.',
+      'Left {name} out. Nothing personal.',
+      '{name} did not make it this week.',
+      'No {name} today. He knows why.',
+      '{name} missed out. We move on.',
+    ],
+    terse: [
+      'Left {name} out.',
+      '{name}: no.',
+      'Not {name}. Not this week.',
+      'No room for {name}.',
+      '{name} sat.',
+    ],
     pointed: [
       'I left {name} out. You will want to ask why. I would want to ask why you bought him.',
       '{name} did not make it. I pick footballers.',
+      'You signed {name}. I did not. He watched.',
+      '{name} is not in my side and I am not going to pretend otherwise to keep you happy.',
+      'Left {name} out again. At some point that becomes a conversation about recruitment.',
     ],
   },
   noneOfThem: {
-    warm: ['Could not fit any of yours in this week. Next week, maybe.', 'None of yours today, sorry. It is a squad game.'],
-    brisk: ['None of yours this week.', 'Nobody you signed started.'],
-    terse: ['None.', 'No.'],
-    pointed: ['I pick players who can play. None of yours qualified.', 'Not one of them. Have a think about that.'],
+    warm: [
+      'Could not fit any of yours in this week. Next week, maybe.',
+      'None of yours today, sorry. It is a squad game.',
+      'Not one of your lads got on. That is how it fell, not a verdict.',
+    ],
+    brisk: [
+      'None of yours this week.',
+      'Nobody you signed started.',
+      'Not one of yours today.',
+    ],
+    terse: ['None.', 'No.', 'Not one.'],
+    pointed: [
+      'I pick players who can play. None of yours qualified.',
+      'Not one of them. Have a think about that.',
+      'Your entire recruitment watched that from the bench.',
+    ],
   },
 } as const satisfies Record<string, Record<CoachRegister, readonly string[]>>
 
@@ -264,8 +310,11 @@ export function signingsVerdict(
   const signings = yourSignings(state, club)
   const key = `signings:${club.id}:${coachStaff.id}:${match?.fixture.id ?? 'none'}`
 
+  // No signings is not news, and the screen beside him already says so. He is
+  // silent rather than filling the space, which is what the season read said
+  // he had to be.
   if (!signings.length) {
-    return { signings, started: [], leftOut: [], register, line: pickBy(key, register, LINES.none) }
+    return { signings, started: [], leftOut: [], register, line: '' }
   }
   if (!match) {
     return { signings, started: [], leftOut: [], register, line: pickBy(key, register, LINES.noMatch) }
@@ -276,7 +325,11 @@ export function signingsVerdict(
   const started = signings.filter((p) => lineup.has(p.id))
   const leftOut = signings.filter((p) => !lineup.has(p.id))
 
-  const pool = !leftOut.length ? LINES.all : !started.length ? LINES.noneOfThem : LINES.some
-  const line = pickBy(key, register, pool).replace('{name}', leftOut[0]?.knownAs ?? 'him')
+  // Everyone you signed played. That is the week going as you hoped, and a
+  // manager who rings you to report that is a manager inventing a phone call.
+  if (!leftOut.length) return { signings, started, leftOut, register, line: '' }
+
+  const pool = started.length ? LINES.some : LINES.noneOfThem
+  const line = pickBy(key, register, pool).replace('{name}', leftOut[0].knownAs)
   return { signings, started, leftOut, register, line }
 }
