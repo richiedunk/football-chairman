@@ -10,6 +10,8 @@
  * transfer negotiation and a media story without four copies drifting apart.
  */
 
+import type { Challenge } from './systems/challenge'
+
 export type ID = string
 
 // ---------------------------------------------------------------------------
@@ -1466,6 +1468,23 @@ export interface GameState {
   inbox: InboxItem[]
   /** Rolling news feed of world events, newest first. */
   newsFeed: NewsItem[]
+
+  /**
+   * Signings from past jobs whose verdict has already been delivered.
+   *
+   * Ids rather than a flag on the player, because the sharpest verdict of the
+   * lot is that he retired — and a retired player is gone from `players`, so
+   * there is nothing left to carry a flag. See `systems/successor.ts`.
+   */
+  reportedSignings?: ID[]
+
+  /**
+   * The challenge this save is answering, if it was started from a link.
+   *
+   * Optional and additive: a save made before challenges existed has none, and
+   * a career played without one is the normal case.
+   */
+  challenge?: Challenge
 
   /** Counter used to mint unique ids deterministically. */
   nextId: number

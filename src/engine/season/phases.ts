@@ -17,6 +17,7 @@ import { applyPointsDeductions, assessClub } from '../systems/regulation'
 import { paySeasonBonuses } from '../systems/directorContract'
 import { playerClub as clubInCharge } from '../playerClub'
 import { phase } from './context'
+import { reportSuccessorVerdicts } from '../systems/successor'
 import { applyPromotionAndRelegation, generateJobOffers, processPlayerYearEnd, releaseUnpromotedYouth, reportRegulation } from './work'
 import type { Club, ID, SeasonHistory } from '../types'
 
@@ -380,6 +381,22 @@ export const buyBacks = phase({
     for (const player of Object.values(state.players)) {
       if (player.buyBack && player.buyBack.untilSeason < state.date.season) player.buyBack = null
     }
+  },
+})
+
+/**
+ * The clubs you left, and what they did with what you bought.
+ *
+ * Placed immediately before the job offers, and the order is the design: a
+ * verdict can cost you reputation, and reputation is what `jobOffers` reads
+ * to decide who comes calling. So the summer you find out your record signing
+ * went for scrap is the summer the phone is quieter, which is the only way a
+ * past mistake has ever been able to reach a present career.
+ */
+export const pastClubs = phase({
+  name: 'pastClubs',
+  run({ state, ids, rng }) {
+    reportSuccessorVerdicts(state, { ids, rng: rng.fork('successor') })
   },
 })
 
