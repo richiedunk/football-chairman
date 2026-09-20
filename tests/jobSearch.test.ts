@@ -189,3 +189,41 @@ describe('the club that sacked you', () => {
     for (const offer of others) expect(offer.barredReason).toBeUndefined()
   })
 })
+
+describe('a listing sells, and a read tells', () => {
+  it('gives every vacancy both an advert and a read', () => {
+    const world = fresh('ADVERT')
+    const offers = openVacancies(world.state, world.ids, new Rng('advert'))
+    expect(offers.length).toBeGreaterThan(0)
+    for (const offer of offers) {
+      expect(offer.advert, `${offer.clubName} has no advert`).toBeTruthy()
+      expect(offer.pitch, `${offer.clubName} has no read`).toBeTruthy()
+    }
+  })
+
+  it('does not simply print the read twice', () => {
+    // The whole point is the gap between what a club says about itself and
+    // what you know. An advert equal to the read is a listing doing nothing.
+    const world = fresh('ADVERT2')
+    const offers = openVacancies(world.state, world.ids, new Rng('advert2')).filter((o) => !o.barred)
+    expect(offers.length).toBeGreaterThan(0)
+    for (const offer of offers) {
+      expect(offer.advert, `${offer.clubName} advertises its own read`).not.toBe(offer.pitch)
+    }
+  })
+
+  it('never lets a struggling club advertise its trouble', () => {
+    // A club in crisis does not advertise itself as a club in crisis. If the
+    // advert leaked the words the read uses, there would be nothing to see
+    // past and the listing would be honest, which adverts are not.
+    const world = fresh('ADVERT3')
+    const offers = openVacancies(world.state, world.ids, new Rng('advert3')).filter((o) => !o.barred)
+    expect(offers.length).toBeGreaterThan(0)
+    for (const offer of offers) {
+      const copy = offer.advert.toLowerCase()
+      for (const word of ['crisis', 'in trouble', 'nobody sensible', 'out of ideas', 'sack']) {
+        expect(copy, `${offer.clubName} advertised "${word}"`).not.toContain(word)
+      }
+    }
+  })
+})

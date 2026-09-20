@@ -1589,7 +1589,21 @@ export interface JobOffer {
   /** Week the offer lapses. */
   expiresWeek: number
   expiresSeason: number
-  /** Why they are interested — shown in the offer letter. */
+  /**
+   * The club's own advertisement, which is written to attract somebody.
+   *
+   * It spins, because a job advert spins. A club in crisis does not advertise
+   * itself as a club in crisis — it seeks a director with the vision to write
+   * its next chapter. Reading past that is the point: this is a listings site,
+   * and a listings site can mislead you where the club's own screens cannot.
+   */
+  advert: string
+  /**
+   * What you actually know about the job, which is not what the advert says.
+   *
+   * Kept beside the advert rather than replacing it, so the listing shows both
+   * the sell and the read — the gap between them being the information.
+   */
   pitch: string
   /**
    * A post you can see and cannot have. The obvious one is the club that has
@@ -1665,4 +1679,4 @@ export interface GameSettings {
   hapticsEnabled: boolean
 }
 
-export const SAVE_VERSION = 20
+export const SAVE_VERSION = 21

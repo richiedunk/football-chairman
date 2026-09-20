@@ -66,6 +66,7 @@ function take(offerId: string) {
     <div class="search-head">
       <div class="search-head__label">Out of work</div>
       <h1 class="search-head__name">{{ director.name }}</h1>
+      <p class="search-head__strap num">DIRECTOR OF FOOTBALL · VACANCIES</p>
       <p class="search-head__note">
         {{ openCount
           ? `${openCount} club${openCount === 1 ? ' is' : 's are'} looking for a director of football.`
@@ -93,7 +94,14 @@ function take(offerId: string) {
             {{ formatWage(p.offer.wageOffer, store.currency) }}/WK ·
             {{ p.offer.expectation.leaguePosition }}{{ ordinal(p.offer.expectation.leaguePosition).toUpperCase() }} EXPECTED
           </div>
-          <div class="search-post__pitch">{{ p.offer.pitch }}</div>
+          <!-- The club's own copy, then what you actually know. The gap
+               between them is the information: a club in crisis does not
+               advertise itself as a club in crisis. -->
+          <p class="search-post__advert">{{ p.offer.advert }}</p>
+          <div class="search-post__pitch">
+            <span class="search-post__read num">YOUR READ</span>
+            {{ p.offer.pitch }}
+          </div>
           <div v-if="p.offer.barredReason" class="search-post__barred">
             {{ p.offer.barredReason }}
           </div>
@@ -119,6 +127,28 @@ function take(offerId: string) {
 
 <style scoped>
 .search-head { padding: 22px 0 16px; }
+/* A listings board rather than a club screen: the advert is somebody selling
+   you something, so it is set as copy, and your own read sits under it
+   labelled as yours. */
+.search-head__strap {
+  margin: 10px 0 0;
+  font-size: 0.58rem;
+  letter-spacing: 0.16em;
+  color: var(--text-fainter);
+}
+.search-post__advert {
+  margin: 6px 0 5px;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--text);
+}
+.search-post__read {
+  display: inline-block;
+  margin-right: 6px;
+  font-size: 0.55rem;
+  letter-spacing: 0.12em;
+  color: var(--accent-dim);
+}
 .search-head__label {
   font-family: var(--font-num);
   font-size: 0.62rem;

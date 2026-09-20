@@ -6,7 +6,7 @@ import { sortTable } from '../systems/board'
 import { eligibleClubs, levelFor } from '../systems/career'
 import { computeValue, computeWageDemand } from '../systems/valuation'
 import { addInboxItem, addNews } from '../systems/inbox'
-import { contact } from '../systems/voice'
+import { contact, phrase } from '../systems/voice'
 import { accrueTrainingYear, releaseRegistration } from '../systems/registration'
 import { writeOffBookValue } from '../systems/finance'
 import { adjustForPlayer } from '../systems/agents'
@@ -465,6 +465,15 @@ export function generateJobOffers(state: GameState, deps: RolloverDeps): JobOffe
       transferBudgetOffer: club.finances.transferBudget,
       expiresWeek: 6,
       expiresSeason: state.date.season,
+      // An approach, not an advertisement. A club that has come looking for
+      // you flatters; a club advertising a vacancy conceals. The listings
+      // board shows both, so this path fills the same field with the kind of
+      // thing somebody says when they want you specifically.
+      advert: phrase(`approach:${club.id}:${state.date.season}`, [
+        `${club.name} have been watching what you have done and would like to talk.`,
+        `${club.name} say they have admired your work for some time and want to meet.`,
+        `An approach from ${club.name}. They believe you are the right person for them.`,
+      ]),
       pitch: writePitch(club, level.title, overperformance),
     }
     return offer

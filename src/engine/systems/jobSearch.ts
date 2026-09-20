@@ -22,6 +22,7 @@ import { Rng } from '../rng'
 import type { IdFactory } from '../ids'
 import { ID_PREFIX } from '../ids'
 import { closeCareerEntry, eligibleClubs, sackedBy } from './career'
+import { phrase } from './voice'
 
 /** Weeks a "check back next month" skips. */
 export const SEARCH_STRIDE_WEEKS = 4
@@ -67,6 +68,7 @@ export function dismissDirector(
   if (club) {
     offers.unshift({
       ...vacancy(state, ids, club),
+      advert: `${club.name} seek an experienced director of football to lead the next phase of the club's development.`,
       pitch: `The job you had until ${weekWord(state.date.week)}. They are advertising already.`,
       barred: true,
       barredReason: `${club.name} dismissed you. They will not be taking your application.`,
@@ -159,6 +161,7 @@ function vacancy(state: GameState, ids: IdFactory, club: Club): JobOffer {
     // else takes them, which advanceSearch decides.
     expiresWeek: 52,
     expiresSeason: state.date.season + 1,
+    advert: advertFor(state, club),
     pitch: pitchFor(state, club),
   }
 }
@@ -175,3 +178,50 @@ function pitchFor(state: GameState, club: Club): string {
   return 'A quiet club looking for somebody to take it on.'
 }
 
+/**
+ * The club's own advertisement.
+ *
+ * Written to attract somebody, which is to say written to conceal whatever is
+ * wrong. Every line here is euphemism for the matching line in `pitchFor`
+ * above, and the pair of them is the whole point of the listing: the advert is
+ * the sell, the read is the truth, and the gap between them is what a director
+ * learns to see.
+ */
+function advertFor(state: GameState, club: Club): string {
+  const key = `advert:${club.id}:${state.date.season}`
+  if (club.finances.inCrisis) {
+    return phrase(key, [
+      `${club.name} are at a crossroads and seek a director of football with the vision to write the next chapter.`,
+      `A rare chance to reshape ${club.name} from the ground up. Ambitious candidates only.`,
+      `${club.name} invite applications from directors ready for a genuine challenge with a proud institution.`,
+    ])
+  }
+  if (!club.headCoachId) {
+    return phrase(key, [
+      `Full control of football operations from day one. ${club.name} offer a blank canvas to the right candidate.`,
+      `${club.name} seek a director of football with a free hand to appoint and build as they see fit.`,
+      `An unusually open brief: ${club.name} want somebody to shape the entire football department.`,
+    ])
+  }
+  if (club.board.confidence < 40) {
+    return phrase(key, [
+      `Following a period of change, ${club.name} seek a fresh voice to take the club forward.`,
+      `${club.name} are looking for a new direction and a director with the conviction to set it.`,
+      `An ambitious board at ${club.name} seek a director of football to begin a new era.`,
+    ])
+  }
+  const table = state.tables[club.leagueId] ?? []
+  const position = table.findIndex((row) => row.clubId === club.id) + 1
+  if (position > 0 && position > table.length - 4) {
+    return phrase(key, [
+      `${club.name}, a proud club in a false position, seek the director to put it right.`,
+      `Results have not matched the potential at ${club.name}. They want somebody to close that gap.`,
+      `${club.name} believe they are better than the table says and seek a director who agrees.`,
+    ])
+  }
+  return phrase(key, [
+    `${club.name} seek a director of football to build on solid foundations.`,
+    `A well-run club with realistic ambitions, ${club.name} are looking for the right appointment.`,
+    `${club.name} offer stability and a board that knows what it wants.`,
+  ])
+}

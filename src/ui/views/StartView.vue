@@ -1,4 +1,12 @@
 <script setup lang="ts">
+// Bound rather than literal: a literal `src` is resolved by the bundler as a
+// module import, and this file lives in public/, which is copied rather than
+// bundled. Relative, because the build is based at './' so it can be opened
+// from file:// inside a Capacitor WebView — and hash routing means the
+// document URL is always index.html, so a relative asset resolves the same
+// from every screen.
+const badgeUrl = 'badge.svg'
+
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useGameStore } from '../../stores/game'
@@ -51,6 +59,12 @@ function when(ts: number) {
   background: var(--accent);
   margin-bottom: 20px;
 }
+.title__badge {
+  display: block;
+  width: 118px;
+  height: auto;
+  margin: 6px 0 14px;
+}
 .title__name {
   font-size: 2.4rem;
   font-weight: 700;
@@ -72,6 +86,9 @@ function when(ts: number) {
          a screen that has no other colour, and it undersold the game. -->
     <div class="title">
       <div class="title__rule" />
+      <!-- The badge, then the wordmark. The mark exists now and the title
+           screen was the one place still describing the game in text alone. -->
+      <img class="title__badge" :src="badgeUrl" alt="" aria-hidden="true" width="118" height="106" />
       <h1 class="title__name">Undisclosed<br />Football</h1>
       <p class="title__strap">
         You run recruitment, contracts, the academy and the books.
