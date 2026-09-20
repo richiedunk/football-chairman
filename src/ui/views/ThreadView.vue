@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, inject, ref, watch } from 'vue'
+import { computed, inject, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useGameStore } from '../../stores/game'
 import { findThread, groupThreads, isOpen } from '../threads'
@@ -26,9 +26,6 @@ const notify = inject<(t: string, k?: 'info' | 'error' | 'success') => void>('no
 
 const key = computed(() => decodeURIComponent(String(route.params.from ?? '')))
 const thread = computed(() => findThread(groupThreads(store.inbox), key.value))
-
-/** The message whose replies are showing. Null is the default: nothing open. */
-const replyingTo = ref<string | null>(null)
 
 /**
  * Opening a conversation reads it.
@@ -59,7 +56,6 @@ watch(
 
 function send(item: InboxItem, optionId: string) {
   const outcome = store.decide(item.id, optionId)
-  replyingTo.value = null
   // The outcome is written into `decision.outcomeText` and appears in the
   // thread as their answer, so it does not also need a screen. A refusal that
   // has no thread to appear in still does — `notify` is where those go.
@@ -81,6 +77,20 @@ function buttonLabel(item: InboxItem): string {
 function hasDestination(item: InboxItem): boolean {
   return !!item.link && resolveLink(router, item.link) !== null
 }
+
+/**
+ * The one decision being answered right now: the most recent one still open.
+ *
+ * A busy week leaves two or three open at once, and offering all of them at
+ * the same time stacked three near-identical sets of options — four ways to
+ * answer a bid, then four more for a different bid, with nothing to say which
+ * belonged to which. Answering the latest reveals the next, which is how a
+ * conversation works anyway.
+ */
+const answering = computed(() => {
+  const open = (thread.value?.messages ?? []).filter(isOpen)
+  return open.length ? open[open.length - 1] : null
+})
 
 /** The option the player chose, for the reply that shows what they said. */
 function chosen(item: InboxItem) {
@@ -120,77 +130,61 @@ function weekBreak(index: number): string | null {
 </script>
 
 <template>
-  <div v-if="thread">
-    <div class="thread">
+  <div v-if="thread" class="chat">
+    <div class="chat__log" role="log">
       <template v-for="(item, index) in thread.messages" :key="item.id">
-        <div v-if="weekBreak(index)" class="thread__break num">{{ weekBreak(index) }}</div>
+        <div v-if="weekBreak(index)" class="chat__break num">{{ weekBreak(index) }}</div>
 
-        <!-- Theirs. No bubble: the text sits on the ground with a hairline
-             above it, which is denser than a bubble and unmistakably not you. -->
-        <div class="thread__said">
-          <div v-if="letterhead(index)" class="thread__who num">{{ item.from }}</div>
-          <p class="thread__body">{{ item.body }}</p>
+        <!-- Theirs. -->
+        <div class="bubble bubble--in">
+          <div v-if="letterhead(index)" class="bubble__who num">{{ item.from }}</div>
+          <p class="bubble__text">{{ item.body }}</p>
 
-          <button
-            v-if="hasDestination(item)"
-            class="thread__attach"
-            @click="follow(item)"
-          >
+          <button v-if="hasDestination(item)" class="bubble__attach" @click="follow(item)">
             {{ buttonLabel(item) }}
           </button>
 
-          <div v-if="isOpen(item)" class="thread__asking num">
-            {{ item.decision!.prompt }}
-          </div>
+          <div class="bubble__stamp num">W{{ item.week }}</div>
         </div>
 
-        <!-- Yours. The one saturated accent, used once, for the thing you did. -->
-        <div v-if="chosen(item)" class="thread__mine">
-          <p class="thread__body">{{ chosen(item)!.label }}</p>
+        <!-- The question, held under the message that asked it. -->
+        <div v-if="isOpen(item)" class="chat__asking num">{{ item.decision!.prompt }}</div>
+
+        <!-- Yours: what you said back. -->
+        <div v-if="chosen(item)" class="bubble bubble--out">
+          <p class="bubble__text">{{ chosen(item)!.label }}</p>
+          <div class="bubble__stamp num">W{{ item.week }}</div>
         </div>
 
-        <!-- Their answer to it. -->
-        <div v-if="item.decision?.chosenId && item.decision.outcomeText" class="thread__said">
-          <p class="thread__body">{{ item.decision.outcomeText }}</p>
+        <!-- And their answer to it. -->
+        <div v-if="item.decision?.chosenId && item.decision.outcomeText" class="bubble bubble--in">
+          <p class="bubble__text">{{ item.decision.outcomeText }}</p>
         </div>
       </template>
     </div>
 
-    <!-- The composer. One open decision at a time, and the most recent one is
-         the one a reader is answering, so it is the one offered. -->
-    <div v-if="thread.pending > 0" class="composer">
-      <template v-for="item in thread.messages.filter(isOpen)" :key="`reply-${item.id}`">
-        <button
-          v-if="replyingTo !== item.id"
-          class="btn btn--primary btn--block composer__open"
-          @click="replyingTo = item.id"
-        >
-          Reply
-          <span v-if="item.urgent" class="composer__urgent num">· THIS ONE BLOCKS THE WEEK</span>
-        </button>
-
-        <!-- The question is not repeated here. It is already on screen, amber,
-             directly above the sheet, under the message that asked it. -->
-        <div v-else class="composer__sheet">
-          <button
-            v-for="option in item.decision!.options"
-            :key="option.id"
-            class="composer__option"
-            :disabled="!option.available"
-            @click="send(item, option.id)"
-          >
-            <span class="composer__label">{{ option.label }}</span>
-            <!-- The consequence stays visible. A row of four bare labels is a
-                 prettier screen that asks the reader to choose blind. -->
-            <span class="composer__hint num">
-              {{ option.available ? option.hint : option.unavailableReason }}
-            </span>
-          </button>
-          <button class="btn btn--ghost btn--sm btn--block" @click="replyingTo = null">
-            Not yet
-          </button>
-        </div>
-      </template>
+    <!-- The replies, always on show. You cannot type to a chairman, so there
+         is no text box to put them behind — hiding them behind a Reply button
+         was a button whose only job was to reveal the thing the screen is for. -->
+    <div v-if="answering" class="replies">
+      <div class="replies__head num">
+        <span>{{ answering.urgent ? 'THIS ONE BLOCKS THE WEEK' : 'PICK ONE' }}</span>
+        <span v-if="thread.pending > 1">{{ thread.pending - 1 }} MORE AFTER THIS</span>
+      </div>
+      <button
+        v-for="option in answering.decision!.options"
+        :key="option.id"
+        class="reply"
+        :disabled="!option.available"
+        @click="send(answering, option.id)"
+      >
+        <span class="reply__label">{{ option.label }}</span>
+        <!-- The consequence stays on the chip. A row of bare labels is a
+             prettier screen that asks the reader to choose blind. -->
+        <span class="reply__hint num">
+          {{ option.available ? option.hint : option.unavailableReason }}
+        </span>
+      </button>
     </div>
   </div>
 </template>

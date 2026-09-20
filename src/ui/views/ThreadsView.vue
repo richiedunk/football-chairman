@@ -2,8 +2,7 @@
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useGameStore } from '../../stores/game'
-import { CATEGORY_LABELS } from '../../engine/systems/inbox'
-import { groupThreads, preview, type Thread } from '../threads'
+import { groupThreads, initials, preview, type Thread } from '../threads'
 
 /**
  * The conversations, most recently spoken in first.
@@ -47,15 +46,6 @@ function when(thread: Thread): string {
   return weeks === 1 ? 'LAST WEEK' : `${weeks} WEEKS AGO`
 }
 
-/**
- * Urgency, not category. Colouring eleven categories puts eleven colours on
- * one screen, which is how the build this replaces ended up with nothing
- * standing out.
- */
-function severity(thread: Thread): string {
-  if (thread.pending === 0) return 'var(--border-strong)'
-  return thread.urgent ? 'var(--danger)' : 'var(--warn)'
-}
 </script>
 
 <template>
@@ -80,32 +70,30 @@ function severity(thread: Thread): string {
       <div class="empty threads-empty">Nobody is waiting on you.</div>
     </div>
 
-    <div v-else class="card">
-      <!-- `threads` names this list for what it is. `list__row` is on half the
-           screens in the game, so a selector anchored on it matches the wrong
-           rows — which is exactly how the end-to-end test came to tap a league
-           row while looking for a conversation. -->
-      <div class="list threads">
-        <button
-          v-for="thread in shown"
-          :key="thread.key"
-          class="list__row"
-          @click="open(thread)"
-        >
-          <span class="dash-item__severity" :style="{ background: severity(thread) }" aria-hidden="true" />
-          <div class="list__main">
-            <div class="list__primary">
-              <span v-if="thread.unread > 0" style="color: var(--info)">● </span>{{ thread.title }}
-            </div>
-            <div class="thread__preview">{{ preview(thread.latest) }}</div>
-            <div class="list__secondary num">
-              {{ CATEGORY_LABELS[thread.category] }} · {{ when(thread) }}
-            </div>
-          </div>
-          <span v-if="thread.urgent" class="chip chip--danger">Urgent</span>
-          <span v-else-if="thread.pending > 0" class="chip chip--warn">Decide</span>
-        </button>
-      </div>
+    <div v-else class="threads">
+      <button
+        v-for="thread in shown"
+        :key="thread.key"
+        class="chat-row"
+        :class="{ 'is-unread': thread.unread > 0 }"
+        @click="open(thread)"
+      >
+        <span class="chat-row__avatar" :class="{ 'is-urgent': thread.urgent }" aria-hidden="true">
+          {{ initials(thread.title) }}
+        </span>
+        <span class="chat-row__main">
+          <span class="chat-row__top">
+            <span class="chat-row__name">{{ thread.title }}</span>
+            <span class="chat-row__when num">{{ when(thread) }}</span>
+          </span>
+          <span class="chat-row__bottom">
+            <span class="thread__preview">{{ preview(thread.latest) }}</span>
+            <span v-if="thread.urgent" class="chat-row__flag chat-row__flag--urgent">!</span>
+            <span v-else-if="thread.pending > 0" class="chat-row__flag chat-row__flag--decide">?</span>
+            <span v-else-if="thread.unread > 0" class="chat-row__count">{{ thread.unread }}</span>
+          </span>
+        </span>
+      </button>
     </div>
 
     <button v-if="store.unread > 0" class="btn btn--ghost btn--block mt" @click="store.markAllRead()">

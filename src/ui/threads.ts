@@ -162,6 +162,31 @@ export function findThread(threads: Thread[], key: string): Thread | null {
 }
 
 /**
+ * The monogram on a thread's avatar.
+ *
+ * Initials of the first two words, which gives CS for the Club Secretary and
+ * MR for Marcus Reidy. A one-word sender — Recruitment, Chairman — takes its
+ * first two letters instead, because a single letter in a circle is not
+ * recognisable at a glance and recognising the sender at a glance is the only
+ * thing the avatar is for.
+ *
+ * Bracketed suffixes are dropped: every outlet is named "The Chronicle (ENG)"
+ * and a monogram of TE tells the reader nothing.
+ */
+export function initials(title: string): string {
+  const words = title
+    .replace(/\([^)]*\)/g, ' ')
+    .split(/[\s-]+/)
+    .filter((w) => /[a-z0-9]/i.test(w))
+  // A leading article is not part of a name. Every other outlet is called
+  // "The something", and a wall of TO, TC, TG tells the reader nothing.
+  if (words.length > 1 && /^(the|a|an)$/i.test(words[0])) words.shift()
+  if (words.length === 0) return '?'
+  if (words.length === 1) return words[0].slice(0, 2).toUpperCase()
+  return (words[0][0] + words[1][0]).toUpperCase()
+}
+
+/**
  * The line under a thread's name in the list.
  *
  * The body's first line rather than the subject: a subject is a filing label

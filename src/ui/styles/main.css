@@ -1202,77 +1202,234 @@ button, input, select, textarea {
 /* ---------------------------------------------------------------------------
    Conversations
 
-   Four elements and no more: what they said, what you said, the week rule, and
-   the composer. The settled visual language is "nothing is boxed", and the
-   fault it was fixing was sections boxed against sections — six bordered panels
-   on one screen with nothing louder than anything else. A thread has no
-   competing sections: one column, one conversation, in time order. So their
-   messages are not boxed at all, and the single bubble on the screen is the one
-   thing you said, in the one accent, which is how the accent is already used
-   everywhere else.
+   A messaging app, because that is what the interrupt channel already was. The
+   earlier pass here hedged: their messages sat flush on the ground with a
+   hairline above, on the theory that a bubble is a box and the visual language
+   says nothing is boxed. That rule was written about sections boxed against
+   sections — six bordered panels with nothing louder than anything else. A
+   thread is one column of one conversation, and there a bubble is not decoration,
+   it is the only thing saying who is speaking.
+
+   The one thing that does NOT follow the idiom is the replies. A real messaging
+   app has a text box; you cannot type to a chairman, and a row of bare labels
+   would ask the reader to choose blind — so each reply carries its consequence,
+   and they are always on show rather than behind a button.
    --------------------------------------------------------------------------- */
 
-.thread {
-  padding: 4px 0 8px;
+/* --- the list of conversations ------------------------------------------- */
+
+.threads {
+  margin: 0 calc(var(--pad) * -1);
 }
 
-/* A week rule, not a date. The calendar is an engine detail; the gaps in a
-   conversation are where the football happened. */
-.thread__break {
+.chat-row {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin: 18px 0 12px;
-  font-size: 10px;
-  letter-spacing: 0.1em;
+  gap: 12px;
+  width: 100%;
+  padding: 10px var(--pad);
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--hairline);
+  text-align: left;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.chat-row:active {
+  background: var(--bg-raised);
+}
+
+/* Initials, not a colour per sender: twenty senders is twenty colours
+   competing on one screen, and the accent is spoken for. */
+.chat-row__avatar {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--bg-raised-2);
+  border: 1px solid var(--border-strong);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text-dim);
+}
+.chat-row__avatar.is-urgent {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.chat-row__main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.chat-row__top,
+.chat-row__bottom {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.chat-row__bottom {
+  align-items: center;
+  margin-top: 2px;
+}
+.chat-row__name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.chat-row.is-unread .chat-row__name {
+  font-weight: 650;
+}
+.chat-row__when {
+  flex: 0 0 auto;
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
   color: var(--text-fainter);
 }
-.thread__break::before,
-.thread__break::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: var(--hairline);
+.chat-row.is-unread .chat-row__when {
+  color: var(--accent-dim);
 }
 
-/* Theirs. Flush to the gutter with a hairline above, which is denser than a
-   bubble and unmistakably not you. */
-.thread__said {
-  padding: 12px 0 14px;
-  border-top: 1px solid var(--hairline);
-}
-.thread__who {
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+/* What was said, not what it was filed as. */
+.thread__preview {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 12px;
+  line-height: 1.35;
   color: var(--text-faint);
-  margin-bottom: 5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.thread__body {
-  margin: 0;
-  font-size: 14px;
-  line-height: 1.5;
-  color: var(--text);
-  white-space: pre-line;
+.chat-row.is-unread .thread__preview {
+  color: var(--text-dim);
 }
 
-/* Yours. The one saturated accent, used once, for the thing you did. */
-.thread__mine {
-  margin: 10px 0 14px auto;
-  max-width: 82%;
-  padding: 10px 13px;
-  border-radius: var(--radius) var(--radius) 3px var(--radius);
+/* One mark on the right, and only one: what this row wants from you. */
+.chat-row__count,
+.chat-row__flag {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 700;
+}
+.chat-row__count {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.chat-row__flag--urgent {
+  background: var(--danger);
+  color: #fff;
+}
+.chat-row__flag--decide {
+  background: var(--warn);
+  color: var(--warn-ink);
+}
+
+/* --- one conversation ----------------------------------------------------- */
+
+.chat {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+.chat__log {
+  flex: 1 1 auto;
+  padding: 4px 0 14px;
+}
+
+/* A centred pill, the way a messaging app dates a run of messages — except in
+   weeks, because the calendar is an engine detail and the gaps in a
+   conversation are where the football happened. */
+.chat__break {
+  width: fit-content;
+  margin: 14px auto 12px;
+  padding: 3px 11px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-raised);
+  font-size: 9.5px;
+  letter-spacing: 0.09em;
+  color: var(--text-faint);
+}
+
+.bubble {
+  position: relative;
+  max-width: 84%;
+  margin-bottom: 8px;
+  padding: 9px 12px 7px;
+  border-radius: var(--radius);
+}
+.bubble--in {
+  margin-right: auto;
+  border-bottom-left-radius: 3px;
+  background: var(--bg-raised-2);
+  border: 1px solid var(--border);
+}
+.bubble--out {
+  margin-left: auto;
+  border-bottom-right-radius: 3px;
   background: var(--accent-wash);
   border: 1px solid rgba(200, 255, 77, 0.22);
 }
-.thread__mine .thread__body {
+.bubble__who {
+  margin-bottom: 4px;
+  font-size: 9.5px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.bubble__text {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--text);
+  white-space: pre-line;
+}
+.bubble--out .bubble__text {
   color: var(--accent);
 }
+/* Right-aligned under the text, where a messaging app puts the time. */
+.bubble__stamp {
+  margin-top: 3px;
+  text-align: right;
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  color: var(--text-fainter);
+}
+.bubble__attach {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  min-height: 34px;
+  padding: 0 10px;
+  background: var(--bg-sunken);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--text-dim);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.bubble__attach:active {
+  background: var(--bg);
+}
 
-/* The question, held under the message that asked it, so a thread scrolled
+/* The question, kept under the message that asked it, so a thread scrolled
    back through still shows which message is the one waiting. */
-.thread__asking {
-  margin-top: 10px;
+.chat__asking {
+  max-width: 84%;
+  margin: 0 0 10px;
   padding-left: 10px;
   border-left: 2px solid var(--warn);
   font-size: 11px;
@@ -1280,95 +1437,61 @@ button, input, select, textarea {
   color: var(--warn);
 }
 
-/* An attachment rather than a button: it belongs to the message above it. */
-.thread__attach {
-  margin-top: 10px;
-  min-height: 36px;
-  padding: 0 12px;
-  background: var(--bg-raised);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
-  color: var(--text-dim);
-  font: inherit;
-  font-size: 12px;
-  cursor: pointer;
-}
-.thread__attach:active {
-  background: var(--bg-raised-2);
-}
+/* --- the replies ---------------------------------------------------------- */
 
-/* The line under a thread's name in the list: what was said, not what it was
-   filed as. */
-.thread__preview {
-  font-size: 12px;
-  line-height: 1.4;
-  color: var(--text-dim);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 100%;
-  margin: 2px 0 3px;
-}
-
-/* The composer. Sticky rather than fixed: the advance bar and the tab bar own
-   the bottom of the shell, and a second fixed layer would sit on top of them. */
-.composer {
+/* Solid, not a gradient. A translucent panel over a scrolling log let the
+   messages show through the options — unreadable, and it looked broken. */
+.replies {
   position: sticky;
   bottom: 0;
-  padding: 10px 0 4px;
-  background: linear-gradient(to top, var(--bg) 62%, transparent);
-}
-.composer__open {
-  gap: 8px;
-}
-.composer__urgent {
-  font-size: 10px;
-  letter-spacing: 0.06em;
-  opacity: 0.8;
-}
-.composer__sheet {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 12px;
-  background: var(--bg-raised);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
+  padding: 10px 0 4px;
+  background: var(--bg);
+  border-top: 1px solid var(--border-strong);
+  box-shadow: 0 -10px 18px -6px var(--bg);
 }
-/* One option per row, label and consequence both. The hint is the information
-   the decision is made on: a row of four bare labels is a prettier screen that
-   asks the reader to choose blind. */
-.composer__option {
+.replies__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 9.5px;
+  letter-spacing: 0.09em;
+  color: var(--text-faint);
+  margin-bottom: 8px;
+}
+.reply {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 3px;
+  gap: 2px;
   width: 100%;
   min-height: var(--tap);
-  padding: 10px 12px;
+  margin-bottom: 7px;
+  padding: 9px 13px;
   text-align: left;
   background: var(--bg-raised-2);
   border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-pill);
   color: var(--text);
   font: inherit;
   cursor: pointer;
 }
-.composer__option:active {
-  border-color: var(--accent-dim);
+.reply:active {
+  border-color: var(--accent);
+  background: var(--accent-wash);
 }
-.composer__option:disabled {
+.reply:disabled {
   opacity: 0.45;
   cursor: default;
 }
-.composer__label {
+.reply__label {
   font-size: 13px;
   font-weight: 600;
 }
-.composer__hint {
-  font-size: 10.5px;
-  line-height: 1.4;
+.reply__hint {
+  font-size: 10px;
+  line-height: 1.35;
   color: var(--text-faint);
   white-space: normal;
 }

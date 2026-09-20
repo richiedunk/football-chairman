@@ -251,7 +251,10 @@ async function advanceOneWeek() {
     // stuck at week 28 with the clock apparently stopped.
     for (let attempt = 0; attempt < 12; attempt++) {
       await readNotice()
-      const decide = page.locator('.chip--danger:has-text("Urgent"), .chip--warn:has-text("Decide")').first()
+      // The mark on the right of a conversation that wants something: "!" for
+      // one that blocks the week, "?" for one that merely waits. These
+      // replaced the chips the flat inbox used.
+      const decide = page.locator('.chat-row__flag--urgent, .chat-row__flag--decide').first()
       if (!(await decide.count())) break
       // The chip is on a thread row, so tapping it opens the conversation and
       // the answer is given there rather than inline.
@@ -260,21 +263,18 @@ async function advanceOneWeek() {
 
       // A conversation can be holding more than one open decision. Answer all
       // of them before going back for the next thread, or a busy window costs
-      // one round trip per message.
+      // one round trip per message. The replies are on show, so there is no
+      // button to open first.
       for (let open = 0; open < 8; open++) {
         await readNotice()
-        const reply = page.locator('.composer__open').first()
-        if (!(await reply.count())) break
-        await tap(reply)
-        await page.waitForTimeout(150)
-        // The reply sheet, once, because it is the thing the whole screen is
-        // for: a decision's options drawn as the things you could say back.
+        const option = page.locator('.reply:not([disabled])').first()
+        if (!(await option.count())) break
+        // The replies, once: a decision's options drawn as the things you
+        // could say back is what this whole screen is for.
         if (!repliedShot) {
           await page.screenshot({ path: `${SHOT}/09c-reply.png`, fullPage: true })
           repliedShot = true
         }
-        const option = page.locator('.composer__option:not([disabled])').first()
-        if (!(await option.count())) break
         await tap(option)
         decisionsAnswered++
         await page.waitForTimeout(250)
@@ -776,13 +776,13 @@ await step('the league carries its own news', async () => {
 await step('messages', async () => {
   await tap('.tabbar__item:has-text("Messages")')
   await page.waitForSelector('.threads, .threads-empty')
-  const threads = await page.locator('.threads .list__row').count()
+  const threads = await page.locator('.chat-row').count()
   if (threads === 0) throw new Error('no conversations to open')
   console.log(`   ${threads} conversation${threads === 1 ? '' : 's'}`)
   await page.screenshot({ path: `${SHOT}/09-messages.png`, fullPage: true })
 
-  await tap('.threads .list__row >> nth=0')
-  await page.waitForSelector('.thread__said', { timeout: 15000 })
+  await tap('.chat-row >> nth=0')
+  await page.waitForSelector('.bubble--in', { timeout: 15000 })
   // The header carries whoever is in the conversation, not the URL key. A
   // header reading "chairman" is the first thing a reader would see.
   const heading = (await page.locator('.topbar__club').textContent())?.trim() ?? ''
@@ -807,7 +807,7 @@ await step('a decision on the dashboard opens its conversation', async () => {
   await page.waitForTimeout(400)
   const landed = page.url().split('#')[1] ?? ''
   if (!landed.startsWith('/inbox/')) throw new Error(`a waiting decision led to ${landed}`)
-  await page.waitForSelector('.thread__said')
+  await page.waitForSelector('.bubble--in')
   console.log(`   landed in ${landed}`)
 })
 
@@ -816,17 +816,17 @@ await step('opening a conversation reads all of it', async () => {
   // badge the reader cannot clear and stops trusting.
   await page.goto('http://127.0.0.1:4173/#/inbox')
   await page.waitForSelector('.threads, .threads-empty')
-  const unread = await page.locator('.threads .list__row .list__primary >> text=●').count()
+  const unread = await page.locator('.chat-row.is-unread').count()
   if (unread === 0) {
     console.log('   nothing unread to clear, skipped')
     return
   }
-  const row = page.locator('.threads .list__row').filter({ hasText: '●' }).first()
+  const row = page.locator('.chat-row.is-unread').first()
   await row.click()
-  await page.waitForSelector('.thread__said')
+  await page.waitForSelector('.bubble--in')
   await page.goto('http://127.0.0.1:4173/#/inbox')
   await page.waitForSelector('.threads')
-  const after = await page.locator('.threads .list__row .list__primary >> text=●').count()
+  const after = await page.locator('.chat-row.is-unread').count()
   if (after >= unread) throw new Error(`opening a thread cleared nothing: ${unread} unread before, ${after} after`)
   console.log(`   ${unread} unread before, ${after} after`)
 })
@@ -843,7 +843,7 @@ await step('every message link is followed and lands somewhere real', async () =
   // on a thread row, so it is proof the right screen has mounted.
   await page.waitForSelector('.threads, .threads-empty')
 
-  const threads = await page.locator('.threads .list__row').count()
+  const threads = await page.locator('.chat-row').count()
   if (threads === 0) throw new Error('no conversations to check links in')
 
   let links = 0
@@ -852,16 +852,16 @@ await step('every message link is followed and lands somewhere real', async () =
   for (let t = 0; t < threads; t++) {
     await page.goto('http://127.0.0.1:4173/#/inbox')
     await page.waitForSelector('.threads')
-    await tap(`.threads .list__row >> nth=${t}`)
-    await page.waitForSelector('.thread__said')
+    await tap(`.chat-row >> nth=${t}`)
+    await page.waitForSelector('.bubble--in')
     const href = page.url()
-    messages += await page.locator('.thread__said').count()
+    messages += await page.locator('.bubble--in').count()
 
-    const attachments = await page.locator('.thread__attach').count()
+    const attachments = await page.locator('.bubble__attach').count()
     for (let a = 0; a < attachments; a++) {
       await page.goto(href)
-      await page.waitForSelector('.thread__attach')
-      const button = page.locator('.thread__attach').nth(a)
+      await page.waitForSelector('.bubble__attach')
+      const button = page.locator('.bubble__attach').nth(a)
       const label = (await button.textContent())?.trim()
       if (label === 'Open') throw new Error('a message link still just says "Open"')
 

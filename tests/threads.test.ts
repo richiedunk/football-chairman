@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { findThread, groupThreads, preview, threadKey } from '../src/ui/threads'
+import { findThread, groupThreads, initials, preview, threadKey } from '../src/ui/threads'
 import type { InboxItem } from '../src/engine/types'
 
 /**
@@ -206,5 +206,38 @@ describe('grouping the inbox into threads', () => {
 
   it('falls back to the subject when a body has nothing in it', () => {
     expect(preview(item({ from: 'Chairman', subject: 'Filed', body: '\n  \n' }))).toBe('Filed')
+  })
+})
+
+describe('the monogram on a thread', () => {
+  it('takes the initials of a name', () => {
+    expect(initials('Club Secretary')).toBe('CS')
+    expect(initials('Marcus Reidy')).toBe('MR')
+  })
+
+  it('gives a one-word sender two letters rather than one', () => {
+    // A single letter in a circle is not recognisable at a glance, and
+    // recognising the sender at a glance is the only thing the avatar is for.
+    expect(initials('Recruitment')).toBe('RE')
+    expect(initials('Chairman')).toBe('CH')
+  })
+
+  it('drops a leading article, which no name needs', () => {
+    // Every other outlet is "The something", and a list of TO, TC, TG tells
+    // the reader nothing about which is which.
+    expect(initials('The Observer Post (ENG)')).toBe('OP')
+    expect(initials('The Chronicle (ENG)')).toBe('CH')
+  })
+
+  it('ignores the nation every outlet is labelled with', () => {
+    // Every outlet is "The Chronicle (ENG)". A monogram of TE says nothing.
+    expect(initials('Back Page (ENG)')).toBe('BP')
+    expect(initials('Matchday Wire (ENG)')).toBe('MW')
+  })
+
+  it('always returns something to put in the circle', () => {
+    for (const odd of ['', '   ', '(ENG)', '---', '7']) {
+      expect(initials(odd), `no monogram for ${JSON.stringify(odd)}`).toBeTruthy()
+    }
   })
 })
