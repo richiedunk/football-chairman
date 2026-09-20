@@ -297,6 +297,18 @@ exists.
 | Authored agents, outlets, architects | `worldGen.ts`, `staffGen.ts` | Inventory. |
 | Fictional-world toggle | `types.ts:1658`, `worldGen.ts:222` | Feature. Free. Protects a paid build. |
 | Owner/chairman mode with real verbs | `ownership.ts`, `board.ts` | A new system on the scale of international football. Not a monetization option. |
+| Naming rights — name a stand or the ground | `stadium.ts` (a string on `Stand`) | Sellable cosmetic. Naming rights are a real thing clubs sell; changes no number. |
+| Found a club — your name, city, colours, starting in non-league | `worldGen.ts` (`createClub`) | Sellable mode. A UI over an existing generator plus the lowest starting reputation. |
+| The researcher's licence — a viewer over every career in the world | `storage/careerHistory.ts` | Sellable. The data is already persisted and, per its own header, never displayed. Careers are past facts, not attributes, so it narrows nothing. |
+| The season programme — a per-season document at the roll | `matchReport.ts`, `finance.ts`, `saves.ts:631` | Sellable cosmetic. The memoir once a year instead of once a career. |
+| Ghosts — retired directors from old saves as rival DoFs | `src/storage/` (a small cross-slot store) | Sellable cosmetic. Cross-save, by name, with their record. |
+| Phone themes | `ui/styles/main.css` (tokens) | Sellable cosmetic. Cheapest on the list. |
+| Rulesets — salary cap, no loans, fan-owned only, one window | `regulation.ts`, `registration.ts` | Sellable as challenges. A different set of constants. |
+| Commentary packs — a named pundit, a tabloid or broadsheet register | `matchReport.ts` | Sellable cosmetic. A string table. |
+| Season ticket — a tip-jar IAP | `AboutView.vue`, `CareerView.vue` | Sellable, framed as what it is: a badge and a credit. Apple permits tip IAPs. |
+| Cloud save as a paid service | `services.ts` (`cloudSave`) | Grey. Legitimate only if you run the server; iCloud / Play Saved Games are free platform features. No server today, so no. |
+| Sim to deadline day | `stores/game.ts:643` | No. `advanceUntilNextMatch` already exists free; metering it is worse than not having it. |
+| A word with the coach; a second-opinion report; rewind a week; clear a board warning; work past sixty-five | `selection.ts`, `scouting.ts`, `board.ts`, `season/phases.ts:423` | **No.** Each would convert and each is one function call away, which is the argument against: they kill the coach as an actor, sell the title mechanic, delete consequence, break the three-warnings clock, and sell an exception the game says it never makes. |
 
 ## Housekeeping before charging anyone
 
