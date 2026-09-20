@@ -172,11 +172,10 @@ Each is one commit with tests, per the standing rules.
    stylesheet and neither means much without the other.
 3. The badges, as drafts, for a decision rather than a merge.
 
-## Seen on the way, not fixed
+## Seen on the way
 
-The end-to-end run's world had a club called Crawley Town, which is a real
-one. The README says the generator re-rolls the specific combinations that
-identify a real club, so either the blocklist is short of the lower English
-divisions or the suffix rule lets "Town" through. It is a naming question,
-not an identity one, and it belongs in `docs/bugs.md` once somebody has
-looked at the blocklist.
+The end-to-end worlds had Crawley Town and Shrewsbury Town in them, and the
+README said the generator re-rolled real club names. The README was the
+stale one: real clubs are shipped on purpose, from `realClubs.ts`, with the
+disclaimer on the About screen, and the roadmap records the decision. The
+README paragraph is corrected. Nothing in the world needed fixing.
