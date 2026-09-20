@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, inject, ref } from 'vue'
+import { computed, inject, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useGameStore } from '../../stores/game'
+import { readCareerRecord } from '../../engine/systems/careerRecord'
 import { isAwayOnDuty } from '../../engine/systems/international'
 import PosBadge from '../components/PosBadge.vue'
 import MeterBar from '../components/MeterBar.vue'
@@ -13,7 +14,9 @@ import { SQUAD_STATUS_LABELS } from '../../engine/systems/morale'
 import { suggestRenewal, type RenewalOffer } from '../../engine/systems/contracts'
 import { injuryDescription } from '../../engine/systems/injuries'
 import { loanSuitorsFor } from '../../engine/systems/loans'
-import type { AttributeKey, Player, Position, SquadStatus } from '../../engine/types'
+import type {
+  AttributeKey, Player, PlayerCareerSeason, Position, SquadStatus,
+} from '../../engine/types'
 import { fullName, nickname } from '../playerName'
 import { clauseState, clauseUpside } from '../../engine/systems/buyBack'
 import { U21_AGE } from '../../engine/systems/registration'
@@ -240,6 +243,44 @@ function submitBid() {
     router.push('/transfers')
   }
 }
+
+/**
+ * The seasons behind him.
+ *
+ * Fetched rather than read off the player. Career records live beside the save
+ * instead of inside it — every player would otherwise carry up to 25 of them
+ * in memory for a screen almost nobody opens, which came to 35% of the save
+ * for a table nothing displayed. One player's worth is one read, and it is
+ * asked for only when his profile is open.
+ */
+const career = ref<PlayerCareerSeason[]>([])
+const careerLoading = ref(false)
+
+const careerSummary = computed(() => {
+  const apps = career.value.reduce((sum, r) => sum + r.appearances, 0)
+  const goals = career.value.reduce((sum, r) => sum + r.goals, 0)
+  const clubs = new Set(career.value.map((r) => r.clubName)).size
+  return `${apps} apps · ${goals} goals · ${clubs} club${clubs === 1 ? '' : 's'}`
+})
+
+watch(
+  () => player.value?.id,
+  async (id) => {
+    career.value = []
+    if (!id) return
+    careerLoading.value = true
+    try {
+      const records = await store.careerHistory(id)
+      // Guard against the profile having moved on while the read was in
+      // flight — tapping through a squad list is faster than a disk read.
+      if (player.value?.id !== id) return
+      career.value = records.map(readCareerRecord).sort((a, b) => a.season - b.season)
+    } finally {
+      if (player.value?.id === id) careerLoading.value = false
+    }
+  },
+  { immediate: true },
+)
 
 const statuses: SquadStatus[] = ['star', 'firstTeam', 'rotation', 'backup', 'prospect', 'surplus']
 
@@ -612,6 +653,39 @@ const internationalLine = computed(() => {
         <div class="stat"><div class="stat__label">Avg rating</div><div class="stat__value stat__value--sm">{{ avgRating }}</div></div>
         <div class="stat"><div class="stat__label">Cards</div><div class="stat__value stat__value--sm">{{ player.stats.yellowCards }}y {{ player.stats.redCards }}r</div></div>
         <div class="stat"><div class="stat__label">MOTM</div><div class="stat__value stat__value--sm">{{ player.stats.motmAwards }}</div></div>
+      </div>
+    </div>
+
+    <!-- Career -->
+    <div v-if="careerLoading || career.length > 0" class="card">
+      <div class="card__head">
+        <span class="card__title">Career</span>
+        <span v-if="career.length" class="small muted">{{ careerSummary }}</span>
+      </div>
+      <div v-if="careerLoading" class="card__body">
+        <div class="small muted">Looking it up…</div>
+      </div>
+      <div v-else class="table__scroll">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Season</th><th>Club</th>
+              <th class="num">Apps</th><th class="num">Gls</th><th class="num">Ast</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(row, i) in career" :key="i">
+              <td>{{ row.season }}/{{ String((row.season + 1) % 100).padStart(2, '0') }}</td>
+              <td>
+                {{ row.clubName }}
+                <div class="tiny faint">{{ row.leagueName }}</div>
+              </td>
+              <td class="num">{{ row.appearances }}</td>
+              <td class="num">{{ row.goals }}</td>
+              <td class="num">{{ row.assists }}</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
 

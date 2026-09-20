@@ -21,7 +21,7 @@ import {
   autoRegister, isHomegrownFor, isRegistrationOpen, registerPlayer, squadRegistration,
   unregisterPlayer, type RegistrationResult,
 } from '../engine/systems/registration'
-import { AUTOSAVE_SLOT, loadGame, saveGame } from '../storage/saves'
+import { AUTOSAVE_SLOT, careerHistoryFor, loadGame, saveGame } from '../storage/saves'
 import { playerClub } from '../engine/playerClub'
 import { exerciseBuyBack } from '../engine/systems/buyBack'
 import {
@@ -42,7 +42,8 @@ import {
   achievement, ACHIEVEMENTS, earnedAchievements, type Achievement,
 } from '../engine/systems/achievements'
 import type {
-  Club, Fixture, GameState, ID, InboxItem, League, MatchResult, Player, Position, Staff,
+  Club, Fixture, GameState, ID, InboxItem, League, MatchResult, Player, PlayerCareerRecord,
+  Position, Staff,
 } from '../engine/types'
 
 /**
@@ -666,11 +667,22 @@ export const useGameStore = defineStore('game', () => {
     }
   }
 
+  /**
+   * Which slot the live game belongs to.
+   *
+   * Career history is stored beside the save rather than on the players, so
+   * anything that wants to read one has to know which save to read it from.
+   * Set by whatever last wrote or loaded the game; the autosave is the usual
+   * answer because it is written every fourth week.
+   */
+  const currentSlot = ref<string>(AUTOSAVE_SLOT)
+
   async function save(slotId: string, name?: string): Promise<void> {
     const s = state.value
     if (!s) throw new Error('No game to save.')
     s.nextId = ids.value
     await withLoading('Saving…', () => saveGame(s, slotId, name))
+    currentSlot.value = slotId
   }
 
   async function load(slotId: string): Promise<boolean> {
@@ -678,8 +690,22 @@ export const useGameStore = defineStore('game', () => {
       const next = await loadGame(slotId)
       if (!next) return false
       attach(next)
+      currentSlot.value = slotId
       return true
     })
+  }
+
+  /** A player's seasons, fetched from the save when a screen asks for them. */
+  async function careerHistory(playerId: ID): Promise<PlayerCareerRecord[]> {
+    const s = state.value
+    if (!s) return []
+    try {
+      return await careerHistoryFor(currentSlot.value, s, playerId)
+    } catch {
+      // A career screen that cannot reach the store should show nothing rather
+      // than break the profile it is part of.
+      return []
+    }
   }
 
   /** Answer an inbox decision. */
@@ -1155,6 +1181,7 @@ export const useGameStore = defineStore('game', () => {
     attach, attachWithFactories, commit, nextWeek, advanceUntilNextMatch,
     save, load, autosave, markRead, markAllRead, decide,
     toggleShortlist, isShortlisted, setTransferListed, setLoanListed, setSquadStatus,
+    careerHistory,
     renew, release, promote, demote, retrain, bid,
     loanOut, loanIn, recall, loansOut, loansIn,
     registration, registrationOpen, register, unregister, autoPickSquad, isHomegrown,

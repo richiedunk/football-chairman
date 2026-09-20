@@ -9,7 +9,8 @@ import { levelFor } from '../engine/systems/career'
 import { compressValue, createStorageAdapter, type SaveSlotMeta, type StorageAdapter } from './adapter'
 import { decompressAsync } from './compression'
 import {
-  HISTORY_PART, compressHistory, hasPendingHistory, mergeHistory, pendingHistory, readHistory,
+  HISTORY_PART, careerOf, compressHistory, hasPendingHistory, mergeHistory, pendingHistory,
+  readHistory,
 } from './careerHistory'
 import { RETIREMENT_AGE, STARTING_AGE } from '../engine/systems/directorCareer'
 import { playerClub } from '../engine/playerClub'
@@ -176,6 +177,22 @@ export async function loadGame(slotId: string): Promise<GameState | null> {
   // save's ratings leak into another.
   clearRatingCache()
   return migrated
+}
+
+/**
+ * One player's career, read out of the save rather than carried in it.
+ *
+ * `player.careerStats` holds only what the season roll has appended since the
+ * last save, so a screen that showed it alone would show almost nothing. The
+ * complete answer is what is stored plus what is pending, in that order.
+ */
+export async function careerHistoryFor(
+  slotId: string,
+  state: GameState,
+  playerId: ID,
+): Promise<PlayerCareerRecord[]> {
+  const stored = await careerOf(adapter, slotId, playerId)
+  return [...stored, ...(state.players[playerId]?.careerStats ?? [])]
 }
 
 export async function deleteSave(slotId: string): Promise<void> {
