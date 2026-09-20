@@ -1,14 +1,44 @@
 apply plugin: 'com.android.application'
 
+// The release workflow passes the version in rather than this file carrying a
+// number somebody has to remember to bump. Both fall back to the template's
+// originals so a build from Android Studio still works with nothing set.
+def appVersionName = System.getenv("APP_VERSION_NAME") ?: "1.0"
+def appVersionCode = (System.getenv("APP_VERSION_CODE") ?: "1").toInteger()
+
 android {
     namespace = "com.undisclosedfootball.game"
     compileSdk = rootProject.ext.compileSdkVersion
+
+    // A fixed debug key, committed on purpose.
+    //
+    // The debug keystore is normally generated on demand, which is fine on one
+    // developer's machine and wrong on CI: a fresh runner has no ~/.android,
+    // so every release would be signed with a different throwaway key and
+    // Android would refuse to install it over the last one. Users would have
+    // to uninstall and lose their saves between versions.
+    //
+    // Pinning the key makes the releases a coherent series. It is not a
+    // secret and is not treated as one: the password is the Android debug
+    // convention, and anyone can sign anything with it. That is the trade
+    // accepted by shipping debug-signed builds at all. A real upload key
+    // belongs in repository secrets, and swapping to one means every
+    // installed copy has to be reinstalled once.
+    signingConfigs {
+        debug {
+            storeFile file('../debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
+    }
+
     defaultConfig {
         applicationId "com.undisclosedfootball.game"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode appVersionCode
+        versionName appVersionName
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

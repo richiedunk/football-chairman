@@ -1,0 +1,156 @@
+name: Release
+
+# Build the Android app and publish it as a GitHub release.
+#
+# This replaces the bunny.net web deploy, which shipped `dist/` to an edge
+# zone on every green main. The game is not a web target any more, so the
+# thing worth shipping is an APK somebody can install. `deploy.yml` kept the
+# zone and now uploads the marketing site in `website/` to it instead.
+#
+# Triggered by a version tag rather than by every push to main. A release is a
+# deliberate act with a number attached, and tagging is how you say which
+# commit gets one — pushing to main should not mint a release nobody asked
+# for. `workflow_dispatch` is the escape hatch for a rebuild without a new
+# tag; it produces a prerelease so it cannot be mistaken for the real thing.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+# One release at a time. Two runs racing on the same tag would both try to
+# create the same release and one would fail on the other's half-finished
+# work.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  android:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      # Needed to create the release and upload the APK to it. Nothing else
+      # here writes to the repository.
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      # The tag is the version. `v1.2.3` becomes versionName 1.2.3, and the
+      # run number becomes versionCode, which only has to increase and has to
+      # be an integer — a date or a semver cannot be either.
+      #
+      # A manual run has no tag to read, so it labels itself with the run
+      # number and is marked prerelease below.
+      - name: Work out the version
+        id: version
+        run: |
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            name="${GITHUB_REF_NAME#v}"
+            prerelease=false
+          else
+            name="0.0.0-dev.${GITHUB_RUN_NUMBER}"
+            prerelease=true
+          fi
+          echo "name=${name}" >> "$GITHUB_OUTPUT"
+          echo "code=${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
+          echo "prerelease=${prerelease}" >> "$GITHUB_OUTPUT"
+          echo "Building ${name} (versionCode ${GITHUB_RUN_NUMBER})"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # Capacitor 8 compiles at source and target 21, so a runner default of
+      # 17 would fail the Gradle build rather than this step.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      # AGP can download a missing platform itself, but only if the licence
+      # state on the runner happens to allow it. Asking for the exact SDK the
+      # build needs turns a possible mid-build download into a step that
+      # either works or fails on its own line.
+      #
+      # Done with the runner's own sdkmanager rather than a third-party
+      # action: this repo pins what it depends on, and an unpinned action in
+      # the job that signs and publishes the artefact is the wrong place to
+      # start trusting a floating tag.
+      - name: Android SDK 36
+        run: |
+          sdkmanager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$sdkmanager" --licenses > /dev/null 2>&1 || true
+          "$sdkmanager" 'platforms;android-36' 'build-tools;36.0.0'
+
+      - run: npm ci
+
+      # CI already ran these on main, but a tag can point at any commit and
+      # this workflow does not read CI's result. An APK is harder to take back
+      # than a web deploy — it is on people's phones — so it is worth the two
+      # minutes to know the engine still works before packaging it.
+      - name: Unit tests
+        run: npm test
+
+      # `npm run build` typechecks before it emits, so a type error fails here
+      # rather than shipping.
+      - name: Build the web bundle
+        run: npm run build
+
+      - name: Copy it into the Android project
+        run: npx cap sync android
+
+      # Debug-signed, with the fixed key committed at android/debug.keystore —
+      # see the comment in android/app/build.gradle for why that key exists
+      # and what it costs.
+      - name: Assemble the APK
+        env:
+          APP_VERSION_NAME: ${{ steps.version.outputs.name }}
+          APP_VERSION_CODE: ${{ steps.version.outputs.code }}
+        run: ./android/gradlew -p android assembleDebug
+
+      # Named for the version, because `app-debug.apk` in a downloads folder
+      # six months from now tells nobody which release it is.
+      - name: Name the artefact
+        id: apk
+        run: |
+          src=android/app/build/outputs/apk/debug/app-debug.apk
+          test -f "$src" || { echo "no APK at $src"; exit 1; }
+          out="undisclosed-football-${{ steps.version.outputs.name }}.apk"
+          mv "$src" "$out"
+          echo "path=${out}" >> "$GITHUB_OUTPUT"
+          ls -lh "$out"
+
+      # `gh` is preinstalled on the runner, so this needs no third-party
+      # action and nothing to pin.
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          if [ "${GITHUB_REF_TYPE}" != "tag" ]; then
+            tag="dev-${GITHUB_RUN_NUMBER}"
+          fi
+
+          notes=$(cat <<'NOTES'
+          Debug-signed APK. Android will warn about installing from an unknown
+          source, which is expected for a build that is not coming from Play.
+
+          Saves live on the device and are not uploaded anywhere, so keep the
+          app installed if you want to keep your career — uninstalling takes
+          the save with it.
+          NOTES
+          )
+
+          # Built as an array rather than passing --prerelease=false, so this
+          # does not depend on how gh's flag parser treats an explicit false.
+          flags=()
+          if [ "${{ steps.version.outputs.prerelease }}" = "true" ]; then
+            flags+=(--prerelease)
+          fi
+
+          gh release create "$tag" "${{ steps.apk.outputs.path }}" \
+            --title "Undisclosed Football ${{ steps.version.outputs.name }}" \
+            --notes "$notes" \
+            --target "$GITHUB_SHA" \
+            "${flags[@]}"

@@ -1,26 +1,29 @@
 name: Deploy
 
-# Ship main to bunny.net edge storage, but only what CI has passed.
+# Ship the public site at website/ to bunny.net edge storage.
 #
-# This used to trigger on push, in parallel with CI and independent of it, so a
-# commit that failed typecheck, tests or the end-to-end run shipped anyway —
-# which it did, for the four runs CI was red. `workflow_run` makes the deploy
-# wait for the CI run on the same commit and the `if` below drops it when that
-# run did not succeed.
+# This workflow used to deploy the game: it built dist/ and uploaded it to the
+# same zone. The game is not a web target any more — it ships as an Android
+# APK from release.yml — so the zone and its four secrets carry the marketing
+# site instead, which is the one thing left here that belongs on the web.
 #
-# `workflow_run` fires for CI runs on any branch, so `branches: [main]` keeps
-# this to main. It only triggers from workflow files on the default branch,
-# which means a change to this gate takes effect once it is merged rather than
-# from the branch proposing it.
+# Triggered by pushes that touch website/ rather than by a CI run. The old
+# version waited on CI because it was shipping the game, and a commit that
+# failed typecheck or tests had no business reaching the edge. None of that
+# applies to this folder: it is one dependency-free index.html and a handful
+# of images, with no build step and nothing in the test suite that looks at
+# it. Gating it on the engine's tests would mean a red unit test blocking a
+# typo fix on a holding page.
 on:
-  workflow_run:
-    workflows: [CI]
-    types: [completed]
+  push:
     branches: [main]
+    paths:
+      - 'website/**'
+      - '.github/workflows/deploy.yml'
   workflow_dispatch:
 
 # Never two deploys at once. Uploads are not transactional, and a half-written
-# index.html pointing at chunks that have not landed yet is a broken site.
+# index.html pointing at assets that have not landed yet is a broken site.
 concurrency:
   group: deploy
   cancel-in-progress: false
@@ -32,39 +35,17 @@ jobs:
     permissions:
       contents: read
     environment: production
-    # A CI run that failed, was cancelled, or timed out must not ship. A manual
-    # dispatch has no `workflow_run` to read and is allowed through on purpose:
-    # it is somebody deciding to deploy, which is the escape hatch for a CI
-    # outage.
-    if: >-
-      github.event_name == 'workflow_dispatch'
-      || github.event.workflow_run.conclusion == 'success'
     steps:
-      # The exact commit CI passed, not whatever main has moved on to.
-      # `workflow_run` checks out the default branch's tip by default, so two
-      # pushes in quick succession would deploy the second one on the strength
-      # of the first one's green run — shipping a commit nothing has tested.
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-
-      - run: npm ci
-
-      # Rebuilt here rather than downloaded from the CI run: a deploy that
-      # builds the commit it is deploying cannot ship a stale artefact.
-      # `npm run build` typechecks first and fails the deploy if it does not.
-      - name: Build
-        run: npm run build
-
+      # No build step and no npm install, because there is nothing to build.
+      # website/ is uploaded exactly as it sits in the repository, which is
+      # also what `python3 -m http.server -d website` serves locally — so what
+      # you checked is what ships.
       - name: Deploy to BunnyCDN
         uses: ayeressian/bunnycdn-storage-deploy@v2.4.5
         with:
-          source: "dist"
+          source: "website"
           storageZoneName: "${{ secrets.BUNNY_STORAGE_ZONE }}"
           storagePassword: "${{ secrets.BUNNY_STORAGE_PASSWORD }}"
           accessKey: "${{ secrets.BUNNY_API_KEY }}"

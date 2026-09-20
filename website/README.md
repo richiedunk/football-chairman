@@ -24,11 +24,17 @@ python3 -m http.server -d website 8000    # http://localhost:8000
 
 ## Deploying
 
-Upload the contents of this folder to any static host — the paths are all
-relative, so it works from a domain root or a subdirectory. It is deliberately
-kept separate from the game's own `deploy.yml`, which builds `dist/` and ships
-it to the game's bunny.net zone: the site and the game are two artefacts and
-should be two uploads, to two zones or two paths.
+`deploy.yml` ships this folder to bunny.net on any push to `main` that touches
+it. Nothing is built first: what is in the repository is what is uploaded,
+which is also what `python3 -m http.server -d website` serves locally.
+
+That workflow used to deploy the game itself. The game is not a web target any
+more — it ships as an Android APK from `release.yml` on a `v*` tag — so the
+zone and its four secrets carry this site instead.
+
+The paths here are all relative, so the folder also works from a domain root
+or a subdirectory on any other static host, which is what keeps the move in
+the next section cheap.
 
 Inter and JetBrains Mono come from Google Fonts and are the page's only
 third-party request. The font stack falls through to the system faces if that
