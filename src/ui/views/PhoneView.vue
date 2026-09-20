@@ -1,0 +1,94 @@
+<script setup lang="ts">
+import { computed } from 'vue'
+import { useRouter } from 'vue-router'
+import { useGameStore } from '../../stores/game'
+import { PHONE_APPS, type PhoneApp } from '../apps'
+
+/**
+ * The home screen.
+ *
+ * Not a dashboard and not a menu — the place the phone sits when you are not
+ * doing anything with it. What it owes the reader is one thing: which of these
+ * wants something from me. That is what the badges are for, and it is why the
+ * counts are the same counts the screens themselves would show rather than a
+ * second reckoning invented here.
+ *
+ * The dashboard is not gone. It is the Club app, first in the grid, and it
+ * still holds the standing, board confidence against its target and the next
+ * match. It stopped being the root, which is a different thing from being
+ * deleted — the mistake I made twice was calling this a replacement.
+ */
+
+const store = useGameStore()
+const router = useRouter()
+
+/**
+ * What sits on an icon.
+ *
+ * Only ever "this wants something". A count that is always there is a count
+ * nobody reads, so a squad of twenty-five with nothing wrong shows nothing.
+ */
+function badgeFor(app: PhoneApp): number {
+  switch (app.badge) {
+    case 'unread':
+      return store.unread
+    case 'deadline':
+      // Only on the day. The market always has something in it; that is not
+      // the same as the market needing you.
+      return store.isDeadline ? store.deadlineOffers.length : 0
+    case 'milestones':
+      return store.newAchievements.length
+    case 'registration':
+      // Players who cannot be picked, while there is still time to fix it.
+      return store.registrationOpen ? (store.registration?.unregistered.length ?? 0) : 0
+    default:
+      return 0
+  }
+}
+
+/** Urgent is a different colour from merely waiting. */
+const blocked = computed(() => store.blockers.length > 0)
+
+const club = computed(() => store.club)
+const date = computed(() => store.game?.date ?? null)
+</script>
+
+<template>
+  <div class="phone">
+    <div class="phone__plate">
+      <div class="phone__club">{{ club?.name ?? 'Undisclosed Football' }}</div>
+      <div class="phone__when num">
+        <span v-if="date">{{ date.season }}/{{ String((date.season + 1) % 100).padStart(2, '0') }}</span>
+        <span v-if="date">WEEK {{ date.week }}</span>
+      </div>
+      <!-- The one line the home screen owes you before you tap anything. -->
+      <div v-if="blocked" class="phone__waiting phone__waiting--urgent num">
+        {{ store.blockers.length }} THING{{ store.blockers.length === 1 ? '' : 'S' }} NEED YOU
+      </div>
+      <div v-else-if="store.pendingDecisions" class="phone__waiting num">
+        {{ store.pendingDecisions }} DECISION{{ store.pendingDecisions === 1 ? '' : 'S' }} OPEN
+      </div>
+      <div v-else class="phone__waiting num">NOTHING PRESSING</div>
+    </div>
+
+    <div class="apps">
+      <button
+        v-for="app in PHONE_APPS"
+        :key="app.id"
+        class="app"
+        @click="router.push(app.to)"
+      >
+        <span class="app__tile">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path :d="app.d" />
+            <path v-if="app.extra" :d="app.extra" />
+          </svg>
+          <span v-if="badgeFor(app) > 0" class="app__badge">
+            {{ badgeFor(app) > 99 ? '99+' : badgeFor(app) }}
+          </span>
+        </span>
+        <span class="app__label">{{ app.label }}</span>
+      </button>
+    </div>
+  </div>
+</template>

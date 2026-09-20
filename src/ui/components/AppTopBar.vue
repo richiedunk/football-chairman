@@ -10,15 +10,16 @@ const store = useGameStore()
 const route = useRoute()
 const router = useRouter()
 
-// Sub-pages get a back arrow; the five tab roots do not, because "back" from a
-// tab root has no meaningful destination on a phone.
-const tabRoots = new Set(['home', 'inbox', 'squad', 'transfers', 'club'])
-const showBack = computed(() => !tabRoots.has(String(route.name)))
+// Everything is a sub-page now: the home screen is the only root, so every
+// app has somewhere real to go back to. That was not true under a tab bar,
+// where "back" from a tab root led nowhere.
+const showBack = computed(() => route.name !== 'phone')
 
-// On a tab root the header carries the club; on a sub-page it carries the
-// screen, with the club demoted to the line beneath. The band stays the same
-// either way, so the club never stops being present.
-const isRoot = computed(() => !showBack.value)
+// The Club app is about the club, so it is named after it — everything else
+// carries its own name with the club demoted to the line beneath. Under a tab
+// bar this followed from being a tab root; with the home screen as the only
+// root it has to be said, or the dashboard's header reads "Home".
+const isRoot = computed(() => route.name === 'home')
 const title = computed(() => {
   if (isRoot.value) return store.club?.name ?? 'Undisclosed Football'
   // A conversation is titled by whoever is in it. The key in the URL is

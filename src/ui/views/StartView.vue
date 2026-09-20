@@ -31,7 +31,7 @@ async function refresh() {
 async function open(slot: SaveSlotMeta) {
   error.value = ''
   try {
-    if (await store.load(slot.id)) router.push('/home')
+    if (await store.load(slot.id)) router.push('/phone')
     else error.value = 'That save could not be read.'
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'That save could not be read.'

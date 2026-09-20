@@ -182,7 +182,7 @@ const concerns = computed(() => {
     </div>
 
     <div class="btn-row mt" style="padding-bottom: 8px">
-      <button class="btn btn--primary btn--block" @click="router.replace('/home')">
+      <button class="btn btn--primary btn--block" @click="router.replace('/phone')">
         Get to work
       </button>
     </div>

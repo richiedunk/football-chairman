@@ -22,6 +22,15 @@ const routes: RouteRecordRaw[] = [
    * places with a deeper drill-down is what stops a phone screen reading as a
    * menu, so those routes carry `tab: 'home'` and keep the first tab lit.
    */
+  /*
+   * The phone's home screen, and the root a career lives at. Everything else
+   * is an app reached from it — which is why there is no longer a tab bar
+   * deciding which five of thirty screens matter.
+   */
+  { path: '/phone', name: 'phone', component: () => import('./ui/views/PhoneView.vue'), meta: { tab: 'phone' } },
+  // The dashboard is still here and still carries the standing, the board's
+  // confidence and the next match. It is the Club app now rather than the
+  // root, which is a different thing from being deleted.
   { path: '/home', name: 'home', component: () => import('./ui/views/HomeView.vue'), meta: { tab: 'home' } },
   /*
    * The route name `inbox` is load-bearing and must not be renamed. Inbox items
