@@ -2,7 +2,9 @@
 import { checkForExposure, generateOrganicStories } from '../../systems/media'
 import { gotAwayStory, reportOnesThatGotAway } from '../../systems/oneThatGotAway'
 import { addInboxItem } from '../../systems/inbox'
+import { phrase } from '../../systems/voice'
 import { phase } from '../context'
+import type { GameState, ID } from '../../types'
 
 /**
  * The press.
@@ -37,8 +39,11 @@ export const press = phase({
         addInboxItem(state, ids, {
           category: 'media',
           subject: story.headline,
-          from: state.outlets[story.outletId]?.name ?? 'The press',
-          body: story.body,
+          // The press officer forwarding a cutting, not the paper texting you.
+          // A newspaper is something you read, which is what the media screen
+          // is for; this is the man whose job is making sure you have seen it.
+          from: 'Press Officer',
+          body: forwarded(state, story.outletId, story.headline, story.body),
           link: { view: 'media' },
         })
       }
@@ -49,8 +54,8 @@ export const press = phase({
       addInboxItem(state, ids, {
         category: 'media',
         subject: story.headline,
-        from: state.outlets[story.outletId]?.name ?? 'The press',
-        body: story.body,
+        from: 'Press Officer',
+        body: forwarded(state, story.outletId, story.headline, story.body),
         // No id: the media screen is not addressable by story, and a link to
         // a route that does not exist falls through to the catch-all.
         link: { view: 'media' },
@@ -68,3 +73,23 @@ export const press = phase({
     }
   },
 })
+
+/**
+ * A story as the press officer passes it on.
+ *
+ * Newspapers were arriving in the inbox as if the paper had texted you, which
+ * puts a thing you read into the channel for people who want an answer. The
+ * story itself belongs on the media screen, set in its own outlet's voice;
+ * this is the colleague making sure you have seen it before somebody asks you
+ * about it.
+ */
+function forwarded(state: GameState, outletId: ID, headline: string, body: string): string {
+  const outlet = state.outlets[outletId]?.name ?? 'The press'
+  const opener = phrase(`forward:${outletId}:${headline}`, [
+    `${outlet} have run this:`,
+    `Seen this in ${outlet}?`,
+    `${outlet}, this morning:`,
+    `Worth a look — ${outlet} are running this:`,
+  ])
+  return `${opener}\n\n"${headline}"\n\n${body}`
+}

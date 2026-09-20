@@ -134,9 +134,14 @@ export const deadlineDay = phase({
           category: 'transfer',
           subject: 'Deadline day',
           from: 'Recruitment',
-          body: 'The window shuts at the end of the week. Anyone still on the list is either '
-            + 'signed today or not at all, and the clubs who would not talk to us in the summer '
-            + 'are answering the phone.',
+          body: phrase(`deadline:${state.date.season}:${state.date.week}`, [
+            `Window shuts Friday. Anyone still on that list gets signed today or not at all — `
+              + `and the clubs who wouldn't take our calls in the summer are suddenly picking up.`,
+            `Today's the day. Whatever's still outstanding is done by tonight or it isn't done, `
+              + `and everyone's phone is on. Including the ones who ignored us in July.`,
+            `Last chance. The list is what it is and the window shuts at the end of the week — `
+              + `though you'd be amazed who answers the phone on deadline day.`,
+          ]),
           link: { view: 'transfers' },
         })
       }

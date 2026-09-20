@@ -2,6 +2,7 @@
 import { modelDue, pruneFindings, runModel } from '../../systems/dataDepartment'
 import { processContracts } from '../../systems/contracts'
 import { addInboxItem } from '../../systems/inbox'
+import { contact } from '../../systems/voice'
 import { phase } from '../context'
 
 /**
@@ -32,10 +33,13 @@ export const dataDepartment = phase({
         const best = state.dataFindings[0]
         if (best && (state.dataFindings.length > before || week === 1)) {
           const player = state.players[best.playerId]
+          const analyst = playerClub.staff
+            .map((id) => state.staff[id])
+            .find((member) => member?.role === 'analyst')
           addInboxItem(state, ids, {
             category: 'scouting',
             subject: `The model has ${state.dataFindings.length} name${state.dataFindings.length === 1 ? '' : 's'}`,
-            from: 'Data Department',
+            from: contact(analyst?.knownAs, 'Analyst'),
             body: player
               ? `This run puts ${player.knownAs} at the top: valued at `
                 + `${best.marketValue.toLocaleString()}, and the model has him at `

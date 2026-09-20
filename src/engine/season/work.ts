@@ -344,7 +344,7 @@ export function releaseUnpromotedYouth(state: GameState, deps: RolloverDeps): vo
           addInboxItem(state, ids, {
             category: 'academy',
             subject: `${player.knownAs} promoted to the senior squad`,
-            from: contact(academyDirectorOf(state, club)?.knownAs, 'Academy Director'),
+            from: contact(academyDirectorOf(state, club)?.knownAs, 'Academy'),
             body: `${player.knownAs} has aged out of the academy and been given a professional contract. He is one to watch.`,
             link: { view: 'player', id: player.id },
           })

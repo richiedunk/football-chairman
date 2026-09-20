@@ -4,6 +4,7 @@ import { createOwner, debtTolerance, OWNER_LABELS, ownerName } from './ownership
 import { recalculateBudgets, weeklyRevenue } from './finance'
 import { setSeasonExpectation, setSeasonMandates } from './board'
 import { addInboxItem, addNews } from './inbox'
+import { phrase } from './voice'
 import type { Club, GameState, OwnerKind, Takeover } from '../types'
 
 /**
@@ -191,8 +192,15 @@ function advanceExisting(state: GameState, ids: IdFactory, rng: Rng): void {
           category: 'media',
           subject: `${club.name} takeover talk`,
           from: 'Press Officer',
-          body: `Reports this morning say ${takeover.incoming.name} have approached the owners about buying the club. `
-            + 'Nobody at the club has confirmed anything and you were not consulted.',
+          body: phrase(`takeovertalk:${club.id}:${takeover.incoming.name}`, [
+            `Heads up before you see it elsewhere — the papers have ${takeover.incoming.name} `
+              + `approaching the owners about buying the club. Nobody here has confirmed a thing, `
+              + `and for what it's worth nobody asked you either.`,
+            `You'll want to know this from me first: ${takeover.incoming.name} are being linked `
+              + `with a bid for the club. No comment from upstairs, and you weren't consulted.`,
+            `Morning. ${takeover.incoming.name} are in the papers as potential buyers. `
+              + `The club is saying nothing, which you can read however you like.`,
+          ]),
           link: { view: 'board' },
         })
       } else {
