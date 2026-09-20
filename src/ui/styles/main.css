@@ -1439,6 +1439,115 @@ button, input, select, textarea {
   color: var(--accent-dim);
 }
 
+/* ---------------------------------------------------------------------------
+   Cuttings
+
+   The third register: the public discussing you. What tells it from the club's
+   own screens is not a typeface, it is that this one can be wrong — so the
+   only job the styling has is to say what kind of paper is telling you, before
+   you have read a word of it.
+
+   Three voices, separated by weight and case rather than by colour. Eleven
+   categories of colour is what the old build did and nothing stood out; the
+   one accent is already spoken for by the thing you did, and a paper you are
+   being asked to distrust should not be wearing it.
+   --------------------------------------------------------------------------- */
+
+.cutting {
+  padding: 12px 0 10px;
+  border-top: 1px solid var(--border-strong);
+}
+
+.cutting__masthead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 8px;
+  margin-bottom: 9px;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.cutting__title {
+  font-size: 13px;
+  color: var(--text);
+}
+
+/* What the paper is, in words. The two numbers this replaces were on a
+   different screen entirely, so nobody read them next to a story. */
+.cutting__standing {
+  font-size: 9.5px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-fainter);
+  white-space: nowrap;
+}
+
+.cutting__headline {
+  margin: 0 0 6px;
+  font-size: 15px;
+  line-height: 1.28;
+  color: var(--text);
+}
+
+.cutting__body {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+
+.cutting__foot {
+  display: flex;
+  gap: 12px;
+  margin-top: 10px;
+  font-size: 9.5px;
+  letter-spacing: 0.07em;
+  color: var(--text-fainter);
+}
+.cutting__ours {
+  color: var(--accent-dim);
+}
+
+/* The paper of record: restrained, wide-tracked, a headline that states. */
+.cutting--record .cutting__title {
+  font-weight: 500;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+.cutting--record .cutting__headline {
+  font-weight: 500;
+  letter-spacing: -0.005em;
+}
+
+/* The middle of the market. */
+.cutting--daily .cutting__title {
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.cutting--daily .cutting__headline {
+  font-weight: 650;
+}
+
+/* The tabloid: heavier, tighter, and it shouts the headline. Legible at the
+   same size — a paper you should discount is not a paper you cannot read. */
+.cutting--tabloid .cutting__masthead {
+  border-bottom-width: 2px;
+  border-bottom-color: var(--border-strong);
+}
+.cutting--tabloid .cutting__title {
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+}
+.cutting--tabloid .cutting__headline {
+  font-weight: 800;
+  letter-spacing: -0.022em;
+  text-transform: uppercase;
+  line-height: 1.16;
+}
+
 @media (min-width: 620px) {
   body { background: #030405; }
   #app {

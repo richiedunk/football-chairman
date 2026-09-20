@@ -989,6 +989,38 @@ await step('media briefing', async () => {
   await page.screenshot({ path: `${SHOT}/12-media-after.png` })
 })
 
+await step('a story is printed in its outlet\'s voice', async () => {
+  // The outlet's credibility and sensationalism are modelled and were being
+  // thrown away here. A reader has to be able to tell a paper of record from
+  // one that prints anything without opening another screen.
+  await page.goto('http://127.0.0.1:4173/#/media')
+  // The briefing's outcome screen is still up from the step before, and it
+  // covers the page — the assertions read straight through it but the
+  // screenshot came out as the notice rather than the press.
+  await readNotice()
+  await page.waitForSelector('.cutting, .empty', { timeout: 15000 })
+  const cuttings = await page.locator('.cutting').count()
+  if (cuttings === 0) {
+    console.log('   no coverage yet, skipped')
+    return
+  }
+  const voices = new Set()
+  for (let i = 0; i < cuttings; i++) {
+    const cls = await page.locator('.cutting').nth(i).getAttribute('class') ?? ''
+    const voice = cls.split(/\s+/).find((c) => c.startsWith('cutting--'))
+    if (!voice) throw new Error('a cutting carries no outlet voice')
+    voices.add(voice)
+    const standing = (await page.locator('.cutting__standing').nth(i).textContent())?.trim()
+    if (!standing) throw new Error('a cutting says nothing about the paper it ran in')
+  }
+  // The truth of a story belongs to the club's note on it, never to the page:
+  // a paper does not print that it made the story up.
+  const insideCutting = await page.locator('.cutting .chip--danger, .cutting .chip--warn').count()
+  if (insideCutting > 0) throw new Error('a cutting is marking its own story false')
+  console.log(`   ${cuttings} cuttings, ${voices.size} voice${voices.size === 1 ? '' : 's'}: ${[...voices].join(', ')}`)
+  await page.screenshot({ path: `${SHOT}/11b-press.png`, fullPage: true })
+})
+
 await step('finance', async () => {
   await page.goto('http://127.0.0.1:4173/#/finance')
   await page.waitForSelector("text=This season's books")

@@ -2,6 +2,7 @@
 import { computed, inject, ref, watch } from 'vue'
 import { useGameStore } from '../../stores/game'
 import MeterBar from '../components/MeterBar.vue'
+import Cutting from '../components/Cutting.vue'
 import AppSheet from '../components/AppSheet.vue'
 import {
   BRIEFING_OPTIONS, credibilityLabel, issueBriefing, respondToStory, RESPONSE_LABELS,
@@ -98,9 +99,6 @@ function respond(story: MediaStory, response: MediaResponse) {
 
 const RESPONSES: MediaResponse[] = ['noComment', 'deny', 'confirm', 'backPlayer', 'backCoach', 'criticise', 'deflect']
 
-function outletName(id: string) {
-  return store.game?.outlets[id]?.name ?? 'The press'
-}
 </script>
 
 <template>
@@ -156,17 +154,15 @@ function outletName(id: string) {
     <div class="section-title">Coverage</div>
     <div v-for="story in stories" :key="story.id" class="card">
       <div class="card__body">
-        <div class="row row--between mb">
-          <span class="chip">{{ STORY_KIND_LABELS[story.kind] }}</span>
-          <span class="tiny faint">
-            {{ outletName(story.outletId) }} · wk {{ story.week }}
-          </span>
-        </div>
-        <div class="bold small">{{ story.headline }}</div>
-        <p class="tiny muted" style="margin-top: 4px">{{ story.body }}</p>
+        <!-- What was printed. Nothing the club knows goes inside it: a paper
+             does not print a note saying it made the story up. -->
+        <Cutting :story="story" />
 
+        <!-- And below it, the club's own reading of what was printed. The
+             truth of a story about this club is something the club knows
+             whether or not the page says so. -->
         <div class="chip-row mt">
-          <span v-if="story.plantedBy === store.club?.id" class="chip chip--info">You planted this</span>
+          <span class="chip">{{ STORY_KIND_LABELS[story.kind] }}</span>
           <span v-if="story.truth === 'fabricated'" class="chip chip--danger">Fabricated</span>
           <span v-else-if="story.truth === 'exaggerated'" class="chip chip--warn">Overstated</span>
         </div>

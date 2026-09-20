@@ -330,6 +330,34 @@ attachment.
 Two new renderers in total, then. Everything else in the table above is an
 existing view sitting in a register it already suited.
 
+### Where the websites register actually started
+
+Not on the league table or the results archive, in the end. Both are already
+dense, typographic and correct, and a new medium for them would have been a
+skin over a table — which is the enthusiasm this document warns about twice.
+The league screen already files results, fixtures and its own news behind
+tabs.
+
+It started on the press instead, because that is where the register pays for
+itself: `MediaOutlet` carries `credibility` and `sensationalism`, the engine
+uses both, and the UI printed them as two numbers on the media screen's staff
+list and then rendered every story identically. A reader had the outlet's
+character available as arithmetic and never as something they could feel.
+
+A story is now a cutting, set in its outlet's voice — three voices, chosen by
+sensationalism, with credibility separating the paper that shouts and is
+usually right from the one that shouts and is not. The one distinction worth
+drawing is that a sensational outlet with real credibility is the dangerous
+one: it will run anything and people believe it.
+
+Two rules came out of building it. **The page never marks its own story
+false.** `truth` is real and the club does know it — a club knows whether its
+striker asked to leave — but it belongs to the club's note under the cutting,
+not to the printed page, because a paper does not print that it made the story
+up. And **the newspaper list keeps its raw numbers**, because that list is the
+club's own system for deciding who to ring, and choosing whom to brief is an
+operating decision rather than something to be felt.
+
 ---
 
 ## What this costs, honestly
