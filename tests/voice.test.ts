@@ -184,7 +184,9 @@ describe('a chairman writes like the man he is', () => {
     for (const kind of ['legacyFamily', 'foreignFund', 'fanOwned']) {
       const body = welcomeAt(kind)
       expect(body, `${kind} owner never mentions the squad`).toMatch(/senior players/)
-      expect(body, `${kind} owner never mentions wages`).toMatch(/wage budget/)
+      // The figure, not one phrasing of it — the letter has been reworded
+      // once already and the fact is what the test is protecting.
+      expect(body, `${kind} owner never mentions wages`).toMatch(/£[\d,]+ a week/)
     }
   })
 })

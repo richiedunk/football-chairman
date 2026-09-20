@@ -8,7 +8,7 @@ import { assignScout } from './systems/scouting'
 import { addInboxItem } from './systems/inbox'
 import { chairmanRegister, pickBy } from './systems/voice'
 import { refreshSquadStatuses } from './systems/morale'
-import { setSeasonExpectation, setSeasonMandates } from './systems/board'
+import { MANDATE_BRIEFS, setSeasonExpectation, setSeasonMandates } from './systems/board'
 import { contractTermsFor, signContract, type ContractOffer } from './systems/directorContract'
 import type { Club, DirectorBackground, GameState, ID, Staff } from './types'
 
@@ -212,60 +212,70 @@ function writeOpeningInbox(state: GameState, ids: IdFactory, club: Club): void {
   const avgAge = seniors.length
     ? (seniors.reduce((sum, p) => sum + p!.age, 0) / seniors.length).toFixed(1)
     : '—'
+  const register = chairmanRegister(club.board.owner.kind)
+  const signature = ownerSignature(club)
+
+  // Only the opening line changes with who owns the club. The rest is the same
+  // man carrying on, so it stays out of the first person — a paragraph that
+  // says "it keeps me awake" reads wrong under a fund that talks in the
+  // passive voice, and the facts are the facts whoever is delivering them.
+  const welcome = [
+    pickBy(`welcome:${club.id}`, register, {
+      paternal: [
+        `Welcome. My family has held this club a long time and we have never had one of these jobs before — which should tell you how far things have slipped.`,
+        `Welcome aboard. We have never employed a director of football. My father would have hated the idea, and he would have been wrong.`,
+      ],
+      plain: [
+        `Right. You're the first director of football we've had, and there's a reason we finally needed one.`,
+        `Welcome. I'll be straight with you: we've not had one of these before and I'd rather we hadn't needed to start.`,
+      ],
+      corporate: [
+        `Welcome to the club. The board has created this position following a review of football operations. The remit is set out below.`,
+        `Welcome. This role is new, arising from the operational review concluded last quarter. Your objectives follow.`,
+      ],
+      breezy: [
+        `Welcome! Brilliant to have you. First one of these we've had — everyone tells me it's what the modern club does, so here we are.`,
+        `Welcome aboard, delighted you said yes. You're our first director of football, which I'm told is very overdue.`,
+      ],
+      committee: [
+        `Welcome. The partners have agreed that the club requires a director of football, and you are that appointment.`,
+        `Welcome aboard. It was the view of the ownership group that this role was needed. You come with our collective backing.`,
+      ],
+      earnest: [
+        `Welcome. The members voted for this post, which is not something we do lightly, and a lot of people are hoping you are the answer.`,
+        `Welcome aboard. This club belongs to its supporters and they have put their money behind creating your job. Please do not waste it.`,
+      ],
+    }),
+    // League first, because the targets read "stay in this division" and
+    // "win the division" — tacking the name on the end of those produced "stay
+    // in this division in Division One".
+    `In ${league?.name ?? 'this division'} this season, the expectation is straightforward: ${club.board.expectation.description.toLowerCase()}. Manage that and nobody upstairs will trouble you.`,
+    `The squad is ${seniors.length} senior players, average age ${avgAge}. Wages run to £${club.finances.wageBudget.toLocaleString()} a week, and ${
+      club.finances.transferBudget > 0
+        ? `there is £${club.finances.transferBudget.toLocaleString()} to spend. It gets spent once`
+        : 'there is nothing to spend, so whatever you want, you find the money for it first'
+    }.`,
+    club.finances.debt > 0
+      ? `The club is also carrying £${club.finances.debt.toLocaleString()} of debt. It is the first thing the board look at on a Monday, and sooner or later it will be the first thing they ask you about.`
+      : '',
+    coach
+      ? `One last thing. ${coach.knownAs} is the head coach and he picks the team. That part is not yours, and accepting it early will save everybody a good deal of trouble.`
+      : `One last thing. There is no head coach. That is the first job, and it will not wait.`,
+    signature,
+  ]
 
   addInboxItem(state, ids, {
     category: 'board',
     subject: `Welcome to ${club.name}`,
     from: 'Chairman',
-    body: [
-      // The first thing a player ever reads, in the voice of whoever owns the
-      // club. Same facts underneath, because the facts are the job; what
-      // changes is the man delivering them.
-      pickBy(`welcome:${club.id}`, chairmanRegister(club.board.owner.kind), {
-        paternal: [
-          `Welcome. My family has held this club a long time and we have never had one of these jobs before — which should tell you how far things have slipped.`,
-          `Welcome aboard. We have never employed a director of football. My father would have hated the idea, and he would have been wrong.`,
-        ],
-        plain: [
-          `Right. You're the first director of football we've had, and there's a reason we finally needed one.`,
-          `Welcome. I'll be straight with you: we've not had one of these before and I'd rather we hadn't needed to start.`,
-        ],
-        corporate: [
-          `Welcome to the club. The board has created this position following a review of football operations. The remit is set out below.`,
-          `Welcome. This role is new, arising from the operational review concluded last quarter. Your objectives follow.`,
-        ],
-        breezy: [
-          `Welcome! Brilliant to have you. First one of these we've had — everyone tells me it's what the modern club does, so here we are.`,
-          `Welcome aboard, delighted you said yes. You're our first director of football, which I'm told is very overdue.`,
-        ],
-        committee: [
-          `Welcome. The partners have agreed that the club requires a director of football, and you are that appointment.`,
-          `Welcome aboard. It was the view of the ownership group that this role was needed. You come with our collective backing.`,
-        ],
-        earnest: [
-          `Welcome. The members voted for this post, which is not something we do lightly, and a lot of people are hoping you are the answer.`,
-          `Welcome aboard. This club belongs to its supporters and they have put their money behind creating your job. Please do not waste it.`,
-        ],
-      }),
-      ``,
-      `The expectation this season is straightforward: ${club.board.expectation.description.toLowerCase()} in ${league?.name ?? 'the division'}.`,
-      ``,
-      `You have ${seniors.length} senior players with an average age of ${avgAge}, a wage budget of £${club.finances.wageBudget.toLocaleString()} a week, and ${club.finances.transferBudget > 0 ? `£${club.finances.transferBudget.toLocaleString()} to spend` : 'nothing to spend'}.`,
-      club.finances.debt > 0
-        ? `\nYou should also know we are carrying £${club.finances.debt.toLocaleString()} of debt. Deal with it.`
-        : '',
-      coach ? `\n${coach.knownAs} is the head coach. He picks the team. You do not.` : '\nWe have no head coach. That is your first problem.',
-    ].join('\n'),
+    body: welcome.filter(Boolean).join('\n\n'),
     urgent: false,
     link: { view: 'board' },
   })
 
   if (club.board.mandates.length > 0) {
-    addInboxItem(state, ids, {
-      category: 'board',
-      subject: 'Your remit',
-      from: 'Chairman',
-      body: pickBy(`remit:${club.id}`, chairmanRegister(club.board.owner.kind), {
+    const remit = [
+      pickBy(`remit:${club.id}`, register, {
         paternal: [`There are a few things besides the table that matter to us here. You will be judged on them too, and I will not pretend otherwise.`],
         plain: [`There's more to it than the league table. These are the other things you'll be marked on. No surprises later.`],
         corporate: [`The following priorities sit alongside league position within your objectives. Performance will be assessed against all of them.`],
@@ -273,7 +283,39 @@ function writeOpeningInbox(state: GameState, ids: IdFactory, club: Club): void {
         committee: [`The partners have agreed a number of priorities alongside league position. You will be assessed against these as well.`],
         earnest: [`The members asked for these alongside the league position. They matter to people here, so they will matter to how you are judged.`],
       }),
+      // The bug this list fixes: the letter announced the priorities and then
+      // set out none of them, because the only place they were ever written
+      // down was the board screen.
+      club.board.mandates.map((m) => `• ${MANDATE_BRIEFS[m]}`).join('\n'),
+      `They are all on the board screen as well, if you would sooner see them as a list.`,
+      signature,
+    ]
+
+    addInboxItem(state, ids, {
+      category: 'board',
+      subject: 'Your remit',
+      from: 'Chairman',
+      body: remit.filter(Boolean).join('\n\n'),
+      urgent: false,
       link: { view: 'board' },
     })
+  }
+}
+
+/**
+ * How the chairman signs off. A person puts his name to a letter; a fund, a
+ * consortium or a supporters' trust does not, and signing one
+ * "— Meridian Capital" read like a press release rather than a note from the
+ * man who just hired you.
+ */
+function ownerSignature(club: Club): string {
+  const owner = club.board.owner
+  switch (owner.kind) {
+    case 'foreignFund':
+    case 'consortium':
+    case 'fanOwned':
+      return ''
+    default:
+      return `— ${owner.name}`
   }
 }

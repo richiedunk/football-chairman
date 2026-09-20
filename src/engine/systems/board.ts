@@ -163,6 +163,26 @@ export const MANDATE_LABELS: Record<BoardMandate, string> = {
 }
 
 /**
+ * The same mandates as the chairman puts them in his opening letter.
+ *
+ * The labels above are a checklist for the board screen; these are the same
+ * instructions written out for somebody to read. Kept out of the first person
+ * so they sit under any chairman's register — the prose around them carries
+ * the voice, the list carries the job.
+ */
+export const MANDATE_BRIEFS: Record<BoardMandate, string> = {
+  reduceWageBill: 'Get the wage bill down. The squad costs more than the club earns.',
+  balanceBooks: 'Balance the books. Tenth and solvent beats fourth and in court.',
+  developYouth: 'Give the academy players a proper look. The club pays for it, so it ought to produce.',
+  winPromotion: 'Go up. Not next year, not the year after. This year.',
+  avoidRelegation: 'Stay in this division. Whatever it takes.',
+  winTrophy: 'Win something. This club has not had a day out in far too long.',
+  sellStarPlayer: 'Sell one of the big earners, and the money comes back to the board, not the squad.',
+  improveFacilities: 'Do something about the facilities. Players walk in, look round, and walk out again.',
+  qualifyContinental: 'Get the club into Europe. The money would change what is possible here.',
+}
+
+/**
  * Weekly board assessment. Confidence moves gradually, so a single bad result
  * never gets you sacked but a bad month does — which is the pressure the whole
  * job is meant to sit under.
