@@ -6,6 +6,7 @@ import { recalculateBudgets } from './systems/finance'
 import { openCareerEntry } from './systems/career'
 import { assignScout } from './systems/scouting'
 import { addInboxItem } from './systems/inbox'
+import { chairmanRegister, pickBy } from './systems/voice'
 import { refreshSquadStatuses } from './systems/morale'
 import { setSeasonExpectation, setSeasonMandates } from './systems/board'
 import { contractTermsFor, signContract, type ContractOffer } from './systems/directorContract'
@@ -217,7 +218,35 @@ function writeOpeningInbox(state: GameState, ids: IdFactory, club: Club): void {
     subject: `Welcome to ${club.name}`,
     from: 'Chairman',
     body: [
-      `Welcome aboard. You are the first director of football this club has employed, and there is a reason we needed one.`,
+      // The first thing a player ever reads, in the voice of whoever owns the
+      // club. Same facts underneath, because the facts are the job; what
+      // changes is the man delivering them.
+      pickBy(`welcome:${club.id}`, chairmanRegister(club.board.owner.kind), {
+        paternal: [
+          `Welcome. My family has held this club a long time and we have never had one of these jobs before — which should tell you how far things have slipped.`,
+          `Welcome aboard. We have never employed a director of football. My father would have hated the idea, and he would have been wrong.`,
+        ],
+        plain: [
+          `Right. You're the first director of football we've had, and there's a reason we finally needed one.`,
+          `Welcome. I'll be straight with you: we've not had one of these before and I'd rather we hadn't needed to start.`,
+        ],
+        corporate: [
+          `Welcome to the club. The board has created this position following a review of football operations. The remit is set out below.`,
+          `Welcome. This role is new, arising from the operational review concluded last quarter. Your objectives follow.`,
+        ],
+        breezy: [
+          `Welcome! Brilliant to have you. First one of these we've had — everyone tells me it's what the modern club does, so here we are.`,
+          `Welcome aboard, delighted you said yes. You're our first director of football, which I'm told is very overdue.`,
+        ],
+        committee: [
+          `Welcome. The partners have agreed that the club requires a director of football, and you are that appointment.`,
+          `Welcome aboard. It was the view of the ownership group that this role was needed. You come with our collective backing.`,
+        ],
+        earnest: [
+          `Welcome. The members voted for this post, which is not something we do lightly, and a lot of people are hoping you are the answer.`,
+          `Welcome aboard. This club belongs to its supporters and they have put their money behind creating your job. Please do not waste it.`,
+        ],
+      }),
       ``,
       `The expectation this season is straightforward: ${club.board.expectation.description.toLowerCase()} in ${league?.name ?? 'the division'}.`,
       ``,
@@ -236,7 +265,14 @@ function writeOpeningInbox(state: GameState, ids: IdFactory, club: Club): void {
       category: 'board',
       subject: 'Your remit',
       from: 'Chairman',
-      body: `The board have set the following priorities alongside league position. You will be judged on these.`,
+      body: pickBy(`remit:${club.id}`, chairmanRegister(club.board.owner.kind), {
+        paternal: [`There are a few things besides the table that matter to us here. You will be judged on them too, and I will not pretend otherwise.`],
+        plain: [`There's more to it than the league table. These are the other things you'll be marked on. No surprises later.`],
+        corporate: [`The following priorities sit alongside league position within your objectives. Performance will be assessed against all of them.`],
+        breezy: [`Oh — couple of other things we care about besides the league! All listed. Don't want you caught out.`],
+        committee: [`The partners have agreed a number of priorities alongside league position. You will be assessed against these as well.`],
+        earnest: [`The members asked for these alongside the league position. They matter to people here, so they will matter to how you are judged.`],
+      }),
       link: { view: 'board' },
     })
   }

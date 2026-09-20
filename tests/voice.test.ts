@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { article, contact, phrase, withArticle } from '../src/engine/systems/voice'
+import {
+  article, boardTone, chairmanRegister, coachRegister, contact, phrase, pickBy, withArticle,
+} from '../src/engine/systems/voice'
+import { prepareNewGame, startCareerAt } from '../src/engine/newGame'
+import { startingClubCandidates } from '../src/engine/systems/career'
 
 /**
  * Picking how somebody phrases something.
@@ -82,5 +86,105 @@ describe('how a contact is saved', () => {
     expect(contact(null, 'Competition Secretary')).toBe('Competition Secretary')
     expect(contact(undefined, 'Head Coach')).toBe('Head Coach')
     expect(contact('   ', 'Physio')).toBe('Physio')
+  })
+})
+
+describe('how the board is disposed towards you', () => {
+  it('reads warnings as worse than a middling number', () => {
+    // Two formal warnings is one from the sack whatever the confidence says.
+    expect(boardTone(80, 2)).toBe('hostile')
+    expect(boardTone(80, 0)).toBe('backing')
+  })
+
+  it('moves through every tone as confidence falls', () => {
+    const seen = [boardTone(90), boardTone(55), boardTone(35), boardTone(10)]
+    expect(new Set(seen).size, `only saw ${seen.join(', ')}`).toBe(4)
+  })
+
+  it('has a tone for every confidence in range', () => {
+    for (let c = 0; c <= 100; c += 1) expect(boardTone(c)).toBeTruthy()
+  })
+})
+
+describe('how a chairman talks', () => {
+  it('gives each kind of owner its own register', () => {
+    const kinds = ['legacyFamily', 'localBusiness', 'foreignFund', 'celebrity', 'consortium', 'fanOwned']
+    const registers = kinds.map(chairmanRegister)
+    // Six owners, six voices: a fund that bought the club in March should not
+    // write like a family that has held it for eighty years.
+    expect(new Set(registers).size).toBe(6)
+  })
+
+  it('falls back rather than failing on an owner it does not know', () => {
+    expect(chairmanRegister('somethingNew')).toBeTruthy()
+  })
+})
+
+describe('how a head coach talks to you', () => {
+  it('turns pointed when he does not rate you, however much he talks', () => {
+    expect(coachRegister(90, 10)).toBe('pointed')
+    expect(coachRegister(10, 10)).toBe('pointed')
+  })
+
+  it('separates a talker from a man of few words', () => {
+    // `mediaHandling` is how much a coach courts the press. A talker talks.
+    expect(coachRegister(90, 80)).not.toBe(coachRegister(10, 80))
+  })
+
+  it('has something for every combination', () => {
+    for (let m = 0; m <= 100; m += 10) {
+      for (let r = 0; r <= 100; r += 10) {
+        expect(coachRegister(m, r), `nothing at media ${m}, relationship ${r}`).toBeTruthy()
+      }
+    }
+  })
+})
+
+describe('picking a line for a register', () => {
+  it('takes it from that register and no other', () => {
+    const pools = { a: ['from a'], b: ['from b'] } as const
+    expect(pickBy('k', 'a', pools)).toBe('from a')
+    expect(pickBy('k', 'b', pools)).toBe('from b')
+  })
+
+  it('returns nothing rather than throwing on a register with no lines', () => {
+    expect(pickBy('k', 'missing' as 'a', { a: ['x'] } as Record<'a', readonly string[]>)).toBe('')
+  })
+})
+
+/**
+ * The mechanism above is only worth anything if the messages actually use it.
+ * A call site that passes a constant register would pass every test in this
+ * file and put the same words in every chairman's mouth.
+ */
+describe('a chairman writes like the man he is', () => {
+  function welcomeAt(kind: string): string {
+    const setup = prepareNewGame({
+      seed: 'VOICE', directorName: 'T', background: 'scout',
+      worldSize: 'compact', homeNationId: 'eng', startingSeason: 2025,
+    })
+    const clubId = startingClubCandidates(setup.state)[0].id
+    setup.state.clubs[clubId].board.owner.kind = kind as never
+    const state = startCareerAt(setup, clubId)
+    const welcome = state.inbox.find((item) => item.subject.startsWith('Welcome to'))
+    expect(welcome, `no welcome message for a ${kind} owner`).toBeTruthy()
+    return welcome!.body
+  }
+
+  it('greets you differently depending on who owns the club', () => {
+    // Same club, same seed, same facts underneath — six owners, six voices.
+    const kinds = ['legacyFamily', 'localBusiness', 'foreignFund', 'celebrity', 'consortium', 'fanOwned']
+    const openings = kinds.map((kind) => welcomeAt(kind).split('\n')[0])
+    expect(new Set(openings).size, `only ${new Set(openings).size} distinct greetings`).toBe(6)
+  })
+
+  it('still tells you the same facts whoever is saying them', () => {
+    // The voice changes; the job does not. A chairman who forgets to mention
+    // the budget is a nicer read and a worse briefing.
+    for (const kind of ['legacyFamily', 'foreignFund', 'fanOwned']) {
+      const body = welcomeAt(kind)
+      expect(body, `${kind} owner never mentions the squad`).toMatch(/senior players/)
+      expect(body, `${kind} owner never mentions wages`).toMatch(/wage budget/)
+    }
   })
 })
