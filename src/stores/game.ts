@@ -34,6 +34,15 @@ import { agentsInvolvedWith, clientsOf, introductions } from '../engine/systems/
 import {
   generateOpportunities, isDeadlineWeek, type DeadlineOpportunity,
 } from '../engine/systems/deadlineDay'
+import {
+  availableCards, careerCard, challengeCard, lastCompletedSeason, seasonCard,
+  type ShareCard, type ShareCardKind,
+} from '../engine/systems/shareCard'
+import {
+  challengeLink, challengeStatus, isSameEngine, type Challenge,
+} from '../engine/systems/challenge'
+import { allVerdicts, type SuccessorVerdict } from '../engine/systems/successor'
+import { shareCard as sendCard, shareOrigin, type ShareResult } from '../ui/share/share'
 import { executeTransfer } from '../engine/systems/transfers'
 import { canAfford } from '../engine/systems/finance'
 import { haptic } from '../platform/native'
@@ -976,6 +985,96 @@ export const useGameStore = defineStore('game', () => {
     return ACHIEVEMENTS.map((entry) => ({ ...entry, earned: earned.has(entry.id) }))
   })
 
+  // --- Sending it to somebody ----------------------------------------------
+
+  /**
+   * The cards this save can currently produce.
+   *
+   * Asked rather than assumed: there is no season card before a season has
+   * finished, and offering one that renders blank is worse than offering
+   * nothing.
+   */
+  const shareableCards = computed<ShareCardKind[]>(() => {
+    void revision.value
+    const s = state.value
+    return s ? availableCards(s) : []
+  })
+
+  function buildCard(kind: ShareCardKind): ShareCard | null {
+    const s = state.value
+    if (!s) return null
+    if (kind === 'career') return careerCard(s)
+
+    const c = club.value
+    if (!c) return null
+    if (kind === 'challenge') return challengeCard(s, c.id)
+
+    const season = lastCompletedSeason(s, c)
+    return season === null ? null : seasonCard(s, c.id, season)
+  }
+
+  /** The link that hands this club, at this seed, to somebody else. */
+  function linkFor(card: ShareCard): string | undefined {
+    return card.challenge ? challengeLink(card.challenge, shareOrigin()) : undefined
+  }
+
+  /**
+   * Send a card.
+   *
+   * The wording that travels with it is built here rather than in the view,
+   * because it is the same sentence whichever route the share sheet takes and
+   * a card shared without it is a picture with no context.
+   */
+  async function share(kind: ShareCardKind): Promise<ShareResult> {
+    const card = buildCard(kind)
+    if (!card) return { route: 'failed', message: 'Nothing to send yet.' }
+
+    const text = card.challenge
+      ? `${card.title} — beat ${card.headline.value}. Same seed, same squad, same coach.`
+      : `${card.title} — ${card.headline.value} ${card.headline.caption.toLowerCase()}.`
+
+    return sendCard({
+      card,
+      text,
+      url: linkFor(card),
+      filename: `${card.kind}-${card.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+    })
+  }
+
+  // --- Challenges -----------------------------------------------------------
+
+  /** The challenge this save is answering, if it started from a link. */
+  const challenge = computed<Challenge | null>(() => {
+    void revision.value
+    return state.value?.challenge ?? null
+  })
+
+  /**
+   * How it is going, judged against this build's own world.
+   *
+   * Recomputed rather than stored, so a challenge cannot be marked complete by
+   * anything other than the game agreeing that it was.
+   */
+  const challengeProgress = computed(() => {
+    void revision.value
+    const s = state.value
+    if (!s?.challenge) return null
+    return {
+      challenge: s.challenge,
+      status: challengeStatus(s, s.challenge),
+      sameEngine: isSameEngine(s.challenge),
+    }
+  })
+
+  // --- What became of them --------------------------------------------------
+
+  /** Verdicts already delivered on signings at clubs you have left. */
+  const verdicts = computed<SuccessorVerdict[]>(() => {
+    void revision.value
+    const s = state.value
+    return s ? allVerdicts(s) : []
+  })
+
   // --- Deadline day ---------------------------------------------------------
 
   const isDeadline = computed(() => {
@@ -1190,6 +1289,8 @@ export const useGameStore = defineStore('game', () => {
     owner, takeover, worldTakeovers,
     isDeadline, deadlineOffers, deadlineTaken, refreshDeadline, takeDeadlineOffer,
     statePhilosophy, exerciseClause,
+    shareableCards, buildCard, linkFor, share,
+    challenge, challengeProgress, verdicts,
     idFactory, nameGenerator, reset,
   }
 })

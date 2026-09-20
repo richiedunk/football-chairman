@@ -16,7 +16,7 @@ import type { ContractOffer } from '../engine/systems/directorContract'
 export const useSetupStore = defineStore('setup', () => {
   const pending = shallowRef<NewGameSetup | null>(null)
 
-  function generate(options: Omit<NewGameOptions, 'startingSeason'>): NewGameSetup {
+  function generate(options: NewGameOptions): NewGameSetup {
     const result = prepareNewGame({ ...options })
     pending.value = result
     return result

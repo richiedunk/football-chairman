@@ -100,11 +100,28 @@ describe('the season card', () => {
     expect(card.rows.find((r) => r.label === 'Signings')?.value).toBe('None')
   })
 
-  it('writes goal difference with its sign', () => {
+  it('does not repeat the headline in a row', () => {
+    // Six rows is the whole budget. One spent restating the position and the
+    // division, which are already the largest thing on the card, is a row
+    // that could have said something the reader did not know.
     const state = world()
     const club = withSeason(state, 3)
     const card = seasonCard(state, club.id, 2025)!
-    expect(card.rows.find((r) => r.label === 'Goal difference')?.value).toBe('+18')
+    expect(card.rows.some((r) => r.label === 'Finished')).toBe(false)
+    expect(card.rows.some((r) => r.value.includes('3rd'))).toBe(false)
+  })
+
+  it('gives both goal columns rather than the difference', () => {
+    const state = world()
+    const club = withSeason(state, 3)
+    const card = seasonCard(state, club.id, 2025)!
+    expect(card.rows.find((r) => r.label === 'Goals')?.value).toBe('62 for, 44 against')
+  })
+
+  it('is speech, and says so', () => {
+    const state = world()
+    const club = withSeason(state, 3)
+    expect(seasonCard(state, club.id, 2025)!.lineIsSpeech).toBe(true)
   })
 })
 
@@ -161,6 +178,27 @@ describe('the challenge card', () => {
     const club = withSeason(state, 4)
     const card = challengeCard(state, club.id)!
     expect(card.rows.find((r) => r.label === 'Set by')?.value).toBe('Ray Vance')
+  })
+
+  it('tells a stranger what they would be inheriting', () => {
+    const state = world()
+    const club = withSeason(state, 4)
+    const card = challengeCard(state, club.id)!
+    const labels = card.rows.map((r) => r.label)
+    expect(labels).toContain('Division')
+    expect(labels).toContain('Squad')
+    expect(labels).toContain('Wage bill')
+    // And none of what the card already says elsewhere.
+    expect(labels).not.toContain('Club')
+    expect(card.rows.some((r) => r.value === card.headline.value)).toBe(false)
+  })
+
+  it('is an instruction, not something anybody said', () => {
+    // The renderer quotes speech. "Better than 4th within one season" in
+    // quotation marks reads as though a person had recited it.
+    const state = world()
+    const club = withSeason(state, 4)
+    expect(challengeCard(state, club.id)!.lineIsSpeech).toBe(false)
   })
 })
 

@@ -10,6 +10,7 @@ import { createRouter, createWebHashHistory, type RouteRecordRaw } from 'vue-rou
 const routes: RouteRecordRaw[] = [
   { path: '/', name: 'start', component: () => import('./ui/views/StartView.vue') },
   { path: '/new', name: 'new-game', component: () => import('./ui/views/NewGameView.vue') },
+  { path: '/challenge', name: 'challenge', component: () => import('./ui/views/ChallengeView.vue') },
   { path: '/new/club', name: 'club-select', component: () => import('./ui/views/ClubSelectView.vue') },
 
   { path: '/welcome', name: 'welcome', component: () => import('./ui/views/WelcomeView.vue') },
@@ -64,6 +65,8 @@ const routes: RouteRecordRaw[] = [
   { path: '/league/:id', name: 'league-detail', component: () => import('./ui/views/LeagueView.vue'), meta: { tab: 'league', title: 'League table' } },
   { path: '/career', name: 'career', component: () => import('./ui/views/CareerView.vue'), meta: { tab: 'home', plain: true } },
   { path: '/achievements', name: 'achievements', component: () => import('./ui/views/AchievementsView.vue'), meta: { tab: 'home', plain: true } },
+  { path: '/share', name: 'share', component: () => import('./ui/views/ShareView.vue'), meta: { tab: 'home', plain: true, title: 'Send it on' } },
+  { path: '/legacy', name: 'legacy', component: () => import('./ui/views/LegacyView.vue'), meta: { tab: 'home', plain: true, title: 'What became of them' } },
   { path: '/about', name: 'about', component: () => import('./ui/views/AboutView.vue'), meta: { tab: 'home', plain: true } },
   { path: '/settings', name: 'settings', component: () => import('./ui/views/SettingsView.vue'), meta: { tab: 'home', plain: true } },
   // An unknown path lands on the dashboard when a career is loaded, and on the

@@ -140,7 +140,10 @@ describe('the wire format', () => {
     withSeason(state, 3)
     const challenge = challengeFrom(state, state.playerClubId!)!
     const link = challengeLink(challenge, 'https://undisclosedfootball.com/')
-    expect(link).toContain('#challenge=')
+    // Inside the hash as a query, not as the hash itself: the app routes on
+    // the hash, so a bare `#challenge=…` would resolve to the not-found
+    // screen and the link would look broken to everyone who opened it.
+    expect(link).toContain('#/?challenge=')
     expect(challengeFromUrl(link)).toEqual(challenge)
   })
 

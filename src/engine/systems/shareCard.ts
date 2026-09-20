@@ -56,6 +56,14 @@ export interface ShareCard {
    * your record signing out is a story, and the story is what travels.
    */
   line: string
+  /**
+   * Whether the line is something somebody said.
+   *
+   * The renderer puts speech in quotation marks, and a challenge's benchmark
+   * is not speech — it is an instruction. Quoting it made the card read as
+   * though a person had said "Better than 22nd within one season" out loud.
+   */
+  lineIsSpeech: boolean
   footer: string
   /** The club's colours, so a card looks like the club it is about. */
   colors: { primary: string; secondary: string }
@@ -83,12 +91,14 @@ export function seasonCard(state: GameState, clubId: ID, season: number): ShareC
   const signings = yourSignings(state, club)
   const benched = signings.filter((p) => (p.snubbedRun ?? 0) > 0)
 
+  // No "Finished" row: the headline is already the position and the division,
+  // and a card that says the same thing twice has wasted the one row that
+  // could have said something else.
   const rows: CardRow[] = [
-    { label: 'Finished', value: `${placing(record.position)} in ${record.leagueName}` },
     { label: 'Points', value: `${record.points} from ${record.played}` },
     {
-      label: 'Goal difference',
-      value: signed(record.goalsFor - record.goalsAgainst),
+      label: 'Goals',
+      value: `${record.goalsFor} for, ${record.goalsAgainst} against`,
     },
   ]
   if (record.cupResult) rows.push({ label: 'Cup', value: record.cupResult })
@@ -113,6 +123,7 @@ export function seasonCard(state: GameState, clubId: ID, season: number): ShareC
     },
     rows,
     line: seasonLine(record.position, signings.length, benched.length),
+    lineIsSpeech: true,
     footer: 'UNDISCLOSED FOOTBALL',
     colors: club.colors,
   }
@@ -187,6 +198,7 @@ export function careerCard(state: GameState): ShareCard {
     },
     rows,
     line: careerLine(trophies.length, sackings, seasons),
+    lineIsSpeech: true,
     footer: 'UNDISCLOSED FOOTBALL',
     colors: club?.colors ?? { primary: '#C8102E', secondary: '#FFFFFF' },
   }
@@ -218,19 +230,18 @@ export function challengeCard(state: GameState, clubId: ID): ShareCard | null {
   if (!club) return null
 
   const currency = state.settings.currency
-  const spell = state.director.careerHistory.find((e) => e.clubId === clubId)
-  const start = spell
-    ? club.history.find((h) => h.season === spell.fromSeason)
-    : undefined
 
+  // Deliberately none of the title, the headline or the footer repeated. What
+  // is left is what somebody deciding whether to take it on would ask: which
+  // division, how big a squad, and how much room there is to change any of it.
   const rows: CardRow[] = [
-    { label: 'Club', value: club.name },
     { label: 'Division', value: state.leagues[club.leagueId]?.name ?? '—' },
-    {
-      label: 'They finished',
-      value: start ? placing(start.position) : 'the season before',
-    },
+    { label: 'Squad', value: `${club.squad.length} players` },
     { label: 'Wage bill', value: `${formatMoney(club.finances.wageBudget, currency)}/wk` },
+    {
+      label: 'To spend',
+      value: formatMoney(club.finances.transferBudget, currency),
+    },
     { label: 'Set by', value: challenge.by },
   ]
 
@@ -244,6 +255,8 @@ export function challengeCard(state: GameState, clubId: ID): ShareCard | null {
     },
     rows,
     line: describeTarget(challenge),
+    // An instruction, not a remark. See `lineIsSpeech`.
+    lineIsSpeech: false,
     footer: 'SAME SEED · SAME SQUAD · SAME COACH',
     colors: club.colors,
     challenge,
@@ -273,8 +286,4 @@ export function lastCompletedSeason(state: GameState, club: Club): number | null
   if (!spell) return null
   const seasons = club.history.filter((h) => h.season >= spell.fromSeason)
   return seasons.length ? seasons[seasons.length - 1].season : null
-}
-
-function signed(n: number): string {
-  return n > 0 ? `+${n}` : String(n)
 }

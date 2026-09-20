@@ -30,6 +30,8 @@ export const SCREEN_LABELS: Record<string, string> = {
   league: 'League table',
   career: 'Career',
   achievements: 'Milestones',
+  share: 'Send it on',
+  legacy: 'What became of them',
   about: 'About',
   settings: 'Settings',
   search: 'Find players',

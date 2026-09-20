@@ -330,10 +330,19 @@ export function decodeChallenge(encoded: string): Challenge | null {
   }
 }
 
-/** The full link, given wherever the game is hosted. */
+/**
+ * The full link, given wherever the game is hosted.
+ *
+ * The code goes in a query string *inside* the hash, not after the `#`
+ * directly. The app is served from a static bundle and routes on the hash
+ * (see `src/router.ts`), so a bare `#challenge=…` is read by the router as a
+ * path of that name and lands the recipient on the not-found screen — which
+ * is the worst possible first contact with the game. `#/?challenge=…` is the
+ * root route carrying a query, which is what it actually is.
+ */
 export function challengeLink(challenge: Challenge, origin: string): string {
   const base = origin.replace(/\/+$/, '')
-  return `${base}/#challenge=${encodeChallenge(challenge)}`
+  return `${base}/#/?challenge=${encodeChallenge(challenge)}`
 }
 
 /** Pull a challenge out of a URL, a hash, or a pasted bare code. */
