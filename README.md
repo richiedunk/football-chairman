@@ -214,3 +214,13 @@ breaks the engine on purpose and checks whether any test notices, which is a dif
 harder question than whether a line was covered. It is scoped to the rule layer and it is
 an overnight job — `docs/mutation-testing.md` explains the scope, the cost and how to run
 something smaller.
+
+---
+
+## The public site
+
+`website/` is the marketing site — a brief overview of the game and a coming-soon page,
+in one dependency-free `index.html` with its own copies of the logos. It is not part of
+the game build and not shipped by `deploy.yml`; it is uploaded on its own, and it is
+written to be lifted into its own repository whole when the source is split out.
+`website/README.md` covers serving and deploying it.
