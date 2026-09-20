@@ -7,7 +7,7 @@ import { openCareerEntry } from './systems/career'
 import { assignScout } from './systems/scouting'
 import { addInboxItem } from './systems/inbox'
 import { refreshSquadStatuses } from './systems/morale'
-import { setSeasonExpectation, setSeasonMandates } from './systems/board'
+import { MANDATE_BRIEFS, setSeasonExpectation, setSeasonMandates } from './systems/board'
 import { contractTermsFor, signContract, type ContractOffer } from './systems/directorContract'
 import type { Club, DirectorBackground, GameState, ID, Staff } from './types'
 
@@ -211,33 +211,66 @@ function writeOpeningInbox(state: GameState, ids: IdFactory, club: Club): void {
   const avgAge = seniors.length
     ? (seniors.reduce((sum, p) => sum + p!.age, 0) / seniors.length).toFixed(1)
     : '—'
+  const signature = ownerSignature(club)
+
+  const welcome = [
+    `Welcome aboard. You are the first director of football this club has employed, and I will be honest with you — we should have done it years ago.`,
+    `We are in ${league?.name ?? 'this division'} this season, and what I want out of it is simple enough: ${club.board.expectation.description.toLowerCase()}. Manage that and nobody upstairs will trouble you.`,
+    `You have ${seniors.length} senior players to work with, average age ${avgAge}. The wage budget is £${club.finances.wageBudget.toLocaleString()} a week, and ${
+      club.finances.transferBudget > 0
+        ? `there is £${club.finances.transferBudget.toLocaleString()} in the pot. Spend it once, and spend it well`
+        : 'there is nothing in the pot, so whatever you want, you find the money for it yourself'
+    }.`,
+    club.finances.debt > 0
+      ? `You should also know we are carrying £${club.finances.debt.toLocaleString()} of debt. It keeps me awake, and I would like it to keep you awake too.`
+      : '',
+    coach
+      ? `One last thing. ${coach.knownAs} picks the team. You do not, and I would rather that never became an argument between us.`
+      : `One last thing. We have no head coach. That is your first job, and I would get on with it.`,
+    signature,
+  ]
 
   addInboxItem(state, ids, {
     category: 'board',
     subject: `Welcome to ${club.name}`,
     from: 'Chairman',
-    body: [
-      `Welcome aboard. You are the first director of football this club has employed, and there is a reason we needed one.`,
-      ``,
-      `The expectation this season is straightforward: ${club.board.expectation.description.toLowerCase()} in ${league?.name ?? 'the division'}.`,
-      ``,
-      `You have ${seniors.length} senior players with an average age of ${avgAge}, a wage budget of £${club.finances.wageBudget.toLocaleString()} a week, and ${club.finances.transferBudget > 0 ? `£${club.finances.transferBudget.toLocaleString()} to spend` : 'nothing to spend'}.`,
-      club.finances.debt > 0
-        ? `\nYou should also know we are carrying £${club.finances.debt.toLocaleString()} of debt. Deal with it.`
-        : '',
-      coach ? `\n${coach.knownAs} is the head coach. He picks the team. You do not.` : '\nWe have no head coach. That is your first problem.',
-    ].join('\n'),
+    body: welcome.filter(Boolean).join('\n\n'),
     urgent: false,
     link: { view: 'board' },
   })
 
   if (club.board.mandates.length > 0) {
+    const remit = [
+      `Before you get settled, there are a few things the board want from you this season on top of where we finish. You will be judged on these as much as on the table.`,
+      club.board.mandates.map((m) => `• ${MANDATE_BRIEFS[m]}`).join('\n'),
+      `None of it is up for discussion. It is all on the board screen as well, if you would sooner see it as a list.`,
+      signature,
+    ]
+
     addInboxItem(state, ids, {
       category: 'board',
       subject: 'Your remit',
       from: 'Chairman',
-      body: `The board have set the following priorities alongside league position. You will be judged on these.`,
+      body: remit.filter(Boolean).join('\n\n'),
+      urgent: false,
       link: { view: 'board' },
     })
+  }
+}
+
+/**
+ * How the chairman signs off. A person puts his name to a letter; a fund or a
+ * supporters' trust does not, and signing one "— Meridian Capital" read like
+ * a press release rather than a note from the man who just hired you.
+ */
+function ownerSignature(club: Club): string {
+  const owner = club.board.owner
+  switch (owner.kind) {
+    case 'foreignFund':
+    case 'consortium':
+    case 'fanOwned':
+      return ''
+    default:
+      return `— ${owner.name}`
   }
 }
