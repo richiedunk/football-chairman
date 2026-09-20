@@ -3,6 +3,7 @@ import { processBoard, processCoachRelations } from '../../systems/board'
 import { refreshSquadStatuses } from '../../systems/morale'
 import { releaseArchitects } from '../../systems/stadium'
 import { addInboxItem, addNews } from '../../systems/inbox'
+import { contact } from '../../systems/voice'
 import { expireItems } from '../../systems/inbox'
 import { paySeverance } from '../../systems/directorContract'
 import { dismissDirector } from '../../systems/jobSearch'
@@ -64,9 +65,10 @@ export const boardAndCoach = phase({
         addInboxItem(state, ids, {
           category: 'coach',
           subject: 'From the head coach',
-          from: playerClub.headCoachId
-            ? state.staff[playerClub.headCoachId]?.knownAs ?? 'Head Coach'
-            : 'Head Coach',
+          from: contact(
+            playerClub.headCoachId ? state.staff[playerClub.headCoachId]?.knownAs : null,
+            'Head Coach',
+          ),
           body: message,
           link: { view: 'staff' },
         })

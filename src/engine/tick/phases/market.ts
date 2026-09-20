@@ -17,6 +17,7 @@ import {
 } from '../../systems/registration'
 import { adjustForPlayer } from '../../systems/agents'
 import { addInboxItem, addNews } from '../../systems/inbox'
+import { contact, phrase } from '../../systems/voice'
 import { playerClub as clubInCharge } from '../../playerClub'
 import { phase } from '../context'
 import type { Club, GameState, ID, Player } from '../../types'
@@ -178,7 +179,7 @@ export const scouting = phase({
         addInboxItem(state, ids, {
           category: 'scouting',
           subject: `Scout report: ${player.knownAs}`,
-          from: state.staff[report.scoutId]?.knownAs ?? 'Scouting Department',
+          from: contact(state.staff[report.scoutId]?.knownAs, 'Scout'),
           body: report.verdict,
           link: { view: 'player', id: player.id },
         })
@@ -194,11 +195,20 @@ function reportIncomingOffers(
 ): void {
   const offers = generateIncomingOffers(state, ctx)
   for (const offer of offers) {
+    const fee = formatMoneyShort(offer.fee)
+    const value = formatMoneyShort(offer.player.value)
     addInboxItem(state, ids, {
       category: 'transfer',
       subject: `Offer received for ${offer.player.knownAs}`,
       from: 'Recruitment',
-      body: `${offer.buyer.name} have made an offer of ${formatMoneyShort(offer.fee)} for ${offer.player.knownAs}. He is valued at ${formatMoneyShort(offer.player.value)}.`,
+      // Recruitment ringing you about it, with the valuation as the aside it
+      // would be on a phone rather than a second sentence of the same weight.
+      body: phrase(`offer:${offer.player.id}:${offer.buyer.id}:${state.date.week}`, [
+        `${offer.buyer.name} have come in for ${offer.player.knownAs}. ${fee}. We have him at ${value}.`,
+        `Offer in from ${offer.buyer.name} for ${offer.player.knownAs} — ${fee}. For what it's worth we value him at ${value}.`,
+        `${offer.buyer.name} want ${offer.player.knownAs} and they're offering ${fee}. He's worth ${value} on our books.`,
+        `Just had ${offer.buyer.name} on about ${offer.player.knownAs}. ${fee} on the table, ${value} is what we'd say he's worth.`,
+      ]),
       urgent: true,
       link: { view: 'player', id: offer.player.id },
       expiresInWeeks: 2,
@@ -279,10 +289,17 @@ function reviewFrozenOutClients(state: GameState, ids: IdFactory): void {
     category: 'player',
     subject: 'Agents are asking about their clients',
     from: 'Your assistant',
-    body: `Several agents have been in touch about players who have barely featured this season — `
-      + `${names}${frozen.length > 4 ? ' among others' : ''}. `
-      + 'None of them is threatening anything. They are simply letting you know they have noticed, '
-      + 'and it will be priced into the next deal you do with them.',
+    body: phrase(`agents:${club.id}:${state.date.season}:${state.date.week}`, [
+      `Three or four agents have been on this week about lads who aren't playing — ${names}`
+        + `${frozen.length > 4 ? ', and others' : ''}. Nobody's threatening anything. `
+        + `They just want you to know they've noticed, and it'll be in the price next time.`,
+      `Quiet word: the agents have clocked who isn't getting on the pitch. `
+        + `${names}${frozen.length > 4 ? ' among others' : ''}. No drama, but they'll remember it `
+        + `when we next sit down with them.`,
+      `Phone's been going — agents asking why their lads aren't featuring. `
+        + `${names}${frozen.length > 4 ? ', to name a few' : ''}. It's not a complaint yet. `
+        + `It will be priced into the next deal we do with any of them.`,
+    ]),
     link: { view: 'squad' },
   })
 }
@@ -309,12 +326,27 @@ function lockSquadRegistrations(state: GameState, ids: IdFactory): void {
       .slice()
       .sort((a, b) => b.currentAbility - a.currentAbility)
 
+    const used = `${view.placesUsed} of ${SQUAD_LIMIT}`
+    const left = barred.map((player) => `${player.knownAs} (${player.position}, ${player.age})`).join(', ')
+    const key = `squadlist:${club.id}:${state.date.season}:${state.date.week}`
+
+    // The club secretary, who has just come back from filing it. Warm where
+    // there is nothing to report and apologetic where there is, because she is
+    // the one who had to leave somebody out.
     const body = barred.length === 0
-      ? `Your squad list is lodged: ${view.placesUsed} of ${SQUAD_LIMIT} places used, `
-        + `${view.homegrown} homegrown. Everyone who needed a place has one.`
-      : `Your squad list is lodged: ${view.placesUsed} of ${SQUAD_LIMIT} places used, `
-        + `${view.homegrown} homegrown. Left out and unavailable until the window reopens: `
-        + `${barred.map((p) => `${p.knownAs} (${p.position}, ${p.age})`).join(', ')}.`
+      ? phrase(key, [
+        `Filed. ${used} places used, ${view.homegrown} homegrown. Everybody who needed a place has one.`,
+        `That's the list in — ${used}, ${view.homegrown} homegrown. Nobody left out this time.`,
+        `Squad list lodged. ${used} used, ${view.homegrown} homegrown, and no casualties.`,
+      ])
+      : phrase(key, [
+        `That's the list filed — ${used} places, ${view.homegrown} homegrown. `
+          + `I couldn't fit everyone: ${left} can't play until the window opens again. Sorry.`,
+        `List is in. ${used} used, ${view.homegrown} homegrown. `
+          + `The ones who missed out are ${left} — they're unavailable now until January.`,
+        `Lodged with the league: ${used}, ${view.homegrown} homegrown. `
+          + `You should know ${left} didn't make it, so they can't be picked until the window reopens.`,
+      ])
 
     addInboxItem(state, ids, {
       category: 'player',

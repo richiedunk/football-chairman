@@ -6,12 +6,15 @@ import { sortTable } from '../systems/board'
 import { eligibleClubs, levelFor } from '../systems/career'
 import { computeValue, computeWageDemand } from '../systems/valuation'
 import { addInboxItem, addNews } from '../systems/inbox'
+import { contact } from '../systems/voice'
 import { accrueTrainingYear, releaseRegistration } from '../systems/registration'
 import { writeOffBookValue } from '../systems/finance'
 import { adjustForPlayer } from '../systems/agents'
 import { SANCTION_LABELS, SQUAD_COST_LIMIT, type RegulationOutcome } from '../systems/regulation'
 import { PATIENCE_WEEKS } from '../systems/aiSquad'
-import type { Club, GameState, ID, JobOffer, League, Player } from '../types'
+import type {
+  Club, GameState, ID, JobOffer, League, Player, Staff,
+} from '../types'
 import { playerClub as clubInCharge } from '../playerClub'
 import type { RolloverDeps } from './context'
 
@@ -341,7 +344,7 @@ export function releaseUnpromotedYouth(state: GameState, deps: RolloverDeps): vo
           addInboxItem(state, ids, {
             category: 'academy',
             subject: `${player.knownAs} promoted to the senior squad`,
-            from: 'Academy Director',
+            from: contact(academyDirectorOf(state, club)?.knownAs, 'Academy Director'),
             body: `${player.knownAs} has aged out of the academy and been given a professional contract. He is one to watch.`,
             link: { view: 'player', id: player.id },
           })
@@ -525,4 +528,9 @@ function writePitch(club: Club, levelTitle: string, overperformance: number): st
     return `${club.name} are in trouble and need someone who can trade their way out of it. It is not a glamorous job, but it is a bigger one.`
   }
   return `${club.name} are looking for a director of football to take charge of recruitment and squad planning. They think you are ready for the step up.`
+}
+
+/** The club's academy director, who has a name and was signing as a job title. */
+function academyDirectorOf(state: GameState, club: Club): Staff | undefined {
+  return club.staff.map((id) => state.staff[id]).find((member) => member?.role === 'academyDirector')
 }

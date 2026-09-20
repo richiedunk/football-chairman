@@ -8,6 +8,7 @@ import { ELEVEN, canFieldEleven, fieldable, fixAiSquad } from '../../systems/mat
 import { boardRemark, scoredAgainstUs } from '../../systems/oneThatGotAway'
 import { positionGroup } from '../../world/attributes'
 import { addInboxItem, addNews } from '../../systems/inbox'
+import { phrase } from '../../systems/voice'
 import { paySeverance } from '../../systems/directorContract'
 import { dismissDirector } from '../../systems/jobSearch'
 import { phase } from '../context'
@@ -51,11 +52,18 @@ export const cupDraws = phase({
         const home = tie.homeClubId === state.playerClubId
         const opponent = state.clubs[home ? tie.awayClubId : tie.homeClubId]
         const round = cup.rounds[cup.rounds.length - 1]
+        const them = opponent?.name ?? 'an opponent'
+        const roundName = round?.name.toLowerCase() ?? 'next round'
         addInboxItem(state, ids, {
           category: 'match',
           subject: `${cup.name}: ${round?.name ?? 'draw'}`,
           from: 'Competition Secretary',
-          body: `You have been drawn ${home ? 'at home to' : 'away to'} ${opponent?.name ?? 'an opponent'} in the ${round?.name.toLowerCase() ?? 'next round'}.`,
+          // The competition secretary, who has just watched the balls come out.
+          body: phrase(`draw:${cup.id}:${state.date.season}:${state.date.week}`, [
+            `Draw's out — you're ${home ? 'at home to' : 'away to'} ${them} in the ${roundName}.`,
+            `${them} in the ${roundName}, ${home ? 'at our place' : 'at theirs'}. Best of luck.`,
+            `You've got ${them} for the ${roundName}. ${home ? 'Home tie.' : 'Away from home.'}`,
+          ]),
           link: { view: 'league' },
         })
       }

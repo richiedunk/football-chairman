@@ -1,4 +1,5 @@
 import { clamp, Rng } from '../rng'
+import { phrase } from './voice'
 import { IdFactory, ID_PREFIX } from '../ids'
 import { costOfLivingIndex, weeklyRevenue } from './finance'
 import { formatMoney } from './valuation'
@@ -176,14 +177,21 @@ export function decayStadium(
       const atRisk = Math.round(stand.capacity * 0.12)
       if (stand.closedSeats < stand.capacity * 0.6 && rng.chance(0.08)) {
         stand.closedSeats = Math.min(stand.capacity, stand.closedSeats + atRisk)
-        closures.push(
-          `The safety officer has closed ${atRisk.toLocaleString()} places in the ${stand.name}. They stay shut until the stand is repaired.`,
-        )
+        // The safety officer wrote about himself in the third person, which is
+        // a bulletin rather than the man who has just served the notice.
+        const seats = atRisk.toLocaleString()
+        closures.push(phrase(`closure:${stand.name}:${stand.closedSeats}`, [
+          `I've had to close ${seats} places in the ${stand.name}. They stay shut until it's repaired — I can't sign it off as it is.`,
+          `${seats} places out of use in the ${stand.name} as of today. I'm sorry, but I'd be signing off something I've seen. Repair it and I'll reopen them.`,
+          `Taking ${seats} places out of the ${stand.name}. You'll get them back when the stand is put right, and not before.`,
+        ]))
       }
     } else if (stand.condition < 45 && rng.chance(0.03)) {
-      warnings.push(
-        `The ${stand.name} is deteriorating. Repairs now would be cheaper than a closure notice later.`,
-      )
+      warnings.push(phrase(`wear:${stand.name}:${Math.round(stand.condition)}`, [
+        `The ${stand.name} is going. Fix it now and it's cheaper than the notice I'll have to serve later.`,
+        `I'd look at the ${stand.name} before I have to make it official. Repairs now cost less than a closure.`,
+        `Fair warning on the ${stand.name} — it's deteriorating, and I'd rather flag it than close it.`,
+      ]))
     }
   }
 

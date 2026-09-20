@@ -9,6 +9,7 @@ import { progressProjects } from '../../systems/facilities'
 import { decayStadium, expandStadium, maintainStadium, progressStadiumWork } from '../../systems/stadium'
 import { canFieldEleven, warnHuman } from '../../systems/matchday'
 import { addInboxItem, addNews } from '../../systems/inbox'
+import { contact, phrase, withArticle } from '../../systems/voice'
 import { payDirectorSalary } from '../../systems/directorContract'
 import { phase } from '../context'
 import type { Club, GameState, ID, Player } from '../../types'
@@ -86,7 +87,7 @@ export const clubWeek = phase({
       }
 
       if (club.id === state.playerClubId) {
-        reportInjuries(state, ids, newInjuries)
+        reportInjuries(state, ids, club, newInjuries)
         for (const closure of wear.closures) {
           addInboxItem(state, ids, {
             category: 'facilities',
@@ -210,16 +211,32 @@ export const morale = phase({
 function reportInjuries(
   state: GameState,
   ids: IdFactory,
+  club: Club,
   injured: Player[],
 ): void {
+  // He is on the staff list with a name on him, and was signing as a
+  // department. A physio texts you about a scan; a department does not.
+  const physio = club.staff
+    .map((id) => state.staff[id])
+    .find((member) => member?.role === 'physio')
   for (const player of injured) {
     if (!player.injury) continue
     const weeks = player.injury.weeksRemaining
+    const injury = player.injury.type.toLowerCase()
+    const out = weeks === 1 ? 'a week' : `${weeks} weeks`
     addInboxItem(state, ids, {
       category: 'player',
       subject: `${player.knownAs} injured`,
-      from: 'Medical Department',
-      body: `${player.knownAs} has picked up a ${player.injury.type.toLowerCase()} and will be unavailable for around ${weeks} week${weeks === 1 ? '' : 's'}.`,
+      from: contact(physio?.knownAs, 'Physio'),
+      // The physio typing from the treatment room, not a bulletin written by
+      // nobody. Keyed on the player and the week so the same injury keeps the
+      // same wording and two injuries in a season do not read identically.
+      body: phrase(`injury:${player.id}:${state.date.season}:${state.date.week}`, [
+        `${player.knownAs} has done ${withArticle(injury)}. I'd say ${out}, and that's me being optimistic.`,
+        `Bad news — ${player.knownAs}, ${injury}. We'll not see him for ${out}.`,
+        `${player.knownAs} pulled up in training. It's ${withArticle(injury)}, so ${out}.`,
+        `It's ${withArticle(injury)} for ${player.knownAs}. Scan says ${out}. I'll keep you posted.`,
+      ]),
       urgent: weeks >= 8,
       link: { view: 'player', id: player.id },
     })
