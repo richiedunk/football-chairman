@@ -27,7 +27,7 @@ const title = computed(() => {
   // header reading "chairman" is a bug the reader sees before anything else.
   if (route.name === 'thread') {
     const key = decodeURIComponent(String(route.params.from ?? ''))
-    return findThread(groupThreads(store.inbox), key)?.title ?? 'Messages'
+    return findThread(groupThreads(store.inbox), key)?.title ?? 'Inbox'
   }
   // A route may name its own heading. SCREEN_LABELS is the list of screens a
   // message is allowed to link to, so a screen nothing links to — the

@@ -11,7 +11,7 @@ import { useGameStore } from '../../stores/game'
  * screen replaces it: everything is one tap from there.
  *
  * Two affordances, because that is what the reader actually needs everywhere.
- * Home, which is the phone. And Messages, because it is the interrupt channel
+ * Home, which is the phone. And the inbox, because it is the interrupt channel
  * and putting it two taps away would undo the reason the tab moved to the
  * middle in the first place.
  */
@@ -20,7 +20,7 @@ const route = useRoute()
 const router = useRouter()
 
 const onHome = computed(() => route.name === 'phone')
-const onMessages = computed(() => route.meta.tab === 'inbox')
+const onInbox = computed(() => route.meta.tab === 'inbox')
 </script>
 
 <template>
@@ -44,8 +44,8 @@ const onMessages = computed(() => route.meta.tab === 'inbox')
 
     <button
       class="homebar__item"
-      :class="{ 'is-active': onMessages }"
-      :aria-current="onMessages ? 'page' : undefined"
+      :class="{ 'is-active': onInbox }"
+      :aria-current="onInbox ? 'page' : undefined"
       @click="router.push('/inbox')"
     >
       <span class="homebar__icon" aria-hidden="true">
@@ -53,7 +53,7 @@ const onMessages = computed(() => route.meta.tab === 'inbox')
           <path d="M4 4h16v16H4zM4 8l8 5 8-5" />
         </svg>
       </span>
-      <span>Messages</span>
+      <span>Inbox</span>
       <span v-if="store.unread > 0" class="homebar__badge">
         {{ store.unread > 99 ? '99+' : store.unread }}
       </span>

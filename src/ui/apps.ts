@@ -37,7 +37,7 @@ export interface PhoneApp {
 
 export const PHONE_APPS: PhoneApp[] = [
   {
-    id: 'inbox', label: 'Messages', to: '/inbox', badge: 'unread',
+    id: 'inbox', label: 'Inbox', to: '/inbox', badge: 'unread',
     d: 'M4 4h16v16H4zM4 8l8 5 8-5',
   },
   {

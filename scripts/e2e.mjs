@@ -842,7 +842,7 @@ await step('the league carries its own news', async () => {
 })
 
 await step('messages', async () => {
-  await tap('.homebar__item:has-text("Messages")')
+  await tap('.homebar__item:has-text("Inbox")')
   await page.waitForSelector('.threads, .threads-empty')
   const threads = await page.locator('.chat-row').count()
   if (threads === 0) throw new Error('no conversations to open')
