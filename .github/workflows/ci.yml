@@ -55,14 +55,34 @@ jobs:
 
       # Waited for with curl rather than a wait-on dependency: the repo keeps a
       # short dependency list on purpose and knip enforces it.
+      #
+      # `--host 127.0.0.1` is what fixed this step. Without it vite binds to
+      # whatever `localhost` resolves to, and on this runner that is not the
+      # IPv4 address the curl below and `scripts/e2e.mjs` both ask for: four
+      # runs spent sixty seconds each failing to reach a server that the
+      # cleanup log shows was alive the entire time. Sixty attempts a second
+      # apart rules out a slow start, which was the other candidate.
+      #
+      # Naming the address rather than a hostname takes name resolution out of
+      # it altogether, which is the fix whichever way that resolution was
+      # going. The banner prints the literal address now, so a future run says
+      # where it actually bound.
+      #
+      # The preview's own output is kept, because "preview never came up" on
+      # its own says nothing about why, and that is all this step said for
+      # four red runs.
       - name: End-to-end
         run: |
-          npx vite preview --port 4173 &
+          npx vite preview --host 127.0.0.1 --port 4173 > /tmp/preview.log 2>&1 &
           for i in $(seq 1 60); do
             curl -sf -o /dev/null http://127.0.0.1:4173/ && break
             sleep 1
           done
-          curl -sf -o /dev/null http://127.0.0.1:4173/ || { echo "preview never came up"; exit 1; }
+          if ! curl -sf -o /dev/null http://127.0.0.1:4173/; then
+            echo "preview never came up; its output was:"
+            cat /tmp/preview.log
+            exit 1
+          fi
           node scripts/e2e.mjs
 
       - name: Keep the screenshots when it breaks
