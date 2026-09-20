@@ -1,8 +1,21 @@
 name: Deploy
 
-# Ship main to bunny.net edge storage.
+# Ship main to bunny.net edge storage, but only what CI has passed.
+#
+# This used to trigger on push, in parallel with CI and independent of it, so a
+# commit that failed typecheck, tests or the end-to-end run shipped anyway —
+# which it did, for the four runs CI was red. `workflow_run` makes the deploy
+# wait for the CI run on the same commit and the `if` below drops it when that
+# run did not succeed.
+#
+# `workflow_run` fires for CI runs on any branch, so `branches: [main]` keeps
+# this to main. It only triggers from workflow files on the default branch,
+# which means a change to this gate takes effect once it is merged rather than
+# from the branch proposing it.
 on:
-  push:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
     branches: [main]
   workflow_dispatch:
 
@@ -19,8 +32,21 @@ jobs:
     permissions:
       contents: read
     environment: production
+    # A CI run that failed, was cancelled, or timed out must not ship. A manual
+    # dispatch has no `workflow_run` to read and is allowed through on purpose:
+    # it is somebody deciding to deploy, which is the escape hatch for a CI
+    # outage.
+    if: >-
+      github.event_name == 'workflow_dispatch'
+      || github.event.workflow_run.conclusion == 'success'
     steps:
+      # The exact commit CI passed, not whatever main has moved on to.
+      # `workflow_run` checks out the default branch's tip by default, so two
+      # pushes in quick succession would deploy the second one on the strength
+      # of the first one's green run — shipping a commit nothing has tested.
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
 
       - uses: actions/setup-node@v4
         with:
