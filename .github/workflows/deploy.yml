@@ -1,0 +1,57 @@
+name: Deploy
+
+# Ship the public site at website/ to bunny.net edge storage.
+#
+# This workflow used to deploy the game: it built dist/ and uploaded it to the
+# same zone. The game is not a web target any more — it ships as an Android
+# APK from release.yml — so the zone and its four secrets carry the marketing
+# site instead, which is the one thing left here that belongs on the web.
+#
+# Triggered by pushes that touch website/ rather than by a CI run. The old
+# version waited on CI because it was shipping the game, and a commit that
+# failed typecheck or tests had no business reaching the edge. None of that
+# applies to this folder: it is one dependency-free index.html and a handful
+# of images, with no build step and nothing in the test suite that looks at
+# it. Gating it on the engine's tests would mean a red unit test blocking a
+# typo fix on a holding page.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'website/**'
+      - '.github/workflows/deploy.yml'
+  workflow_dispatch:
+
+# Never two deploys at once. Uploads are not transactional, and a half-written
+# index.html pointing at assets that have not landed yet is a broken site.
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      # No build step and no npm install, because there is nothing to build.
+      # website/ is uploaded exactly as it sits in the repository, which is
+      # also what `python3 -m http.server -d website` serves locally — so what
+      # you checked is what ships.
+      - name: Deploy to BunnyCDN
+        uses: ayeressian/bunnycdn-storage-deploy@v2.4.5
+        with:
+          source: "website"
+          storageZoneName: "${{ secrets.BUNNY_STORAGE_ZONE }}"
+          storagePassword: "${{ secrets.BUNNY_STORAGE_PASSWORD }}"
+          accessKey: "${{ secrets.BUNNY_API_KEY }}"
+          pullZoneId: "${{ secrets.BUNNY_PULL_ZONE_ID }}"
+          upload: "true"
+          remove: "false"
+          purgePullZone: "true"
+          purgePullZoneDelay: "15"
+          maxRetries: "5"

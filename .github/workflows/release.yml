@@ -4,7 +4,8 @@ name: Release
 #
 # This replaces the bunny.net web deploy, which shipped `dist/` to an edge
 # zone on every green main. The game is not a web target any more, so the
-# thing worth shipping is an APK somebody can install.
+# thing worth shipping is an APK somebody can install. `deploy.yml` kept the
+# zone and now uploads the marketing site in `website/` to it instead.
 #
 # Triggered by a version tag rather than by every push to main. A release is a
 # deliberate act with a number attached, and tagging is how you say which

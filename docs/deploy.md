@@ -1,8 +1,13 @@
 # Releasing
 
-The game ships as an Android APK attached to a GitHub release. There is no web
-deploy: the browser build still exists and is what `npm run dev` and the
-end-to-end test drive, but it is not a target anybody installs from any more.
+The game ships as an Android APK attached to a GitHub release. The browser
+build still exists and is what `npm run dev` and the end-to-end test drive,
+but it is not a target anybody installs from any more, and nothing uploads it.
+
+`deploy.yml` still exists and still points at the same bunny.net zone, but it
+ships `website/` — the marketing site — rather than the game's `dist/`. The two
+have nothing to do with each other beyond sharing a storage zone:
+`website/README.md` covers that one.
 
 ## Cutting a release
 

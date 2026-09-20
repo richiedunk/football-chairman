@@ -71,9 +71,10 @@ Two consequences worth knowing before the first native build:
 
 #### Releasing
 
-Pushing a `v*` tag builds an Android APK and publishes it as a GitHub release. There is
-no web deploy. `docs/deploy.md` covers the version numbering, the committed debug signing
-key and what swapping it for a real one will cost.
+Pushing a `v*` tag builds an Android APK and publishes it as a GitHub release. The game
+is not deployed to the web at all — `deploy.yml` now carries the marketing site instead.
+`docs/deploy.md` covers the version numbering, the committed debug signing key and what
+swapping it for a real one will cost.
 
 ---
 
@@ -252,6 +253,7 @@ something smaller.
 
 `website/` is the marketing site — a brief overview of the game and a coming-soon page,
 in one dependency-free `index.html` with its own copies of the logos. It is not part of
-the game build and not shipped by `deploy.yml`; it is uploaded on its own, and it is
-written to be lifted into its own repository whole when the source is split out.
-`website/README.md` covers serving and deploying it.
+the game build: `deploy.yml` uploads the folder as it stands to bunny.net whenever a
+push to `main` touches it, which is the only thing that workflow does now that the game
+ships as an APK. It is written to be lifted into its own repository whole when the
+source is split out. `website/README.md` covers serving and deploying it.
