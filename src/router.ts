@@ -23,7 +23,14 @@ const routes: RouteRecordRaw[] = [
    * menu, so those routes carry `tab: 'home'` and keep the first tab lit.
    */
   { path: '/home', name: 'home', component: () => import('./ui/views/HomeView.vue'), meta: { tab: 'home' } },
-  { path: '/inbox', name: 'inbox', component: () => import('./ui/views/InboxView.vue'), meta: { tab: 'inbox' } },
+  /*
+   * The route name `inbox` is load-bearing and must not be renamed. Inbox items
+   * carry `link: { view, id }`, and those items are in the save file — a career
+   * a season old has fifty of them pointing at `inbox`. Renaming the route
+   * deadens every one of them for no gain.
+   */
+  { path: '/inbox', name: 'inbox', component: () => import('./ui/views/ThreadsView.vue'), meta: { tab: 'inbox' } },
+  { path: '/inbox/:from', name: 'thread', component: () => import('./ui/views/ThreadView.vue'), meta: { tab: 'inbox' } },
   { path: '/squad', name: 'squad', component: () => import('./ui/views/SquadView.vue'), meta: { tab: 'squad' } },
   { path: '/registration', name: 'registration', component: () => import('./ui/views/RegistrationView.vue'), meta: { tab: 'squad' } },
   { path: '/player/:id', name: 'player', component: () => import('./ui/views/PlayerView.vue'), meta: { tab: 'squad' } },

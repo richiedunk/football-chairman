@@ -7,7 +7,7 @@
  */
 export const SCREEN_LABELS: Record<string, string> = {
   home: 'Home',
-  inbox: 'Inbox',
+  inbox: 'Messages',
   squad: 'Squad',
   room: 'Dressing room',
   registration: 'Squad list',

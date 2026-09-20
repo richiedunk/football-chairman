@@ -189,6 +189,7 @@ console.log(`   club: ${clubName}`)
 // behaviour, so the test answers the decision and carries on, which also
 // exercises the decision resolver.
 let decisionsAnswered = 0
+let repliedShot = false
 // A week that contains a match now ends on the report screen rather than on a
 // toast, and a week can contain two — a cup replay and a league game. The
 // button is the same button in the same place, so clearing them is a matter of
@@ -252,14 +253,35 @@ async function advanceOneWeek() {
       await readNotice()
       const decide = page.locator('.chip--danger:has-text("Urgent"), .chip--warn:has-text("Decide")').first()
       if (!(await decide.count())) break
+      // The chip is on a thread row, so tapping it opens the conversation and
+      // the answer is given there rather than inline.
       await tap(decide)
-      await page.waitForTimeout(200)
-      // The decision options are the block buttons under the prompt.
-      const option = page.locator('.col > .btn--block:not([disabled])').first()
-      if (!(await option.count())) break
-      await tap(option)
-      decisionsAnswered++
       await page.waitForTimeout(250)
+
+      // A conversation can be holding more than one open decision. Answer all
+      // of them before going back for the next thread, or a busy window costs
+      // one round trip per message.
+      for (let open = 0; open < 8; open++) {
+        await readNotice()
+        const reply = page.locator('.composer__open').first()
+        if (!(await reply.count())) break
+        await tap(reply)
+        await page.waitForTimeout(150)
+        // The reply sheet, once, because it is the thing the whole screen is
+        // for: a decision's options drawn as the things you could say back.
+        if (!repliedShot) {
+          await page.screenshot({ path: `${SHOT}/09c-reply.png`, fullPage: true })
+          repliedShot = true
+        }
+        const option = page.locator('.composer__option:not([disabled])').first()
+        if (!(await option.count())) break
+        await tap(option)
+        decisionsAnswered++
+        await page.waitForTimeout(250)
+      }
+
+      await page.goto('http://127.0.0.1:4173/#/inbox')
+      await page.waitForSelector('.threads, .threads-empty')
     }
     await page.goto('http://127.0.0.1:4173/#/home')
     await page.waitForSelector('.advance-bar .advance')
@@ -751,57 +773,99 @@ await step('the league carries its own news', async () => {
   await page.screenshot({ path: `${SHOT}/10b-news.png` })
 })
 
-await step('inbox', async () => {
-  await tap('.tabbar__item:has-text("Inbox")')
-  await page.waitForTimeout(400)
-  const rows = await page.locator('.card .list__row').count()
-  if (rows > 0) await tap('.card .list__row >> nth=0')
-  await page.waitForTimeout(250)
-  await page.screenshot({ path: `${SHOT}/09-inbox.png` })
+await step('messages', async () => {
+  await tap('.tabbar__item:has-text("Messages")')
+  await page.waitForSelector('.threads, .threads-empty')
+  const threads = await page.locator('.threads .list__row').count()
+  if (threads === 0) throw new Error('no conversations to open')
+  console.log(`   ${threads} conversation${threads === 1 ? '' : 's'}`)
+  await page.screenshot({ path: `${SHOT}/09-messages.png`, fullPage: true })
+
+  await tap('.threads .list__row >> nth=0')
+  await page.waitForSelector('.thread__said', { timeout: 15000 })
+  // The header carries whoever is in the conversation, not the URL key. A
+  // header reading "chairman" is the first thing a reader would see.
+  const heading = (await page.locator('.topbar__club').textContent())?.trim() ?? ''
+  if (heading !== heading.trim() || /^[a-z]/.test(heading)) {
+    throw new Error(`a thread is titled "${heading}"`)
+  }
+  await page.screenshot({ path: `${SHOT}/09b-thread.png`, fullPage: true })
 })
 
-await step('every inbox link is followed and lands somewhere real', async () => {
-  // This used to count buttons on the inbox screen, which is 0, because the
-  // link button only exists on an *expanded* message. So it passed vacuously
-  // for as long as media links were broken. Open every message and follow
-  // every link instead.
+await step('opening a conversation reads all of it', async () => {
+  // An unread count that survives having the thread open in front of you is a
+  // badge the reader cannot clear and stops trusting.
   await page.goto('http://127.0.0.1:4173/#/inbox')
-  await page.waitForSelector('.list__row, .empty')
+  await page.waitForSelector('.threads, .threads-empty')
+  const unread = await page.locator('.threads .list__row .list__primary >> text=●').count()
+  if (unread === 0) {
+    console.log('   nothing unread to clear, skipped')
+    return
+  }
+  const row = page.locator('.threads .list__row').filter({ hasText: '●' }).first()
+  await row.click()
+  await page.waitForSelector('.thread__said')
+  await page.goto('http://127.0.0.1:4173/#/inbox')
+  await page.waitForSelector('.threads')
+  const after = await page.locator('.threads .list__row .list__primary >> text=●').count()
+  if (after >= unread) throw new Error(`opening a thread cleared nothing: ${unread} unread before, ${after} after`)
+  console.log(`   ${unread} unread before, ${after} after`)
+})
 
-  const count = await page.locator('.card > .list__row').count()
-  if (count === 0) throw new Error('no inbox messages to check links on')
+await step('every message link is followed and lands somewhere real', async () => {
+  // This used to count buttons on the flat inbox, which is 0, because the link
+  // only existed on an *expanded* message — so it passed vacuously for as long
+  // as media links were broken. The same trap exists here: the links live
+  // inside threads, so every thread is opened and every attachment followed.
+  await page.goto('http://127.0.0.1:4173/#/inbox')
+  // A hash-only goto resolves before the view has swapped, and `.list__row` is
+  // on half the screens in the game — so waiting on that matched the outgoing
+  // screen's rows and this step tapped a league row. `.thread__preview` is only
+  // on a thread row, so it is proof the right screen has mounted.
+  await page.waitForSelector('.threads, .threads-empty')
+
+  const threads = await page.locator('.threads .list__row').count()
+  if (threads === 0) throw new Error('no conversations to check links in')
 
   let links = 0
+  let messages = 0
   const landings = new Map()
-  for (let i = 0; i < count; i++) {
+  for (let t = 0; t < threads; t++) {
     await page.goto('http://127.0.0.1:4173/#/inbox')
-    await page.waitForSelector('.card > .list__row')
-    await tap(`.card > .list__row >> nth=${i}`)
+    await page.waitForSelector('.threads')
+    await tap(`.threads .list__row >> nth=${t}`)
+    await page.waitForSelector('.thread__said')
+    const href = page.url()
+    messages += await page.locator('.thread__said').count()
 
-    const button = page.locator('.btn--block:has-text("Open ")').first()
-    if (await button.count() === 0) continue
-    const label = (await button.textContent())?.trim()
-    if (label === 'Open') throw new Error('an inbox link still just says "Open"')
+    const attachments = await page.locator('.thread__attach').count()
+    for (let a = 0; a < attachments; a++) {
+      await page.goto(href)
+      await page.waitForSelector('.thread__attach')
+      const button = page.locator('.thread__attach').nth(a)
+      const label = (await button.textContent())?.trim()
+      if (label === 'Open') throw new Error('a message link still just says "Open"')
 
-    await button.click()
-    await page.waitForTimeout(400)
-    const landed = page.url().split('#')[1] ?? '/'
-    links++
-    landings.set(landed.split('/').slice(0, 2).join('/'), (landings.get(landed.split('/').slice(0, 2).join('/')) ?? 0) + 1)
+      await button.click()
+      await page.waitForTimeout(400)
+      const landed = page.url().split('#')[1] ?? '/'
+      links++
+      const screen = landed.split('/').slice(0, 2).join('/')
+      landings.set(screen, (landings.get(screen) ?? 0) + 1)
 
-    // The catch-all sends an unroutable link to the dashboard, and the title
-    // screen when nothing is loaded. Neither is a destination a message names.
-    if (landed === '/home' || landed === '/') {
-      throw new Error(`"${label}" fell through to ${landed}`)
-    }
-    // And the screen it landed on has to have rendered something.
-    if (await page.locator('.content').count() === 0) {
-      throw new Error(`"${label}" landed on an empty screen at ${landed}`)
+      // The catch-all sends an unroutable link to the dashboard, and the title
+      // screen when nothing is loaded. Neither is a destination a message names.
+      if (landed === '/home' || landed === '/') {
+        throw new Error(`"${label}" fell through to ${landed}`)
+      }
+      if (await page.locator('.content').count() === 0) {
+        throw new Error(`"${label}" landed on an empty screen at ${landed}`)
+      }
     }
   }
 
-  if (links === 0) throw new Error('no inbox message carried a link to follow')
-  console.log(`   ${links} links followed from ${count} messages`)
+  if (links === 0) throw new Error('no message carried a link to follow')
+  console.log(`   ${links} links followed from ${messages} messages in ${threads} conversations`)
   console.log(`   landed on: ${[...landings].map(([k, n]) => `${k} x${n}`).join(', ')}`)
 })
 

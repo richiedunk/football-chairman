@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useGameStore } from '../../stores/game'
 import { headerBand } from '../colour'
 import { screenLabel } from '../screens'
+import { findThread, groupThreads } from '../threads'
 
 const store = useGameStore()
 const route = useRoute()
@@ -20,6 +21,13 @@ const showBack = computed(() => !tabRoots.has(String(route.name)))
 const isRoot = computed(() => !showBack.value)
 const title = computed(() => {
   if (isRoot.value) return store.club?.name ?? 'Director of Football'
+  // A conversation is titled by whoever is in it. The key in the URL is
+  // lower-cased, so the name comes from the thread rather than the param — a
+  // header reading "chairman" is a bug the reader sees before anything else.
+  if (route.name === 'thread') {
+    const key = decodeURIComponent(String(route.params.from ?? ''))
+    return findThread(groupThreads(store.inbox), key)?.title ?? 'Messages'
+  }
   // A route may name its own heading. SCREEN_LABELS is the list of screens a
   // message is allowed to link to, so a screen nothing links to — the
   // not-found screen — does not belong in it, and falling back to the route
