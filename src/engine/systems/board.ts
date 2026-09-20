@@ -4,6 +4,7 @@ import { ledgerBalance } from './finance'
 import { positionalCompetence, ratingForPositionCached } from '../world/attributes'
 import { auditSquadDepth } from '../sim/selection'
 import { ordinal } from './career'
+import { chairmanRegister, coachRegister, pickBy } from './voice'
 import { expectedWage } from '../world/staffGen'
 import { expectationLift, impatienceFactor } from './ownership'
 import { totalWageBill } from './valuation'
@@ -243,21 +244,51 @@ export function processBoard(
           ? `${club.name} are in a financial state the board hold you responsible for`
           : `${club.name} sit ${position}${ordinal(position)} against a target of ${expected}${ordinal(expected)}`
 
+        // The same decision, in the voice of whoever owns the club. A family
+        // that has held it for eighty years sacks you differently from a fund
+        // that bought it in March, and the game has always known which it is.
+        const register = chairmanRegister(club.board.owner.kind)
+        const key = `board:${club.id}:${state.date.season}:${state.date.week}`
+
         if (club.board.warnings >= 3) {
-          messages.push(
-            `The board have terminated your contract. ${grounds}, and they have run out of patience. Your successor will rebuild as they see fit.`,
-          )
+          messages.push(pickBy(key, register, {
+            paternal: [`It gives me no pleasure to end this. ${grounds}, and I have defended you longer than I should have. Your successor will do it their way.`],
+            plain: [`That's it — your contract's terminated. ${grounds}, and I've run out of road. Whoever comes next gets a free hand.`],
+            corporate: [`Your contract is terminated with immediate effect. ${grounds}. The board will appoint a successor with a mandate to rebuild.`],
+            breezy: [`Look — this is awful and I hate doing it, but we're going to make a change. ${grounds}. No hard feelings, honestly.`],
+            committee: [`The partners have resolved to terminate your contract. ${grounds}, and the vote was not close. Your successor will rebuild as they see fit.`],
+            earnest: [`I'm sorry. The members have voted and your contract ends here. ${grounds}, and I could not talk them round.`],
+          }))
           return { messages, sacked: true }
         }
-        messages.push(
-          financial
-            ? `Formal warning from the board (${club.board.warnings} of 3). The club's finances are not where they should be and they hold you responsible. This has to be fixed.`
-            : `Formal warning from the board (${club.board.warnings} of 3). They expected ${expected}${ordinal(expected)} and the club is ${position}${ordinal(position)}. Results must improve.`,
-        )
+
+        const count = `${club.board.warnings} of 3`
+        const cause = financial
+          ? `the club's finances are not where they should be, and they are your responsibility`
+          : `they expected ${expected}${ordinal(expected)} and we are ${position}${ordinal(position)}`
+        messages.push(pickBy(key, register, {
+          paternal: [`A formal warning, ${count}, and I would rather it had not come to this. You should know ${cause}. Put it right.`],
+          plain: [`Formal warning, ${count}. Plainly: ${cause}. I need it fixed and I'd rather not have this conversation again.`],
+          corporate: [`Formal warning issued (${count}). The board notes that ${cause}. Improvement is required within the current review period.`],
+          breezy: [`Bit awkward, this — it's a formal warning, ${count}. The thing is ${cause}. Can we sort it out?`],
+          committee: [`The partners have issued a formal warning (${count}). Their position is that ${cause}, and they expect improvement.`],
+          earnest: [`This is a formal warning, ${count}, and I hated writing it. The truth is ${cause}. People here notice.`],
+        }))
       }
     } else if (club.board.confidence > 60 && club.board.warnings > 0 && rng.chance(0.2)) {
       club.board.warnings -= 1
-      messages.push('The board have withdrawn a previous warning. Your position is more secure.')
+      messages.push(pickBy(
+        `withdrawn:${club.id}:${state.date.season}:${state.date.week}`,
+        chairmanRegister(club.board.owner.kind),
+        {
+          paternal: [`I have had a warning taken off your record. You have earned that.`],
+          plain: [`We've withdrawn one of your warnings. Credit where it's due.`],
+          corporate: [`One formal warning has been rescinded following review of recent performance.`],
+          breezy: [`Good news — we've torn up one of those warnings! Keep it going.`],
+          committee: [`The partners have agreed to withdraw a previous warning. Your position is more secure.`],
+          earnest: [`We've taken a warning off your record. The members were pleased to do it.`],
+        },
+      ))
     }
   }
 
@@ -632,7 +663,16 @@ export function processCoachRelations(
     if (filled) {
       request.response = 'fulfilled'
       coach.dofRelationship = clamp(coach.dofRelationship + 12, 0, 100)
-      messages.push(`${coachStaff.knownAs} is pleased with the new ${request.position}.`)
+      messages.push(pickBy(
+        `filled:${request.id}`,
+        coachRegister(coachStaff.attributes.mediaHandling, coach.dofRelationship),
+        {
+          warm: [`Thank you for the ${request.position} — genuinely. That's the difference between us being short and us being fine.`],
+          brisk: [`The new ${request.position} is exactly what we needed. Appreciated.`],
+          terse: [`Good signing. That's the ${request.position} sorted.`],
+          pointed: [`The ${request.position} has arrived. It took long enough, but it's the right one.`],
+        },
+      ))
     }
   }
 
@@ -657,11 +697,24 @@ export function processCoachRelations(
       }
       coach.requests.push(request)
       newRequests.push(request)
-      messages.push(
-        worst.count === 0
-          ? `${coachStaff.knownAs} says the squad has no recognised ${request.position} and it is costing the team.`
-          : `${coachStaff.knownAs} would like another ${request.position} — he does not feel he has cover.`,
-      )
+      // In his own voice, and to you. He was writing about himself in the
+      // third person while asking you for a favour, which is the one message
+      // where the relationship ought to be audible.
+      const tone = coachRegister(coachStaff.attributes.mediaHandling, coach.dofRelationship)
+      const key = `request:${request.id}`
+      messages.push(worst.count === 0
+        ? pickBy(key, tone, {
+          warm: [`We've got nobody who can play ${request.position}, and it's showing. I know it's not simple — but I need one.`],
+          brisk: [`No recognised ${request.position} in this squad. It's costing us points. Can you look at it?`],
+          terse: [`I need a ${request.position}. We haven't got one.`],
+          pointed: [`I'll say it again, since it doesn't seem to have landed: there is no ${request.position} in this squad and it is costing us.`],
+        })
+        : pickBy(key, tone, {
+          warm: [`If you can, I'd love another ${request.position}. We're one injury from being in trouble there.`],
+          brisk: [`Could do with another ${request.position} — no real cover if one goes down.`],
+          terse: [`Another ${request.position} would help. No cover.`],
+          pointed: [`Another ${request.position}, please. I've mentioned the lack of cover before.`],
+        }))
     }
   }
 

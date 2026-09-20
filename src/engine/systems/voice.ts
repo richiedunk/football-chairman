@@ -85,3 +85,85 @@ export function contact(name: string | null | undefined, role: string): string {
   const trimmed = name?.trim()
   return trimmed ? `${trimmed} (${role})` : role
 }
+
+// ---------------------------------------------------------------------------
+// Who is speaking, and how they feel about you
+// ---------------------------------------------------------------------------
+
+/**
+ * How the board is currently disposed towards you.
+ *
+ * Not a mood: `confidence` is computed every week from results against the
+ * expectation, the books, and whether you did what you were told, and
+ * `warnings` is the formal count that ends a job at three. A chairman writing
+ * to a director he has already warned twice does not write the way he did in
+ * August, and the game already knows which of those it is.
+ */
+export type BoardTone = 'backing' | 'neutral' | 'cooling' | 'hostile'
+
+export function boardTone(confidence: number, warnings = 0): BoardTone {
+  if (warnings >= 2 || confidence < 22) return 'hostile'
+  if (confidence < 45) return 'cooling'
+  if (confidence >= 72) return 'backing'
+  return 'neutral'
+}
+
+/**
+ * How a chairman talks, which follows from what he is.
+ *
+ * `OwnerKind` was already generated with the world and read only for money and
+ * patience. It is also the single best thing the game knows about how the man
+ * would phrase a sentence: a family that has held the club for eighty years
+ * does not write like a fund that bought it in March, and a supporters' trust
+ * does not write like either.
+ */
+export type ChairmanRegister =
+  | 'paternal'   // legacyFamily — long view, the club as an inheritance
+  | 'plain'      // localBusiness — blunt, money-minded, fair
+  | 'corporate'  // foreignFund — metrics, distance, the passive voice
+  | 'breezy'     // celebrity — enthusiastic, vague, slightly absent
+  | 'committee'  // consortium — hedged, nobody's own opinion
+  | 'earnest'    // fanOwned — sincere, apologetic about money
+
+const REGISTERS: Record<string, ChairmanRegister> = {
+  legacyFamily: 'paternal',
+  localBusiness: 'plain',
+  foreignFund: 'corporate',
+  celebrity: 'breezy',
+  consortium: 'committee',
+  fanOwned: 'earnest',
+}
+
+export function chairmanRegister(kind: string): ChairmanRegister {
+  return REGISTERS[kind] ?? 'plain'
+}
+
+/**
+ * How a head coach talks to you.
+ *
+ * Derived rather than invented. `mediaHandling` is how much a coach courts the
+ * press — a talker talks — and `dofRelationship` is what he thinks of you
+ * specifically, which the match verdict already leans on. Both were modelled
+ * and neither reached the words on the screen.
+ */
+export type CoachRegister = 'warm' | 'brisk' | 'terse' | 'pointed'
+
+export function coachRegister(mediaHandling: number, dofRelationship: number): CoachRegister {
+  if (dofRelationship < 30) return 'pointed'
+  if (dofRelationship >= 65) return mediaHandling >= 50 ? 'warm' : 'brisk'
+  return mediaHandling >= 55 ? 'brisk' : 'terse'
+}
+
+/**
+ * A line from the pool belonging to one register, varied within it.
+ *
+ * Keeps the writing at the call site where the message is, rather than in a
+ * table somewhere else that has to be read alongside it.
+ */
+export function pickBy<K extends string>(
+  key: string,
+  group: K,
+  pools: Record<K, readonly string[]>,
+): string {
+  return phrase(key, pools[group] ?? [])
+}

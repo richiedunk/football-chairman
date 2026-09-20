@@ -9,6 +9,8 @@ import { MemoryAdapter, compressValue } from '../src/storage/adapter'
 import { SAVE_VERSION, type GameState } from '../src/engine/types'
 import { makeCareerRecord, readCareerRecord } from '../src/engine/systems/careerRecord'
 import { assignScout, processScouting } from '../src/engine/systems/scouting'
+import { openVacancies } from '../src/engine/systems/jobSearch'
+import { IdFactory } from '../src/engine/ids'
 import { Rng } from '../src/engine/rng'
 
 /**
@@ -56,6 +58,11 @@ beforeAll(() => {
     assignScout(scout, { type: 'player', targetId: target.id, minAbility: 0, maxAge: 40 })
     processScouting(base, club, { rng: new Rng('mig-scout'), week: 1, season: 2025 })
   }
+
+  // And a jobs board. The fixture's director is employed, so he has no offers
+  // — and a migration test written against none passes having checked nothing,
+  // which is exactly what the v21 test did until it was made to fail.
+  base.director.jobOffers = openVacancies(base, new IdFactory(base.nextId), new Rng('mig-jobs'))
 }, 180_000)
 
 /** A save as it would have looked at `version`, before later fields existed. */
@@ -95,6 +102,15 @@ function stripToVersion(state: GameState, version: number): GameState {
     }
     for (const negotiation of s.negotiations) bag(negotiation).playerInitiated = false
     if (s.director.contract) bag(s.director.contract).signedSeason = 2025
+  }
+
+  if (version < 21) {
+    // A listing did not carry the club's own advert. The fixture's offers are
+    // freshly built and have one, so it has to come off or the migration is
+    // never exercised.
+    for (const offer of s.director?.jobOffers ?? []) {
+      delete (offer as { advert?: string }).advert
+    }
   }
 
   if (version < 20) {
@@ -221,7 +237,7 @@ async function loadFrom(version: number, slotId: string): Promise<GameState> {
   return loaded!
 }
 
-const HISTORICAL = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+const HISTORICAL = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
 
 describe('every historical format still loads', () => {
   for (const version of HISTORICAL) {
@@ -291,6 +307,14 @@ describe('every historical format still loads', () => {
       reports[0].previousAbilityRange,
       'v20: predecessor range left undefined rather than null',
     ).toBeNull()
+
+    // v21: a listing carries the club's own advert beside your read of it.
+    const listings = loaded.director.jobOffers
+    expect(listings.length, 'fixture carries no job listing to migrate').toBeGreaterThan(0)
+    for (const listing of listings) {
+      expect(typeof listing.advert, `v21: ${listing.clubName} has no advert`).toBe('string')
+      expect(listing.advert, `v21: ${listing.clubName}'s advert is empty`).toBeTruthy()
+    }
 
     await deleteSave('mig-all')
   }, 60_000)

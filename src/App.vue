@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useGameStore } from './stores/game'
 import AppTopBar from './ui/components/AppTopBar.vue'
 import AppStatusBar from './ui/components/AppStatusBar.vue'
-import AppTabBar from './ui/components/AppTabBar.vue'
+import AppHomeBar from './ui/components/AppHomeBar.vue'
 import AdvanceBar from './ui/components/AdvanceBar.vue'
 import NoticeScreen, { type Notice } from './ui/components/NoticeScreen.vue'
 import { nextLine } from './ui/loadingLines'
@@ -53,7 +53,7 @@ watch(
     if (looking && name !== 'looking' && name !== 'career' && name !== 'settings') {
       router.replace('/looking')
     } else if (!looking && name === 'looking' && store.loaded) {
-      router.replace('/home')
+      router.replace('/phone')
     }
   },
   { immediate: true },
@@ -102,10 +102,14 @@ watch(
 // reopened report is an ordinary detail screen and the back arrow closes it.
 const showAdvance = computed(() => {
   if (!showChrome.value) return false
-  if (route.name === 'home') return true
-  // And on the conversations, because that is where the blockers are answered
-  // now. Clearing the last one and then having to go back to the dashboard to
-  // set the week off is a round trip through a screen you did not want.
+  // The home screen is where a week is set off from — it is the screen that
+  // says what is waiting, so it is the screen that should let you get on with
+  // it. The dashboard keeps the button too, being the same screen it always
+  // was, one tap further in.
+  if (route.name === 'phone' || route.name === 'home') return true
+  // And on the conversations, because that is where the blockers are answered.
+  // Clearing the last one and then walking back to set the week off is a round
+  // trip through a screen you did not want.
   //
   // The list of them, not inside a thread: a thread scrolls, and the replies
   // are pinned to the bottom of it, so a second control down there would sit
@@ -138,7 +142,7 @@ onMounted(async () => {
   // Android's hardware back button, so back navigates rather than quitting.
   cleanups.push(
     await bindBackButton(
-      () => notices.value.length > 0 || !['start', 'home'].includes(String(route.name)),
+      () => notices.value.length > 0 || !['start', 'phone'].includes(String(route.name)),
       () => {
         // A message waiting to be read is what back dismisses first. Navigating
         // out from under it would lose the thing it was trying to say.
@@ -164,7 +168,7 @@ onUnmounted(() => {
 
 <template>
   <div class="app-shell" :inert="notices.length > 0 || undefined">
-    <AppTopBar v-if="showChrome" />
+    <AppTopBar v-if="showChrome && route.name !== 'phone'" />
     <AppStatusBar v-if="showChrome" />
 
     <main ref="content" class="content">
@@ -176,7 +180,7 @@ onUnmounted(() => {
     </main>
 
     <AdvanceBar v-if="showAdvance" />
-    <AppTabBar v-if="showChrome" />
+    <AppHomeBar v-if="showChrome" />
 
     <div v-if="store.busy" class="loading">
       <div class="loading__bar"><div class="loading__sweep" /></div>

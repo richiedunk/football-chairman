@@ -568,6 +568,16 @@ function migrate(state: GameState): GameState {
     state.version = 20
   }
 
+  // v21: a job listing carries the club's own advert as well as your read of
+  // it. An old save's offers have only the read, so it stands as both until
+  // the next search regenerates the board.
+  if (state.version < 21) {
+    for (const offer of state.director?.jobOffers ?? []) {
+      if (offer && typeof offer.advert !== 'string') offer.advert = offer.pitch ?? ''
+    }
+    state.version = 21
+  }
+
   state.version = SAVE_VERSION
   return state
 }

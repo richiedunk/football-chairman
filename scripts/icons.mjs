@@ -34,6 +34,25 @@ const BG = '#08090B'
 const badge = fs.readFileSync(path.join(ROOT, 'design/badge.svg'), 'utf8')
   .replace(/<svg([^>]*?)\swidth="\d+"\s+height="\d+"/, '<svg$1 width="100%" height="100%"')
 const wordmark = fs.readFileSync(path.join(ROOT, 'design/wordmark.png')).toString('base64')
+// A hand-mapped light wordmark rather than a CSS inversion. Inverting turns
+// the lime into magenta, which is the one colour in the identity that must not
+// move; these two files differ only in the neutrals.
+const wordmarkLight = fs.readFileSync(path.join(ROOT, 'design/wordmark-light.png')).toString('base64')
+
+/**
+ * The badge with its neutrals swapped and the lime left exactly alone.
+ *
+ * The drawn parts are a string substitution. The figure is not: it is a raster
+ * embedded in the SVG, so no amount of editing the markup touches it, and the
+ * first light lockup came out with a white figure on white paper. It gets
+ * `brightness(0)`, which is targeted at that one element rather than thrown
+ * over the whole mark — a blunt inversion is what turns the lime magenta.
+ */
+const badgeLight = badge
+  .replace(/#FFFFFF/g, '__FIG__')
+  .replace(/#08090B/g, '#F7F7F5')
+  .replace(/__FIG__/g, '#08090B')
+  .replace('<image ', '<image style="filter:brightness(0)" ')
 
 const SANDBOX_CHROMIUM = '/opt/pw-browsers/chromium'
 const browser = await chromium.launch(
@@ -84,15 +103,18 @@ const WORD_H = Math.round(WORD_W * 222 / 1092)
 const PAD_TOP = 64, PAD_BOTTOM = 56, GAP = 36
 const LOCKUP_H = PAD_TOP + BADGE_H + GAP + WORD_H + PAD_BOTTOM
 
-const lockup = (bg, invert) => {
-  const flip = invert ? ';filter:invert(1) hue-rotate(180deg)' : ''
-  return `<div style="width:1100px;padding:${PAD_TOP}px 0 ${PAD_BOTTOM}px;background:${bg};display:flex;flex-direction:column;align-items:center;gap:${GAP}px">
-    <div style="width:${Math.round(BADGE_H * 640 / 576)}px;height:${BADGE_H}px${flip}">${badge}</div>
-    <img src="data:image/png;base64,${wordmark}" style="width:${WORD_W}px;height:${WORD_H}px${flip}">
+const lockup = (bg, light) => `
+  <div style="width:1100px;padding:${PAD_TOP}px 0 ${PAD_BOTTOM}px;background:${bg};display:flex;flex-direction:column;align-items:center;gap:${GAP}px">
+    <div style="width:${Math.round(BADGE_H * 640 / 576)}px;height:${BADGE_H}px">${light ? badgeLight : badge}</div>
+    <img src="data:image/png;base64,${light ? wordmarkLight : wordmark}" style="width:${WORD_W}px;height:${WORD_H}px">
   </div>`
-}
 await shot(lockup(BG, false), 1100, LOCKUP_H, path.join(PUBLIC, 'logo.png'))
 await shot(lockup('#F7F7F5', true), 1100, LOCKUP_H, path.join(PUBLIC, 'logo-light.png'))
+
+// The bare badge, served so the title screen can show the mark itself rather
+// than only the wordmark.
+fs.writeFileSync(path.join(PUBLIC, 'badge.svg'), badge.replace('width="100%" height="100%"', ''))
+console.log('   public/badge.svg')
 
 console.log('favicon')
 // Nested inside a dark plate, because the figure is white and would vanish

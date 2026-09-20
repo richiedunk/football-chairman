@@ -151,7 +151,7 @@ async function saveNow() {
 
 async function loadSlot(id: string) {
   if (await store.load(id)) {
-    router.push('/home')
+    router.push('/phone')
   } else {
     notify?.('That save could not be read.', 'error')
   }

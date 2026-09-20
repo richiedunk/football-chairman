@@ -70,7 +70,7 @@ async function press() {
   const reading = openReport.value
   if (reading) {
     const next = store.dismissMatchReport(reading)
-    router.replace(next ? `/match/${next}` : '/home')
+    router.replace(next ? `/match/${next}` : '/phone')
     return
   }
 

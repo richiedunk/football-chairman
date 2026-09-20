@@ -1686,6 +1686,171 @@ button, input, select, textarea {
   color: var(--text);
 }
 
+/* ---------------------------------------------------------------------------
+   The phone
+
+   A home screen of apps in place of five fixed tabs. Thirty screens through
+   five slots meant four of them were doorways and everything else was a
+   drill-down; here every surface is one tap from home and adding one costs an
+   icon rather than another level of menu.
+   --------------------------------------------------------------------------- */
+
+.phone {
+  padding-top: 4px;
+}
+
+/* The plate: whose phone this is, when it is, and the one thing worth knowing
+   before you tap anything. */
+.phone__plate {
+  padding: 18px 0 20px;
+  border-bottom: 1px solid var(--hairline);
+  margin-bottom: 18px;
+}
+.phone__club {
+  font-size: 1.45rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+.phone__when {
+  display: flex;
+  gap: 12px;
+  margin-top: 5px;
+  font-size: 10px;
+  letter-spacing: 0.09em;
+  color: var(--text-faint);
+}
+.phone__waiting {
+  margin-top: 12px;
+  font-size: 10px;
+  letter-spacing: 0.09em;
+  color: var(--text-dim);
+}
+.phone__waiting--urgent {
+  color: var(--danger);
+}
+
+.apps {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px 6px;
+  padding-bottom: 10px;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+/* A rounded tile, the way an app icon is a rounded tile. One surface and one
+   hairline — the grid is already fourteen objects and giving each its own
+   colour is the busy-ness the visual language exists to prevent. */
+.app__tile {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  border-radius: 15px;
+  background: var(--bg-raised-2);
+  border: 1px solid var(--border-strong);
+  color: var(--text-dim);
+}
+.app:active .app__tile {
+  background: var(--bg-raised);
+  border-color: var(--accent-dim);
+  color: var(--accent);
+}
+.app__tile svg {
+  width: 25px;
+  height: 25px;
+}
+
+/* Top-right, where a badge goes, and only when something wants you. */
+.app__badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 19px;
+  height: 19px;
+  padding: 0 5px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-pill);
+  background: var(--danger);
+  border: 2px solid var(--bg);
+  color: #fff;
+  font-family: var(--font-num);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.app__label {
+  font-size: 10.5px;
+  line-height: 1.2;
+  color: var(--text-faint);
+  text-align: center;
+}
+
+/* --- the phone's own navigation ------------------------------------------ */
+
+.homebar {
+  display: flex;
+  align-items: stretch;
+  border-top: 1px solid var(--border);
+  background: var(--bg-sunken);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.homebar__item {
+  position: relative;
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-height: var(--tabbar-h);
+  padding: 0;
+  background: none;
+  border: 0;
+  color: var(--text-faint);
+  font: inherit;
+  font-size: 10.5px;
+  cursor: pointer;
+}
+.homebar__item.is-active {
+  color: var(--accent);
+}
+.homebar__icon svg {
+  width: 21px;
+  height: 21px;
+}
+.homebar__badge {
+  position: absolute;
+  top: 7px;
+  left: 50%;
+  margin-left: 6px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-pill);
+  background: var(--danger);
+  color: #fff;
+  font-family: var(--font-num);
+  font-size: 9.5px;
+  font-weight: 700;
+}
+
 @media (min-width: 620px) {
   body { background: #030405; }
   #app {
