@@ -1962,3 +1962,58 @@ button, input, select, textarea {
     transform: translateX(-50%);
   }
 }
+
+/* The coach's view of one of your players: who is speaking, in mono, then
+   his verdict, then the reason. Hairline above, no box, one voice. */
+.coach-view {
+  margin: 12px var(--pad) 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+}
+.coach-view__who {
+  font-family: var(--font-num);
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  color: var(--text-faint);
+}
+.coach-view__label { font-size: 0.9rem; font-weight: 600; letter-spacing: -0.01em; }
+.coach-view__reason { flex-basis: 100%; font-size: 0.8rem; color: var(--text-dim); }
+
+/* The coach on the dashboard: who, the count, what he said, who he left out.
+   Same ground as the page, hairline below, so it reads as a person speaking
+   rather than a card of numbers. */
+.dash-coach {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: 100%;
+  padding: 12px var(--pad) 13px;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.dash-coach:active { background: var(--bg-raised); }
+.dash-coach__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-family: var(--font-num);
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+}
+.dash-coach__who { color: var(--text-faint); }
+.dash-coach__count { text-align: right; }
+.dash-coach__line { font-size: 0.95rem; line-height: 1.35; letter-spacing: -0.01em; }
+.dash-coach__out {
+  font-family: var(--font-num);
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+}
