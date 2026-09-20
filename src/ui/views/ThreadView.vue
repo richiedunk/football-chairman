@@ -79,18 +79,31 @@ function hasDestination(item: InboxItem): boolean {
 }
 
 /**
- * The one decision being answered right now: the most recent one still open.
+ * The one decision being answered right now: the oldest one still open.
  *
- * A busy week leaves two or three open at once, and offering all of them at
- * the same time stacked three near-identical sets of options — four ways to
- * answer a bid, then four more for a different bid, with nothing to say which
- * belonged to which. Answering the latest reveals the next, which is how a
- * conversation works anyway.
+ * A busy week leaves two or three open at once. Offering all of them at once
+ * stacked three near-identical sets of options — four ways to answer a bid,
+ * then four more for a different bid, with nothing saying which belonged to
+ * which — so only one is offered and answering it reveals the next.
+ *
+ * **Oldest, not newest.** These expire: an offer lapses two weeks after it
+ * arrives and resolves itself with its default. So the one nearest the front
+ * of the queue is the one nearest to being decided for you, and it is the one
+ * that should be in front of you. It also means the question being answered is
+ * the first one you meet reading down, rather than the last.
+ *
+ * **A function, not a computed, and that is load-bearing.** `isOpen` reads
+ * `decision.chosenId` off the raw engine object, and the game state is a
+ * `shallowRef` — so a mutation there is invisible to reactivity until the
+ * store bumps its revision. The template calls `isOpen` afresh on every
+ * render; a cached computed only re-evaluates when its dependencies say so.
+ * The two drifted apart, and the screen ended up naming the offer you had just
+ * answered while the one still waiting sat above it greyed out. Evaluated in
+ * the same render as the predicate it agrees with, they cannot disagree.
  */
-const answering = computed(() => {
-  const open = (thread.value?.messages ?? []).filter(isOpen)
-  return open.length ? open[open.length - 1] : null
-})
+function answering(): InboxItem | null {
+  return (thread.value?.messages ?? []).find(isOpen) ?? null
+}
 
 /** The option the player chose, for the reply that shows what they said. */
 function chosen(item: InboxItem) {
@@ -147,8 +160,19 @@ function weekBreak(index: number): string | null {
           <div class="bubble__stamp num">W{{ item.week }}</div>
         </div>
 
-        <!-- The question, held under the message that asked it. -->
-        <div v-if="isOpen(item)" class="chat__asking num">{{ item.decision!.prompt }}</div>
+        <!-- The question, held under the message that asked it — but only the
+             one being answered is live. Two amber prompts on screen with a
+             single set of replies at the bottom is the reader guessing which
+             offer they are accepting, which is the worst thing this screen
+             could ask of them. -->
+        <div
+          v-if="isOpen(item)"
+          class="chat__asking num"
+          :class="{ 'is-waiting': item.id !== answering()?.id }"
+        >
+          {{ item.decision!.prompt }}
+          <span v-if="item.id !== answering()?.id" class="chat__queued">still waiting</span>
+        </div>
 
         <!-- Yours: what you said back. -->
         <div v-if="chosen(item)" class="bubble bubble--out">
@@ -166,17 +190,21 @@ function weekBreak(index: number): string | null {
     <!-- The replies, always on show. You cannot type to a chairman, so there
          is no text box to put them behind — hiding them behind a Reply button
          was a button whose only job was to reveal the thing the screen is for. -->
-    <div v-if="answering" class="replies">
+    <div v-if="answering()" class="replies">
       <div class="replies__head num">
-        <span>{{ answering.urgent ? 'THIS ONE BLOCKS THE WEEK' : 'PICK ONE' }}</span>
-        <span v-if="thread.pending > 1">{{ thread.pending - 1 }} MORE AFTER THIS</span>
+        <!-- Naming it is the whole fix: the options for two different offers
+             are word-for-word identical, so the only thing telling them apart
+             is which message they belong to. -->
+        <span class="replies__subject">{{ answering()!.subject }}</span>
+        <span v-if="thread.pending > 1">{{ thread.pending - 1 }} MORE AFTER</span>
       </div>
+      <div v-if="answering()!.urgent" class="replies__blocks num">THIS ONE BLOCKS THE WEEK</div>
       <button
-        v-for="option in answering.decision!.options"
+        v-for="option in answering()!.decision!.options"
         :key="option.id"
         class="reply"
         :disabled="!option.available"
-        @click="send(answering, option.id)"
+        @click="send(answering()!, option.id)"
       >
         <span class="reply__label">{{ option.label }}</span>
         <!-- The consequence stays on the chip. A row of bare labels is a

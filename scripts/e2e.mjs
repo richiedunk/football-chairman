@@ -202,6 +202,7 @@ console.log(`   club: ${clubName}`)
 // exercises the decision resolver.
 let decisionsAnswered = 0
 let repliedShot = false
+let multiQuestionThreads = 0
 // A week that contains a match now ends on the report screen rather than on a
 // toast, and a week can contain two — a cup replay and a league game. The
 // button is the same button in the same place, so clearing them is a matter of
@@ -281,6 +282,29 @@ async function advanceOneWeek() {
         await readNotice()
         const option = page.locator('.reply:not([disabled])').first()
         if (!(await option.count())) break
+
+        // Two offers in one week both come from Recruitment, land in one
+        // thread and carry word-for-word identical options. Exactly one
+        // question may be live, and the panel has to say which — otherwise the
+        // reader is guessing which player they just sold. Checked here rather
+        // than in a step of its own, because by the time the run reaches a
+        // step of its own there are no decisions left to look at.
+        //
+        // Waited for rather than read straight off: answering one decision
+        // re-renders the thread, and counting in the middle of that catches
+        // the panel still naming the offer that has just been dealt with.
+        const settled = await page.waitForFunction(() => {
+          const asking = document.querySelectorAll('.chat__asking').length
+          if (asking === 0) return { asking: 0, live: 0, subject: null }
+          const live = document.querySelectorAll('.chat__asking:not(.is-waiting)').length
+          if (live !== 1) return false
+          const subject = document.querySelector('.replies__subject')?.textContent?.trim() ?? null
+          return subject ? { asking, live, subject } : false
+        }, null, { timeout: 5000 }).then((h) => h.jsonValue(), () => null)
+
+        if (!settled) throw new Error('a thread showed no live question beside a named reply panel')
+        if (settled.asking > 1) multiQuestionThreads++
+
         // The replies, once: a decision's options drawn as the things you
         // could say back is what this whole screen is for.
         if (!repliedShot) {
@@ -360,6 +384,7 @@ await step('advance 10 weeks', async () => {
   await page.waitForTimeout(300)
   await page.screenshot({ path: `${SHOT}/07-home-after.png` })
   console.log(`   decisions answered: ${decisionsAnswered}`)
+  console.log(`   threads holding more than one open question: ${multiQuestionThreads}`)
 })
 
 await step('an international break empties the squad list a week early', async () => {

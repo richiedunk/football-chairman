@@ -1436,6 +1436,20 @@ button, input, select, textarea {
   line-height: 1.45;
   color: var(--warn);
 }
+/* An open question that is not the one being answered. Still visible, because
+   it is still owed an answer — but not competing with the live one. */
+.chat__asking.is-waiting {
+  border-left-color: var(--border-strong);
+  color: var(--text-faint);
+}
+.chat__queued {
+  display: block;
+  margin-top: 2px;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-fainter);
+}
 
 /* --- the replies ---------------------------------------------------------- */
 
@@ -1458,7 +1472,24 @@ button, input, select, textarea {
   font-size: 9.5px;
   letter-spacing: 0.09em;
   color: var(--text-faint);
+  margin-bottom: 4px;
+}
+/* What is being answered. Two offers get identical options, so this line is
+   the only thing distinguishing one reply panel from the other. */
+.replies__subject {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.replies__blocks {
   margin-bottom: 8px;
+  font-size: 9.5px;
+  letter-spacing: 0.09em;
+  color: var(--danger);
 }
 .reply {
   display: flex;
