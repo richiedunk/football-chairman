@@ -41,6 +41,13 @@ engine behind it, and squads thinning at the season roll), the bugs in
 coach who talks — which is a new piece of work rather than a leftover, and
 needs a backend before it needs a design.
 
+**The phone** is specified in `docs/the-phone.md` and not yet started. It is a
+UI layer over the interrupt channel — the inbox becomes threads, and a
+decision's options become replies — with no engine change and no change to the
+advance button or the outcome screen. It is written down separately because it
+carries its own anti-goals, and because the version of it that reskins the
+squad list is a costume rather than a design.
+
 **Continental competitions are built.** They were deferred pending the long
 save, the long save has been run, and they are done — see "Continental
 competition" below. The dangling `continentalPlaces` hooks are gone: every
