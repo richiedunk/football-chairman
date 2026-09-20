@@ -36,6 +36,10 @@ export async function initialiseNative(): Promise<void> {
     const { StatusBar, Style } = await import('@capacitor/status-bar')
     await StatusBar.setStyle({ style: Style.Dark })
     if (platform() === 'android') {
+      // A no-op on Android 15+, where targeting API 36 makes edge-to-edge
+      // mandatory and the status bar has no background to set. Still worth
+      // calling: minSdk is 24, and on Android 14 and below it is the only
+      // thing stopping a white bar above a dark app.
       await StatusBar.setBackgroundColor({ color: '#0b1220' })
     }
   } catch {
