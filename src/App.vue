@@ -103,6 +103,14 @@ watch(
 const showAdvance = computed(() => {
   if (!showChrome.value) return false
   if (route.name === 'home') return true
+  // And on the conversations, because that is where the blockers are answered
+  // now. Clearing the last one and then having to go back to the dashboard to
+  // set the week off is a round trip through a screen you did not want.
+  //
+  // The list of them, not inside a thread: a thread scrolls, and the replies
+  // are pinned to the bottom of it, so a second control down there would sit
+  // on top of the one you are actually using.
+  if (route.name === 'inbox') return true
   return route.name === 'match' && store.matchQueue.includes(String(route.params.id ?? ''))
 })
 
