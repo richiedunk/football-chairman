@@ -1,6 +1,7 @@
 import { clamp, Rng } from '../rng'
 import { squadImportance } from './valuation'
 import { influenceOf, readRoom, roomBaseline } from './dressingRoom'
+import { phrase, withArticle } from './voice'
 import type { Club, GameState, Player, SquadStatus } from '../types'
 
 /**
@@ -66,7 +67,11 @@ export function processMorale(
       if (player.morale < 45 && rng.chance(0.06)) {
         grievances.push({
           player,
-          reason: `${player.knownAs} is unhappy with his playing time — he was signed as a ${SQUAD_STATUS_LABELS[player.desiredStatus].toLowerCase()}.`,
+          reason: phrase(`minutes:${player.id}:${state.date.season}:${state.date.week}`, [
+            `${player.knownAs} has been in to see me. He came here as ${withArticle(SQUAD_STATUS_LABELS[player.desiredStatus].toLowerCase())} and he isn't playing like one.`,
+            `Had ${player.knownAs} at my door about his minutes. He was promised ${SQUAD_STATUS_LABELS[player.desiredStatus].toLowerCase()} and he hasn't forgotten it.`,
+            `${player.knownAs} isn't happy. His words: he signed as ${withArticle(SQUAD_STATUS_LABELS[player.desiredStatus].toLowerCase())}. Hard to argue.`,
+          ]),
           severity: player.morale < 28 ? 'high' : 'medium',
         })
       }
@@ -88,14 +93,22 @@ export function processMorale(
         if (rng.chance(0.05)) {
           grievances.push({
             player,
-            reason: `${player.knownAs}'s contract expires at the end of the season and nothing has been offered.`,
+            reason: phrase(`expiring:${player.id}:${state.date.season}:${state.date.week}`, [
+              `${player.knownAs} is out of contract in the summer and nobody has spoken to him. He's noticed.`,
+              `We need to talk about ${player.knownAs}. Contract up at the end of the season, nothing offered, and he's asking me why.`,
+              `${player.knownAs}'s deal runs out this summer. He has had no offer and he is starting to take that personally.`,
+            ]),
             severity: 'high',
           })
         }
       } else if (seasonsLeft === 1 && !player.contract.inNegotiation && rng.chance(0.02)) {
         grievances.push({
           player,
-          reason: `${player.knownAs} has asked about a new deal — he has a year left.`,
+          reason: phrase(`renewal:${player.id}:${state.date.season}:${state.date.week}`, [
+            `${player.knownAs} asked me about a new deal today. He's got a year left.`,
+            `Quiet one: ${player.knownAs} wants to know where he stands. Twelve months to run.`,
+            `${player.knownAs} raised his contract with me. A year left — worth getting ahead of.`,
+          ]),
           severity: 'low',
         })
       }
@@ -117,7 +130,11 @@ export function processMorale(
         if (player.morale < 40 && rng.chance(0.04)) {
           grievances.push({
             player,
-            reason: `${player.knownAs} feels he has outgrown the club and wants to test himself higher up.`,
+            reason: phrase(`outgrown:${player.id}:${state.date.season}:${state.date.week}`, [
+              `${player.knownAs} thinks he's outgrown us. He wants to try himself higher up and he said so plainly.`,
+              `I'll be honest with you — ${player.knownAs} believes he is too good for this level now.`,
+              `${player.knownAs} has told me he wants a bigger club. Not angry about it, just certain.`,
+            ]),
             severity: 'high',
           })
         }
@@ -166,7 +183,11 @@ export function processMorale(
       player.transferRequested = true
       grievances.push({
         player,
-        reason: `${player.knownAs} has handed in a formal transfer request.`,
+        reason: phrase(`request:${player.id}:${state.date.season}:${state.date.week}`, [
+          `${player.knownAs} has put in a formal transfer request. It's in writing.`,
+          `It's official — ${player.knownAs} has requested a transfer.`,
+          `${player.knownAs} handed me a transfer request this morning. In writing, so it's real.`,
+        ]),
         severity: 'high',
       })
     }
@@ -230,7 +251,11 @@ export function reactToSigning(
       if (player.morale < 40 && rng.chance(0.4)) {
         reactions.push({
           player,
-          reason: `${player.knownAs} is unsettled by the arrival of ${signing.knownAs} in his position.`,
+          reason: phrase(`signedover:${player.id}:${signing.id}`, [
+            `${player.knownAs} is rattled by ${signing.knownAs} coming in. Same position, and he knows what it means.`,
+            `Signing ${signing.knownAs} has unsettled ${player.knownAs}. He sees it as a message.`,
+            `${player.knownAs} has taken the ${signing.knownAs} signing badly. It's his shirt.`,
+          ]),
         })
       }
     } else if (signing.currentAbility < player.currentAbility - 12) {

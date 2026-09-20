@@ -2,6 +2,7 @@
 import { phaseForWeek, SEASON_WEEKS } from '../../sim/schedule'
 import { produceIntake, INTAKE_WEEK } from '../../systems/academy'
 import { addInboxItem } from '../../systems/inbox'
+import { contact, phrase } from '../../systems/voice'
 import { runSeasonRollover } from '../../season'
 import { playerClub as clubInCharge } from '../../playerClub'
 import { IdFactory } from '../../ids'
@@ -76,11 +77,21 @@ function runAcademyIntake(
     const ctx = { rng: rng.fork(`intake:${club.id}`), ids, names, season: state.date.season }
     const { summary } = produceIntake(state, club, ctx)
     if (club.id === state.playerClubId) {
+      const director = club.staff
+        .map((id) => state.staff[id])
+        .find((member) => member?.role === 'academyDirector')
       addInboxItem(state, ids, {
         category: 'academy',
         subject: 'Youth intake',
-        from: 'Academy Director',
-        body: summary,
+        from: contact(director?.knownAs, 'Academy'),
+        // The summary is his, so he hands it over rather than having it
+        // appear. Keeps the numbers exactly as the system produced them.
+        body: `${phrase(`intake:${club.id}:${state.date.season}`, [
+          `This year's intake is in.`,
+          `Right — the new lads have arrived.`,
+          `Intake done for the year.`,
+          `We've taken this year's group on.`,
+        ])} ${summary}`,
         link: { view: 'academy' },
       })
     }
