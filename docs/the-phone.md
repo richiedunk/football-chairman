@@ -159,6 +159,105 @@ So, concretely:
 
 ---
 
+## The four registers
+
+The question this has to answer before any screen is drawn: if the phone is the
+shell, what *is* each screen? A league table is not a conversation. A squad list
+is not a document. Getting this wrong in either direction is how the idea fails
+— either everything becomes a chat thread, or the phone is a frame around
+thirty unchanged tables and means nothing.
+
+**Faking a spreadsheet is rejected.** Column letters and gridlines over a table
+that already exists cost rows and add nothing. So is a fake browser chrome with
+a URL bar. A medium that only changes the font is a costume.
+
+The rule that replaces it:
+
+> **The medium is chosen by who authored the information, not by how the data is
+> shaped.**
+
+Ask of each screen: *who wrote this, and how would it reach my phone?* That
+gives four registers, and **four is the limit** — a shell with six does not know
+what it is.
+
+1. **Messages** — a person is talking to you. Two-way, short, has a deadline.
+2. **Documents** — a department is reporting to you. Authored, dated, on a
+   letterhead, stating judgement together with its uncertainty. Cannot be
+   edited. Can be *superseded* by a later revision.
+3. **Websites** — the public is discussing you. You learn public facts the way
+   the public does, from a source with a bias, which may be wrong.
+4. **The club's own system** — you operate it. Dense, typographic, sortable, no
+   fiction at all.
+
+**Register 4 is what the game already is, and it is already right.** That is the
+deflationary half of this idea and the reason it is affordable: most views do not
+change. What changes is that the shell stops rendering four registers
+identically.
+
+Each register has to earn a **behavioural** difference, not a typeface. Messages
+can be replied to. A document has an author and a revision number and cannot be
+argued with. A website can be wrong. If a register cannot be told from register
+4 by what it *does*, it should not exist.
+
+### Where each screen sits
+
+| Register | Screens | Why |
+| --- | --- | --- |
+| **Messages** | Inbox, Agents, board *requests*, the head coach, the player liaison's read of the room, briefing a named journalist | Somebody is waiting on an answer |
+| **Documents** | Scout reports, the data department, the accounts, architect tenders, medical notes, the squad list as filed by the League, your own career record | A department authored it, dated it and stands behind it |
+| **Websites** | League tables, the results archive, the press, transfer rumours, deadline day as a live blog, the one that got away, the jobs board | Public, biased, sometimes wrong |
+| **The club's system** | Squad, player profiles, registration, transfers in progress, scouting assignments, search, staff, recruitment policy, academy, club, board standing, settings, milestones | You operate it; density is the feature |
+
+### Two places where the register carries information rather than decoration
+
+**A scout report is a revised document.** A range narrowing over weeks *is* a
+dossier being revised, and "third report — range narrowed" says something a
+live-updating widget cannot: that knowledge was bought with time. The engine
+already models the narrowing; the document is what makes it legible.
+
+**A website can be wrong, and the engine already knows how wrong.**
+`MediaOutlet` carries `credibility` and `sensationalism` and the UI throws both
+away. A rumour on a sensationalist outlet should *look* like one, so the reader
+learns to discount it — which is the media system's whole design, currently
+invisible. And a planted fabrication should be read where it was planted, on
+that outlet's page, rather than as a row in a list.
+
+### The dressing room is a defect, and this is what it reveals
+
+Ask who authored the dressing room screen and the answer is nobody. There is no
+document in football called "the dressing room."
+
+The system is explicitly built to give **information and consequences, never
+man-management** — and then delivers that information as a leaderboard of
+influence figures to one decimal place. That is register 4 rendering something
+the club has no system for. A director does not read the room off a dashboard;
+somebody tells him about it.
+
+So the room becomes **a person's read**: a short recurring briefing from the
+player liaison or the coach, naming two or three players and what they are doing
+to the room, with the setters-and-draggers list as its *attachment* rather than
+its headline. `+0.7` becomes words, because a liaison says "he has been
+excellent with the young lads," not "+0.7." The figure is telemetry for a
+judgement, and showing telemetry is what makes a judgement read as a gauge.
+
+**This is worth fixing whether or not the phone ever ships.**
+
+### Form, and the discipline of leaving things alone
+
+Form is a public fact. `FormRun` in the squad list is the reader operating the
+club's system, which is correct. The same WWDLW on a results site is correct
+too. Nothing needs inventing, and a breakdown that finds a new medium for every
+screen is not a design, it is enthusiasm.
+
+### Declined: a fan forum
+
+Supporter mood is computed weekly from its causes and a forum or social feed is
+the obvious home for it. It is declined. It is the one register needing more
+generated prose than this game can write well, a thin one reads as filler, and a
+generator of crowd opinion is a generator of abuse that would then have to be
+policed. Supporter mood stays on the board screen as the causal breakdown, which
+is better than a fake timeline.
+
 ## The shell
 
 This is the one genuine fork, and it needs a decision before any of the above
@@ -217,8 +316,19 @@ is third because it wants the two views underneath it to be stable.
 decisions as an inbox; it starts rendering them as the threads they belong to.
 Small, and the last thing that would look inconsistent.
 
-**5. Stop.** Measure by playing. Option A is a separate decision taken after
-this has been lived in, not a phase of this work.
+**5. Stop, and measure by playing.** Option A is a separate decision taken
+after this has been lived in, not a phase of this work.
+
+Only then, the other registers, in this order and for this reason: **documents
+first, proving themselves on the scout report**, because the revision model is
+the one that changes what the reader understands rather than how it looks; then
+**websites, starting with the results archive and the league table**, which are
+the two screens most obviously nobody's but the public's. The dressing-room
+rewrite rides with the document and message work, being one briefing and one
+attachment.
+
+Two new renderers in total, then. Everything else in the table above is an
+existing view sitting in a register it already suited.
 
 ---
 
