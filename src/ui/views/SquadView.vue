@@ -9,12 +9,31 @@ import { auditSquadDepth } from '../../engine/sim/selection'
 import { ELEVEN, fieldable } from '../../engine/systems/matchday'
 import type { Player, Position } from '../../engine/types'
 import Chevron from '../components/Chevron.vue'
+import AppSheet from '../components/AppSheet.vue'
 
 const store = useGameStore()
 const router = useRouter()
 
 type SortKey = 'position' | 'ability' | 'age' | 'value' | 'wage' | 'form' | 'morale' | 'contract' | 'apps'
 const sort = ref<SortKey>('position')
+const sortOpen = ref(false)
+
+/**
+ * The nine ways to order the list, behind one line. As a segmented control
+ * the nine took a third of the screen above the list that is the point of
+ * the screen — the squad doc's boast is thirteen rows without scrolling and
+ * the control was costing seven of them. One mono line saying how the list
+ * is sorted, and a sheet when you want it sorted differently.
+ */
+const SORT_LABELS: Record<SortKey, string> = {
+  position: 'Position', ability: 'Ability', age: 'Age', value: 'Value', wage: 'Wage',
+  form: 'Form', morale: 'Morale', contract: 'Contract', apps: 'Games',
+}
+const SORT_KEYS = Object.keys(SORT_LABELS) as SortKey[]
+function pickSort(key: SortKey) {
+  sort.value = key
+  sortOpen.value = false
+}
 const showDepth = ref(false)
 
 // Goalkeepers, defenders, midfield, forwards — the order a teamsheet is read
@@ -193,16 +212,28 @@ const fieldableNow = computed(() => {
       </div>
     </div>
 
-    <div class="section-title">Sort by</div>
-    <div class="segmented segmented--wrap">
-      <button
-        v-for="key in (['position','ability','age','value','wage','form','morale','contract','apps'] as SortKey[])"
-        :key="key"
-        class="segmented__item"
-        :class="{ 'is-active': sort === key }"
-        @click="sort = key"
-      >{{ key === 'apps' ? 'Games' : key.charAt(0).toUpperCase() + key.slice(1) }}</button>
-    </div>
+    <button class="sortline" @click="sortOpen = true">
+      <span class="sortline__label">Sort by</span>
+      <span class="sortline__value">{{ SORT_LABELS[sort] }}</span>
+      <Chevron :size="13" />
+    </button>
+
+    <AppSheet v-if="sortOpen" title="Sort the squad" @close="sortOpen = false">
+      <div class="list">
+        <button
+          v-for="key in SORT_KEYS"
+          :key="key"
+          class="list__row"
+          :class="{ 'sortline__pick--active': sort === key }"
+          @click="pickSort(key)"
+        >
+          <div class="list__main">
+            <div class="list__primary">{{ SORT_LABELS[key] }}</div>
+          </div>
+          <div v-if="sort === key" class="list__trail num" style="color: var(--accent)">CURRENT</div>
+        </button>
+      </div>
+    </AppSheet>
 
     <div class="card">
       <div class="list">

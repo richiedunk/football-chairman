@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useGameStore } from '../../stores/game'
-import { groupThreads, initials, preview, type Thread } from '../threads'
+import { groupThreads, preview, type Thread } from '../threads'
 
 /**
  * The conversations, most recently spoken in first.
@@ -75,12 +75,9 @@ function when(thread: Thread): string {
         v-for="thread in shown"
         :key="thread.key"
         class="chat-row"
-        :class="{ 'is-unread': thread.unread > 0 }"
+        :class="{ 'is-unread': thread.unread > 0, 'is-urgent': thread.urgent }"
         @click="open(thread)"
       >
-        <span class="chat-row__avatar" :class="{ 'is-urgent': thread.urgent }" aria-hidden="true">
-          {{ initials(thread.title) }}
-        </span>
         <span class="chat-row__main">
           <span class="chat-row__top">
             <span class="chat-row__name">{{ thread.title }}</span>
