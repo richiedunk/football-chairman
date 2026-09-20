@@ -155,6 +155,13 @@ export interface MatchResult {
   attendance?: number
   /** One-line verdict used in the results feed. Detailed matches only. */
   summary?: string
+  /**
+   * Players with a claim on the side who did not get on it. Detailed matches
+   * only, and trimmed with everything else when a result is slimmed — the
+   * snub system reads them in the same week they are produced.
+   */
+  homeSnubbed?: ID[]
+  awaySnubbed?: ID[]
 }
 
 export type MatchEventType =
@@ -730,6 +737,15 @@ export interface Player {
   suspendedWeeks: number
   /** How the player sees their standing at the club. */
   squadStatus: SquadStatus
+  /**
+   * Consecutive matches he was left out of despite having a claim on the side.
+   *
+   * Written by the snub system, and only for the club you run — the selector
+   * computes the omissions for every match in the world, but nobody at
+   * Rotherham is modelling how their fourth-choice left-back feels about it.
+   * Optional and additive: a save from before this existed reads as zero.
+   */
+  snubbedRun?: number
   /** What the player believes they deserve. Mismatch causes unrest. */
   desiredStatus: SquadStatus
   /** Personality traits shaping development, media and negotiation. */

@@ -101,7 +101,19 @@ export function simulateMatch(
   const home = selectTeam(state, homeClub, rng, availability)
   const away = selectTeam(state, awayClub, rng, availability)
 
-  return runMatch(state, homeClub, awayClub, home, away, rng, ctx, detailed)
+  const result = runMatch(state, homeClub, awayClub, home, away, rng, ctx, detailed)
+
+  // Who had a claim on the side and did not get on it. The selector has always
+  // known — it is what `unluckyOmissions` is — and until now the answer was
+  // discarded at every call site. It travels on the result so the week that
+  // produced it can act on it, and only on a detailed match: the other nine
+  // thousand belong to clubs that do not model how anyone feels.
+  if (detailed) {
+    if (home.unluckyOmissions.length) result.homeSnubbed = home.unluckyOmissions
+    if (away.unluckyOmissions.length) result.awaySnubbed = away.unluckyOmissions
+  }
+
+  return result
 }
 
 function runMatch(

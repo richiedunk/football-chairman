@@ -8,6 +8,7 @@ import {
 import MeterBar from '../components/MeterBar.vue'
 import Chevron from '../components/Chevron.vue'
 import { listName } from '../playerName'
+import { onARun, runWord } from '../../engine/systems/snub'
 
 /**
  * The room.
@@ -26,6 +27,33 @@ const room = computed(() => {
   const club = store.club
   return s && club ? readRoom(s, club) : null
 })
+
+/**
+ * The men who have not been picked, and for how long.
+ *
+ * The room is a consequence of decisions, and this is the decision the
+ * director did not make: somebody else picked the side, and these are the
+ * players paying for it. They belong here rather than on the squad list,
+ * because a run of omissions is a fact about the room rather than about any
+ * one player's numbers.
+ */
+const snubbed = computed(() => {
+  const s = store.game
+  const club = store.club
+  return s && club ? onARun(s, club).slice(0, 5) : []
+})
+
+/**
+ * Morale in words, for the same reason the influence figures are words: this
+ * screen is a person telling you about the room, and a person does not quote
+ * you a number out of a hundred.
+ */
+function moraleWord(morale: number): string {
+  if (morale >= 70) return 'taking it well'
+  if (morale >= 50) return 'not happy'
+  if (morale >= 30) return 'unhappy'
+  return 'finished with it'
+}
 
 /** The tone on a 0-100 meter. The scale lives with the labels, not here. */
 const meter = computed(() => (room.value ? roomMeter(room.value.tone) : 50))
@@ -95,6 +123,33 @@ const renewalEffect = computed(() => {
           </button>
         </div>
       </div>
+    </template>
+
+    <template v-if="snubbed.length">
+      <div class="section-title">Not being picked</div>
+      <div class="card">
+        <div class="list">
+          <button
+            v-for="p in snubbed"
+            :key="p.id"
+            class="list__row"
+            @click="router.push(`/player/${p.id}`)"
+          >
+            <div class="list__main">
+              <div class="list__primary">{{ listName(p) }}</div>
+              <div class="list__secondary num">
+                {{ p.position }} · {{ p.age }} · {{ moraleWord(p.morale).toUpperCase() }}
+              </div>
+            </div>
+            <span class="list__value neg-val">{{ runWord(p.snubbedRun ?? 0) }}</span>
+            <Chevron />
+          </button>
+        </div>
+      </div>
+      <p class="small muted" style="padding: 0 var(--pad)">
+        The coach picks the team. A man with a claim on the side who keeps watching it from
+        the bench is a man whose morale, and whose value, you are spending.
+      </p>
     </template>
 
     <template v-if="room.draggers.length">
