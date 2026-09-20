@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 576" width="640" height="576" role="img" aria-label="Undisclosed Football">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 576"  role="img" aria-label="Undisclosed Football">
   <!--
     The badge, and the source every icon is cut from. `npm run icons`
     regenerates them; nothing in public/ is edited by hand.
@@ -13,6 +13,14 @@
 
     The figure is the original artwork, lifted out and left alone. It is the
     half of this mark that is worth anything.
+
+    The bar is the redaction. It went on in the identity pass (docs/identity.md):
+    the mark was a man in a suit, which is you and could be any management
+    game; with his face withheld it is the player you are buying, who is the
+    one you cannot see. Level, slightly wider than the head, and drawn by
+    somebody who did not care how it looked — with a keyline heavy enough to
+    survive 48px, where three units of lime vanished and left it reading as a
+    hole in the drawing.
 
     The ball is redrawn. Fitting an arc through the original's puts its centre
     at y=697 with a radius of 176, and it was cut at 648 — only the top third
@@ -44,6 +52,8 @@
       <line x1="274.3" y1="440.4" x2="194.7" y2="382.6"/>
     </g>
     <path d="M320.0,407.2L365.7,440.4L348.2,494.2L291.8,494.2L274.3,440.4Z" fill="#08090B"/>
+    <rect x="228" y="164" width="184" height="36" fill="#08090B"/>
+    <rect x="228" y="164" width="184" height="36" fill="none" stroke="#C8FF4D" stroke-width="9"/>
   </g>
 
   <path d="M320 12 L622 118 L612 300 C592 396 468 480 320 556 C172 480 48 396 28 300 L18 118 Z"

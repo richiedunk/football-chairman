@@ -141,10 +141,13 @@ The badge is a man in a suit. `design/badges/` holds four drafts that put the
   an angle, the way the fee line reads in every paper.
 
 `design/badges/index.html` lays them out at launcher and hero sizes on the
-game's ground colour. Pick one, or take the brackets for the launcher and the
-redacted man for the hero, which is my recommendation: one is an icon and the
-other is a joke, and a game with this much dry copy can afford one joke on
-the front.
+game's ground colour.
+
+**Taken: the redacted man, everywhere.** `design/badge.svg` carries the bar
+now, and every icon, lockup, favicon and splash is cut from it by
+`npm run icons`, so nothing drifts. The other three stay in `design/badges/`
+as the record of what was considered. The keyline on the bar was thickened
+once, from three units to nine, after the first render lost it at 48px.
 
 ---
 
