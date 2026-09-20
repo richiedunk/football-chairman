@@ -1,10 +1,17 @@
 /**
- * Every icon and lockup, cut from `design/badge.svg`.
+ * Every icon, lockup and splash, cut from `design/badge.svg`.
  *
- * Nothing in `public/` is drawn by hand, so nothing in `public/` drifts from
- * the badge. Run after changing the badge or the wordmark:
+ * Nothing here is drawn by hand, so nothing here drifts from the badge. Run
+ * after changing the badge or the wordmark:
  *
  *     npm run icons
+ *
+ * This used to write only `public/`, which was fine while the game was a web
+ * target and `public/` was the whole product. Shipping an APK exposed the
+ * gap: the Android and iOS icon sets were still the Capacitor template's blue
+ * logo, because nothing had ever replaced what `cap add` scaffolded. Both
+ * native platforms are generated here now, for the same reason `public/` is —
+ * an icon nobody regenerates is an icon that silently stays wrong.
  *
  * Renders through the same Chromium the end-to-end test uses, because it is
  * the only renderer here that understands an SVG with an embedded raster in
@@ -33,13 +40,18 @@ const browser = await chromium.launch(
   fs.existsSync(SANDBOX_CHROMIUM) ? { executablePath: SANDBOX_CHROMIUM } : {},
 )
 
-async function shot(html, width, height, out, scale = 1) {
-  const page = await browser.newPage({ viewport: { width, height }, deviceScaleFactor: scale })
-  await page.setContent(`<body style="margin:0;background:${BG}">${html}</body>`)
+async function shot(html, width, height, out, { transparent = false } = {}) {
+  const page = await browser.newPage({ viewport: { width, height } })
+  // Android's adaptive icon paints its own background layer under the
+  // foreground, so the foreground has to be cut out rather than plated —
+  // otherwise the plate covers the background and the parallax has nothing
+  // to move against.
+  await page.setContent(`<body style="margin:0;background:${transparent ? 'transparent' : BG}">${html}</body>`)
   await page.waitForTimeout(120)
-  await page.screenshot({ path: out })
+  fs.mkdirSync(path.dirname(out), { recursive: true })
+  await page.screenshot({ path: out, omitBackground: transparent })
   await page.close()
-  console.log(`   ${path.relative(ROOT, out)}  ${width * scale}x${height * scale}`)
+  console.log(`   ${path.relative(ROOT, out)}  ${width}x${height}`)
 }
 
 /** The badge alone, centred on a square with `fill` of it covered. */
@@ -99,6 +111,102 @@ ${inner}
 </svg>
 `)
 console.log('   public/favicon.svg')
+
+const ANDROID_RES = path.join(ROOT, 'android/app/src/main/res')
+const IOS_ASSETS = path.join(ROOT, 'ios/App/App/Assets.xcassets')
+
+// Android ships one set per screen density. The multipliers are fixed by the
+// platform, so the sizes follow from a base measured in dp rather than from a
+// list of pixel numbers that has to be kept in step with itself.
+const DENSITIES = [['mdpi', 1], ['hdpi', 1.5], ['xhdpi', 2], ['xxhdpi', 3], ['xxxhdpi', 4]]
+const px = (dp, mult) => Math.round(dp * mult)
+
+// An adaptive icon is a 108dp canvas of which only the centre 72dp is ever
+// visible — the outer ring is bleed the launcher parallaxes into. Masks are
+// applied inside that 72dp, and the harshest is a circle.
+//
+// 0.50 was chosen by rendering the candidates under a real circular mask and
+// looking: at 0.56 the shield's shoulders are already clipped, at 0.62 badly
+// so, and 0.44 fits but leaves the icon small and timid in the tray. At 0.50
+// the whole shield survives the circle with a little air around it.
+const FG_FILL = 0.50
+// The same proportion re-expressed for a plate that is itself the circle
+// rather than a 72dp window onto a 108dp canvas: 0.50 x (108 / 72).
+const ROUND_FILL = FG_FILL * 108 / 72
+
+/** The badge on a circular plate, for the pre-adaptive round icon. */
+function rounded(size, fill) {
+  const h = Math.round(size * fill)
+  const w = Math.round(h * 640 / 576)
+  return `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${BG};display:flex;align-items:center;justify-content:center">
+    <div style="width:${w}px;height:${h}px">${badge}</div>
+  </div>`
+}
+
+/** The badge centred on a splash, sized against the shorter edge. */
+function splash(width, height, fill) {
+  const h = Math.round(Math.min(width, height) * fill)
+  const w = Math.round(h * 640 / 576)
+  return `<div style="width:${width}px;height:${height}px;background:${BG};display:flex;align-items:center;justify-content:center">
+    <div style="width:${w}px;height:${h}px">${badge}</div>
+  </div>`
+}
+
+console.log('android launcher')
+for (const [density, mult] of DENSITIES) {
+  const dir = path.join(ANDROID_RES, `mipmap-${density}`)
+  const legacy = px(48, mult)
+  // API 24 and 25 predate adaptive icons and show these unmasked, so they are
+  // plated squares at the same proportion as the web icon.
+  await shot(squared(legacy, 0.86), legacy, legacy, path.join(dir, 'ic_launcher.png'))
+  await shot(rounded(legacy, ROUND_FILL), legacy, legacy, path.join(dir, 'ic_launcher_round.png'))
+  // Transparent: the background layer is the colour below, not this.
+  const fg = px(108, mult)
+  await shot(squared(fg, FG_FILL), fg, fg, path.join(dir, 'ic_launcher_foreground.png'), {
+    transparent: true,
+  })
+}
+
+// Written here rather than left as the template's white, so the layer under
+// the shield is the app's own background and the icon reads as one piece.
+fs.writeFileSync(path.join(ANDROID_RES, 'values/ic_launcher_background.xml'),
+  `<?xml version="1.0" encoding="utf-8"?>
+<!-- Generated by \`npm run icons\`. Do not edit. -->
+<resources>
+    <color name="ic_launcher_background">${BG}</color>
+</resources>
+`)
+console.log('   android/app/src/main/res/values/ic_launcher_background.xml')
+
+console.log('android splash')
+// The theme sets these as `android:background`, which stretches the bitmap to
+// fill the window — so the source aspect ratio decides how much the badge is
+// distorted on a given phone. These are the template's own dimensions rather
+// than anything derived: they are not a clean progression (hdpi is 3:5,
+// xhdpi 9:16) because they were picked to sit near real screens, and
+// regenerating them from a tidier formula would have made every one of them
+// a worse match. Only the artwork changes here.
+const SPLASH_PORT = {
+  mdpi: [320, 480], hdpi: [480, 800], xhdpi: [720, 1280],
+  xxhdpi: [960, 1600], xxxhdpi: [1280, 1920],
+}
+for (const [density, [w, h]] of Object.entries(SPLASH_PORT)) {
+  await shot(splash(w, h, 0.26), w, h, path.join(ANDROID_RES, `drawable-port-${density}/splash.png`))
+  await shot(splash(h, w, 0.26), h, w, path.join(ANDROID_RES, `drawable-land-${density}/splash.png`))
+}
+// The undensitied fallback, which is what a device with no better match gets.
+await shot(splash(480, 320, 0.26), 480, 320, path.join(ANDROID_RES, 'drawable/splash.png'))
+
+console.log('ios')
+// One universal 1024 is all a modern asset catalogue wants. Opaque and inset,
+// because Apple rounds the corners itself and rejects an icon with alpha.
+await shot(squared(1024, 0.84), 1024, 1024,
+  path.join(IOS_ASSETS, 'AppIcon.appiconset/AppIcon-512@2x.png'))
+// Three identical square splashes: Capacitor points light, dark and universal
+// at their own files, and the game has one appearance.
+for (const name of ['splash-2732x2732.png', 'splash-2732x2732-1.png', 'splash-2732x2732-2.png']) {
+  await shot(splash(2732, 2732, 0.22), 2732, 2732, path.join(IOS_ASSETS, `Splash.imageset/${name}`))
+}
 
 await browser.close()
 console.log('done')
