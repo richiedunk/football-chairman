@@ -36,7 +36,7 @@ export async function initialiseNative(): Promise<void> {
     const { StatusBar, Style } = await import('@capacitor/status-bar')
     await StatusBar.setStyle({ style: Style.Dark })
     if (platform() === 'android') {
-      await StatusBar.setBackgroundColor({ color: '#0b1220' })
+      await StatusBar.setBackgroundColor({ color: '#08090B' })
     }
   } catch {
     // Status bar styling is cosmetic; carry on without it.

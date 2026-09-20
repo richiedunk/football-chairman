@@ -1,5 +1,7 @@
 # Undisclosed Football
 
+<img src="public/logo.png" alt="Undisclosed Football" width="320">
+
 A football management game where you are the **director of football**, not the manager.
 You run recruitment, contracts, the academy, facilities, the wage bill and the press.
 Someone else picks the team — and if he doesn't rate your signing, your signing doesn't play.
