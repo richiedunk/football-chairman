@@ -792,6 +792,25 @@ await step('messages', async () => {
   await page.screenshot({ path: `${SHOT}/09b-thread.png`, fullPage: true })
 })
 
+await step('a decision on the dashboard opens its conversation', async () => {
+  // The dashboard names one specific thing that is waiting. Landing on the
+  // list of conversations would ask the reader to find again the message they
+  // have just been shown.
+  await page.goto('http://127.0.0.1:4173/#/home')
+  await page.waitForSelector('.dash-item')
+  const decision = page.locator('.dash-item').filter({ hasText: /ANSWER|WEEKS TO/ }).first()
+  if (!(await decision.count())) {
+    console.log('   nothing waiting this week, skipped')
+    return
+  }
+  await decision.click()
+  await page.waitForTimeout(400)
+  const landed = page.url().split('#')[1] ?? ''
+  if (!landed.startsWith('/inbox/')) throw new Error(`a waiting decision led to ${landed}`)
+  await page.waitForSelector('.thread__said')
+  console.log(`   landed in ${landed}`)
+})
+
 await step('opening a conversation reads all of it', async () => {
   // An unread count that survives having the thread open in front of you is a
   // badge the reader cannot clear and stops trusting.

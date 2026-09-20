@@ -8,6 +8,8 @@ import {
 import { MemoryAdapter, compressValue } from '../src/storage/adapter'
 import { SAVE_VERSION, type GameState } from '../src/engine/types'
 import { makeCareerRecord, readCareerRecord } from '../src/engine/systems/careerRecord'
+import { assignScout, processScouting } from '../src/engine/systems/scouting'
+import { Rng } from '../src/engine/rng'
 
 /**
  * The migration safety net.
@@ -39,6 +41,21 @@ beforeAll(() => {
     worldSize: 'compact', homeNationId: 'eng', startingSeason: 2025,
   })
   base = startCareerAt(setup, startingClubCandidates(setup.state)[0].id)
+
+  // A fresh career has no scout reports, and a migration test written against
+  // a state with none passes having checked nothing. So the fixture is given
+  // some, by scouting the way the game does rather than by hand.
+  const club = base.clubs[base.playerClubId!]
+  const scout = club.staff
+    .map((id) => base.staff[id])
+    .find((member) => member?.role === 'scout')
+  if (scout) {
+    const target = Object.values(base.players).find(
+      (p) => p.clubId && p.clubId !== club.id && !p.isAcademy,
+    )!
+    assignScout(scout, { type: 'player', targetId: target.id, minAbility: 0, maxAge: 40 })
+    processScouting(base, club, { rng: new Rng('mig-scout'), week: 1, season: 2025 })
+  }
 }, 180_000)
 
 /** A save as it would have looked at `version`, before later fields existed. */
@@ -78,6 +95,16 @@ function stripToVersion(state: GameState, version: number): GameState {
     }
     for (const negotiation of s.negotiations) bag(negotiation).playerInitiated = false
     if (s.director.contract) bag(s.director.contract).signedSeason = 2025
+  }
+
+  if (version < 20) {
+    // A scout report did not know which revision of itself it was, and the
+    // fixture's reports are freshly built and carry the fields — so they have
+    // to be taken back off, or the test passes without the migration running.
+    for (const report of Object.values(s.scoutReports)) {
+      delete (report as { revision?: number }).revision
+      delete (report as { previousAbilityRange?: unknown }).previousAbilityRange
+    }
   }
 
   if (version < 19) {
@@ -194,7 +221,7 @@ async function loadFrom(version: number, slotId: string): Promise<GameState> {
   return loaded!
 }
 
-const HISTORICAL = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]
+const HISTORICAL = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
 
 describe('every historical format still loads', () => {
   for (const version of HISTORICAL) {
@@ -252,6 +279,18 @@ describe('every historical format still loads', () => {
     for (const entry of club.history) {
       expect(bag(entry).headCoachName, 'v15: dead history field survived').toBeUndefined()
     }
+
+    // Not guarded on the report existing: a conditional assertion here would
+    // pass on a fixture with no reports, which is exactly what a fresh career
+    // is. The fixture is scouted in `beforeAll` so that this has something to
+    // be wrong about.
+    const reports = Object.values(loaded.scoutReports)
+    expect(reports.length, 'fixture carries no scout report to migrate').toBeGreaterThan(0)
+    expect(reports[0].revision, 'v20: report does not know which revision it is').toBe(1)
+    expect(
+      reports[0].previousAbilityRange,
+      'v20: predecessor range left undefined rather than null',
+    ).toBeNull()
 
     await deleteSave('mig-all')
   }, 60_000)

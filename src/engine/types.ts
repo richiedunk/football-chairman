@@ -1083,6 +1083,24 @@ export interface ScoutReport {
   seasonFiled: number
   /** Set when the report is stale enough to warrant a fresh look. */
   stale: boolean
+  /**
+   * How many times this dossier has been filed, starting at 1.
+   *
+   * A report is replaced wholesale each time a scout files again, so without
+   * this the only thing the reader could see was the current range — and a
+   * range on its own says nothing about how it was arrived at. Knowledge is
+   * bought with weeks of a scout's time, and a third report that has narrowed
+   * is the only place the game can show that it was.
+   */
+  revision: number
+  /**
+   * The ability range the previous revision reported, or null on a first look.
+   *
+   * Only the previous one. A full history would grow without bound in a save
+   * that already runs to megabytes, and the thing worth showing is the change
+   * since last time rather than a chart of every week.
+   */
+  previousAbilityRange: [number, number] | null
 }
 
 // ---------------------------------------------------------------------------
@@ -1647,4 +1665,4 @@ export interface GameSettings {
   hapticsEnabled: boolean
 }
 
-export const SAVE_VERSION = 19
+export const SAVE_VERSION = 20

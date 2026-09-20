@@ -1373,6 +1373,72 @@ button, input, select, textarea {
   white-space: normal;
 }
 
+/* ---------------------------------------------------------------------------
+   Documents
+
+   The second register: a department reporting to you. A document is authored,
+   dated, numbered and cannot be argued with, and that is what has to be
+   visible — not a typeface. The design system has Inter and JetBrains Mono and
+   nothing else, so the idiom is structural: a letterhead with a rule under it,
+   a filing stamp in mono, the verdict as prose, and the reading set apart from
+   the prose that justifies it.
+   --------------------------------------------------------------------------- */
+
+.dossier__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 7px;
+  border-bottom: 1px solid var(--border-strong);
+}
+.dossier__author {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+.dossier__filed {
+  font-size: 10px;
+  letter-spacing: 0.07em;
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+
+/* The filing stamp. A document knows which revision of itself it is. */
+.dossier__stamp {
+  margin-top: 7px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.dossier__superseded {
+  color: var(--warn);
+}
+
+.dossier__verdict {
+  margin: 10px 0 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text);
+}
+
+/* The reading, set apart from the prose that justifies it. */
+.dossier__reading {
+  padding: 9px 0;
+  border-top: 1px solid var(--hairline);
+  border-bottom: 1px solid var(--hairline);
+  margin-bottom: 10px;
+}
+/* The line the revision number exists for: what weeks of a scout's time
+   bought. Accent, because it is the one thing on the document that is news. */
+.dossier__change {
+  margin-top: 5px;
+  font-size: 10px;
+  letter-spacing: 0.07em;
+  color: var(--accent-dim);
+}
+
 @media (min-width: 620px) {
   body { background: #030405; }
   #app {
