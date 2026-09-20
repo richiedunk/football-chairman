@@ -1436,6 +1436,20 @@ button, input, select, textarea {
   line-height: 1.45;
   color: var(--warn);
 }
+/* An open question that is not the one being answered. Still visible, because
+   it is still owed an answer — but not competing with the live one. */
+.chat__asking.is-waiting {
+  border-left-color: var(--border-strong);
+  color: var(--text-faint);
+}
+.chat__queued {
+  display: block;
+  margin-top: 2px;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-fainter);
+}
 
 /* --- the replies ---------------------------------------------------------- */
 
@@ -1458,7 +1472,24 @@ button, input, select, textarea {
   font-size: 9.5px;
   letter-spacing: 0.09em;
   color: var(--text-faint);
+  margin-bottom: 4px;
+}
+/* What is being answered. Two offers get identical options, so this line is
+   the only thing distinguishing one reply panel from the other. */
+.replies__subject {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.replies__blocks {
   margin-bottom: 8px;
+  font-size: 9.5px;
+  letter-spacing: 0.09em;
+  color: var(--danger);
 }
 .reply {
   display: flex;
@@ -1684,6 +1715,260 @@ button, input, select, textarea {
   font-size: 14px;
   line-height: 1.45;
   color: var(--text);
+}
+
+/* ---------------------------------------------------------------------------
+   The phone
+
+   A home screen of apps in place of five fixed tabs. Thirty screens through
+   five slots meant four of them were doorways and everything else was a
+   drill-down; here every surface is one tap from home and adding one costs an
+   icon rather than another level of menu.
+   --------------------------------------------------------------------------- */
+
+.phone {
+  padding-top: 4px;
+}
+
+/* The plate: whose phone this is, when it is, and the one thing worth knowing
+   before you tap anything. */
+.phone__plate {
+  padding: 18px 0 20px;
+  border-bottom: 1px solid var(--hairline);
+  margin-bottom: 18px;
+}
+.phone__club {
+  font-size: 1.45rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+.phone__when {
+  display: flex;
+  gap: 12px;
+  margin-top: 5px;
+  font-size: 10px;
+  letter-spacing: 0.09em;
+  color: var(--text-faint);
+}
+.phone__waiting {
+  margin-top: 12px;
+  font-size: 10px;
+  letter-spacing: 0.09em;
+  color: var(--text-dim);
+}
+.phone__waiting--urgent {
+  color: var(--danger);
+}
+
+/* The notification stack: who wanted you, before you have opened anything.
+   Raised off the ground because these sit on top of the phone rather than in
+   it, which is the one place a container earns its keep on this screen. */
+.notifs {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-bottom: 20px;
+}
+.notif {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 10px 12px;
+  text-align: left;
+  background: var(--bg-raised-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.notif:active {
+  border-color: var(--border-strong);
+  background: var(--bg-raised);
+}
+.notif.is-urgent {
+  border-color: var(--danger-dim);
+}
+.notif__avatar {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--bg-sunken);
+  border: 1px solid var(--border-strong);
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+.notif__main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.notif__top {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.notif__from {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.notif__when {
+  flex: 0 0 auto;
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  color: var(--text-fainter);
+}
+.notif__text {
+  display: block;
+  margin-top: 1px;
+  font-size: 11.5px;
+  line-height: 1.35;
+  color: var(--text-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* The ones over the cap, counted rather than listed. */
+.notif--more {
+  justify-content: center;
+  padding: 8px 12px;
+  background: none;
+  border-style: dashed;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.apps {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px 6px;
+  padding-bottom: 10px;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+/* A rounded tile, the way an app icon is a rounded tile. One surface and one
+   hairline — the grid is already fourteen objects and giving each its own
+   colour is the busy-ness the visual language exists to prevent. */
+.app__tile {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  border-radius: 15px;
+  background: var(--bg-raised-2);
+  border: 1px solid var(--border-strong);
+  color: var(--text-dim);
+}
+.app:active .app__tile {
+  background: var(--bg-raised);
+  border-color: var(--accent-dim);
+  color: var(--accent);
+}
+.app__tile svg {
+  width: 25px;
+  height: 25px;
+}
+
+/* Top-right, where a badge goes, and only when something wants you. */
+.app__badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 19px;
+  height: 19px;
+  padding: 0 5px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-pill);
+  background: var(--danger);
+  border: 2px solid var(--bg);
+  color: #fff;
+  font-family: var(--font-num);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.app__label {
+  font-size: 10.5px;
+  line-height: 1.2;
+  color: var(--text-faint);
+  text-align: center;
+}
+
+/* --- the phone's own navigation ------------------------------------------ */
+
+.homebar {
+  display: flex;
+  align-items: stretch;
+  border-top: 1px solid var(--border);
+  background: var(--bg-sunken);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.homebar__item {
+  position: relative;
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-height: var(--tabbar-h);
+  padding: 0;
+  background: none;
+  border: 0;
+  color: var(--text-faint);
+  font: inherit;
+  font-size: 10.5px;
+  cursor: pointer;
+}
+.homebar__item.is-active {
+  color: var(--accent);
+}
+.homebar__icon svg {
+  width: 21px;
+  height: 21px;
+}
+.homebar__badge {
+  position: absolute;
+  top: 7px;
+  left: 50%;
+  margin-left: 6px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-pill);
+  background: var(--danger);
+  color: #fff;
+  font-family: var(--font-num);
+  font-size: 9.5px;
+  font-weight: 700;
 }
 
 @media (min-width: 620px) {

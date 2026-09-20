@@ -27,8 +27,8 @@ const attempted = computed(() => {
 })
 
 /** Mid-career, the way back is your own desk. Cold, it is the title screen. */
-const home = computed(() => (store.loaded ? '/home' : '/'))
-const homeLabel = computed(() => (store.loaded ? 'Back to the dashboard' : 'Back to the title screen'))
+const home = computed(() => (store.loaded ? '/phone' : '/'))
+const homeLabel = computed(() => (store.loaded ? 'Back to the home screen' : 'Back to the title screen'))
 </script>
 
 <template>

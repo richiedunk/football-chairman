@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { findThread, groupThreads, initials, preview, threadKey } from '../src/ui/threads'
+import { findThread, groupThreads, initials, isOpen, preview, threadKey } from '../src/ui/threads'
 import type { InboxItem } from '../src/engine/types'
 
 /**
@@ -239,5 +239,51 @@ describe('the monogram on a thread', () => {
     for (const odd of ['', '   ', '(ENG)', '---', '7']) {
       expect(initials(odd), `no monogram for ${JSON.stringify(odd)}`).toBeTruthy()
     }
+  })
+})
+
+/**
+ * Two offers in one week both come from Recruitment, so they land in one
+ * conversation with word-for-word identical options — accept, ask for more,
+ * reject. The screen has to say which one it is answering, and it has to
+ * answer them in an order that does not let one expire while you deal with
+ * the other.
+ */
+describe('a conversation holding more than one open decision', () => {
+  const offer = (id: string, week: number, subject: string): InboxItem => item({
+    id, week, subject, from: 'Recruitment', read: true, urgent: true,
+    expiresWeek: week + 2,
+    decision: open(),
+  })
+
+  it('answers the oldest first, because that is the one about to expire', () => {
+    // Both lapse two weeks after they arrive and resolve themselves with their
+    // default. Answering the newest first would let the older one time out
+    // while it sat above, still unanswered, on the same screen.
+    const thread = groupThreads([
+      offer('inbox_b', 9, 'Offer received for Younger'),
+      offer('inbox_a', 7, 'Offer received for Older'),
+    ])[0]
+    const answering = thread.messages.find(isOpen)
+    expect(answering?.subject).toBe('Offer received for Older')
+  })
+
+  it('counts the others so the screen can say how many follow', () => {
+    const thread = groupThreads([
+      offer('inbox_c', 9, 'Third'),
+      offer('inbox_b', 8, 'Second'),
+      offer('inbox_a', 7, 'First'),
+    ])[0]
+    expect(thread.pending).toBe(3)
+  })
+
+  it('moves on to the next once the first is answered', () => {
+    const answered = item({
+      id: 'inbox_a', week: 7, subject: 'First', from: 'Recruitment', read: true,
+      decision: { ...open()!, chosenId: 'yes', outcomeText: 'Done.' },
+    })
+    const thread = groupThreads([offer('inbox_b', 8, 'Second'), answered])[0]
+    expect(thread.messages.find(isOpen)?.subject).toBe('Second')
+    expect(thread.pending).toBe(1)
   })
 })

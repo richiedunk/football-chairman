@@ -282,6 +282,28 @@ exactly as designed — standing at 66px, board confidence with a marker at the
 target, next match in the opponent's colour, six departments as one small bar
 chart. The phone idiom applies to the interrupt channel and nowhere else.
 
+**Taken, in the end: A — and the recommendation below was wrong twice.**
+
+The argument for B was that "a lock screen shows less than a dashboard". That
+framed the choice as *replacement* when it is *relocation*. The dashboard is
+not deleted by a home screen; it becomes the Club app, first in the grid, and
+it still carries the standing, board confidence against its target and the next
+match. Nothing is lost, and the thing that is gained is an information
+architecture that fits the game: thirty screens were being pushed through five
+tabs, which meant four of the five were doorways and everything else — finance,
+the boardroom, the academy, the ground, the press — was a drill-down. A home
+screen of apps puts every surface one tap from home, gives each one a badge
+that can say whether it wants something, and makes adding a surface cost an
+icon rather than another level of menu.
+
+What survives from B: the dashboard itself, the advance button in its one
+place, the outcome screens, and the conversations. What goes is the tab bar,
+replaced by the phone's own navigation — Home, and Messages, because the
+interrupt channel two taps away would undo the reason it moved to the middle.
+
+The original recommendation follows, kept because being wrong in a specific
+way is worth keeping.
+
 **Recommendation: B, and build it first.** The dashboard was designed against
 three drawn directions and it is doing the hardest job on the phone well; a
 lock screen is a screen that shows less and costs a tap to get anywhere. More

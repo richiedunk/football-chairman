@@ -156,7 +156,15 @@ await step('take a job', async () => {
   await page.screenshot({ path: `${SHOT}/06-welcome.png`, fullPage: true })
 
   await tap('.btn--primary:has-text("Get to work")')
-  await page.waitForSelector('.tabbar', { timeout: 30000 })
+  // A career lands on the phone's home screen now, not on the dashboard —
+  // which is the Club app one tap in.
+  await page.waitForSelector('.homebar', { timeout: 30000 })
+  await page.waitForSelector('.apps')
+  await readNotice()
+  await page.waitForTimeout(400)
+  await page.screenshot({ path: `${SHOT}/06c-phone-new.png`, fullPage: true })
+
+  await page.goto('http://127.0.0.1:4173/#/home')
   await page.waitForSelector('.dash-standing')
   await page.screenshot({ path: `${SHOT}/07-home.png` })
 })
@@ -165,6 +173,10 @@ await step('the header carries the club colour, readably', async () => {
   // The band is computed from the club's real primary at runtime, so this is
   // the only place the rule gets exercised against whatever club the run
   // happened to land at. A washed-out or unset band is a real bug.
+  // On a screen that has a header: the phone's home screen carries its own
+  // plate instead, so there is no band to measure there.
+  await page.goto('http://127.0.0.1:4173/#/home')
+  await page.waitForSelector('.topbar')
   const { band, ratio } = await page.evaluate(() => {
     const el = document.querySelector('.topbar')
     const bg = getComputedStyle(el).backgroundColor
@@ -190,6 +202,7 @@ console.log(`   club: ${clubName}`)
 // exercises the decision resolver.
 let decisionsAnswered = 0
 let repliedShot = false
+let multiQuestionThreads = 0
 // A week that contains a match now ends on the report screen rather than on a
 // toast, and a week can contain two — a cup replay and a league game. The
 // button is the same button in the same place, so clearing them is a matter of
@@ -269,6 +282,29 @@ async function advanceOneWeek() {
         await readNotice()
         const option = page.locator('.reply:not([disabled])').first()
         if (!(await option.count())) break
+
+        // Two offers in one week both come from Recruitment, land in one
+        // thread and carry word-for-word identical options. Exactly one
+        // question may be live, and the panel has to say which — otherwise the
+        // reader is guessing which player they just sold. Checked here rather
+        // than in a step of its own, because by the time the run reaches a
+        // step of its own there are no decisions left to look at.
+        //
+        // Waited for rather than read straight off: answering one decision
+        // re-renders the thread, and counting in the middle of that catches
+        // the panel still naming the offer that has just been dealt with.
+        const settled = await page.waitForFunction(() => {
+          const asking = document.querySelectorAll('.chat__asking').length
+          if (asking === 0) return { asking: 0, live: 0, subject: null }
+          const live = document.querySelectorAll('.chat__asking:not(.is-waiting)').length
+          if (live !== 1) return false
+          const subject = document.querySelector('.replies__subject')?.textContent?.trim() ?? null
+          return subject ? { asking, live, subject } : false
+        }, null, { timeout: 5000 }).then((h) => h.jsonValue(), () => null)
+
+        if (!settled) throw new Error('a thread showed no live question beside a named reply panel')
+        if (settled.asking > 1) multiQuestionThreads++
+
         // The replies, once: a decision's options drawn as the things you
         // could say back is what this whole screen is for.
         if (!repliedShot) {
@@ -348,6 +384,7 @@ await step('advance 10 weeks', async () => {
   await page.waitForTimeout(300)
   await page.screenshot({ path: `${SHOT}/07-home-after.png` })
   console.log(`   decisions answered: ${decisionsAnswered}`)
+  console.log(`   threads holding more than one open question: ${multiQuestionThreads}`)
 })
 
 await step('an international break empties the squad list a week early', async () => {
@@ -482,8 +519,73 @@ await step('the boardroom is one tap from the dashboard', async () => {
   if (!page.url().includes('#/board')) throw new Error(`went to ${page.url()}`)
 })
 
+await step('the home screen says who wanted you', async () => {
+  // A turn-based game can have an honest lock screen: these are the unread
+  // messages, newest first, and tapping one opens the conversation it belongs
+  // to rather than the list of conversations.
+  await page.goto('http://127.0.0.1:4173/#/phone')
+  await page.waitForSelector('.apps')
+  await readNotice()
+  const notifs = await page.locator('.notif:not(.notif--more)').count()
+  if (notifs === 0) {
+    console.log('   nothing unread, skipped')
+    return
+  }
+  const from = (await page.locator('.notif__from').nth(0).textContent())?.trim()
+  await tap('.notif >> nth=0')
+  await page.waitForTimeout(400)
+  const landed = page.url().split('#')[1] ?? ''
+  if (!landed.startsWith('/inbox/')) throw new Error(`a notification led to ${landed}`)
+  await page.waitForSelector('.bubble--in')
+  // And it opened the right conversation, not merely a conversation.
+  const heading = (await page.locator('.topbar__club').textContent())?.trim()
+  if (heading !== from) throw new Error(`"${from}" opened "${heading}"`)
+  console.log(`   ${notifs} on the stack, first one opens ${heading}`)
+})
+
+await step('every app on the home screen opens something real', async () => {
+  // The home screen replaced a five-slot tab bar that hid twenty-five
+  // screens behind drill-downs. An icon that leads nowhere is worse than a
+  // missing one: the reader taps it, lands on the catch-all, and stops
+  // trusting the screen.
+  await page.goto('http://127.0.0.1:4173/#/phone')
+  await page.waitForSelector('.apps')
+  const count = await page.locator('.app').count()
+  if (count < 10) throw new Error(`only ${count} apps on the home screen`)
+
+  const landings = []
+  for (let i = 0; i < count; i++) {
+    await page.goto('http://127.0.0.1:4173/#/phone')
+    await page.waitForSelector('.apps')
+    const label = (await page.locator('.app__label').nth(i).textContent())?.trim()
+    await tap(`.app >> nth=${i}`)
+    await page.waitForTimeout(350)
+    const landed = page.url().split('#')[1] ?? '/'
+    if (landed === '/phone' || landed === '/') throw new Error(`"${label}" went nowhere`)
+    if (!(await page.locator('.content').count())) {
+      throw new Error(`"${label}" landed on an empty screen at ${landed}`)
+    }
+    // And every app has a way back, which a tab root never had.
+    if (!(await page.locator('.topbar__back').count())) {
+      throw new Error(`"${label}" has no way back to the home screen`)
+    }
+    landings.push(`${label}${landed}`)
+  }
+  if (new Set(landings).size !== landings.length) throw new Error('two apps led to the same screen')
+  console.log(`   ${count} apps, all landing somewhere distinct`)
+  await page.goto('http://127.0.0.1:4173/#/phone')
+  await page.waitForSelector('.apps')
+  // An undismissed outcome screen makes the shell inert, which dims it — the
+  // first shot of this came out looking like the whole phone was disabled.
+  await readNotice()
+  await page.waitForTimeout(400)
+  await page.screenshot({ path: `${SHOT}/06b-phone.png`, fullPage: true })
+})
+
 await step('squad screen', async () => {
-  await tap('.tabbar__item:has-text("Squad")')
+  await page.goto('http://127.0.0.1:4173/#/phone')
+  await page.waitForSelector('.apps')
+  await tap('.app:has-text("Squad")')
   await page.waitForSelector('text=Sort by')
   await page.screenshot({ path: `${SHOT}/08-squad.png` })
 })
@@ -526,7 +628,7 @@ await step('the jobs board is only for the jobless', async () => {
   // than no screen at all.
   await page.goto('http://127.0.0.1:4173/#/looking')
   await page.waitForTimeout(500)
-  if (!page.url().includes('#/home')) {
+  if (!page.url().includes('#/phone')) {
     throw new Error(`an employed director was left on ${page.url()}`)
   }
 })
@@ -565,15 +667,15 @@ await step('an address that does not exist says so', async () => {
   if (!shown?.includes('nonexistent-id')) throw new Error(`address not shown: ${shown}`)
 
   // Mid-career it is a screen inside the game, not a dead end outside it.
-  if (!(await page.locator('.tabbar').count())) throw new Error('not-found lost the game chrome')
+  if (!(await page.locator('.homebar').count())) throw new Error('not-found lost the game chrome')
   // And it does not put its own route name across the top of the app.
   const heading = (await page.textContent('.topbar__club'))?.trim()
   if (/not.?found/i.test(heading ?? '')) throw new Error(`header leaks the route name: ${heading}`)
   await page.screenshot({ path: `${SHOT}/29-notfound.png` })
 
-  await tap('.btn--primary:has-text("Back to the dashboard")')
+  await tap('.btn--primary:has-text("Back to the home screen")')
   await page.waitForTimeout(400)
-  if (!page.url().includes('#/home')) throw new Error(`the way back went to ${page.url()}`)
+  if (!page.url().includes('#/phone')) throw new Error(`the way back went to ${page.url()}`)
 })
 
 await step('a bad address from cold does not look like a lost save', async () => {
@@ -789,7 +891,7 @@ await step('the league carries its own news', async () => {
 })
 
 await step('messages', async () => {
-  await tap('.tabbar__item:has-text("Messages")')
+  await tap('.homebar__item:has-text("Inbox")')
   await page.waitForSelector('.threads, .threads-empty')
   const threads = await page.locator('.chat-row').count()
   if (threads === 0) throw new Error('no conversations to open')
@@ -1321,9 +1423,12 @@ await step('save and reload', async () => {
   await page.reload({ waitUntil: 'load' })
   await page.waitForSelector('text=Continue', { timeout: 15000 })
   await tap('.list__main >> nth=0')
-  await page.waitForSelector('.tabbar', { timeout: 30000 })
+  // A loaded career comes back to the phone's home screen, which carries the
+  // club on its own plate rather than in a header.
+  await page.waitForSelector('.homebar', { timeout: 30000 })
+  await page.waitForSelector('.phone__club', { timeout: 15000 })
   await page.waitForTimeout(500)
-  const reloaded = await page.textContent('.topbar__club')
+  const reloaded = await page.textContent('.phone__club')
   if (!reloaded?.includes(clubName?.slice(0, 10) ?? '')) {
     throw new Error(`reloaded into wrong club: ${reloaded} vs ${clubName}`)
   }

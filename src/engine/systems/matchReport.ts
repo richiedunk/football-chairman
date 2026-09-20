@@ -19,6 +19,7 @@
  */
 
 import type { Club, Fixture, MatchResult, Staff } from '../types'
+import { coachRegister, phrase, type CoachRegister } from './voice'
 
 export type Verdict = 'outstanding' | 'good' | 'par' | 'poor' | 'dismal'
 
@@ -74,71 +75,115 @@ const HEADLINES: Record<Verdict, string> = {
 }
 
 /**
- * The coach's line, by verdict and by how he gets on with you.
+ * The coach's line, by verdict and by the register he speaks to you in.
  *
- * A coach who trusts the director says the same thing more generously than one
- * who does not, which is the cheapest way to make the relationship audible
- * without inventing a conversation system.
+ * This used to be a two-way warm/cold split, which was the cheapest way to
+ * make the relationship audible and predated the coach having a voice anywhere
+ * else. He has one now — `coachRegister`, from how much he courts the press
+ * and what he makes of you — and the post-match verdict was the last place he
+ * still spoke in a fixed one. A talkative coach who rates you and a taciturn
+ * one who does not should not hand you the same sentence after the same game.
+ *
+ * Four registers: warm talks and shares the credit, brisk states the outcome,
+ * terse says as little as the moment allows, and pointed makes sure you know
+ * whose fault it is.
  */
-const COACH_LINES: Record<Verdict, { warm: string[]; cold: string[] }> = {
+const COACH_LINES: Record<Verdict, Record<CoachRegister, string[]>> = {
   outstanding: {
     warm: [
-      'That is the group you built for me. They were superb.',
-      'Nobody gave us a prayer. Look at them now.',
+      'That is the group you built for me. They were superb, and you should take some of that.',
+      'Nobody gave us a prayer. Look at them now — that is your recruitment as much as my coaching.',
     ],
-    cold: [
-      'The players deserve enormous credit for that.',
-      'We got what we deserved for once.',
+    brisk: [
+      'Excellent. They carried it out exactly as we worked on it.',
+      'That is as well as we can play. Pleased.',
+    ],
+    terse: [
+      'Good day.',
+      'They were superb. That is all I will say.',
+    ],
+    pointed: [
+      'The players deserve enormous credit for that. They have had to.',
+      'We got what we deserved for once. It has been a while.',
     ],
   },
   good: {
     warm: [
-      'Pleased with that. The squad has enough in it.',
-      'A good day. They carried out the plan.',
+      'Pleased with that. The squad has enough in it, and that is down to both of us.',
+      'A good day. They carried out the plan and they had the legs to do it.',
     ],
-    cold: [
-      'We took our chances. That is the job done.',
-      'A decent result, all things considered.',
+    brisk: [
+      'Job done. We took our chances and saw it out.',
+      'A good result. No complaints from me.',
+    ],
+    terse: [
+      'Fine. Next one.',
+      'That will do.',
+    ],
+    pointed: [
+      'We took our chances. That is the job done, for now.',
+      'A decent result, all things considered. And there is a lot to consider.',
     ],
   },
   par: {
     warm: [
-      'About right. Nothing to complain about.',
-      'That is roughly where we are at the moment.',
+      'About right, and nothing to complain about. We are where we ought to be.',
+      'That is roughly where we are at the moment, and I am comfortable with it.',
     ],
-    cold: [
-      'It is what it is. We move on to the next one.',
-      'Fair result. Neither side did much to change it.',
+    brisk: [
+      'Fair result. Neither side did enough to change it.',
+      'About par. We move on.',
+    ],
+    terse: [
+      'It is what it is.',
+      'Par.',
+    ],
+    pointed: [
+      'About what this squad is worth, if I am honest with you.',
+      'That is the level we are at. I have said why.',
     ],
   },
   poor: {
     warm: [
-      'Disappointed. That is on the day, not on the squad.',
-      'We were not at it. I will sort that out.',
+      'Disappointed, but that is on the day and not on the squad you have given me.',
+      'We were not at it. That one is mine — I will sort it out on the training ground.',
     ],
-    cold: [
-      'We are short in one or two areas and it showed.',
+    brisk: [
+      'Not good enough. We will look at it this week.',
+      'Below where we should be. My job to fix.',
+    ],
+    terse: [
+      'Poor.',
+      'Not good enough. Nothing else to say.',
+    ],
+    pointed: [
+      'We are short in one or two areas and it showed. Again.',
       'I can only work with what I am given.',
     ],
   },
   dismal: {
     warm: [
-      'That was unacceptable and I will say so to them.',
-      'No excuses. I got it wrong today.',
+      'That was unacceptable and I have told them so. It is not a reflection on the work you have done.',
+      'No excuses. I got it wrong today and I will put it right.',
     ],
-    cold: [
-      'I have been saying for weeks that this group is not deep enough.',
-      'You saw it. I have nothing to add.',
+    brisk: [
+      'Unacceptable. I will deal with it.',
+      'Nowhere near. That is on me and on them.',
+    ],
+    terse: [
+      'Unacceptable.',
+      'You saw it.',
+    ],
+    pointed: [
+      'I have been saying for weeks that this group is not deep enough. Today is what that looks like.',
+      'You saw it. I have nothing to add that I have not already put in writing.',
     ],
   },
 }
 
-/** Deterministic pick, so reopening a report never changes what was said. */
-function pick(options: string[], seed: string): string {
-  let hash = 0
-  for (let i = 0; i < seed.length; i++) hash = (hash * 31 + seed.charCodeAt(i)) | 0
-  return options[Math.abs(hash) % options.length]
-}
+// The pick is `phrase` from ./voice, which is the same job this file had its
+// own hash for. Two deterministic string pickers in one codebase is one too
+// many, and reopening a report still never changes what was said.
 
 export function matchVerdict(
   club: Club,
@@ -155,14 +200,17 @@ export function matchVerdict(
   const expected = expectedPoints(club.reputation, opponent.reputation, isHome)
   const verdict = gradeFor(pointsFor(outcome), expected)
 
-  const relationship = coach?.coachProfile?.dofRelationship ?? 50
-  const lines = COACH_LINES[verdict][relationship >= 55 ? 'warm' : 'cold']
+  const register = coachRegister(
+    coach?.attributes?.mediaHandling ?? 50,
+    coach?.coachProfile?.dofRelationship ?? 50,
+  )
+  const lines = COACH_LINES[verdict][register]
 
   return {
     verdict,
     outcome,
     headline: HEADLINES[verdict],
-    coachLine: coach ? pick(lines, `${fixture.id}:${coach.id}`) : '',
+    coachLine: coach ? phrase(`verdict:${fixture.id}:${coach.id}`, lines) : '',
     expectedPoints: expected,
   }
 }
