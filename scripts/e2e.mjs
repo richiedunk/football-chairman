@@ -826,6 +826,28 @@ await step('a decision on the dashboard opens its conversation', async () => {
   console.log(`   landed in ${landed}`)
 })
 
+await step('the week can be set off from the conversations', async () => {
+  // Blockers are answered here now. Having to walk back to the dashboard to
+  // advance is a round trip through a screen you did not want, and it is the
+  // thing that would most break the phone fiction.
+  await page.goto('http://127.0.0.1:4173/#/inbox')
+  await page.waitForSelector('.threads, .threads-empty')
+  if (!(await page.locator('.advance-bar .advance').count())) {
+    throw new Error('no advance button on the conversations')
+  }
+  // But not inside a thread: the replies are pinned to the bottom there, and a
+  // second control would sit on top of the one being used.
+  const rows = await page.locator('.chat-row').count()
+  if (rows > 0) {
+    await tap('.chat-row >> nth=0')
+    await page.waitForSelector('.bubble--in')
+    if (await page.locator('.advance-bar .advance').count()) {
+      throw new Error('the advance button is inside a conversation, over the replies')
+    }
+  }
+  console.log('   advance on the list, not in a thread')
+})
+
 await step('opening a conversation reads all of it', async () => {
   // An unread count that survives having the thread open in front of you is a
   // badge the reader cannot clear and stops trusting.
