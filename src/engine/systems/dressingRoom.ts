@@ -167,6 +167,31 @@ export function roomSummary(reading: RoomReading): string {
 }
 
 /**
+ * What one player is doing to the room, in words.
+ *
+ * The screen used to print his influence as a figure to one decimal place,
+ * which is telemetry for a judgement — and showing telemetry is what made a
+ * judgement read as a gauge. Nobody reads a room off a dashboard; a player
+ * liaison tells you that somebody has been excellent with the young lads, and
+ * that is a sentence rather than +0.7.
+ *
+ * Traits run from -1.7 to about +1.2 before a player's voice and mood scale
+ * them, so the bands are set against what the model can actually produce
+ * rather than against a tidy 0-1.
+ */
+export function influenceWord(influence: number): string {
+  const size = Math.abs(influence)
+  if (influence > 0) {
+    if (size >= 1.2) return 'Sets the standard'
+    if (size >= 0.5) return 'Good for the room'
+    return 'Helps, quietly'
+  }
+  if (size >= 1.2) return 'Poisonous in there'
+  if (size >= 0.5) return 'A problem'
+  return 'A minor irritant'
+}
+
+/**
  * The tone an ordinary squad reads, measured rather than assumed.
  *
  * Across a generated world of 238 clubs thirty weeks in: median 0.78, mean

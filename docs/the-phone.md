@@ -242,6 +242,16 @@ judgement, and showing telemetry is what makes a judgement read as a gauge.
 
 **This is worth fixing whether or not the phone ever ships.**
 
+**Fixed.** Narrower than the diagnosis above, in the end: `roomSummary` was
+already naming names in the right voice, so the prose was never missing. What
+was wrong was the leaderboard of decimals sitting beside it and the fact that
+nothing on the screen said who was telling you. The read is attributed now — to
+the head coach where there is one, since he is in there daily and already has a
+voice in this game, and to the player liaison otherwise — it leads rather than
+sits third, and `influenceWord` turns `+0.7` into "Good for the room". The
+lists stay, as who he named rather than as a chart. The end-to-end run asserts
+the attribution exists and that no figure has crept back into the column.
+
 ### Form, and the discipline of leaving things alone
 
 Form is a public fact. `FormRun` in the squad list is the reader operating the

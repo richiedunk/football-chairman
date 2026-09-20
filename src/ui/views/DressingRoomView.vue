@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useGameStore } from '../../stores/game'
 import {
-  readRoom, renewalAppetite, roomLabel, roomMeter, roomSummary,
+  influenceWord, readRoom, renewalAppetite, roomLabel, roomMeter, roomSummary,
 } from '../../engine/systems/dressingRoom'
 import MeterBar from '../components/MeterBar.vue'
 import Chevron from '../components/Chevron.vue'
@@ -30,6 +30,13 @@ const room = computed(() => {
 /** The tone on a 0-100 meter. The scale lives with the labels, not here. */
 const meter = computed(() => (room.value ? roomMeter(room.value.tone) : 50))
 
+/**
+ * Whoever is telling you. The head coach if there is one, since he is in there
+ * daily and already has a voice in this game; the player liaison otherwise,
+ * which is the role the inbox already sends this kind of message under.
+ */
+const liaison = computed(() => store.headCoach?.knownAs ?? 'Player Liaison')
+
 const renewalEffect = computed(() => {
   if (!room.value) return 0
   return Math.round((renewalAppetite(room.value.tone) - 1) * 100)
@@ -41,12 +48,16 @@ const renewalEffect = computed(() => {
     <div class="section-title">The room</div>
     <div class="card">
       <div class="card__body stack">
+        <!-- Attributed, because there is no document in football called "the
+             dressing room" and nobody reads a room off a dashboard. Somebody
+             who is in there every day tells you about it. -->
+        <div class="room__from num">{{ liaison }} · THIS WEEK</div>
+        <p class="room__read">{{ roomSummary(room) }}</p>
         <div class="row row--between">
           <span class="small muted">Atmosphere</span>
           <span class="bold">{{ roomLabel(room.tone) }}</span>
         </div>
         <MeterBar :value="meter" :max="100" />
-        <p class="small" style="margin: 0">{{ roomSummary(room) }}</p>
         <p v-if="renewalEffect !== 0" class="small" style="margin: 0"
            :class="renewalEffect > 0 ? '' : 'neg-val'">
           <template v-if="renewalEffect > 0">
@@ -63,7 +74,7 @@ const renewalEffect = computed(() => {
     </div>
 
     <template v-if="room.setters.length">
-      <div class="section-title">Setting the standard</div>
+      <div class="section-title">Who he says is setting it</div>
       <div class="card">
         <div class="list">
           <button
@@ -79,7 +90,7 @@ const renewalEffect = computed(() => {
                 {{ row.player.traits.join(', ').toUpperCase() || 'NO TRAITS' }}
               </div>
             </div>
-            <span class="list__value pos-val num">+{{ row.influence.toFixed(1) }}</span>
+            <span class="list__value pos-val">{{ influenceWord(row.influence) }}</span>
             <Chevron />
           </button>
         </div>
@@ -87,7 +98,7 @@ const renewalEffect = computed(() => {
     </template>
 
     <template v-if="room.draggers.length">
-      <div class="section-title">Dragging it down</div>
+      <div class="section-title">And who is not</div>
       <div class="card">
         <div class="list">
           <button
@@ -103,7 +114,7 @@ const renewalEffect = computed(() => {
                 {{ row.player.traits.join(', ').toUpperCase() || 'NO TRAITS' }}
               </div>
             </div>
-            <span class="list__value neg-val num">{{ row.influence.toFixed(1) }}</span>
+            <span class="list__value neg-val">{{ influenceWord(row.influence) }}</span>
             <Chevron />
           </button>
         </div>

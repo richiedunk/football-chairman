@@ -1671,6 +1671,21 @@ button, input, select, textarea {
   line-height: 1.16;
 }
 
+/* The room, as somebody's read rather than a gauge. The attribution is the
+   point: a judgement with nobody behind it reads as telemetry. */
+.room__from {
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.room__read {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--text);
+}
+
 @media (min-width: 620px) {
   body { background: #030405; }
   #app {

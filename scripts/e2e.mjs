@@ -629,6 +629,21 @@ await step('the data department says how wrong it might be', async () => {
   console.log(`   ${rows} name${rows === 1 ? '' : 's'} on the list, error band stated`)
 })
 
+await step('the dressing room is somebody\'s read, not a gauge', async () => {
+  // The defect this fixes: a judgement was being delivered as a leaderboard of
+  // influence figures to one decimal place. Nobody reads a room off a
+  // dashboard, so it is attributed, and the figures are words.
+  await page.goto('http://127.0.0.1:4173/#/room')
+  await page.waitForSelector('.room__read, .empty', { timeout: 15000 })
+  const from = (await page.locator('.room__from').textContent())?.trim()
+  if (!from) throw new Error('the read is attributed to nobody')
+  const values = await page.locator('.list__value').allTextContents()
+  for (const v of values) {
+    if (/[0-9]/.test(v)) throw new Error(`the room is still quoting a figure: "${v.trim()}"`)
+  }
+  console.log(`   read from ${from}, ${values.length} named in words`)
+})
+
 await step('the dressing room reads the room and names names', async () => {
   await page.goto('http://127.0.0.1:4173/#/room')
   await page.waitForSelector('.section-title:has-text("The room")', { timeout: 15000 })

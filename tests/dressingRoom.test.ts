@@ -2,11 +2,7 @@ import { beforeAll, describe, expect, it } from 'vitest'
 import { prepareNewGame, startCareerAt } from '../src/engine/newGame'
 import { startingClubCandidates } from '../src/engine/systems/career'
 import { seniorSquad } from '../src/engine/systems/aiSquad'
-import {
-  influenceOf, readRoom, renewalAppetite, roomBaseline, roomLabel, roomMeter, roomSummary,
-  ROOM_NEUTRAL,
-  voice,
-} from '../src/engine/systems/dressingRoom'
+import { ROOM_NEUTRAL, influenceOf, influenceWord, readRoom, renewalAppetite, roomBaseline, roomLabel, roomMeter, roomSummary, voice } from '../src/engine/systems/dressingRoom'
 import type { Club, GameState, Player, PlayerTrait } from '../src/engine/types'
 
 let state: GameState
@@ -207,6 +203,37 @@ describe('the lane', () => {
       'roomBaseline', 'renewalAppetite',
     ]) {
       expect(name).not.toMatch(forbidden)
+    }
+  })
+})
+
+describe('what a player is doing to the room, in words', () => {
+  it('separates helping from harming', () => {
+    expect(influenceWord(1.4)).not.toBe(influenceWord(-1.4))
+    expect(influenceWord(0.2)).not.toBe(influenceWord(-0.2))
+  })
+
+  it('gets stronger with the size of the influence, both ways', () => {
+    const up = [influenceWord(0.2), influenceWord(0.8), influenceWord(1.5)]
+    const down = [influenceWord(-0.2), influenceWord(-0.8), influenceWord(-1.5)]
+    expect(new Set(up).size, 'the same phrase for every good influence').toBe(3)
+    expect(new Set(down).size, 'the same phrase for every bad influence').toBe(3)
+  })
+
+  it('says something across the whole range the model can produce', () => {
+    // Traits run to -1.7, scaled by a voice up to 1.5 and a mood up to 1.3, so
+    // the extremes are wider than the trait table alone suggests.
+    for (let i = -3.5; i <= 3.5; i += 0.1) {
+      if (Math.abs(i) < 0.001) continue
+      expect(influenceWord(i), `nothing to say at ${i.toFixed(1)}`).toBeTruthy()
+    }
+  })
+
+  it('never puts a number in front of the reader', () => {
+    // The whole point: a judgement stops reading as a gauge.
+    for (let i = -3; i <= 3; i += 0.25) {
+      if (Math.abs(i) < 0.001) continue
+      expect(influenceWord(i), `${i} leaked a figure`).not.toMatch(/[0-9]/)
     }
   })
 })
