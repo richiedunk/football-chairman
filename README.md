@@ -200,12 +200,16 @@ boundary; structured-cloning the state would cost more than the compression it w
 
 ## Club and player names
 
-Every club, player, coach, agent and journalist is **generated**, not shipped.
+Every player, coach, scout, agent, owner, architect and journalist is **generated**, not
+shipped. Clubs are the exception, deliberately: the game ships with the actual clubs in the
+divisions they actually play in, and nothing else real — used descriptively, to say which
+club a thing happened to, which is the position the genre has long taken. No crest or kit is
+reproduced and no likeness of a real person appears. The notice is on the title screen and
+in full on the About screen.
 
-Clubs are built as *real city* + *generic football suffix* — city names are geography and
-nobody owns them, and "United", "Calcio" or "spor" are generic football vocabulary. What the
-generator deliberately avoids is the specific *combination* that identifies a real club;
-there's a blocklist it re-rolls against. League names are fictional in the familiar
+`src/engine/world/realClubs.ts` is the data pack, keyed by nation and tier. Where it runs
+short, world generation makes up the rest as *real city* + *generic suffix*, so the pack can
+be as complete or as partial as it is accurate. League names are fictional in the familiar
 idiom ("The Prem", "Division Two", "Non-League Premier").
 
 Player names come from 24 nationality-weighted pools with real naming conventions: Brazilian
