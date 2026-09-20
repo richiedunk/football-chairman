@@ -1542,7 +1542,7 @@ button, input, select, textarea {
    the prose that justifies it.
    --------------------------------------------------------------------------- */
 
-.dossier__head {
+.doc__head {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
@@ -1550,27 +1550,36 @@ button, input, select, textarea {
   padding-bottom: 7px;
   border-bottom: 1px solid var(--border-strong);
 }
-.dossier__author {
+.doc__author {
   font-size: 13px;
   font-weight: 600;
   color: var(--text);
 }
-.dossier__filed {
+.doc__filed {
   font-size: 10px;
   letter-spacing: 0.07em;
   color: var(--text-faint);
   white-space: nowrap;
 }
 
-/* The filing stamp. A document knows which revision of itself it is. */
-.dossier__stamp {
+/* The filing stamp. A document knows which revision of itself it is, and —
+   the thing a live panel can never say — whether it is still current. */
+.doc__stamp {
   margin-top: 7px;
   font-size: 10px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text-dim);
 }
-.dossier__superseded {
+.doc__status { color: var(--text-dim); }
+.doc__status--warn { color: var(--warn); }
+
+/* A line on a document that has gone off: the edge the model found in week 12
+   is priced at week 12, and the market has had four weeks to notice. */
+.doc__moved {
+  margin-top: 4px;
+  font-size: 10px;
+  letter-spacing: 0.07em;
   color: var(--warn);
 }
 

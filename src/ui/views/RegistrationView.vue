@@ -3,6 +3,7 @@ import { computed, inject, ref } from 'vue'
 import { useGameStore } from '../../stores/game'
 import PosBadge from '../components/PosBadge.vue'
 import MeterBar from '../components/MeterBar.vue'
+import AppDocument from '../components/AppDocument.vue'
 import { formatWage } from '../../engine/systems/valuation'
 import { NON_HOMEGROWN_LIMIT, SQUAD_LIMIT } from '../../engine/systems/registration'
 import { underEmbargo } from '../../engine/systems/regulation'
@@ -15,6 +16,22 @@ const notify = inject<(t: string, k?: 'info' | 'error' | 'success') => void>('no
 const view = computed(() => store.registration)
 const open = computed(() => store.registrationOpen)
 const nationAdjective = computed(() => store.nation?.adjective ?? 'homegrown')
+
+/**
+ * Who the list is filed with, and when.
+ *
+ * A squad list is not a control panel, it is a document lodged with the
+ * competition — the engine has always treated it as one, freezing it the week
+ * the window shuts and leaving an injury in February as a problem you solve
+ * from what you already named. The screen said so in a paragraph at the
+ * bottom. Now the form says it: an author, a date, and a status that can read
+ * "lodged", which is the one thing a live panel can never say about itself.
+ */
+const filedWith = computed(() => store.league?.name ?? 'The League')
+const filed = computed(() => {
+  const d = store.game?.date
+  return d ? `WEEK ${d.week} · ${d.season}/${String((d.season + 1) % 100).padStart(2, '0')}` : ''
+})
 
 type Tab = 'list' | 'omitted' | 'exempt'
 const tab = ref<Tab>('list')
@@ -77,6 +94,14 @@ function autoPick() {
 
     <div class="card">
       <div class="card__body">
+        <AppDocument
+          :author="filedWith"
+          :filed="filed"
+          stamp="Squad list, as lodged"
+          :status="open ? 'THE WINDOW IS OPEN' : 'LODGED — CANNOT BE CHANGED'"
+          :status-warn="!open"
+          style="margin-bottom: 10px"
+        />
         <p class="small" style="margin: 0 0 6px">
           You may name {{ SQUAD_LIMIT }} senior players, of whom at most
           {{ NON_HOMEGROWN_LIMIT }} may have been trained outside the country. Anyone
@@ -84,10 +109,11 @@ function autoPick() {
           cannot be selected at all until the window reopens.
         </p>
         <p v-if="open" class="tiny muted" style="margin: 0">
-          The window is open — the list can still be changed.
+          It can still be amended until the window shuts.
         </p>
         <p v-else class="tiny" style="margin: 0; color: var(--warn)">
-          The window is shut. This list is lodged with the league and cannot be changed.
+          Nothing on it can be changed until the window reopens. A list is superseded, not
+          edited.
         </p>
       </div>
     </div>
