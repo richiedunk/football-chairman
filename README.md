@@ -44,6 +44,31 @@ Nothing in the game code branches on platform. `src/platform/native.ts` is the o
 that knows Capacitor exists, and every call in it is guarded so the same bundle runs
 unchanged in a browser.
 
+#### Toolchain
+
+Capacitor 8, which fixes the floor under both stores and raises what you need installed:
+
+| | Version | Why it is that number |
+| --- | --- | --- |
+| Node | 22+ | Capacitor 8's own minimum. |
+| JDK | 21 | `capacitor.build.gradle` compiles at source/target 21. |
+| Gradle | 8.14.3 | Wrapper is pinned; AGP 8.13 will not run on less. |
+| Android SDK | 36 | Google Play refuses an upload below API 36. |
+| Xcode | 16+ | Deployment target is iOS 15. |
+
+Two consequences worth knowing before the first native build:
+
+- **Android is edge-to-edge and cannot opt out.** Targeting API 36 means the system
+  draws the status and navigation bars over the WebView and ignores any background
+  colour set for them. The layout already survives this — `.app-shell` pads by
+  `env(safe-area-inset-*)` and paints `--bg` behind — which is why the change needed no
+  CSS. The `StatusBar` background settings in `capacitor.config.ts` and
+  `platform/native.ts` are kept anyway: `minSdk` is 24, and they still apply on every
+  device running Android 14 or earlier.
+- **iOS runs on UIScene.** Capacitor 8.5 adopts it, so there is now a `SceneDelegate.swift`
+  beside `AppDelegate.swift` and a `UIApplicationSceneManifest` in `Info.plist`. Nothing
+  in the game touches either.
+
 ---
 
 ## How it plays
