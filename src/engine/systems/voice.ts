@@ -52,6 +52,17 @@ export function phrase(key: string, pool: readonly string[]): string {
 }
 
 /**
+ * A number in [0, 1) from a key, for the places that want a *figure* varied
+ * rather than a sentence — a newspaper's guess at a fee, say. Same key, same
+ * number, on every platform, and no state carried. It is the phrase picker's
+ * hash read as a fraction; it is not, and must not be used as, a random
+ * source for anything the simulation depends on.
+ */
+export function unit(key: string): number {
+  return hash(key) / 0x100000000
+}
+
+/**
  * "a" or "an", for a word the writer does not know in advance.
  *
  * Injuries, facilities and competitions all get dropped into a sentence from

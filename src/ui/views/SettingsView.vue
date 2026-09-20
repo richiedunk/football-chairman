@@ -194,15 +194,6 @@ function mb(bytes: number) {
             <option value="USD">Dollars ($)</option>
           </select>
         </div>
-        <label class="row row--between mt" style="min-height: var(--tap)">
-          <span class="small">
-            Show true attributes
-            <span class="tiny faint" style="display: block">
-              Bypasses the scouting system entirely. For debugging.
-            </span>
-          </span>
-          <input v-model="settings.revealTrueAttributes" type="checkbox" @change="store.commit()" />
-        </label>
       </div>
     </div>
 

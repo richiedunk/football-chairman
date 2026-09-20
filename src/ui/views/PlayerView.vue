@@ -67,10 +67,13 @@ const report = computed(() => {
  * Your own players train with your staff every day, so their attributes are
  * known. Everyone else is only ever a scout report — a range, not a number.
  * Potential stays uncertain either way, because nobody knows that.
+ *
+ * There used to be a setting that showed everyone's true figures. It was
+ * labelled "for debugging" and it sat in the player's Settings screen, which
+ * made it a button for switching the game's central idea off. A debug tool
+ * belongs in a script; the setting is gone.
  */
-const knowsAttributes = computed(
-  () => isOurs.value || store.game?.settings.revealTrueAttributes === true,
-)
+const knowsAttributes = computed(() => isOurs.value)
 
 const abilityDisplay = computed(() => {
   const p = player.value
@@ -83,7 +86,6 @@ const abilityDisplay = computed(() => {
 const potentialDisplay = computed(() => {
   const p = player.value
   if (!p) return '—'
-  if (store.game?.settings.revealTrueAttributes) return String(Math.round(p.potentialAbility))
   if (report.value) return formatRange(report.value.potentialRange)
   if (isOurs.value) {
     // Your own coaching staff give a band, not a figure.

@@ -5,6 +5,7 @@ import { useGameStore } from '../../stores/game'
 import PlayerRow from '../components/PlayerRow.vue'
 import { formatMoney, formatWage } from '../../engine/systems/valuation'
 import { effectiveOfferValue } from '../../engine/systems/transfers'
+import { discloseFee } from '../../engine/systems/disclosure'
 import type { TransferNegotiation } from '../../engine/types'
 import Chevron from '../components/Chevron.vue'
 
@@ -34,7 +35,19 @@ const shortlist = computed(() =>
 
 const listed = computed(() => store.squad.filter((p) => p.listedForTransfer || p.listedForLoan))
 
-const recentWorldTransfers = computed(() => (store.game?.completedTransfers ?? []).slice(0, 10))
+/**
+ * Other clubs' deals, as the public sees them. A fee you were not party to is
+ * undisclosed — the word the game is named after — and what sits under it is
+ * one paper's guess, which is the paper's problem. See systems/disclosure.ts.
+ */
+const recentWorldTransfers = computed(() => {
+  const s = store.game
+  if (!s) return []
+  return s.completedTransfers.slice(0, 10).map((t) => ({
+    ...t,
+    disclosure: discloseFee(s, t, store.club?.id ?? null),
+  }))
+})
 
 const STAGE_LABELS: Record<TransferNegotiation['stage'], string> = {
   enquiry: 'Enquiry made',
@@ -297,8 +310,14 @@ function withdraw(negotiation: TransferNegotiation) {
             <div class="list__secondary">{{ t.fromClubName }} → {{ t.toClubName }}</div>
           </div>
           <div class="list__trail">
-            <div class="list__value">{{ t.fee > 0 ? formatMoney(t.fee, store.currency) : 'Free' }}</div>
-            <div class="list__sub">wk {{ t.week }}</div>
+            <div class="list__value">
+              {{ t.disclosure.label === 'Disclosed' ? formatMoney(t.disclosure.fee ?? 0, store.currency) : t.disclosure.label }}
+            </div>
+            <div v-if="t.disclosure.reported" class="list__sub">
+              {{ t.disclosure.reported.outletName.toUpperCase() }} {{ t.disclosure.reported.verb.toUpperCase() }}
+              {{ formatMoney(t.disclosure.reported.figure, store.currency) }}
+            </div>
+            <div v-else class="list__sub">wk {{ t.week }}</div>
           </div>
         </div>
         <div v-if="!recentWorldTransfers.length" class="empty">No transfers yet.</div>
