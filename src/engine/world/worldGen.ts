@@ -123,7 +123,6 @@ export function generateWorld(options: WorldGenOptions): GameState {
     nextId: 1,
     settings: {
       currency: 'GBP',
-      revealTrueAttributes: false,
       autosave: true,
       fastAdvance: false,
       hapticsEnabled: true,

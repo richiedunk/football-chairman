@@ -20,6 +20,8 @@ const showBack = computed(() => route.name !== 'phone')
 // bar this followed from being a tab root; with the home screen as the only
 // root it has to be said, or the dashboard's header reads "Home".
 const isRoot = computed(() => route.name === 'home')
+// Screens that are not about the club do not wear its colours.
+const plain = computed(() => route.meta.plain === true)
 const title = computed(() => {
   if (isRoot.value) return store.club?.name ?? 'Undisclosed Football'
   // A conversation is titled by whoever is in it. The key in the URL is
@@ -62,7 +64,7 @@ watchEffect(() => {
 </script>
 
 <template>
-  <header class="topbar">
+  <header class="topbar" :class="{ 'topbar--plain': plain }">
     <button v-if="showBack" class="topbar__back" aria-label="Back" @click="router.back()">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6" /></svg>
     </button>
@@ -81,5 +83,5 @@ watchEffect(() => {
       <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 008 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H2a2 2 0 110-4h.09A1.65 1.65 0 004.6 8a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 3.68 1.65 1.65 0 0010 2.17V2a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H22a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z" /></svg>
     </button>
   </header>
-  <div class="topbar__strip" :class="{ 'topbar__strip--split': band.stripAlt }" />
+  <div v-if="!plain" class="topbar__strip" :class="{ 'topbar__strip--split': band.stripAlt }" />
 </template>

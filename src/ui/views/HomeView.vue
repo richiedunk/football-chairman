@@ -8,6 +8,7 @@ import { headerBand } from '../colour'
 import { confidenceLabel } from '../../engine/systems/board'
 import { formatMoney } from '../../engine/systems/valuation'
 import { isAwayOnDuty } from '../../engine/systems/international'
+import { signingsVerdict } from '../../engine/systems/coachView'
 import type { Fixture, MatchResult } from '../../engine/types'
 import { ratingForPositionCached } from '../../engine/world/attributes'
 import FormRun from '../components/FormRun.vue'
@@ -104,6 +105,39 @@ const nextMatch = computed(() => {
     // The opponent's colour, put through the same readability rule so a white
     // or yellow club is still visible against the raised band.
     colour: headerBand(opponent.colors.primary, opponent.colors.secondary).strip,
+  }
+})
+
+/**
+ * The coach, on the home screen, with the one number that matters weekly in a
+ * game where somebody else picks the team: how many of the players you
+ * signed he actually started. In his own voice, because he has one now, and
+ * a director who paid a record fee for a striker on the bench should hear it
+ * from the man who benched him rather than find it in a match report.
+ */
+const coachSays = computed(() => {
+  const s = store.game
+  const c = club.value
+  if (!s || !c) return null
+  const last = store.recentResults[0] ?? null
+  const verdict = signingsVerdict(s, c, last)
+  if (!verdict) return null
+  const n = verdict.signings.length
+  const headline = !n
+    ? 'NO SIGNINGS OF YOURS YET'
+    : !last
+      ? `${n} SIGNING${n === 1 ? '' : 'S'} · NO MATCH YET`
+      : `YOUR SIGNINGS · ${verdict.started.length} OF ${n} STARTED`
+  const leftOut = verdict.leftOut.map((p) => p.knownAs)
+  return {
+    name: store.headCoach?.knownAs ?? 'The coach',
+    headline,
+    line: verdict.line,
+    leftOut: leftOut.length > 3 ? [...leftOut.slice(0, 3), `${leftOut.length - 3} more`] : leftOut,
+    tone: !n || !last ? 'var(--text-faint)'
+      : verdict.leftOut.length === 0 ? 'var(--accent)'
+      : verdict.started.length === 0 ? 'var(--danger)'
+      : 'var(--warn)',
   }
 })
 
@@ -376,6 +410,18 @@ const hub = computed(() => {
         </span>
       </span>
       <Chevron />
+    </button>
+
+    <!-- The coach. He picks the team, so here is what he did with yours. -->
+    <button v-if="coachSays" class="dash-coach" @click="router.push('/staff')">
+      <span class="dash-coach__head">
+        <span class="dash-coach__who">{{ coachSays.name.toUpperCase() }}</span>
+        <span class="dash-coach__count" :style="{ color: coachSays.tone }">{{ coachSays.headline }}</span>
+      </span>
+      <span class="dash-coach__line">“{{ coachSays.line }}”</span>
+      <span v-if="coachSays.leftOut.length" class="dash-coach__out">
+        LEFT OUT · {{ coachSays.leftOut.join(', ').toUpperCase() }}
+      </span>
     </button>
 
     <!-- Decisions, as an inbox rather than a grid. -->

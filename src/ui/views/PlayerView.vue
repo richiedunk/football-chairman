@@ -21,6 +21,7 @@ import type {
 import { fullName, nickname } from '../playerName'
 import { clauseState, clauseUpside } from '../../engine/systems/buyBack'
 import { U21_AGE } from '../../engine/systems/registration'
+import { coachView } from '../../engine/systems/coachView'
 
 const route = useRoute()
 const router = useRouter()
@@ -30,6 +31,18 @@ const notify = inject<(t: string, k?: 'info' | 'error' | 'success') => void>('no
 const player = computed(() => store.player(String(route.params.id)))
 const isOurs = computed(() => player.value?.clubId === store.club?.id)
 const currentClub = computed(() => (player.value?.clubId ? store.clubById(player.value.clubId) : null))
+/**
+ * What the head coach makes of him. Only for your own players: the figures
+ * above are what your staff know, and this is the one opinion that decides
+ * whether any of it gets on the pitch. See systems/coachView.ts.
+ */
+const coachOpinion = computed(() => {
+  const s = store.game
+  const c = store.club
+  const p = player.value
+  if (!s || !c || !p || !isOurs.value) return null
+  return coachView(s, c, p)
+})
 /**
  * A buy-back this club holds on him.
  *
@@ -67,10 +80,13 @@ const report = computed(() => {
  * Your own players train with your staff every day, so their attributes are
  * known. Everyone else is only ever a scout report — a range, not a number.
  * Potential stays uncertain either way, because nobody knows that.
+ *
+ * There used to be a setting that showed everyone's true figures. It was
+ * labelled "for debugging" and it sat in the player's Settings screen, which
+ * made it a button for switching the game's central idea off. A debug tool
+ * belongs in a script; the setting is gone.
  */
-const knowsAttributes = computed(
-  () => isOurs.value || store.game?.settings.revealTrueAttributes === true,
-)
+const knowsAttributes = computed(() => isOurs.value)
 
 const abilityDisplay = computed(() => {
   const p = player.value
@@ -83,7 +99,6 @@ const abilityDisplay = computed(() => {
 const potentialDisplay = computed(() => {
   const p = player.value
   if (!p) return '—'
-  if (store.game?.settings.revealTrueAttributes) return String(Math.round(p.potentialAbility))
   if (report.value) return formatRange(report.value.potentialRange)
   if (isOurs.value) {
     // Your own coaching staff give a band, not a figure.
@@ -490,6 +505,13 @@ const internationalLine = computed(() => {
           <div class="stat__label">For this level</div>
           <div class="stat__value stat__value--sm">{{ stars ? `${stars}★` : '—' }}</div>
         </div>
+      </div>
+      <!-- The coach's view sits under the numbers, because it is what the
+           numbers are worth. He picks the team; this is what he thinks. -->
+      <div v-if="coachOpinion" class="coach-view">
+        <span class="coach-view__who">{{ (store.headCoach?.knownAs ?? 'The coach').toUpperCase() }}</span>
+        <span class="coach-view__label">{{ coachOpinion.label }}</span>
+        <span v-if="coachOpinion.reason" class="coach-view__reason">{{ coachOpinion.reason }}</span>
       </div>
     </div>
 

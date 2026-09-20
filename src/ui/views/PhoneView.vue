@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useGameStore } from '../../stores/game'
 import { PHONE_APPS, type PhoneApp } from '../apps'
-import { initials, isOpen, preview, threadKey } from '../threads'
+import { isOpen, preview, threadKey } from '../threads'
 
 /**
  * The home screen.
@@ -110,7 +110,6 @@ const date = computed(() => store.game?.date ?? null)
         :class="{ 'is-urgent': item.urgent && isOpen(item) }"
         @click="openNotification(item.from)"
       >
-        <span class="notif__avatar" aria-hidden="true">{{ initials(item.from) }}</span>
         <span class="notif__main">
           <span class="notif__top">
             <span class="notif__from">{{ item.from }}</span>
