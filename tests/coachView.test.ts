@@ -174,6 +174,48 @@ describe('your signings', () => {
     expect(a.started).toHaveLength(0)
   })
 
+  it('says nothing at all when there is nothing to say', () => {
+    // `scripts/voicecheck.ts` played a season and caught him saying "Nothing
+    // of yours to pick from yet" twenty-four times, seven of them in a row.
+    // Silence is the fix, so silence is the thing under test.
+    const before = state.completedTransfers
+    state.completedTransfers = []
+    try {
+      expect(signingsVerdict(state, club, null)!.line).toBe('')
+    } finally {
+      state.completedTransfers = before
+    }
+  })
+
+  it('says nothing when every one of them played', () => {
+    const mine = yourSignings(state, club)
+    expect(mine.length).toBeGreaterThan(0)
+    const fixture = { id: 'fx-all', homeClubId: club.id, awayClubId: 'other', week: 8 } as Fixture
+    const result = {
+      homeLineup: mine.map((p) => p.id), awayLineup: [],
+      homeGoals: 2, awayGoals: 0, events: [], ratings: {},
+    } as MatchResult
+    const verdict = signingsVerdict(state, club, { fixture, result })!
+    expect(verdict.leftOut).toHaveLength(0)
+    expect(verdict.line, 'a manager who rings to report a normal week').toBe('')
+  })
+
+  it('has more than a couple of ways to say the one thing that is news', () => {
+    // The pool that was two lines deep is the one he now draws from every
+    // time somebody is benched, so it is the one that must not run dry.
+    const mine = yourSignings(state, club)
+    const fixture = (id: string) => ({ id, homeClubId: club.id, awayClubId: 'o', week: 9 } as Fixture)
+    const result = {
+      homeLineup: [mine[0].id], awayLineup: [],
+      homeGoals: 0, awayGoals: 0, events: [], ratings: {},
+    } as MatchResult
+    const lines = new Set<string>()
+    for (let i = 0; i < 40; i++) {
+      lines.add(signingsVerdict(state, club, { fixture: fixture(`f${i}`), result })!.line)
+    }
+    expect(lines.size).toBeGreaterThanOrEqual(4)
+  })
+
   it('talks like himself', () => {
     const profile = coach.coachProfile!
     const saved = profile.dofRelationship
