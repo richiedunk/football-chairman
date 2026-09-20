@@ -494,6 +494,30 @@ await step('the boardroom is one tap from the dashboard', async () => {
   if (!page.url().includes('#/board')) throw new Error(`went to ${page.url()}`)
 })
 
+await step('the home screen says who wanted you', async () => {
+  // A turn-based game can have an honest lock screen: these are the unread
+  // messages, newest first, and tapping one opens the conversation it belongs
+  // to rather than the list of conversations.
+  await page.goto('http://127.0.0.1:4173/#/phone')
+  await page.waitForSelector('.apps')
+  await readNotice()
+  const notifs = await page.locator('.notif:not(.notif--more)').count()
+  if (notifs === 0) {
+    console.log('   nothing unread, skipped')
+    return
+  }
+  const from = (await page.locator('.notif__from').nth(0).textContent())?.trim()
+  await tap('.notif >> nth=0')
+  await page.waitForTimeout(400)
+  const landed = page.url().split('#')[1] ?? ''
+  if (!landed.startsWith('/inbox/')) throw new Error(`a notification led to ${landed}`)
+  await page.waitForSelector('.bubble--in')
+  // And it opened the right conversation, not merely a conversation.
+  const heading = (await page.locator('.topbar__club').textContent())?.trim()
+  if (heading !== from) throw new Error(`"${from}" opened "${heading}"`)
+  console.log(`   ${notifs} on the stack, first one opens ${heading}`)
+})
+
 await step('every app on the home screen opens something real', async () => {
   // The home screen replaced a five-slot tab bar that hid twenty-five
   // screens behind drill-downs. An icon that leads nowhere is worse than a
