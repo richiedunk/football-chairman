@@ -1,264 +1,275 @@
 # Monetization
 
-A review of what this game can sell, what it should not sell, and what each
-option costs to build. Nothing here is implemented — the repo ships with no
-monetization at all. This is the decision document that should come before it.
+What this game can sell, in keeping with its own fiction, and where the fiction
+has to stop. Nothing here is implemented — the repo ships with no monetization
+at all. This is the decision document that comes before it.
 
 ## What is being sold
 
-The product, as it stands:
-
-- A deep single-player simulation. ~490 clubs, ~18,000 players, a 35-season
-  career bounded by the director retiring at sixty-five.
+- A deep single-player simulation. ~490 clubs, ~18,000 players, a career
+  bounded at thirty-five seasons by a director who retires at sixty-five.
 - No server. `docs/deploy.md` is explicit: static files, no database, no API
-  keys, nothing to scale. There is no account, no analytics, no telemetry.
+  keys, nothing to scale. No account, no analytics, no telemetry.
 - Saves are local — gzipped JSON in IndexedDB, ~3.5MB a world.
-- Three shipping surfaces from one bundle: the web build on bunny.net, iOS and
-  Android through Capacitor.
+- Three surfaces from one bundle: web on bunny.net, iOS and Android via Capacitor.
 - The audience is the FM Mobile / Football Chairman Pro audience: people who
-  will pay once for depth and who review-bomb anything that meters their time.
+  pay once for depth and who review-bomb anything that meters their time.
 
-Two monetization seams already exist in the code and were built on purpose:
+Two seams already exist and were built on purpose:
 
 | Seam | Where | State |
 | --- | --- | --- |
-| `purchases` service — `products` / `buy` / `restore`, `ProductId` | `src/platform/services.ts` | No-op stub, `capabilities().purchases` hard-false |
-| `director.xpMultiplier` — applied in `awardXp` and read nowhere else | `src/engine/systems/career.ts:112`, `src/engine/types.ts:1489` | Always 1 |
+| `purchases` — `products` / `buy` / `restore`, `ProductId` | `src/platform/services.ts` | No-op stub, `capabilities().purchases` hard-false |
+| `director.xpMultiplier` — applied in `awardXp`, read nowhere else | `src/engine/systems/career.ts:112` | Always 1 |
 
-The seam is good work. The product the seam anticipates — a purchasable XP
-boost — is the weakest option on the list, for reasons below.
-
-## The constraints that decide this
-
-These are not preferences. They are properties of what is built.
-
-**No backend means no live-ops.** No battle pass, no seasonal events, no
-server-side A/B testing, no remote config, no receipt validation, no funnel
-data. Every model that depends on operating a game rather than shipping one is
-off the table until someone runs a server, and running a server turns a
-zero-marginal-cost static site into a business with an on-call rota.
-
-**No receipt validation means client-side entitlement.** On mobile that is
-tolerable — StoreKit and Play Billing are the source of truth and `restore()`
-re-establishes it. On the web it is meaningless: IndexedDB and localStorage are
-editable from devtools in ten seconds. Do not build a web economy that assumes
-the client is honest.
-
-**The simulation is deterministic and local.** A consumable that grants an
-in-fiction advantage (budget, a revealed attribute, an XP multiplier) is worth
-exactly as much as a save edit, and the people most likely to pay for it are
-the people least likely to need to.
-
-**The core loop is deliberately anti-friction-except-where-designed.** Urgent
-inbox items block the week from advancing — that is the mechanic that stops the
-game being mashed through. Any paywall placed on or near that block converts a
-design feature into an extortion point, and the genre's audience will read it
-that way correctly.
-
-**The game's premise is uncertainty.** "Undisclosed" is the name and the
-mechanic: you never see true attributes, only a range that narrows with scouting
-work. Selling certainty — an IAP that reveals a player's real numbers — sells
-the thing the game is about. It would probably convert well. It should still
-not be built.
-
-**Store rules, already partly noted in `services.ts`:**
-- Anything consumed in-app goes through StoreKit / Play Billing. Apple Pay and
-  Google Pay cannot carry it.
-- Restore-purchases must be *offered*, not merely possible. `SettingsView.vue`
-  is the place.
-- Offer a third-party sign-in on iOS and Sign in with Apple must sit beside it
-  (`auth.availableProviders()` already computes rather than hard-codes this).
-- Ads bring ATT on iOS, a TCF consent flow in the EU, and an age-rating change.
-- A price tier per region, and a localised price string from the store — never a
-  hard-coded "£2.99" in the UI. `Product.price` is already typed for this.
+The seam is the right shape. The product it anticipates — a purchasable XP
+boost — is the weakest option available, and the in-world version of this
+document replaces it with something better. See **Qualifications** below.
 
 ---
 
-## The options, ranked
+## In-world, and the line it must not cross
 
-### 1. Premium up front on mobile, free on the web — *recommended primary*
+The ambition is that a purchase should belong to the fiction rather than sit on
+top of it. That is achievable here, more than in most games, because of one
+thing already built:
 
-One price, everything included, no IAP in the build. £6.99–£8.99 puts it beside
-FM Mobile rather than beside the free-to-play tier, which is the correct shelf:
-the game's depth is the sales argument and a free-to-play price signals the
-opposite of depth.
+**The game is a director's phone, and the storefront's clerk is already
+employed.** `docs/the-phone.md` made the fiction literal — messages arrive from
+a chairman, a head coach, an agent, a club secretary, a journalist. One of those
+senders is **`Your representative`**, and today it already delivers the two
+messages that matter most to a career: the clubs that have approached you, and
+the season review (`src/engine/season/phases.ts:390-410`). A director's
+opportunities arrive from their rep. That is not a metaphor for a storefront,
+it is the thing itself.
 
-The web build becomes the demo and the marketing. Two shapes work:
+And the **jobs board is already a shelf.** 114 clubs by division, the ones your
+record does not justify greyed out and labelled with the level gap. It is a
+catalogue with locked items in it, built for reasons that have nothing to do
+with money.
 
-- **Full and free on the web.** Strongest word-of-mouth, weakest conversion —
-  people who would have paid play free forever in a browser. Defensible if the
-  phone experience is genuinely better (it is: portrait-first, haptics, offline).
-- **First career, then the wall.** The web build plays one club, one full season
-  — which is a *complete* experience of every system — then the season roll asks
-  for the app. Needs a gate point, not a gate system.
+So the frame works. But it brings a failure mode that bolted-on monetization
+does not have, and it has to be stated before anything is designed:
 
-**Revenue shape:** lumpy, front-loaded on launch and on each press mention, no
-tail without new content. This is the model's real weakness and why option 2
-exists.
+> **The fiction can be in-world. The transaction cannot.**
 
-**Cost:** small. An entitlement check, one gate point, a restore button,
-store-listing work. No engine changes.
+If a purchase is disguised as a game action, the player cannot reason about it —
+and that is not only a design problem. Both stores require purchases to be
+clearly presented; the UK CMA's principles on in-game purchases and EU consumer
+guidance both bite on exactly this: obscured prices, purchases that do not read
+as purchases, and virtual currencies used to blur what something costs in real
+money.
 
-**Risk:** a single price means a single shot at each player. Everything after
-launch is discovery work, not product work.
+The rule that follows, and every design below obeys it:
 
-### 2. Content packs — *recommended as the recurring layer*
+**The thing you buy belongs to the world. The moment you buy is honest.** Your
+rep can tell you an opportunity exists. The tap that spends money raises a plain
+sheet with the store's own localised price on it, says it is a purchase, and
+never pretends to be a transfer fee, a course fee, or anything else denominated
+in the game's money.
 
-This is the option the architecture was accidentally built for. The README
-already says it out loud: *"Swapping in a different name pack is a data change,
-not a code change."* Nations, leagues, cities and name pools are all data
-(`src/engine/world/nations.ts`, `src/engine/names/pools.ts`).
+### Four things the fiction must never be used to smuggle
 
-Sellable packs, roughly in order of how well they fit:
+Stated first, in the style of `docs/the-phone.md`, because each is a way this
+idea could undo work done deliberately.
 
-- **Nation packs.** New pyramids with real depth — Japan below the top flight,
-  the Nordics, Eastern Europe, South America beyond the five that exist. Adds
-  jobs to the jobs board, which is the career's whole ladder.
-- **Scenario packs.** Authored starting situations rather than generated ones:
-  a club in administration under a transfer embargo, a season after a takeover,
-  a relegation rescue in February. This touches `newGame.ts` candidate selection
-  and board mandates, and it is the highest-value-per-byte content the game can
-  ship — the systems already model all of it, nothing new has to be simulated.
-- **Name packs.** Historical naming, regional variants. Cheap, and a nice
-  goodwill freebie rather than a product.
+1. **Real money never enters the club's books.** Club finance is a designed
+   constraint: money arrives lumpily, wages leave weekly, and a club can be
+   profitable across a season and still run out of cash in February. The most
+   lore-perfect consumable available is *a rich owner takes over* — and
+   `src/engine/systems/takeovers.ts` already models it, so it would be a
+   morning's work. It is also the single most corrosive thing on this list. The
+   best-fitting idea and the worst idea are the same idea. Refuse it.
+2. **No purchase in, near, or downstream of a blocking decision.** Urgent inbox
+   items block the week; that is the mechanic that stops the game being mashed
+   through. A purchase anywhere near it converts a design feature into an
+   extortion point, and the genre's audience will read it that way correctly.
+3. **No bought currency.** No director points, no credits, no "transfer
+   tokens". One-off named things at real prices. Indirection is precisely what
+   regulators are looking at and precisely what makes a price unreadable.
+4. **The rep does not nag.** `docs/the-phone.md` already bans engagement
+   theatre — no fabricated typing indicators, no badge inflation, no chairman
+   using emoji. Monetization obeys the same rule: the storefront speaks when the
+   fiction would have spoken anyway, at a season roll or a career end, and never
+   otherwise. A rep who messages you to sell something he would not have
+   mentioned is a rep the player stops reading, and that thread carries the job
+   offers.
 
-**Revenue shape:** a tail. £1.99–£3.99 a pack, or a "all future packs" bundle.
-This is what turns a launch spike into a line.
+---
 
-**Cost:** moderate, and there is one real engineering risk that has to be
-handled before the first pack ships, not after.
+## The in-world design
 
-> **Determinism and saves.** Everything is derived from a seed. A world
-> generated with a pack installed *cannot be rebuilt without that pack*. The
-> save must record which packs generated it (`GameState.packs: string[]`, a
-> `SAVE_VERSION` bump and a migration), and loading a save whose packs are
-> missing must fail with an explanation rather than silently generating a
-> different world. Get this wrong once and paying customers lose careers.
+### 1. Scenario packs arrive as jobs — *the best fit available*
 
-> **Keep entitlement out of the engine.** The engine has zero Vue imports and no
-> knowledge of the platform, and that is why it can be tested headlessly. Packs
-> must arrive as *data passed into `generateWorld`*, the same way `WorldSize`
-> does today. `src/engine/` must never ask whether something was bought.
+A pack is not an item in a menu. It is **a job offer in your rep's thread**:
+a club in administration under a transfer embargo, a season after a takeover, a
+relegation rescue in February with eleven fit players.
 
-### 3. A paid Sandbox / Owner mode unlock
+Diegetically this is exactly and only how a director's next move arrives. The
+jobs board already carries locked entries, already explains why each is closed
+to you, and already sits behind the same rep who wrote to you about it. The
+purchase adds a *situation* to the world, not a power to your director — and
+every one of these is already simulable: registration embargoes, ownership
+changes, board mandates and crisis states all exist as systems.
 
-The career is gated: your level decides which of the 114 clubs will interview
-you, and at level 1 that is about 22 of them. A one-time unlock that removes the
-gate — start anywhere, any club, any division — is the classic adjacent-mode
-IAP, and it does not damage the career mode because it is *not* the career mode.
-People who want to run Real-Madrid-but-not-really on day one are not the people
-grinding a level-2 non-league job, and selling them a separate box is honest.
+Sold as: named jobs, £1.99–£3.99, or a bundle. The tail that turns a launch
+spike into a line.
 
-**Cost:** small-to-moderate. `jobSearch.ts` already computes the gate; the mode
-is mostly "skip this filter", plus keeping it out of the XP and career-record
-systems so the two modes don't contaminate each other's records.
+**Cost:** moderate, and one engineering risk that must be handled before the
+first pack ships, not after. See **Determinism** below.
 
-**Note:** do *not* sell this as an XP shortcut. Sell it as a different mode.
-The difference matters to the player and to the review score.
+### 2. Nation packs are where your career goes abroad
 
-### 4. Cosmetics and quality-of-life
+Same shelf, same clerk. A pack is a pyramid — Japan below the top flight, the
+Nordics, Eastern Europe — and it reaches the player as clubs appearing on the
+jobs board and a rep who says a club abroad has asked about you. Nations, cities
+and name pools are already data (`src/engine/world/nations.ts`,
+`src/engine/names/pools.ts`); the README already notes a name pack is a data
+change, not a code change.
 
-Extra save slots (the slot system in `src/storage/saves.ts` already supports
-arbitrary slots — a cap would have to be *added* to then be sold, which is worth
-being honest with yourself about), colour themes, a career-archive export. Low
-revenue, near-zero harm, and they give the store page something to list.
+### 3. Qualifications, not boosts — *what should replace `xpMultiplier`*
 
-**Cost:** small. **Revenue:** small. Include them; don't plan around them.
+The lore-true version of buying progress is a director taking a course:
+a sporting-director diploma, a data short course, a language.
 
-### 5. Rewarded video ads — *only under conditions, and probably not*
+The distinction that makes it acceptable is not the label, it is the direction:
 
-If ads happen at all: rewarded only, never interstitial, never on the advance
-button. The honest placements are the natural dead time — world generation, the
-season-review screen — and the honest rewards are cosmetic or trivial.
+- **A boost sells speed.** The jobs-board ladder *is* the meta-progression —
+  the README calls it "the reason to accept a job at a club you have outgrown
+  rather than restarting". Selling a shortcut past it sells past the game.
+- **A qualification sells breadth.** `DirectorBackground` already exists with
+  six backgrounds, each with a real perk, chosen once at the start
+  (`src/engine/newGame.ts`). A course is **another background to run a career
+  with** — a sidegrade that changes what you are good at, not how fast you
+  climb. It is content, it is replayability, and it cannot be used to skip
+  anything.
 
-Arguments against, specific to this game:
-- An ad SDK ends the "static files, no keys, nothing to scale" property in
-  `docs/deploy.md` and drags in ATT, TCF consent and an age-rating change.
-- The game is offline-capable by design. Ads are not.
-- The audience pays for depth. Ads on a management sim read as a downgrade
-  signal, and the review text will say so.
-- The rewards that would actually convert (budget, scouting certainty, XP) are
-  exactly the ones that damage the systems.
+Sell backgrounds. Keep `xpMultiplier` as a hook — it costs nothing and a future
+difficulty setting may legitimately want it — but rename the `xp-boost-small` /
+`xp-boost-large` products before anyone assumes they are the plan.
 
-**Verdict:** skip. If revenue is short, a lower price point beats ads.
+### 4. Director → chairman is the next rung, not a skipped gate
 
-### 6. Subscription — not yet
+The repo is called `football-chairman`. The sandbox unlock everyone in this
+genre sells has an in-world name here already: you stop being an employee and
+you buy a club. `src/engine/systems/ownership.ts` models six owner kinds and
+what each wants; `takeovers.ts` models the change of hands.
 
-A subscription has to be earned by a content cadence, and there is no server, no
-live content pipeline, and a finite 35-season career. A subscription over this
-product today is a rental of something that does not change. It becomes viable
-*only* as a wrapper over option 2 — "every pack, as they land" — and only once
-two or three packs have actually shipped on time.
+Sold as a separate mode at the top of the career — pick a club, run it as its
+owner — it is honest, it is diegetic, and it does not damage career mode because
+it is not career mode. Sold as "skip the level gate", it is pay-to-win in a
+cardigan. Same code, different framing, and the framing is the product.
 
-### 7. Consumables and boosts — argue against
+**Cost:** small-to-moderate. Keep it out of the XP and career-record systems so
+the two modes cannot contaminate each other's records.
 
-This includes the `xp-boost-small` / `xp-boost-large` products the code already
-anticipates. Taking them one at a time:
+### 5. The memoir — the end-of-career artefact
 
-| Product | What it actually sells | What it breaks |
+When a director turns sixty-five the game writes: *"Your record is on the career
+screen. It is the only part of the job that outlasts it."*
+(`src/engine/season/phases.ts:440`.)
+
+That is the moment of maximum attachment in the entire product, it arrives once
+per career, and there is a purchasable object sitting in it: the record made
+into a thing — the memoir, the archive, the career typeset and exportable.
+
+It affects no simulation value whatsoever, so it can be priced without a single
+design argument. Cosmetic monetization does not get more in-world than selling a
+man his own career at the end of it.
+
+### 6. The demo wall is your own contract
+
+The web build is free and is the marketing. Its wall, if there is one, is
+diegetic without any invention at all: you take your first job, you work the
+season, and at the season roll your rep writes to you with the clubs that have
+approached — which is a message the game already sends.
+
+The full game is where that thread continues. Say so plainly in the sheet that
+comes up. Do not dress the price as a contract negotiation.
+
+---
+
+## The lore-perfect traps
+
+Three ideas fit the fiction beautifully and should still be refused. Writing
+them down so they are refused once rather than re-proposed every quarter.
+
+| Idea | Why it fits | Why not |
 | --- | --- | --- |
-| XP boost | A shortcut up the jobs-board ladder | The ladder *is* the meta-progression — the README calls it "the reason to accept a job at a club you have outgrown rather than restarting". Selling past it sells past the game. |
-| Transfer budget | Money | Finance is a designed constraint; money arrives lumpily and wages leave weekly. Adding money removes the February cash crisis the system exists to create. |
-| Revealed attributes | Certainty | The title mechanic. |
-| Skip the blocking decision | Removing friction the design added | The one thing stopping the game being mashed through. |
-| Extra scouts / instant reports | Time | Defensible, but it is still time-metering in a game that does not otherwise meter time. |
-
-The `xpMultiplier` hook should stay — it costs nothing and a future *difficulty*
-or *pack* setting may legitimately want it. The products named against it in
-`ProductId` should be renamed before anyone assumes they are the plan.
+| **A data-provider subscription** | Real directors buy Wyscout and StatsBomb on annual contracts; `dataDepartment.ts` already models a data department; the App Store also bills annually. The mapping is uncanny. | It sells narrowed scout ranges, i.e. certainty. "Undisclosed" is the title *and* the mechanic. The safe version is a data pack that adds presentation — charts, an archive — and never narrows a range. |
+| **A better agent for yourself** | You are an employee; real directors have representation; the rep already exists as a character. | It sells better job offers and better contract terms. That is power, and it would convert, which is what makes it dangerous rather than what makes it good. |
+| **A takeover by a rich owner** | Already modelled, one morning's work. | Puts real money into the club's books. See anti-goal 1. |
 
 ---
 
 ## Recommended package
 
-1. **Premium on iOS and Android**, £6.99–£8.99, no IAP in the base build.
-2. **Free web build** as demo and marketing — full first season, then the app.
-3. **Sandbox mode** as a single optional unlock (£2.99), a separate mode.
-4. **Content packs** quarterly (£1.99–£3.99), nation and scenario first.
-5. **Cosmetics** as filler.
-6. **No ads, no consumables, no subscription** until packs have a track record.
+1. **Premium on iOS and Android**, £6.99–£8.99, no IAP in the base build. The
+   FM Mobile shelf, not the free-to-play one.
+2. **Free web build** as demo and marketing, with the contract-renewal wall if a
+   wall is wanted at all.
+3. **Chairman mode** as one optional unlock (~£2.99), a separate mode.
+4. **Scenario and nation packs** quarterly (£1.99–£3.99), delivered as jobs.
+5. **Backgrounds** sold as qualifications, individually or bundled with packs.
+6. **The memoir** at career end.
+7. **No ads, no consumables, no bought currency, no subscription** until the
+   packs have a track record of landing on time. A subscription has to be earned
+   by a content cadence, and there is no server and no live pipeline yet.
 
-Everything above is buildable without a server. That property is worth more than
-any single revenue line and should not be spent casually.
+Everything above ships without a backend. That property is worth more than any
+single revenue line and should not be spent casually.
 
 ---
 
 ## What to build first
 
-In order, before any store listing exists:
-
-1. **`src/platform/entitlements.ts`** — one module, above the engine, that
-   answers "does this build own X". Backed by `purchases.restore()` on native,
-   hard-true on a paid build, hard-false on web. Nothing in `src/engine/` imports
-   it, ever.
-2. **Flip `capabilities().purchases`** and wire a real StoreKit / Play Billing
-   provider behind the existing `PurchaseService`. The seam is already the right
-   shape; the stub returns `{ status: 'unavailable' }` and every caller must keep
-   handling that, because the web build will always get it.
-3. **A restore-purchases row in `SettingsView.vue`.** Both stores require it to
-   be offered.
-4. **`GameState.packs`, a `SAVE_VERSION` bump and the missing-pack load path** —
-   before the first pack, not after.
-5. **The gate point** for the web demo, at the season roll, in the UI layer only.
+1. **`src/platform/entitlements.ts`** — one module, above the engine, answering
+   "does this build own X". Backed by `purchases.restore()` on native, hard-false
+   on web. **Nothing in `src/engine/` imports it, ever** — the engine has no
+   framework imports and no DOM, which is why it can be tested headlessly, and
+   an engine that asks whether something was bought is no longer that engine.
+2. **Packs as data passed into `generateWorld`**, the way `WorldSize` already is
+   (`src/engine/world/worldGen.ts:33`). The UI decides what is owned; the engine
+   is handed a content set and has no opinion about money.
+3. **Determinism and saves — before the first pack, not after.** Everything is
+   derived from a seed, so a world generated with a pack *cannot be rebuilt
+   without that pack*. The save must record which packs made it
+   (`GameState.packs: string[]`, a `SAVE_VERSION` bump, a migration), and loading
+   a save whose packs are missing must fail with an explanation rather than
+   silently generating a different world. Get this wrong once and paying
+   customers lose careers.
+4. **Flip `capabilities().purchases`** and put a real StoreKit / Play Billing
+   provider behind `PurchaseService`. Every caller must keep handling
+   `{ status: 'unavailable' }`, because the web build will always get it.
+5. **A restore-purchases row in `SettingsView.vue`.** Both stores require it to
+   be offered, not merely possible.
+6. **One storefront sheet**, raised from the rep's thread, showing
+   `Product.price` — the store's own localised string, never a hard-coded
+   "£2.99" — and reading unambiguously as a purchase.
 
 ## Things to fix before charging money
 
-A paid product makes existing gaps into support tickets.
+A paid product turns existing gaps into support tickets.
 
 - **IndexedDB is not pinned.** `navigator.storage.persist()` is never called
   anywhere in `src/storage/`. A browser under storage pressure may evict a
-  paying player's 35-season career. Call it, and handle the refusal.
+  paying player's thirty-five-season career. Call it, and handle the refusal.
 - **There is no cloud save.** `capabilities().cloudSave` is false and there is no
-  server to make it true. A reinstall loses everything. At minimum, make the
-  existing export-to-file path obvious and prompt it at season end; iCloud /
-  Play Games Saved Games are the real fix and both are native-only.
-- **There is no analytics.** With a premium model that is survivable. With any
-  model that needs a funnel it is not — decide which before choosing, because
-  adding telemetry later is a privacy-policy and consent change, not a code one.
+  server to make it true. A reinstall loses everything. At minimum surface the
+  existing export-to-file path and prompt it at season end; iCloud and Play
+  Games Saved Games are the real fix, and both are native-only.
+- **There is no analytics.** Survivable with a premium model, fatal to any model
+  needing a funnel. Decide before choosing, because adding telemetry later is a
+  privacy-policy and consent change, not a code change.
+- **Store compliance.** Anything consumed in-app goes through StoreKit / Play
+  Billing — Apple Pay and Google Pay cannot carry it, as `services.ts` already
+  notes. Offer a third-party sign-in on iOS and Sign in with Apple must sit
+  beside it; `auth.availableProviders()` already computes rather than hard-codes
+  this.
 - **`docs/bugs.md` has open items needing design decisions**, and mutation
   testing has never been run. Neither blocks a launch; both change what a refund
   request costs.
 - **Names and trademarks.** The generator avoids real club identities on purpose
-  and the README is careful to say it is not a legal opinion. Charging money
-  raises the stakes on that paragraph. Get an actual opinion before the first
-  paid build, particularly if a pack ever leans toward recognisable teams.
+  and the README is careful to say that is not a legal opinion. Charging money
+  raises the stakes on that paragraph — get a real one before the first paid
+  build, and especially before a pack leans toward recognisable teams.
