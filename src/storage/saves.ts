@@ -646,10 +646,10 @@ export async function importSave(file: File): Promise<GameState> {
   try {
     state = JSON.parse(text) as GameState
   } catch {
-    throw new Error('That file is not a Director of Football career.')
+    throw new Error('That file is not an Undisclosed Football career.')
   }
   if (typeof state.version !== 'number' || !state.players) {
-    throw new Error('That file is not a Director of Football career.')
+    throw new Error('That file is not an Undisclosed Football career.')
   }
   clearRatingCache()
   const migrated = migrate(state)

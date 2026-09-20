@@ -485,6 +485,6 @@ describe('taking a career off the device', () => {
 
   it('refuses something that is not a career at all', async () => {
     const file = new File(['this is not a save'], 'notes.txt')
-    await expect(importSave(file)).rejects.toThrow(/not a Director of Football/i)
+    await expect(importSave(file)).rejects.toThrow(/not an Undisclosed Football/i)
   })
 })

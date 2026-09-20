@@ -72,7 +72,7 @@ function when(ts: number) {
          a screen that has no other colour, and it undersold the game. -->
     <div class="title">
       <div class="title__rule" />
-      <h1 class="title__name">Director<br />of Football</h1>
+      <h1 class="title__name">Undisclosed<br />Football</h1>
       <p class="title__strap">
         You run recruitment, contracts, the academy and the books.
         Someone else picks the team.

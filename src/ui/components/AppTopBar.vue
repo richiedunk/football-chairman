@@ -20,7 +20,7 @@ const showBack = computed(() => !tabRoots.has(String(route.name)))
 // either way, so the club never stops being present.
 const isRoot = computed(() => !showBack.value)
 const title = computed(() => {
-  if (isRoot.value) return store.club?.name ?? 'Director of Football'
+  if (isRoot.value) return store.club?.name ?? 'Undisclosed Football'
   // A conversation is titled by whoever is in it. The key in the URL is
   // lower-cased, so the name comes from the thread rather than the param — a
   // header reading "chairman" is a bug the reader sees before anything else.

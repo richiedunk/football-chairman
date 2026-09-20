@@ -1,10 +1,10 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace "com.directoroffootball.game"
+    namespace "com.undisclosedfootball.game"
     compileSdk rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.directoroffootball.game"
+        applicationId "com.undisclosedfootball.game"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

@@ -90,7 +90,7 @@ await step('load title', async () => {
   // than as one text node.
   await page.waitForSelector('.title__name')
   const mark = (await page.textContent('.title__name'))?.replace(/\s+/g, ' ').trim()
-  if (mark !== 'Directorof Football' && mark !== 'Director of Football') {
+  if (mark !== 'UndisclosedFootball' && mark !== 'Undisclosed Football') {
     throw new Error(`unexpected wordmark: ${mark}`)
   }
   await page.screenshot({ path: `${SHOT}/01-title.png` })
