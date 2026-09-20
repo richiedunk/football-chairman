@@ -122,3 +122,37 @@ describe('manOfTheMatch', () => {
     expect(manOfTheMatch(club('US', 50), fixture('US', 'THEM'), result(0, 0))).toBeNull()
   })
 })
+
+describe('the coach says it in his own voice', () => {
+  /** The same game, judged by a coach with a given temperament and opinion. */
+  const lineFrom = (mediaHandling: number, dofRelationship: number): string => {
+    const him = ({ id: 'C1', attributes: { mediaHandling }, coachProfile: { dofRelationship } }) as Staff
+    return matchVerdict(
+      club('US', 50), club('THEM', 50), fixture('US', 'THEM'), result(1, 1), him,
+    ).coachLine
+  }
+
+  it('gives the same result different words to different coaches', () => {
+    // The verdict was the last place he spoke in a fixed register. A talkative
+    // coach who rates you and a taciturn one who does not should not hand you
+    // the same sentence after the same game.
+    const lines = new Set([
+      lineFrom(90, 80),  // warm
+      lineFrom(20, 80),  // brisk
+      lineFrom(20, 45),  // terse
+      lineFrom(50, 10),  // pointed
+    ])
+    expect(lines.size, `four coaches produced ${lines.size} lines`).toBe(4)
+  })
+
+  it('says the same thing to the same coach every time it is asked', () => {
+    // A report reopened next season must not have changed what was said.
+    const once = lineFrom(70, 70)
+    for (let i = 0; i < 20; i++) expect(lineFrom(70, 70)).toBe(once)
+  })
+
+  it('says nothing at all when the club has no coach', () => {
+    const v = matchVerdict(club('US', 50), club('THEM', 50), fixture('US', 'THEM'), result(1, 1), null)
+    expect(v.coachLine).toBe('')
+  })
+})
