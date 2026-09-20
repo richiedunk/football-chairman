@@ -260,6 +260,27 @@ exist to calibrate against, and outcomes in this category vary by 100×.
 Only relevant under options 2 and 3, and short because they are constraints
 rather than ideas.
 
+**The rule above all of them comes from `docs/identity.md`:**
+
+> You buy players you cannot fully see, for a coach you do not control.
+
+That sentence is what the game is, and it prices two things out of existence
+before any model is chosen. **Nothing may be sold that lifts the fog** — no
+"full scout report", no true-attribute reveal, no narrowed range for money.
+The reveal toggle was removed from the settings screen precisely because a
+button that switches the central idea off is not a feature, and a button that
+does it for £1.99 is the same button with a worse motive. **And nothing may be
+sold that buys control of the coach** — no override on selection, no
+guaranteed minutes for a signing, no forcing a player into the side. Both are
+the obvious things a free-to-play design would reach for, both would test
+well, and both sell the game's only distinguishing idea for the price of a
+coffee.
+
+What is left is the honest inventory: more world to run (nations, scenarios,
+eras), not less uncertainty within it. That constraint is why option 1 or 2
+fits this game and free-to-play does not — the mechanics with the strongest
+pull-to-pay are exactly the two that would hollow it out.
+
 - **The fiction can be in-world; the transaction cannot.** The phone shell means a
   purchase can be *offered* in a conversation — `Your representative` already
   delivers job offers and the season review (`season/phases.ts:386-410`). The tap

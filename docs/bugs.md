@@ -11,7 +11,97 @@ will break next.
 
 ---
 
+## Triage
+
+Read end to end on 2026-09-20 and sorted, because fifteen entries under one
+heading called **Open** is not a queue, it is a pile. Four of them are struck
+through and finished. Several others read as investigation logs that end in
+"fixed" or "largely fixed". And two live faults are buried in the tail of
+entries whose headline says they are done, which is the worst place for a bug
+to be.
+
+Nothing below is deleted or moved — the standing rule in this file is that
+the record of what has broken is the guide to what will break next. This is a
+reading of it, not an edit to it.
+
+### Live, in the order I would take them
+
+| # | What | Where it is written | Cost |
+| --- | --- | --- | --- |
+| 1 | **The board scores its own wage mandate on a number no other system uses.** `reduceWageBill` totals raw squad contracts: no staff, and a player loaned out still counted at full wage. Everything else reads `totalWageBill`. So the obvious way to answer the mandate — loan out your biggest earner — moves a number the board is not looking at. | Tail of *Seven features… wired in* | Small. One function, one test. |
+| 2 | **A transfer negotiation never expires.** `TransferNegotiation.deadlineWeek` is written and read by nothing, so a deal opened in July is still sitting open in May. | Tail of *Seventeen fields… deleted* | Small. |
+| 3 | **The scout has four things to say and says them forty-eight times a season.** Measured by `scripts/voicecheck.ts`: 48 lines from a pool of 4, the same sentence fifteen times, three in a row. See the entry below. | *The scout repeats himself*, below | Small. Widen, or let him stay quiet. |
+| 4 | **Non-league clubs promote about 2.9 academy players a year.** The intake floor is two for every club in the world, including a club with a field and a shed. The teenage bulge at the bottom of the pyramid is *entirely* this. A data change with a design decision attached. | *The discount that let a released pro drop down* | Small change, real decision. |
+| 5 | **Tiers 4 and 5 still fail the prime-age acceptance test** — 6.2 and 4.9 against a target of eight. Three attempts have failed and the diagnosis has been revised seven times. The current reading is that the constraint is what a club can *pay*, not who it will accept. | *A player with no club never got any worse* | Large, and wants measuring first. |
+| 6 | **Autosave still serialises on the main thread** — 406ms after the tuple work, plus an unaddressed 141MB spike. Every figure so far is from a laptop. | *Autosave wrote the whole game every week* | Medium, and wants a real device. |
+| 7 | **`@capacitor/preferences` is installed, imported by nothing, and wired into both native projects.** Worth a decision rather than a removal: a WKWebView can evict localStorage, and the save fallback path depends on it. | *An unused Capacitor plugin* | Small, but the iOS half needs a Mac. |
+| 8 | **`GameSettings.fastAdvance` is a setting no screen offers.** | *Seventeen fields… deleted* | Trivial. |
+
+### A decision rather than a bug
+
+**The career history.** `careerStats` is written for every player, was 35% of
+the save's raw JSON before the tuple work, and no screen has ever shown it.
+The entry says "worth either building or binning". It is worth building now,
+and the reason is new: `docs/identity.md` settles the four registers, and a
+player's career record is named in `docs/the-phone.md` under **documents** —
+an authored, dated thing you read rather than operate. The data is already
+paid for and the register it belongs in now exists.
+
+### Finished, and reading as open
+
+The four struck-through entries — *seven features wired in*, *fifteen dead
+fields deleted*, *the takeover's dead field*, *the dressing room is a tax* —
+are done. So is **AI stadium expansion**, which ends with a corrected model
+and `tests/attendance.test.ts` pinning the property. They stay where they are
+per the rule above, but they are not work.
+
+### Watching, not working
+
+**Clubs hoarding cash** and **every club out of wage room** both end in the
+same place: the dial is deliberately set conservative, and turning it further
+wants evidence that the world survives it. That is a decision waiting on a
+measurement, not a fault waiting on a fix.
+
+---
+
 ## Open
+
+### The scout repeats himself, and so did the coach
+
+`scripts/voicecheck.ts` plays a season and prints every line each character
+says, in the order the player meets them, with the distinct-line count and the
+longest identical run. It is the only way this fault shows up: every one of
+these lines passes a unit test on its own call, and the failure is entirely in
+the repetition.
+
+One season, seed `VOICE1`:
+
+| who | lines said | distinct | most-used | longest run |
+| --- | --- | --- | --- | --- |
+| Player Liaison | 56 | 43 | 3 | 1 |
+| A scout | 48 | **4** | **15** | 3 |
+| Coach, match verdict | 47 | 9 | 9 | 2 |
+| Coach, on your signings | 47 | **2** | **24** | **7** |
+
+**The coach is fixed**, and the fix was not more lines. He said "Nothing of
+yours to pick from yet" twenty-four times and "No signings yet. Noted."
+twenty-three, seven of them back to back — a pool of two is a pool of one by
+March. He is silent now when nothing has happened: no signings is not news,
+and every signing starting is not news either. He speaks only when somebody
+you paid for was left out, which is the one case the screen exists for, and
+that pool went from two lines to five per register. The row disappears from
+the table entirely.
+
+**The scout is not fixed.** He files 48 messages a season from a pool of four,
+says "Seen him once. Too early to say" fifteen times, and repeats himself
+three times running. The same reasoning applies: a scout who has learned
+nothing this week has nothing to file, and the dossier on the player screen
+already carries "due a fresh look". Widening the pool alone would be treating
+the symptom.
+
+`coach:verdict` at 9 distinct over 47 is thin rather than broken — the pools
+are per outcome-grade per register, so one club with one coach only ever draws
+from a few. Worth knowing, not worth work.
 
 ### A career history nothing has ever shown
 `careerStats` is written for every player at every season roll, capped at 25
