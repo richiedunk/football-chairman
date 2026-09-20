@@ -205,7 +205,7 @@ Every club, player, coach, agent and journalist is **generated**, not shipped.
 Clubs are built as *real city* + *generic football suffix* — city names are geography and
 nobody owns them, and "United", "Calcio" or "spor" are generic football vocabulary. What the
 generator deliberately avoids is the specific *combination* that identifies a real club;
-there's a blocklist it re-rolls against. League names are fictional in the Football Chairman
+there's a blocklist it re-rolls against. League names are fictional in the familiar
 idiom ("The Prem", "Division Two", "Non-League Premier").
 
 Player names come from 24 nationality-weighted pools with real naming conventions: Brazilian

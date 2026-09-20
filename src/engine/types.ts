@@ -1671,8 +1671,6 @@ export interface NewsItem {
 
 export interface GameSettings {
   currency: 'GBP' | 'EUR' | 'USD'
-  /** Show true attributes instead of scouted ranges — a cheat/debug toggle. */
-  revealTrueAttributes: boolean
   autosave: boolean
   /** Skip confirmation dialogs on routine actions. */
   fastAdvance: boolean

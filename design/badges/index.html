@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Undisclosed Football — badge drafts</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  /* The game's own ground and faces, so a draft is judged where it will live. */
+  :root { --ink:#08090B; --raised:#101215; --line:#23262B; --text:#F2F4F6; --muted:#9AA1AB; --accent:#C8FF4D; }
+  body { margin:0; padding:40px 32px 64px; background:var(--ink); color:var(--text); font-family: Inter, system-ui, -apple-system, sans-serif; }
+  h1 { font-size:20px; font-weight:800; letter-spacing:-0.02em; margin:0 0 6px; }
+  p.lede { color:var(--muted); font-size:14px; max-width:64ch; margin:0 0 36px; line-height:1.5; }
+  .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:36px 28px; }
+  .draft { border-top:1px solid var(--line); padding-top:16px; }
+  .draft h2 { font-family: "JetBrains Mono", ui-monospace, Menlo, monospace; font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:var(--accent); margin:0 0 4px; font-weight:600; }
+  .draft p { color:var(--muted); font-size:13px; line-height:1.5; margin:0 0 14px; min-height:3.2em; }
+  .hero { display:block; width:100%; max-width:300px; height:auto; }
+  .row { display:flex; align-items:flex-end; gap:18px; margin-top:16px; }
+  .row figure { margin:0; text-align:center; }
+  .row img { display:block; background:var(--ink); }
+  .launcher img { border-radius:22%; }
+  .row figcaption { font-family:"JetBrains Mono", ui-monospace, Menlo, monospace; font-size:9px; letter-spacing:0.1em; color:var(--muted); margin-top:6px; }
+  .current { opacity:0.75; }
+</style>
+</head>
+<body>
+<h1>Badge drafts</h1>
+<p class="lede">Four marks that put the idea — you buy players you cannot fully see — into the badge, beside the current one for comparison. Each is shown at hero size and at the two sizes a phone actually shows an icon.</p>
+<div class="grid">
+  <div class="draft current">
+    <h2>Current</h2>
+    <p>A man in a suit with a ball. This is you, and it could be any management game ever made.</p>
+    <img class="hero" src="../badge.svg" alt="">
+    <div class="row">
+      <figure class="launcher"><img src="../badge.svg" width="96" height="86" alt=""><figcaption>96</figcaption></figure>
+      <figure class="launcher"><img src="../badge.svg" width="48" height="43" alt=""><figcaption>48</figcaption></figure>
+    </div>
+  </div>
+  <div class="draft">
+    <h2>1 · Redacted</h2>
+    <p>The same man, a bar where his face is. The player you are buying is the one you cannot see.</p>
+    <img class="hero" src="redacted.svg" alt="">
+    <div class="row">
+      <figure class="launcher"><img src="redacted.svg" width="96" height="86" alt=""><figcaption>96</figcaption></figure>
+      <figure class="launcher"><img src="redacted.svg" width="48" height="43" alt=""><figcaption>48</figcaption></figure>
+    </div>
+  </div>
+  <div class="draft">
+    <h2>2 · The range</h2>
+    <p>A scout's range as the crest. Two lit bounds, and somewhere between them a footballer you cannot quite see.</p>
+    <img class="hero" src="range.svg" alt="">
+    <div class="row">
+      <figure class="launcher"><img src="range.svg" width="96" height="86" alt=""><figcaption>96</figcaption></figure>
+      <figure class="launcher"><img src="range.svg" width="48" height="43" alt=""><figcaption>48</figcaption></figure>
+    </div>
+  </div>
+  <div class="draft">
+    <h2>3 · Brackets</h2>
+    <p>[ ● ] — a range with a football in it. The one drawn to be an icon: two strokes and a circle survive 48px.</p>
+    <img class="hero" src="brackets.svg" alt="">
+    <div class="row">
+      <figure class="launcher"><img src="brackets.svg" width="96" height="96" alt=""><figcaption>96</figcaption></figure>
+      <figure class="launcher"><img src="brackets.svg" width="48" height="48" alt=""><figcaption>48</figcaption></figure>
+    </div>
+  </div>
+  <div class="draft">
+    <h2>4 · The stamp</h2>
+    <p>The shield as a press cutting, the word stamped across it the way the fee line reads in every paper. Needs the word, so it is a hero mark, not an icon.</p>
+    <img class="hero" src="stamp.svg" alt="">
+    <div class="row">
+      <figure class="launcher"><img src="stamp.svg" width="96" height="86" alt=""><figcaption>96</figcaption></figure>
+      <figure class="launcher"><img src="stamp.svg" width="48" height="43" alt=""><figcaption>48</figcaption></figure>
+    </div>
+  </div>
+</div>
+</body>
+</html>

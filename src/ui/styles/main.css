@@ -155,6 +155,15 @@ button, input, select, textarea {
   transition: background 0.25s ease;
 }
 
+/* System screens — settings, search, about, the career record — are not
+   about the club, and the club's colour across the top of them was
+   decoration: a second header before any content, on a phone. They keep the
+   bar for the title and the back button and lose the paint and the strip. */
+.topbar--plain {
+  background: var(--bg-raised);
+  border-bottom: 1px solid var(--hairline);
+}
+
 .topbar__strip {
   flex: 0 0 auto;
   height: 3px;
@@ -1242,22 +1251,10 @@ button, input, select, textarea {
 
 /* Initials, not a colour per sender: twenty senders is twenty colours
    competing on one screen, and the accent is spoken for. */
-.chat-row__avatar {
-  flex: 0 0 auto;
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: var(--bg-raised-2);
-  border: 1px solid var(--border-strong);
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  color: var(--text-dim);
-}
-.chat-row__avatar.is-urgent {
-  border-color: var(--danger);
+/* No avatar. The phone doc declined them on the thread screen — a circle of
+   colour per sender is twenty new colours competing with one accent — and
+   the list had them anyway, as initials in a ring. Urgency goes on the name. */
+.chat-row.is-urgent .chat-row__name {
   color: var(--danger);
 }
 
@@ -1363,21 +1360,28 @@ button, input, select, textarea {
   color: var(--text-faint);
 }
 
+/* Theirs is not a bubble. The phone doc settled this before the screen was
+   built — their messages flush left with a hairline between utterances,
+   yours in the one lime bubble — and the build put both sides in boxes, so
+   the one colour that was meant to mark what *you* did marked nothing. Back
+   to the doc: a container around an utterance says who is speaking, and only
+   one side needs saying. */
 .bubble {
   position: relative;
-  max-width: 84%;
+  max-width: 88%;
   margin-bottom: 8px;
-  padding: 9px 12px 7px;
-  border-radius: var(--radius);
+  padding: 9px 0 7px;
 }
 .bubble--in {
   margin-right: auto;
-  border-bottom-left-radius: 3px;
-  background: var(--bg-raised-2);
-  border: 1px solid var(--border);
+  padding-left: 12px;
+  border-bottom: 1px solid var(--hairline);
 }
 .bubble--out {
+  max-width: 84%;
   margin-left: auto;
+  padding: 9px 12px 7px;
+  border-radius: var(--radius);
   border-bottom-right-radius: 3px;
   background: var(--accent-wash);
   border: 1px solid rgba(200, 255, 77, 0.22);
@@ -1762,47 +1766,38 @@ button, input, select, textarea {
 }
 
 /* The notification stack: who wanted you, before you have opened anything.
-   Raised off the ground because these sit on top of the phone rather than in
-   it, which is the one place a container earns its keep on this screen. */
+   Rows, not cards. The first version raised each one on its own plate with
+   an initials avatar, which is iOS chrome pasted onto a design whose rule is
+   that nothing is boxed — and the dashboard one tap away obeys that rule, so
+   every tap on Club crossed a visual border. Sender in mono caps, a hairline
+   between rows, urgency as a colour on the sender rather than a border. The
+   phone doc refused avatars on the thread screen for a reason that holds
+   here too: twenty circles is twenty things competing with one accent. */
 .notifs {
   display: flex;
   flex-direction: column;
-  gap: 7px;
-  margin-bottom: 20px;
+  margin-top: -18px;
+  margin-bottom: 18px;
 }
 .notif {
   display: flex;
   align-items: center;
   gap: 11px;
   width: 100%;
-  padding: 10px 12px;
+  padding: 10px 0;
   text-align: left;
-  background: var(--bg-raised-2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--hairline);
   color: inherit;
   font: inherit;
   cursor: pointer;
 }
 .notif:active {
-  border-color: var(--border-strong);
   background: var(--bg-raised);
 }
-.notif.is-urgent {
-  border-color: var(--danger-dim);
-}
-.notif__avatar {
-  flex: 0 0 auto;
-  display: grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: var(--bg-sunken);
-  border: 1px solid var(--border-strong);
-  font-size: 10.5px;
-  font-weight: 600;
-  color: var(--text-dim);
+.notif.is-urgent .notif__from {
+  color: var(--danger);
 }
 .notif__main {
   flex: 1 1 auto;
@@ -1816,8 +1811,11 @@ button, input, select, textarea {
 .notif__from {
   flex: 1 1 auto;
   min-width: 0;
-  font-size: 12.5px;
-  font-weight: 600;
+  font-family: var(--font-num);
+  font-size: 10px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--text-dim);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1830,20 +1828,18 @@ button, input, select, textarea {
 }
 .notif__text {
   display: block;
-  margin-top: 1px;
-  font-size: 11.5px;
+  margin-top: 3px;
+  font-size: 13px;
   line-height: 1.35;
-  color: var(--text-faint);
+  color: var(--text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 /* The ones over the cap, counted rather than listed. */
 .notif--more {
-  justify-content: center;
-  padding: 8px 12px;
-  background: none;
-  border-style: dashed;
+  justify-content: flex-start;
+  padding: 9px 0;
   font-size: 10px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -1853,7 +1849,7 @@ button, input, select, textarea {
 .apps {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 18px 6px;
+  gap: 16px 6px;
   padding-bottom: 10px;
 }
 
@@ -1861,7 +1857,7 @@ button, input, select, textarea {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 7px;
+  gap: 6px;
   padding: 0;
   background: none;
   border: 0;
@@ -1870,35 +1866,30 @@ button, input, select, textarea {
   cursor: pointer;
 }
 
-/* A rounded tile, the way an app icon is a rounded tile. One surface and one
-   hairline — the grid is already fourteen objects and giving each its own
-   colour is the busy-ness the visual language exists to prevent. */
+/* Icon and label, nothing behind them. The tile — a rounded plate with a
+   hairline, sixteen of them — was the launcher of a phone the game is not
+   running on. It is a positioning box for the badge now and draws nothing. */
 .app__tile {
   position: relative;
   display: grid;
   place-items: center;
   width: 54px;
-  height: 54px;
-  border-radius: 15px;
-  background: var(--bg-raised-2);
-  border: 1px solid var(--border-strong);
+  height: 46px;
   color: var(--text-dim);
 }
 .app:active .app__tile {
-  background: var(--bg-raised);
-  border-color: var(--accent-dim);
   color: var(--accent);
 }
 .app__tile svg {
-  width: 25px;
-  height: 25px;
+  width: 26px;
+  height: 26px;
 }
 
 /* Top-right, where a badge goes, and only when something wants you. */
 .app__badge {
   position: absolute;
-  top: -5px;
-  right: -5px;
+  top: -2px;
+  right: 6px;
   min-width: 19px;
   height: 19px;
   padding: 0 5px;
@@ -1993,3 +1984,90 @@ button, input, select, textarea {
     transform: translateX(-50%);
   }
 }
+
+/* The coach's view of one of your players: who is speaking, in mono, then
+   his verdict, then the reason. Hairline above, no box, one voice. */
+.coach-view {
+  margin: 12px var(--pad) 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+}
+.coach-view__who {
+  font-family: var(--font-num);
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  color: var(--text-faint);
+}
+.coach-view__label { font-size: 0.9rem; font-weight: 600; letter-spacing: -0.01em; }
+.coach-view__reason { flex-basis: 100%; font-size: 0.8rem; color: var(--text-dim); }
+
+/* The coach on the dashboard: who, the count, what he said, who he left out.
+   Same ground as the page, hairline below, so it reads as a person speaking
+   rather than a card of numbers. */
+.dash-coach {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: 100%;
+  padding: 12px var(--pad) 13px;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.dash-coach:active { background: var(--bg-raised); }
+.dash-coach__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-family: var(--font-num);
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+}
+.dash-coach__who { color: var(--text-faint); }
+.dash-coach__count { text-align: right; }
+.dash-coach__line { font-size: 0.95rem; line-height: 1.35; letter-spacing: -0.01em; }
+.dash-coach__out {
+  font-family: var(--font-num);
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+}
+
+/* One line saying how a list is sorted, in place of a panel of every way it
+   could be. Mono label, the current key in text, a chevron for the sheet. */
+.sortline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 40px;
+  margin: 10px 0 4px;
+  padding: 0;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--hairline);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.sortline__label {
+  font-family: var(--font-num);
+  font-size: 0.6rem;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.sortline__value {
+  flex: 1 1 auto;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+.sortline__pick--active .list__primary { color: var(--accent); }

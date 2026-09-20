@@ -48,7 +48,7 @@ const routes: RouteRecordRaw[] = [
   { path: '/agents', name: 'agents', component: () => import('./ui/views/AgentsView.vue'), meta: { tab: 'transfers' } },
   { path: '/scouting', name: 'scouting', component: () => import('./ui/views/ScoutingView.vue'), meta: { tab: 'transfers' } },
   { path: '/data', name: 'data', component: () => import('./ui/views/DataView.vue'), meta: { tab: 'transfers', title: 'Data department' } },
-  { path: '/search', name: 'search', component: () => import('./ui/views/SearchView.vue'), meta: { tab: 'transfers' } },
+  { path: '/search', name: 'search', component: () => import('./ui/views/SearchView.vue'), meta: { tab: 'transfers', plain: true } },
   { path: '/club', name: 'club', component: () => import('./ui/views/ClubView.vue'), meta: { tab: 'home' } },
   { path: '/finance', name: 'finance', component: () => import('./ui/views/FinanceView.vue'), meta: { tab: 'home' } },
   { path: '/facilities', name: 'facilities', component: () => import('./ui/views/FacilitiesView.vue'), meta: { tab: 'home' } },
@@ -62,10 +62,10 @@ const routes: RouteRecordRaw[] = [
   { path: '/match/:id', name: 'match', component: () => import('./ui/views/MatchView.vue'), meta: { tab: 'home' } },
   { path: '/league', name: 'league', component: () => import('./ui/views/LeagueView.vue'), meta: { tab: 'league' } },
   { path: '/league/:id', name: 'league-detail', component: () => import('./ui/views/LeagueView.vue'), meta: { tab: 'league', title: 'League table' } },
-  { path: '/career', name: 'career', component: () => import('./ui/views/CareerView.vue'), meta: { tab: 'home' } },
-  { path: '/achievements', name: 'achievements', component: () => import('./ui/views/AchievementsView.vue'), meta: { tab: 'home' } },
-  { path: '/about', name: 'about', component: () => import('./ui/views/AboutView.vue'), meta: { tab: 'home' } },
-  { path: '/settings', name: 'settings', component: () => import('./ui/views/SettingsView.vue'), meta: { tab: 'home' } },
+  { path: '/career', name: 'career', component: () => import('./ui/views/CareerView.vue'), meta: { tab: 'home', plain: true } },
+  { path: '/achievements', name: 'achievements', component: () => import('./ui/views/AchievementsView.vue'), meta: { tab: 'home', plain: true } },
+  { path: '/about', name: 'about', component: () => import('./ui/views/AboutView.vue'), meta: { tab: 'home', plain: true } },
+  { path: '/settings', name: 'settings', component: () => import('./ui/views/SettingsView.vue'), meta: { tab: 'home', plain: true } },
   // An unknown path lands on the dashboard when a career is loaded, and on the
   // title screen only when there is nothing to go back to. Sending someone
   // mid-career to "Start a new career" because a link was malformed looks

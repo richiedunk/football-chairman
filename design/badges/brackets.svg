@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" width="640" height="640" role="img" aria-label="Undisclosed Football — brackets">
+  <!--
+    Draft 3 — Brackets.
+
+    [ ● ] — a range containing a football. No shield, because this is the
+    one drawn to be an icon rather than a crest: two strokes and a circle
+    survive 48px on a home screen, and a shield with a figure in it does not.
+    The brackets are a range's notation; the ball is the thing inside it.
+  -->
+  <defs>
+    <linearGradient id="lime" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#A8E02C"/>
+      <stop offset="0.5" stop-color="#C8FF4D"/>
+      <stop offset="1" stop-color="#9BD124"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="640" rx="140" fill="#08090B"/>
+  <g fill="none" stroke="url(#lime)" stroke-width="44" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M196 150 H120 V490 H196"/>
+    <path d="M444 150 H520 V490 H444"/>
+  </g>
+  <circle cx="320" cy="320" r="112" fill="#FFFFFF"/>
+  <g transform="translate(320 320) scale(0.9333) translate(-320 -496)">
+  <g stroke="#08090B" stroke-width="16.8" stroke-linecap="round">
+    <line x1="320.0" y1="407.2" x2="320.0" y2="363.2"/>
+    <line x1="365.7" y1="440.4" x2="445.3" y2="382.6"/>
+    <line x1="348.2" y1="494.2" x2="441.9" y2="524.6"/>
+    <line x1="291.8" y1="494.2" x2="198.1" y2="524.6"/>
+    <line x1="274.3" y1="440.4" x2="194.7" y2="382.6"/>
+  </g>
+  <path d="M320.0,407.2L365.7,440.4L348.2,494.2L291.8,494.2L274.3,440.4Z" fill="#08090B"/>
+  </g>
+</svg>
