@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
-  WINDOW_HOURS, clockFace, frameAt, hasLapsed, hoursLeft, offerHoursLeft, windowMs,
+  WINDOW_CHOICES, WINDOW_HOURS, WINDOW_MINUTES, clockFace, frameAt, hasLapsed, hoursLeft,
+  offerHoursLeft, windowMs,
 } from '../src/engine/systems/deadlineClock'
 import type { DeadlineOpportunity } from '../src/engine/systems/deadlineDay'
 
@@ -26,7 +27,7 @@ function offer(hours: number, id = `p${hours}`): DeadlineOpportunity {
   }
 }
 
-const TOTAL = windowMs(6)
+const TOTAL = windowMs(WINDOW_MINUTES)
 
 describe('the day running down', () => {
   it('starts full and ends empty', () => {
@@ -47,6 +48,32 @@ describe('the day running down', () => {
   it('survives a window of no length rather than dividing by it', () => {
     expect(hoursLeft(0, 0)).toBe(0)
     expect(frameAt([offer(5)], 0, 0).shut).toBe(true)
+  })
+})
+
+describe('how long a day is', () => {
+  it('is an hour by default, not a demonstration of the idea', () => {
+    expect(WINDOW_MINUTES).toBe(60)
+  })
+
+  it('offers shorter days, because an hour is a real commitment', () => {
+    expect(WINDOW_CHOICES.length).toBeGreaterThan(1)
+    expect(WINDOW_CHOICES.map((c) => c.minutes)).toContain(WINDOW_MINUTES)
+    for (const choice of WINDOW_CHOICES) {
+      expect(choice.minutes).toBeGreaterThan(0)
+      expect(choice.label.length).toBeGreaterThan(0)
+      expect(choice.detail.length).toBeGreaterThan(0)
+    }
+  })
+
+  it('scales the same whatever length is picked', () => {
+    // The day is 24 fictional hours however many real minutes it is given,
+    // so an offer stamped 12h goes at the halfway point of every choice.
+    for (const choice of WINDOW_CHOICES) {
+      const total = windowMs(choice.minutes)
+      expect(hasLapsed(offer(12), total * 0.49, total), `${choice.minutes}m`).toBe(false)
+      expect(hasLapsed(offer(12), total * 0.51, total), `${choice.minutes}m`).toBe(true)
+    }
   })
 })
 
@@ -110,6 +137,21 @@ describe('a frame', () => {
   it('keeps the generated order, so nothing jumps about as it thins', () => {
     const frame = frameAt(offers, TOTAL * 0.2, TOTAL)
     expect(frame.live.map((o) => o.playerId)).toEqual(['marquee', 'middling'])
+  })
+
+  it('carries each offer its own hours, taken at one instant', () => {
+    // The list and the clock read one frame so they cannot disagree. A screen
+    // that recomputed per row would sample the clock once per offer, and the
+    // bottom row would lag the top one.
+    const frame = frameAt(offers, TOTAL * 0.25, TOTAL)
+    expect(frame.remaining.marquee).toBe(18)
+    expect(frame.remaining.middling).toBe(6)
+    expect(frame.remaining.scrap).toBe(0)
+  })
+
+  it('leaves nothing standing once it is shut', () => {
+    const frame = frameAt(offers, TOTAL, TOTAL)
+    for (const id of Object.keys(frame.remaining)) expect(frame.remaining[id]).toBe(0)
   })
 
   it('ends with the window shut and nothing standing', () => {

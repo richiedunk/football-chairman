@@ -194,8 +194,9 @@ function mb(bytes: number) {
           <input v-model="settings.liveDeadline" type="checkbox" @change="store.commit()" />
         </label>
         <p class="tiny faint" style="margin: 0 0 4px">
-          The last day of the window plays out over six real minutes. Offers
-          expire while you read them. You can shut it early at any point.
+          Deadline day asks whether to play it out, and how long to give it.
+          Offers expire while you read them. The clock keeps running while you
+          look at other screens, and you can shut it early at any point.
         </p>
         <div class="field mt">
           <label class="field__label">Currency</label>

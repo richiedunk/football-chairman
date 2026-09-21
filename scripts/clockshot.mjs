@@ -291,12 +291,24 @@ const at = await date()
 console.log(`at ${at.season} W${at.week}`)
 if (at.week !== 5) throw new Error(`expected the deadline at W5, reached W${at.week}`)
 
-// ── watch it run ──────────────────────────────────────────────────────────────
+// ── the day opens with a question ─────────────────────────────────────────────
 await page.goto('http://127.0.0.1:4173/#/deadline')
-await page.waitForSelector('.deadline-clock', { timeout: 20000 })
+await page.waitForSelector('.sheet', { timeout: 20000 })
+// Counted by the choice class, not by the accent: only the recommended
+// length is the primary button, which is the house rule everywhere else.
+const choices = await page.locator('.deadline-choice').count()
+console.log(`asked, with ${choices} lengths offered`)
+if (choices < 2) throw new Error('the day opened without offering a length')
+if (await page.locator('.deadline-clock').count()) {
+  throw new Error('the clock was already running before it was agreed to')
+}
+await page.screenshot({ path: `${SHOT}/deadline-asks.png`, fullPage: true })
 
-// The bar is removed once the window shuts, which is the app being right
-// rather than the screen being broken, so it is read as optional.
+// The shortest length, so this run can watch one actually expire.
+await tap('.deadline-choice >> nth=-1')
+await page.waitForSelector('.deadline-clock', { timeout: 10000 })
+
+// ── watch it run ──────────────────────────────────────────────────────────────
 const read = async () => ({
   face: (await page.textContent('.deadline-clock'))?.trim(),
   width: (await page.locator('.deadline-track__fill').count())
@@ -318,15 +330,37 @@ console.log(`t=6s    ${later.face}  bar ${later.width}  gone ${later.gone}`)
 if (later.face === first.face) throw new Error('the clock did not move')
 if (later.width === first.width) throw new Error('the bar did not move')
 
-// A full six-minute window is too long for a check, so the escape hatch is
-// also how this run reaches the end state — which is the behaviour that
-// matters most anyway: it has to settle at once.
+// ── it has to survive going somewhere else ────────────────────────────────────
+// The whole argument for a long window is that it is spent on other screens.
+await page.goto('http://127.0.0.1:4173/#/squad')
+await page.waitForSelector('.statusbar', { timeout: 20000 })
+const onSquad = (await page.textContent('.statusbar'))?.trim() ?? ''
+console.log(`away:   statusbar reads ${/([\d:]+ LEFT|SHUT)/.exec(onSquad)?.[1] ?? '(no clock)'}`)
+if (!/LEFT|SHUT/.test(onSquad)) throw new Error('the countdown is invisible away from the screen')
+
+await page.waitForTimeout(4000)
+await page.goto('http://127.0.0.1:4173/#/deadline')
+await page.waitForSelector('.deadline-clock', { timeout: 10000 })
+if (await page.locator('.sheet').count()) {
+  throw new Error('coming back asked again, on a day already under way')
+}
+const back = await read()
+console.log(`back:   ${back.face}`)
+const asSeconds = (face) => {
+  const [h, m] = face.split(':').map(Number)
+  return h * 3600 + m * 60
+}
+if (asSeconds(back.face) >= asSeconds(later.face)) {
+  throw new Error(`the clock paused while away: ${later.face} then ${back.face}`)
+}
+
+// ── and it has to be endable, at once ─────────────────────────────────────────
 await tap('.btn:has-text("Shut it now")')
 await page.waitForTimeout(400)
 const shut = await read()
 console.log(`shut    ${shut.face}  gone ${shut.gone} of ${shut.offers}`)
-if (shut.width !== null) throw new Error('the countdown bar outlived the window')
 if (shut.face !== '0:00') throw new Error(`shutting early left the clock at ${shut.face}`)
+if (shut.width !== null) throw new Error('the countdown bar outlived the window')
 if (shut.offers > 0 && shut.gone !== shut.offers) {
   throw new Error(`window shut with ${shut.offers - shut.gone} offers still standing`)
 }

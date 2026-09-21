@@ -25,9 +25,14 @@ import type { DeadlineOpportunity } from './deadlineDay'
  * - **It can be ended at any time.** Shutting the window early is one tap and
  *   it settles immediately. A player who does not want a timer is never held
  *   by one.
- * - **It is off unless asked for.** The setting defaults to the old
- *   behaviour, because a save in progress must not suddenly acquire a timer on
- *   a screen that never had one.
+ * - **It is never started without being asked for.** The setting is off by
+ *   default, and even with it on the day still opens with a question and a
+ *   choice of length. Nobody is handed a timer they did not agree to.
+ * - **It does not hold you on one screen.** The clock runs in the store
+ *   against a wall-clock timestamp, so going to look at the squad list or the
+ *   finances does not pause it and does not lose it. At an hour that is not a
+ *   nicety: an hour of being unable to leave one page would be the worst
+ *   screen in the game.
  *
  * Nothing here touches the simulation. The set of offers is generated exactly
  * as before and is fixed for the week; this decides only which of them are
@@ -35,8 +40,26 @@ import type { DeadlineOpportunity } from './deadlineDay'
  * clock that is never started changes nothing at all.
  */
 
-/** How long the last day lasts, in real minutes, when the clock is running. */
-export const WINDOW_MINUTES = 6
+/**
+ * How long the last day lasts, in real minutes.
+ *
+ * An hour by default, which is the length the thing wants to be. Six minutes
+ * was a demonstration of the mechanic rather than the mechanic: the whole
+ * point is that a window closing is something you live alongside for an
+ * evening while you weigh up a signing, and six minutes is over before the
+ * first one can be weighed.
+ *
+ * The other lengths exist because an hour is a real commitment and the game
+ * should not be the one deciding somebody has it spare.
+ */
+export const WINDOW_MINUTES = 60
+
+/** The lengths offered when the day opens. */
+export const WINDOW_CHOICES: { minutes: number; label: string; detail: string }[] = [
+  { minutes: 60, label: 'The full day', detail: 'An hour. Go and do other things; it keeps running.' },
+  { minutes: 20, label: 'A short day', detail: 'Twenty minutes, same shape.' },
+  { minutes: 5, label: 'The last hours', detail: 'Five minutes. Everything at once.' },
+]
 
 /** Hours in the fictional day the window compresses. */
 export const WINDOW_HOURS = 24
@@ -108,6 +131,15 @@ export interface ClockFrame {
   live: DeadlineOpportunity[]
   /** The ones that have gone while you were reading. */
   gone: DeadlineOpportunity[]
+  /**
+   * Whole hours left on each offer, keyed by player.
+   *
+   * Computed here rather than by the screen so that the list and the clock
+   * can never disagree: both read one frame, taken at one instant. A view
+   * that recomputed elapsed time per row would be sampling the clock once per
+   * offer, and the last row would be a fraction of a second behind the first.
+   */
+  remaining: Record<string, number>
 }
 
 export function frameAt(
@@ -118,8 +150,10 @@ export function frameAt(
   const left = hoursLeft(elapsedMs, totalMs)
   const live: DeadlineOpportunity[] = []
   const gone: DeadlineOpportunity[] = []
+  const remaining: Record<string, number> = {}
 
   for (const offer of offers) {
+    remaining[offer.playerId] = Math.ceil(offerHoursLeft(offer, elapsedMs, totalMs))
     if (hasLapsed(offer, elapsedMs, totalMs)) gone.push(offer)
     else live.push(offer)
   }
@@ -131,5 +165,6 @@ export function frameAt(
     shut: left <= 0,
     live,
     gone,
+    remaining,
   }
 }

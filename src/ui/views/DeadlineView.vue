@@ -1,12 +1,11 @@
 <script setup lang="ts">
-import { computed, inject, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, inject, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useGameStore } from '../../stores/game'
 import PosBadge from '../components/PosBadge.vue'
 import { formatMoney, formatWage } from '../../engine/systems/valuation'
-import {
-  WINDOW_MINUTES, frameAt, offerHoursLeft, windowMs,
-} from '../../engine/systems/deadlineClock'
+import { WINDOW_CHOICES } from '../../engine/systems/deadlineClock'
+import AppSheet from '../components/AppSheet.vue'
 import type { DeadlineOpportunity } from '../../engine/systems/deadlineDay'
 
 /**
@@ -22,83 +21,58 @@ const router = useRouter()
 const notify = inject<(t: string, k?: 'info' | 'error' | 'success') => void>('notify')
 
 /**
- * The live clock.
+ * Opening the day.
  *
- * Held here rather than in the store because it is presentation and nothing
- * else: no tick runs, no state is written, and leaving the screen ends it. A
- * clock in the store would be a clock that kept running while you were in the
- * squad list, which is a different and much worse feature.
+ * The clock itself lives in the store, because an hour-long window has to
+ * keep running while you go and look at a player's profile or the finances —
+ * which is what deadline day is actually like, and which a clock owned by
+ * this component could not survive.
  *
- * `elapsed` is measured against a start timestamp rather than accumulated by
- * the interval, so a browser that throttles a backgrounded tab does not hand
- * back a day that ran slow while nobody was looking.
+ * What is left here is the question. Even with the setting on, the day opens
+ * by asking rather than by starting, because a timer that begins the moment a
+ * screen loads is a timer nobody agreed to, and because the length is a real
+ * choice: an hour is a commitment and the game is in no position to know who
+ * has one spare.
  */
-const TOTAL = windowMs(WINDOW_MINUTES)
-const startedAt = ref<number | null>(null)
-const elapsed = ref(0)
-let ticker: ReturnType<typeof setInterval> | null = null
+const asking = ref(false)
+const declined = ref(false)
 
-const live = computed(() => store.game?.settings.liveDeadline === true)
-
-function stopClock(): void {
-  if (ticker !== null) clearInterval(ticker)
-  ticker = null
-}
-
-function startClock(): void {
-  stopClock()
-  startedAt.value = Date.now()
-  elapsed.value = 0
-  // Four times a second: enough that the minute figure moves smoothly, far
-  // short of anything that would cost a frame on a phone.
-  ticker = setInterval(() => {
-    if (startedAt.value === null) return
-    elapsed.value = Date.now() - startedAt.value
-    if (elapsed.value >= TOTAL) {
-      elapsed.value = TOTAL
-      stopClock()
-    }
-  }, 250)
-}
-
-/** End it now. Never a trap: one tap settles the window at once. */
-function shutNow(): void {
-  stopClock()
-  elapsed.value = TOTAL
-}
+const enabled = computed(() => store.game?.settings.liveDeadline === true)
+const live = computed(() => store.deadlineLive)
+const frame = computed(() => store.deadlineFrame)
 
 onMounted(() => {
   store.refreshDeadline()
-  if (live.value && store.isDeadline) startClock()
+  // Asked once per visit, and not at all if the day has already been opened,
+  // already been declined, or there is nothing on the desk to hurry over.
+  if (enabled.value && store.isDeadline && !live.value && !declined.value) {
+    asking.value = store.deadlineOffers.length > 0
+  }
 })
 
-onBeforeUnmount(stopClock)
+function open(minutes: number): void {
+  asking.value = false
+  store.startDeadlineClock(minutes)
+}
 
-const frame = computed(() =>
-  frameAt(store.deadlineOffers, live.value ? elapsed.value : 0, TOTAL))
-
-/**
- * What is on the desk.
- *
- * With the clock off this is every offer, exactly as before. With it on, the
- * ones that have gone stay on screen greyed rather than disappearing — a row
- * that vanishes under your thumb reads as a bug, and seeing what you missed
- * is most of the point.
- */
-const offers = computed(() => store.deadlineOffers)
+function playUntimed(): void {
+  asking.value = false
+  declined.value = true
+}
 
 function lapsed(offer: DeadlineOpportunity): boolean {
-  return live.value && frame.value.gone.some((o) => o.playerId === offer.playerId)
+  const f = frame.value
+  return !!f && f.gone.some((o) => o.playerId === offer.playerId)
 }
 
+/** Read off the frame, so every row is showing the same instant. */
 function hoursOn(offer: DeadlineOpportunity): number {
-  return live.value
-    ? Math.ceil(offerHoursLeft(offer, elapsed.value, TOTAL))
-    : offer.hours
+  return frame.value?.remaining[offer.playerId] ?? offer.hours
 }
+
+const offers = computed(() => store.deadlineOffers)
 const taken = computed(() => store.deadlineTaken)
 const budget = computed(() => store.club?.finances.transferBudget ?? 0)
-
 const busy = ref<string | null>(null)
 
 const KIND_LABEL: Record<DeadlineOpportunity['kind'], string> = {
@@ -134,11 +108,11 @@ function player(id: string) {
       <div class="card__body">
         <div class="row row--between" style="align-items: flex-start">
           <div style="font-size: 1.3rem; font-weight: 700; letter-spacing: -0.025em; color: var(--warn)">
-            {{ live && frame.shut ? 'The window has shut' : 'The window shuts tonight' }}
+            {{ frame?.shut ? 'The window has shut' : 'The window shuts tonight' }}
           </div>
           <!-- The clock is the loudest number on the screen when it is
                running, because the whole point of the day is that it is. -->
-          <div v-if="live" class="deadline-clock num" :class="{ 'is-out': frame.shut }">
+          <div v-if="frame" class="deadline-clock num" :class="{ 'is-out': frame.shut }">
             {{ frame.face }}
           </div>
         </div>
@@ -146,7 +120,7 @@ function player(id: string) {
           Everything here is take it or leave it. Nobody is negotiating and nobody is
           calling back.
         </p>
-        <div v-if="live && !frame.shut" class="deadline-track">
+        <div v-if="frame && !frame.shut" class="deadline-track">
           <div class="deadline-track__fill" :style="{ width: `${(1 - frame.progress) * 100}%` }" />
         </div>
       </div>
@@ -158,6 +132,41 @@ function player(id: string) {
         </div>
       </div>
     </div>
+
+    <!-- The question that opens the day. Asked rather than assumed, and it
+         carries the length choice because an hour is a real commitment. -->
+    <AppSheet
+      v-if="asking"
+      title="Play it out?"
+      subtitle="The window can run to a real clock"
+      @close="playUntimed"
+    >
+      <p class="small muted" style="margin: 0 0 14px">
+        Offers expire while you read them and nobody comes back. The clock
+        keeps running while you look at players, the table or the books, and
+        you can shut it early whenever you like.
+      </p>
+      <!-- One accent action, as everywhere else: the first choice is the
+           recommendation and the rest are alternatives. Three lime buttons
+           meant none of them was the primary one. -->
+      <div class="col">
+        <button
+          v-for="(choice, i) in WINDOW_CHOICES"
+          :key="choice.minutes"
+          class="btn btn--block mb deadline-choice"
+          :class="i === 0 ? 'btn--primary' : 'btn--ghost'"
+          @click="open(choice.minutes)"
+        >
+          <span class="deadline-choice__label">{{ choice.label }}</span>
+          <span class="deadline-choice__detail">{{ choice.detail }}</span>
+        </button>
+      </div>
+      <template #footer>
+        <button class="btn btn--ghost btn--block" @click="playUntimed">
+          Not today — no clock
+        </button>
+      </template>
+    </AppSheet>
 
     <div class="section-title">On the desk</div>
     <div class="card">
@@ -207,7 +216,11 @@ function player(id: string) {
     <div class="btn-row mt" style="padding-bottom: 8px">
       <!-- The escape hatch, and the reason a clock on this screen is not a
            trap: it can always be ended, and ending it settles at once. -->
-      <button v-if="live && !frame.shut" class="btn btn--ghost" @click="shutNow">
+      <button
+        v-if="frame && !frame.shut"
+        class="btn btn--ghost"
+        @click="store.shutDeadlineWindow()"
+      >
         Shut it now
       </button>
       <button class="btn btn--ghost" @click="router.push('/transfers')">Transfers</button>
@@ -259,6 +272,30 @@ function player(id: string) {
   margin-top: 12px;
   overflow: hidden;
 }
+/*
+ * A choice in the opening sheet: a name, and the thing it costs you, stacked.
+ * On one line the detail ran to two rows anyway and centred itself into a
+ * shape that read as a paragraph rather than as a button.
+ */
+.deadline-choice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-height: var(--tap);
+  padding-top: 9px;
+  padding-bottom: 9px;
+  text-align: left;
+}
+.deadline-choice__label { font-weight: 700; }
+.deadline-choice__detail {
+  font-size: 0.74rem;
+  font-weight: 500;
+  opacity: 0.72;
+  white-space: normal;
+  line-height: 1.35;
+}
+
 .deadline-track__fill {
   height: 100%;
   background: var(--warn);
