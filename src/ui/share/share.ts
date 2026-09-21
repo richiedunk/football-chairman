@@ -212,13 +212,41 @@ export async function readClipboard(): Promise<string | null> {
   return null
 }
 
-/** Where a challenge link should point. */
+/** The public site, for every build that has no usable origin of its own. */
+export const PUBLIC_ORIGIN = 'https://undisclosedfootball.com'
+
+/**
+ * Where a challenge link should point.
+ *
+ * Only a page actually served over http or https can put its own address in
+ * somebody else's message. Everything else the game runs inside has an origin
+ * that is useless to a recipient: `capacitor://` and `https://localhost` in
+ * the phone builds, and `file://` in the desktop one, whose `origin` is the
+ * string "null" — which would have produced a challenge link reading
+ * `null/#/?challenge=…` and failed silently, because it is a perfectly valid
+ * string.
+ *
+ * So the protocol is checked rather than the platform. A new shell that loads
+ * from disk gets the right answer without this having to learn about it.
+ */
 export function shareOrigin(): string {
-  // A native build has no meaningful origin of its own — `capacitor://` and
-  // `https://localhost` are both useless in somebody else's messages — so the
-  // public site is named explicitly and the web build uses wherever it is
-  // actually served from.
-  if (isNative()) return 'https://undisclosedfootball.com'
-  if (typeof window === 'undefined') return 'https://undisclosedfootball.com'
-  return window.location.origin + window.location.pathname.replace(/index\.html$/, '')
+  if (isNative()) return PUBLIC_ORIGIN
+  if (typeof window === 'undefined') return PUBLIC_ORIGIN
+  return originFrom(window.location)
+}
+
+/**
+ * The decision, without a browser.
+ *
+ * Split out so it can be tested. The whole point of this function is what it
+ * does on the protocols the test runner does not have — `file:` and
+ * `capacitor:` — so a version reachable only through a real `window` is a
+ * version whose interesting cases are never checked.
+ */
+export function originFrom(
+  location: { protocol: string; origin: string; pathname: string },
+): string {
+  const { protocol, origin, pathname } = location
+  if (protocol !== 'http:' && protocol !== 'https:') return PUBLIC_ORIGIN
+  return origin + pathname.replace(/index\.html$/, '')
 }
