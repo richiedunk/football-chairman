@@ -11,6 +11,7 @@ import AppSheet from '../components/AppSheet.vue'
 import ContractNegotiator from '../components/ContractNegotiator.vue'
 import type { ContractOffer } from '../../engine/systems/directorContract'
 import type { JobOffer } from '../../engine/types'
+import { describeTarget, type ChallengeStatus } from '../../engine/systems/challenge'
 import {
   MAX_CAREER_SEASONS, RETIREMENT_AGE, careerSummary, retirementHeadline, seasonsRemaining,
 } from '../../engine/systems/directorCareer'
@@ -123,11 +124,46 @@ function standDown() {
   store.retire()
   confirmingRetire.value = false
 }
+
+/** What the standing line says, which is never a percentage. */
+const CHALLENGE_STATUS: Record<ChallengeStatus, string> = {
+  pending: 'Still going',
+  met: 'Beaten',
+  failed: 'Not beaten',
+}
 </script>
 
 <template>
   <div v-if="director">
     <h1 class="mb">{{ director.name }}</h1>
+
+    <!-- A career taken on from somebody else's link is a career with a point
+         to it, and the point belongs where the record is read. Judged by the
+         game against its own world, never by the code that was pasted in. -->
+    <template v-if="store.challengeProgress">
+      <div
+        class="card"
+        :style="{
+          background: store.challengeProgress.status === 'met' ? 'var(--accent-wash)'
+            : store.challengeProgress.status === 'failed' ? 'var(--danger-wash)'
+            : undefined,
+        }"
+      >
+        <div class="card__body">
+          <div class="row row--between">
+            <span class="small muted">{{ store.challengeProgress.challenge.by || 'Somebody' }} set you</span>
+            <span class="mono">{{ describeTarget(store.challengeProgress.challenge) }}</span>
+          </div>
+          <div class="row row--between mt">
+            <span class="small muted">Standing</span>
+            <span class="mono">{{ CHALLENGE_STATUS[store.challengeProgress.status] }}</span>
+          </div>
+          <p v-if="!store.challengeProgress.sameEngine" class="tiny faint" style="margin: 10px 0 0">
+            Set on a different version of the game, so the comparison is rough.
+          </p>
+        </div>
+      </div>
+    </template>
 
     <!-- The clock. It is the whole point of having an age: a three-year rebuild
          at fifty-eight is not the same decision as one at thirty-four, and the
@@ -382,6 +418,15 @@ function standDown() {
     <div class="btn-row mt" style="padding-bottom: 8px">
       <button class="btn btn--ghost" @click="router.push('/achievements')">
         Milestones ({{ store.achievementProgress.filter((a) => a.earned).length }}/{{ store.achievementProgress.length }})
+      </button>
+      <!-- Only once there is something to read. The page explains itself when
+           it is empty, but an empty page is still a wasted tap. -->
+      <button
+        v-if="store.verdicts.length"
+        class="btn btn--ghost"
+        @click="router.push('/legacy')"
+      >
+        What became of them ({{ store.verdicts.length }})
       </button>
     </div>
 

@@ -7,16 +7,32 @@
 // from every screen.
 const badgeUrl = 'badge.svg'
 
-import { onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, onMounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useGameStore } from '../../stores/game'
+import { challengeFromUrl } from '../../engine/systems/challenge'
 import { deleteSave, listSaves, storageName } from '../../storage/saves'
 import type { SaveSlotMeta } from '../../storage/adapter'
 
 const router = useRouter()
+const route = useRoute()
 const store = useGameStore()
 const saves = ref<SaveSlotMeta[]>([])
 const error = ref('')
+
+/**
+ * A challenge link that has just been opened.
+ *
+ * The link lands here rather than on the challenge screen directly, because
+ * the recipient may already have a career in progress and sending them
+ * straight into "take this job" would look like an offer to overwrite it. So
+ * the title screen makes it the loudest thing on the page and lets them
+ * choose.
+ */
+const incoming = computed(() => {
+  const code = route.query.challenge
+  return typeof code === 'string' && challengeFromUrl(code) ? code : null
+})
 
 onMounted(refresh)
 
@@ -96,7 +112,28 @@ function when(ts: number) {
       </p>
     </div>
 
-    <button class="btn btn--primary btn--block" @click="router.push('/new')">
+    <template v-if="incoming">
+      <div class="card" style="background: var(--accent-wash); border-color: var(--accent-dim)">
+        <div class="card__body">
+          <div style="font-weight: 700; letter-spacing: -0.02em">Somebody has set you a challenge</div>
+          <p class="small muted" style="margin: 6px 0 0">
+            The same club, the same squad and the same head coach they were
+            handed. See if you do better.
+          </p>
+        </div>
+      </div>
+      <button
+        class="btn btn--primary btn--block mt"
+        @click="router.push({ name: 'challenge', query: { challenge: incoming } })"
+      >
+        Look at the challenge
+      </button>
+      <button class="btn btn--ghost btn--block mt" @click="router.push('/new')">
+        Start a new career instead
+      </button>
+    </template>
+
+    <button v-else class="btn btn--primary btn--block" @click="router.push('/new')">
       Start a new career
     </button>
 

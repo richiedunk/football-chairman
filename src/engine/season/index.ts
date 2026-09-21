@@ -5,7 +5,7 @@ import { playerClub as clubInCharge } from '../playerClub'
 
 import { guardedFacts, runPhases } from '../phases'
 import { type RolloverContext, type RolloverDeps, type RolloverFacts, type RolloverPhase } from './context'
-import { aYearOlder, academyChurn, buyBacks, clubHousekeeping, directorXp, finalTables, internationalReset, jobOffers, leagueReputation, newSeason, openTheRoll, playerYearEnd, promotionAndRelegation, squadRegistration } from './phases'
+import { aYearOlder, academyChurn, buyBacks, clubHousekeeping, directorXp, finalTables, internationalReset, jobOffers, leagueReputation, newSeason, openTheRoll, pastClubs, playerYearEnd, promotionAndRelegation, squadRegistration } from './phases'
 
 /**
  * Season rollover.
@@ -54,6 +54,7 @@ export const ROLL: readonly RolloverPhase[] = [
   newSeason,
   buyBacks,
 
+  pastClubs,
   jobOffers,
   aYearOlder,
 ]

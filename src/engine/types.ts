@@ -10,6 +10,8 @@
  * transfer negotiation and a media story without four copies drifting apart.
  */
 
+import type { Challenge } from './systems/challenge'
+
 export type ID = string
 
 // ---------------------------------------------------------------------------
@@ -1467,6 +1469,23 @@ export interface GameState {
   /** Rolling news feed of world events, newest first. */
   newsFeed: NewsItem[]
 
+  /**
+   * Signings from past jobs whose verdict has already been delivered.
+   *
+   * Ids rather than a flag on the player, because the sharpest verdict of the
+   * lot is that he retired — and a retired player is gone from `players`, so
+   * there is nothing left to carry a flag. See `systems/successor.ts`.
+   */
+  reportedSignings?: ID[]
+
+  /**
+   * The challenge this save is answering, if it was started from a link.
+   *
+   * Optional and additive: a save made before challenges existed has none, and
+   * a career played without one is the normal case.
+   */
+  challenge?: Challenge
+
   /** Counter used to mint unique ids deterministically. */
   nextId: number
   settings: GameSettings
@@ -1691,6 +1710,15 @@ export interface GameSettings {
   /** Skip confirmation dialogs on routine actions. */
   fastAdvance: boolean
   hapticsEnabled: boolean
+  /**
+   * Run the last day of the window against a real clock.
+   *
+   * Optional and off by default, which is deliberate twice over: a save made
+   * before this existed reads as `undefined` and behaves exactly as it always
+   * did, and a timer is the one kind of pressure a player should have to ask
+   * for rather than be given. See `systems/deadlineClock.ts`.
+   */
+  liveDeadline?: boolean
 }
 
 export const SAVE_VERSION = 21

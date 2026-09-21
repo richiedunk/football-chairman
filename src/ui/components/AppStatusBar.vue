@@ -30,6 +30,22 @@ const week = computed(() => {
   return `W${s.date.week}`
 })
 
+/**
+ * The deadline countdown, which takes the week's slot while it runs.
+ *
+ * It belongs here rather than on the deadline screen alone, because the whole
+ * argument for an hour-long window is that you spend it somewhere else — on a
+ * player's profile, in the finances, reading the table. A clock you can only
+ * see by going back to the screen you are trying to leave is a clock that
+ * pins you to it.
+ *
+ * It replaces the week rather than joining the row. The strip holds four
+ * items on a 390px phone and a fifth would crowd every one of them, and on
+ * the one day this is running the week is the least useful thing on it: it is
+ * deadline day, which is precisely what the countdown says.
+ */
+const countdown = computed(() => store.deadlineFrame)
+
 const balance = computed(() => {
   const c = store.club
   if (!c) return { text: '—', tone: '' }
@@ -71,7 +87,12 @@ const ffp = computed(() => {
 
 <template>
   <div v-if="store.club" class="statusbar">
-    <div class="statusbar__item">{{ week }}</div>
+    <div class="statusbar__item">
+      <span v-if="countdown" :class="countdown.shut ? 'statusbar__value--bad' : 'statusbar__value--warn'">
+        {{ countdown.shut ? 'SHUT' : `${countdown.face} LEFT` }}
+      </span>
+      <span v-else>{{ week }}</span>
+    </div>
     <div class="statusbar__item">
       <span :class="balance.tone" class="statusbar__value">{{ balance.text }}</span>
     </div>

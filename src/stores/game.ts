@@ -34,6 +34,18 @@ import { agentsInvolvedWith, clientsOf, introductions } from '../engine/systems/
 import {
   generateOpportunities, isDeadlineWeek, type DeadlineOpportunity,
 } from '../engine/systems/deadlineDay'
+import {
+  WINDOW_MINUTES, frameAt, windowMs, type ClockFrame,
+} from '../engine/systems/deadlineClock'
+import {
+  availableCards, careerCard, challengeCard, lastCompletedSeason, seasonCard,
+  type ShareCard, type ShareCardKind,
+} from '../engine/systems/shareCard'
+import {
+  challengeLink, challengeStatus, isSameEngine, type Challenge,
+} from '../engine/systems/challenge'
+import { allVerdicts, type SuccessorVerdict } from '../engine/systems/successor'
+import { shareCard as sendCard, shareOrigin, type ShareResult } from '../ui/share/share'
 import { executeTransfer } from '../engine/systems/transfers'
 import { canAfford } from '../engine/systems/finance'
 import { haptic } from '../platform/native'
@@ -158,6 +170,9 @@ export const useGameStore = defineStore('game', () => {
 
   function attach(next: GameState): void {
     clearRatingCache()
+    // The clock belongs to a sitting, not to a save. Loading one must never
+    // drop the player into somebody else's half-run window.
+    clearDeadlineClock()
     // Loading a save must not announce every milestone the career ever
     // reached. Everything already earned is treated as already seen.
     announced.clear()
@@ -976,6 +991,96 @@ export const useGameStore = defineStore('game', () => {
     return ACHIEVEMENTS.map((entry) => ({ ...entry, earned: earned.has(entry.id) }))
   })
 
+  // --- Sending it to somebody ----------------------------------------------
+
+  /**
+   * The cards this save can currently produce.
+   *
+   * Asked rather than assumed: there is no season card before a season has
+   * finished, and offering one that renders blank is worse than offering
+   * nothing.
+   */
+  const shareableCards = computed<ShareCardKind[]>(() => {
+    void revision.value
+    const s = state.value
+    return s ? availableCards(s) : []
+  })
+
+  function buildCard(kind: ShareCardKind): ShareCard | null {
+    const s = state.value
+    if (!s) return null
+    if (kind === 'career') return careerCard(s)
+
+    const c = club.value
+    if (!c) return null
+    if (kind === 'challenge') return challengeCard(s, c.id)
+
+    const season = lastCompletedSeason(s, c)
+    return season === null ? null : seasonCard(s, c.id, season)
+  }
+
+  /** The link that hands this club, at this seed, to somebody else. */
+  function linkFor(card: ShareCard): string | undefined {
+    return card.challenge ? challengeLink(card.challenge, shareOrigin()) : undefined
+  }
+
+  /**
+   * Send a card.
+   *
+   * The wording that travels with it is built here rather than in the view,
+   * because it is the same sentence whichever route the share sheet takes and
+   * a card shared without it is a picture with no context.
+   */
+  async function share(kind: ShareCardKind): Promise<ShareResult> {
+    const card = buildCard(kind)
+    if (!card) return { route: 'failed', message: 'Nothing to send yet.' }
+
+    const text = card.challenge
+      ? `${card.title} — beat ${card.headline.value}. Same seed, same squad, same coach.`
+      : `${card.title} — ${card.headline.value} ${card.headline.caption.toLowerCase()}.`
+
+    return sendCard({
+      card,
+      text,
+      url: linkFor(card),
+      filename: `${card.kind}-${card.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+    })
+  }
+
+  // --- Challenges -----------------------------------------------------------
+
+  /** The challenge this save is answering, if it started from a link. */
+  const challenge = computed<Challenge | null>(() => {
+    void revision.value
+    return state.value?.challenge ?? null
+  })
+
+  /**
+   * How it is going, judged against this build's own world.
+   *
+   * Recomputed rather than stored, so a challenge cannot be marked complete by
+   * anything other than the game agreeing that it was.
+   */
+  const challengeProgress = computed(() => {
+    void revision.value
+    const s = state.value
+    if (!s?.challenge) return null
+    return {
+      challenge: s.challenge,
+      status: challengeStatus(s, s.challenge),
+      sameEngine: isSameEngine(s.challenge),
+    }
+  })
+
+  // --- What became of them --------------------------------------------------
+
+  /** Verdicts already delivered on signings at clubs you have left. */
+  const verdicts = computed<SuccessorVerdict[]>(() => {
+    void revision.value
+    const s = state.value
+    return s ? allVerdicts(s) : []
+  })
+
   // --- Deadline day ---------------------------------------------------------
 
   const isDeadline = computed(() => {
@@ -994,12 +1099,89 @@ export const useGameStore = defineStore('game', () => {
   const deadlineOffers = ref<DeadlineOpportunity[]>([])
   const deadlineTaken = ref<Set<ID>>(new Set())
 
+  /**
+   * The live clock, held here rather than on the screen.
+   *
+   * It has to outlive the deadline view. An hour-long window that paused the
+   * moment you went to look at a player's profile would be a window you could
+   * not use, and one that reset would be worse — so the clock is anchored to
+   * a wall-clock timestamp and the interval belongs to the store.
+   *
+   * It is deliberately *not* on `GameState`. A career saved mid-window and
+   * reopened the next morning would otherwise find the window long shut and
+   * five signings missed to an hour that passed while the app was closed.
+   * Losing the timer on a reload is the forgiving failure, and the untimed
+   * screen it falls back to is the one the game shipped with.
+   */
+  const deadlineStartedAt = ref<number | null>(null)
+  const deadlineTotalMs = ref(windowMs(WINDOW_MINUTES))
+  const deadlineNow = ref(0)
+  let deadlineTicker: ReturnType<typeof setInterval> | null = null
+
+  /** True once the day has been started and before it has settled. */
+  const deadlineLive = computed(() => {
+    void revision.value
+    return deadlineStartedAt.value !== null
+  })
+
+  const deadlineFrame = computed<ClockFrame | null>(() => {
+    if (deadlineStartedAt.value === null) return null
+    const elapsed = Math.max(0, deadlineNow.value - deadlineStartedAt.value)
+    return frameAt(deadlineOffers.value, elapsed, deadlineTotalMs.value)
+  })
+
+  function stopDeadlineTicker(): void {
+    if (deadlineTicker !== null) clearInterval(deadlineTicker)
+    deadlineTicker = null
+  }
+
+  /**
+   * Open the day.
+   *
+   * Four times a second: enough for the minute figure to move smoothly, far
+   * short of anything that costs a frame. The elapsed time is measured from
+   * the start rather than accumulated, so a phone that throttles a
+   * backgrounded tab does not hand back a day that ran slow while nobody was
+   * watching it.
+   */
+  function startDeadlineClock(minutes = WINDOW_MINUTES): void {
+    stopDeadlineTicker()
+    deadlineTotalMs.value = windowMs(minutes)
+    deadlineStartedAt.value = Date.now()
+    deadlineNow.value = deadlineStartedAt.value
+    deadlineTicker = setInterval(() => {
+      deadlineNow.value = Date.now()
+      if (deadlineStartedAt.value === null) return
+      if (deadlineNow.value - deadlineStartedAt.value >= deadlineTotalMs.value) {
+        stopDeadlineTicker()
+      }
+    }, 250)
+  }
+
+  /** Settle it now, at any point, from anywhere. */
+  function shutDeadlineWindow(): void {
+    stopDeadlineTicker()
+    if (deadlineStartedAt.value === null) return
+    deadlineNow.value = deadlineStartedAt.value + deadlineTotalMs.value
+  }
+
+  /** Put the clock away without settling it — the week has moved on. */
+  function clearDeadlineClock(): void {
+    stopDeadlineTicker()
+    deadlineStartedAt.value = null
+    deadlineNow.value = 0
+  }
+
   function refreshDeadline(): void {
     const s = state.value
     const c = club.value
     if (!s || !c || !isDeadlineWeek(s.date.week)) {
       deadlineOffers.value = []
       deadlineTaken.value = new Set()
+      // A clock left running into a week that is not deadline day would count
+      // down over a screen that no longer exists, and would still be counting
+      // when the next window came round.
+      clearDeadlineClock()
       return
     }
     const seed = `${s.seed}:deadline:${s.date.season}:${s.date.week}`
@@ -1190,6 +1372,9 @@ export const useGameStore = defineStore('game', () => {
     owner, takeover, worldTakeovers,
     isDeadline, deadlineOffers, deadlineTaken, refreshDeadline, takeDeadlineOffer,
     statePhilosophy, exerciseClause,
+    deadlineLive, deadlineFrame, startDeadlineClock, shutDeadlineWindow, clearDeadlineClock,
+    shareableCards, buildCard, linkFor, share,
+    challenge, challengeProgress, verdicts,
     idFactory, nameGenerator, reset,
   }
 })
