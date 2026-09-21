@@ -11,6 +11,7 @@
  */
 
 import type { Challenge } from './systems/challenge'
+import type { SaveLineage } from '../storage/lineage'
 
 export type ID = string
 
@@ -1468,6 +1469,20 @@ export interface GameState {
   inbox: InboxItem[]
   /** Rolling news feed of world events, newest first. */
   newsFeed: NewsItem[]
+
+  /**
+   * Which copy of this career these bytes are.
+   *
+   * Not simulation, and it sits here for the same reason `seed` and `savedAt`
+   * do: it has to travel inside the save, because the whole point of it is to
+   * be compared against the same career as it exists somewhere else. See
+   * `src/storage/lineage.ts`.
+   *
+   * Optional and additive. A save from before this existed has none, and a
+   * copy with no lineage is deliberately unorderable rather than assumed to be
+   * older than anything.
+   */
+  lineage?: SaveLineage
 
   /**
    * Signings from past jobs whose verdict has already been delivered.

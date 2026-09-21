@@ -1,6 +1,7 @@
 import {
   SAVE_VERSION, type GameState, type ID, type PlayerCareerRecord, type PlayerTrait,
 } from '../engine/types'
+import { stamp } from './lineage'
 import { autoRegister } from '../engine/systems/registration'
 import { createOwner, ownerName, startingOwnerKind } from '../engine/systems/ownership'
 import { Rng } from '../engine/rng'
@@ -76,6 +77,10 @@ export async function saveGame(
   name?: string,
 ): Promise<SaveSlotMeta> {
   state.savedAt = Date.now()
+  // Every write is a new version of this copy, whether or not anything ever
+  // asks. A career that only picks up a lineage once somebody turns handoff on
+  // would have no history to compare against on the day they do.
+  stamp(state)
 
   // Career history goes into its own part of the record, and only when there
   // is something new to put there. `player.careerStats` holds what the season
