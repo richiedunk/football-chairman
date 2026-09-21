@@ -2,7 +2,8 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useGameStore } from '../../stores/game'
-import { PHONE_APPS, type PhoneApp } from '../apps'
+import { PHONE_APPS } from '../apps'
+import { badgeFor as countFor } from '../appBadge'
 import { isOpen, preview, threadKey } from '../threads'
 
 /**
@@ -22,30 +23,6 @@ import { isOpen, preview, threadKey } from '../threads'
 
 const store = useGameStore()
 const router = useRouter()
-
-/**
- * What sits on an icon.
- *
- * Only ever "this wants something". A count that is always there is a count
- * nobody reads, so a squad of twenty-five with nothing wrong shows nothing.
- */
-function badgeFor(app: PhoneApp): number {
-  switch (app.badge) {
-    case 'unread':
-      return store.unread
-    case 'deadline':
-      // Only on the day. The market always has something in it; that is not
-      // the same as the market needing you.
-      return store.isDeadline ? store.deadlineOffers.length : 0
-    case 'milestones':
-      return store.newAchievements.length
-    case 'registration':
-      // Players who cannot be picked, while there is still time to fix it.
-      return store.registrationOpen ? (store.registration?.unregistered.length ?? 0) : 0
-    default:
-      return 0
-  }
-}
 
 /** Urgent is a different colour from merely waiting. */
 const blocked = computed(() => store.blockers.length > 0)
@@ -135,8 +112,8 @@ const date = computed(() => store.game?.date ?? null)
             <path :d="app.d" />
             <path v-if="app.extra" :d="app.extra" />
           </svg>
-          <span v-if="badgeFor(app) > 0" class="app__badge">
-            {{ badgeFor(app) > 99 ? '99+' : badgeFor(app) }}
+          <span v-if="countFor(store, app) > 0" class="app__badge">
+            {{ countFor(store, app) > 99 ? '99+' : countFor(store, app) }}
           </span>
         </span>
         <span class="app__label">{{ app.label }}</span>
