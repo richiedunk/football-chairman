@@ -20,64 +20,63 @@ sell the one thing a curator can put in a paragraph.
 
 ---
 
-## The finding
+## The finding, and what has since been built
 
-**The two most valuable buyers want the same missing thing, and it is a
-layout, not a feature.**
+**The two most valuable buyers wanted the same missing thing, and it was a
+layout rather than a feature.**
 
 Apple Arcade titles must run on iPhone, iPad, Mac and Apple TV. Steam is a
-monitor. Both are landscape, wide, and often driven by a pointer or a pad.
-This build is portrait-locked in both native manifests
-(`ios/App/App/Info.plist:33`, `AndroidManifest.xml:18`) and its layout caps
-at a phone column (`main.css` sizes everything off a 390px phone in rem). On
-an iPad it is a strip down the middle of the screen; on a Mac or a television
-it is not a product.
+monitor. Both are landscape and wide, and this build was portrait-locked in
+both native manifests with a layout that capped at a phone column — so on an
+iPad it was a strip down the middle of the screen, and on a Mac it was not a
+product.
 
-`docs/monetization.md` presented this as a fork: stay mobile-native and pitch
-Arcade, or build a desktop layout and go to Steam. It is not a fork. The
-Arcade pitch is *also* blocked on the wide layout, because the curators will
-open it on an iPad first. So the wide layout is the one investment that
-unlocks both of the six-figure paths at once, and everything else on this
-page is cheaper and smaller.
+That presented as a fork: stay mobile-native and pitch Arcade, or build a
+desktop layout and go to Steam. It was never a fork. The Arcade pitch was
+*also* blocked on the wide layout, because a curator opens it on an iPad
+first, which made one investment the thing that unlocked both six-figure
+paths.
 
-That is the headline. The rest is the checklist.
+### It is built
+
+Above 900px the apps are a rail on the left, the column is no longer clamped,
+and a screen that is a list next to a detail is drawn as both at once — the
+inbox and a player against his squad. Below that nothing changed: a phone gets
+the phone. It cost one breakpoint, one rail and one list-and-detail pattern,
+and no view was restyled, because the dense typographic screens were already
+correct at any width. See `src/ui/wide.ts` and `src/ui/panes.ts`.
+
+**Steam has a target.** `desktop/` is an Electron shell around the built
+bundle, kept as its own package so the root install is unaffected. It has been
+launched and the game renders from disk with saves working. Steamworks,
+signing and controller support remain, and its README says so.
+
+**iPad is unlocked**, landscape on iPad only. The iPhone stays portrait, which
+is the design rather than a limitation.
+
+What this does *not* yet cover: Android is still portrait-locked in its
+manifest, because that manifest cannot tell a tablet from a phone and letting
+a phone rotate into a 390px-tall window would be worse than not rotating. A
+tablet-only rule there needs the screen-orientation plugin and a runtime
+check.
 
 ---
 
 ## A. Things that are on every buyer's list
 
-### 1. A wide layout — iPad, Mac, Steam, TV
+### 1. A wide layout — iPad, Mac, Steam, TV — built
 
-**Unlocks:** Apple Arcade eligibility, Steam, Mac App Store, the "tablet"
-row on Play Pass.
-**Cost:** the largest item here. Weeks, not days.
+**Unlocks:** Apple Arcade eligibility, Steam, Mac App Store, the "tablet" row
+on Play Pass.
 
-The architecture makes it far cheaper than it looks. The screens are
-typographic lists and cards with no fixed-pixel art. The five-tab nav and
-the hub already describe a sidebar. The phone document's own anti-goal ("not
-a reskin of thirty views") is the right instinction here too: this is not a
-second UI. It is one breakpoint at roughly 900px that does three things:
+Done, along with the Electron shell and the iPad orientation. See the finding
+above for what landed and what did not.
 
-- The five tabs become a left rail, the way the same five tabs do on an iPad
-  in any Apple app. Nothing under them changes.
-- List screens (squad, market, scouting, league) get a **detail pane** on the
-  right, so tapping a player row opens `PlayerView` beside the list instead
-  of over it. That is the one pattern that makes a management sim feel native
-  on a wide screen, and it is a router `<RouterView name="detail">` plus a
-  grid, not a redesign.
-- The home screen goes to two columns: standing and match on the left, what
-  is waiting on you on the right. `HomeView.vue` already computes both as
-  separate blocks.
-
-Pointer and keyboard follow for nearly nothing: the lists are buttons and
-links already, and `:hover` states are a token change. Controller support
-for Apple TV is the one part that is real new work, and it can be the last
-thing done, after the deal is in conversation, because Apple TV is the
-platform Arcade cares least about.
-
-Unlock the orientation in both manifests at the same time. Portrait on a
-phone stays the default and the design; the lock is what stops an iPad
-rotating.
+The one part deliberately left: **controller support**, which Apple TV needs
+and Steam Deck verification wants. It is real new work rather than a
+breakpoint, and it can wait until a deal is in conversation — Apple TV is the
+platform Arcade cares least about, and a Deck build is playable with its
+trackpad and keyboard in the meantime.
 
 ### 2. A guaranteed first hour
 
@@ -238,26 +237,26 @@ engineering; it is a deploy step.
 
 ## Order of work
 
-1. **Fictional world by default** (5). One day. Removes the legal blocker
-   before anybody sees the game.
+1. ~~**Fictional world by default** (5).~~ Still to do. One day, and it removes
+   the legal blocker before anybody sees the game.
 2. **The opening scenario** (2). Days. Guarantees the beat.
 3. **The phone** (7). As specified. Gives the beat a frame.
-4. **The wide layout** (1). Weeks. Makes the game exist on iPad, Mac and
-   Steam, and makes the Arcade pitch possible.
-5. **Cloud save and achievements** (3, 4) once developer accounts exist.
-   These are gated on paperwork, not on design, so start the paperwork now.
+4. ~~**The wide layout** (1).~~ **Built**, with the desktop shell and iPad
+   landscape. Controller support is the remainder.
+5. **Cloud save and achievements** (3, 4) once developer accounts exist. These
+   are gated on paperwork, not on design, so start the paperwork now.
 6. **Trailer, screenshots, the hosted build, the beta** (8, 11, 10). After 2
    and 3, before any pitch is sent.
 7. **Localisation** (6) only against a term sheet that requires it.
 
-Do the first three before pitching anyone. They are small, and they are the
-difference between a scout meeting the game's idea in ten minutes and a scout
-never meeting it at all. Do the fourth before pitching Arcade or listing on
-Steam, because neither will look at a portrait strip. Do not start the
-fourth first: it is the longest item, and the pitch deck can be built and the
-publisher conversations opened while it is in progress.
+The hosted build (11) has become more urgent than its number suggests, and for
+a reason that did not exist when this was written: challenge links are built
+into the game now, and they point at a domain serving a holding page. Every
+link sent today is a dead one.
 
----
+Items 1, 2 and 3 are still what to do before pitching anyone. They are small,
+and they are the difference between a scout meeting the game's idea in ten
+minutes and never meeting it at all.
 
 ## What not to build for distribution
 
