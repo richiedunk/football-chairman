@@ -58,6 +58,28 @@ describe('the origin a link is built on', () => {
         .toBe(PUBLIC_ORIGIN)
     }
   })
+
+  it('refuses a loopback address, which only reaches the sender', () => {
+    // The phone builds serve themselves over https://localhost, so this is
+    // what makes the platform check unnecessary. It covers a developer's own
+    // preview for the same reason: a link to 127.0.0.1 is a link to nobody.
+    for (const origin of [
+      'https://localhost', 'http://localhost:5173',
+      'http://127.0.0.1:4173', 'http://[::1]:8080',
+    ]) {
+      expect(originFrom({ protocol: origin.split(':')[0] + ':', origin, pathname: '/' }))
+        .toBe(PUBLIC_ORIGIN)
+    }
+  })
+
+  it('still trusts a real host that merely looks local', () => {
+    // `localhost.example.com` is somebody's actual domain.
+    expect(originFrom({
+      protocol: 'https:',
+      origin: 'https://localhost.example.com',
+      pathname: '/',
+    })).toBe('https://localhost.example.com/')
+  })
 })
 
 describe('a link built on the fallback', () => {
