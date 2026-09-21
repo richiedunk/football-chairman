@@ -2,8 +2,8 @@ import { beforeAll, describe, expect, it } from 'vitest'
 import { prepareNewGame, startCareerAt } from '../src/engine/newGame'
 import { startingClubCandidates } from '../src/engine/systems/career'
 import {
-  base64UrlDecode, base64UrlEncode, challengeFrom, challengeFromUrl, challengeLink,
-  challengeStatus, decodeChallenge, encodeChallenge, isSameEngine, placing,
+  CHALLENGE_VERSION, base64UrlDecode, base64UrlEncode, challengeFrom, challengeFromUrl,
+  challengeLink, challengeStatus, decodeChallenge, encodeChallenge, isSameEngine, placing,
   startingSeasonOf, worldSizeOf, type Challenge,
 } from '../src/engine/systems/challenge'
 import { SAVE_VERSION, type GameState } from '../src/engine/types'
@@ -115,6 +115,7 @@ describe('cutting a challenge from a career', () => {
     expect(challenge.nationId).toBe('eng')
     expect(challenge.by).toBe('A. Director')
     expect(challenge.engine).toBe(SAVE_VERSION)
+    expect(challenge.v).toBe(CHALLENGE_VERSION)
   })
 })
 
@@ -167,7 +168,9 @@ describe('the wire format', () => {
     const state = world()
     withSeason(state, 3)
     const challenge = challengeFrom(state, state.playerClubId!)!
-    const ahead = encodeChallenge({ ...challenge, v: 99 })
+    // Relative to the current version rather than a literal, so that bumping
+    // the format does not quietly leave this asserting nothing.
+    const ahead = encodeChallenge({ ...challenge, v: CHALLENGE_VERSION + 1 })
     expect(decodeChallenge(ahead)).toBeNull()
   })
 
@@ -242,7 +245,7 @@ describe('the same seed hands over the same club', () => {
 describe('judging a challenge', () => {
   function challengeOf(state: GameState, over: Partial<Challenge['target']>): Challenge {
     return {
-      v: 1, engine: SAVE_VERSION, seed: state.seed, size: 'compact', nationId: 'eng',
+      v: CHALLENGE_VERSION, engine: SAVE_VERSION, seed: state.seed, size: 'compact', nationId: 'eng',
       season: 2025, clubId: state.playerClubId!, clubName: state.clubs[state.playerClubId!].name,
       background: 'scout', by: 'Them',
       target: { goal: 'finish', value: 5, seasons: 2, ...over },

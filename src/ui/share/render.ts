@@ -29,9 +29,15 @@ import type { ShareCard } from '../../engine/systems/shareCard'
  * legible. Numbers in the mono face, prose in Inter. One accent.
  */
 
-/** Nominal card size. Everything below is expressed against this width. */
-export const CARD_W = 1080
-export const CARD_H = 1350
+/**
+ * Nominal card size. Everything below is expressed against this width.
+ *
+ * Not exported: the outside world asks for a width and gets the 4:5 frame,
+ * which is the contract. Publishing the numbers would invite a caller to lay
+ * something out against them and then disagree with the renderer.
+ */
+const CARD_W = 1080
+const CARD_H = 1350
 
 const INK = '#dde1e6'
 const DIM = '#98a0ac'
