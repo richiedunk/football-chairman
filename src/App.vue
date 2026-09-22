@@ -1,10 +1,14 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, provide, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, provide, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useGameStore } from './stores/game'
 import AppTopBar from './ui/components/AppTopBar.vue'
 import AppStatusBar from './ui/components/AppStatusBar.vue'
 import AppHomeBar from './ui/components/AppHomeBar.vue'
+import AppRail from './ui/components/AppRail.vue'
+import PaneEmpty from './ui/components/PaneEmpty.vue'
+import { useWide } from './ui/wide'
+import { paneLoader } from './ui/panes'
 import AdvanceBar from './ui/components/AdvanceBar.vue'
 import NoticeScreen, { type Notice } from './ui/components/NoticeScreen.vue'
 import { nextLine } from './ui/loadingLines'
@@ -61,6 +65,53 @@ watch(
 const showChrome = computed(() => store.loaded && !isSetupRoute.value)
 
 /**
+ * The desktop arrangement.
+ *
+ * Three things change above the breakpoint and nothing else does: the apps
+ * become a rail on the left instead of a grid you travel to, the column stops
+ * being clamped to a phone's width, and a screen that is a list next to a
+ * detail is drawn as both at once.
+ *
+ * Everything below that is untouched. The squad list is twenty-five rows of
+ * nine attributes and it is correct at any width; the point of a wide layout
+ * is not to redraw those screens but to stop showing one of them at a time
+ * down the middle of a monitor.
+ */
+const wide = useWide()
+const desktop = computed(() => wide.value && showChrome.value)
+
+/** The list that stays on the left, when the current route names one. */
+const paneName = computed(() => {
+  if (!desktop.value) return undefined
+  const name = route.meta.pane
+  return typeof name === 'string' ? name : undefined
+})
+
+const paneComponents = new Map<string, ReturnType<typeof defineAsyncComponent>>()
+const paneComponent = computed(() => {
+  const name = paneName.value
+  const loader = paneLoader(name)
+  if (!name || !loader) return null
+  // Cached, so that moving between two players does not tear down and rebuild
+  // the squad list beside them on every navigation.
+  let component = paneComponents.get(name)
+  if (!component) {
+    component = defineAsyncComponent(loader)
+    paneComponents.set(name, component)
+  }
+  return component
+})
+
+/**
+ * True when the route *is* the list.
+ *
+ * A pane is named after its own list route, so on `/inbox` the left-hand side
+ * already holds what the router would put on the right. Rendering both would
+ * mount the same view twice and show the conversations next to themselves.
+ */
+const onPaneRoute = computed(() => paneName.value !== undefined && route.name === paneName.value)
+
+/**
  * Every screen opens at the top.
  *
  * The router's own scrollBehavior scrolls the window, and this app does not
@@ -82,12 +133,17 @@ watch(
 )
 
 const content = ref<HTMLElement | null>(null)
+const detail = ref<HTMLElement | null>(null)
 watch(
   () => route.fullPath,
   () => {
     // After the route transition has swapped the component in, or the reset
     // lands on the outgoing screen.
-    void nextTick(() => content.value?.scrollTo({ top: 0 }))
+    //
+    // The detail pane when there is one: in the two-pane arrangement it is
+    // the detail that scrolls, and resetting the container around it would
+    // leave a player's profile opened halfway down.
+    void nextTick(() => (detail.value ?? content.value)?.scrollTo({ top: 0 }))
   },
 )
 
@@ -167,20 +223,43 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="app-shell" :inert="notices.length > 0 || undefined">
-    <AppTopBar v-if="showChrome && route.name !== 'phone'" />
-    <AppStatusBar v-if="showChrome" />
+  <div
+    class="app-shell"
+    :class="{ 'app-shell--desktop': desktop }"
+    :inert="notices.length > 0 || undefined"
+  >
+    <AppRail v-if="desktop" />
 
-    <main ref="content" class="content">
-      <RouterView v-slot="{ Component }">
-        <Transition name="fade" mode="out-in">
-          <component :is="Component" />
-        </Transition>
-      </RouterView>
-    </main>
+    <div class="app-frame">
+      <AppTopBar v-if="showChrome && route.name !== 'phone'" />
+      <AppStatusBar v-if="showChrome" />
 
-    <AdvanceBar v-if="showAdvance" />
-    <AppHomeBar v-if="showChrome" />
+      <!-- Two panes, when the route names a list to keep beside it. -->
+      <div v-if="paneComponent" class="panes">
+        <aside class="panes__list"><component :is="paneComponent" /></aside>
+        <main ref="detail" class="panes__detail">
+          <PaneEmpty v-if="onPaneRoute" :pane="paneName!" />
+          <RouterView v-else v-slot="{ Component }">
+            <Transition name="fade" mode="out-in">
+              <component :is="Component" />
+            </Transition>
+          </RouterView>
+        </main>
+      </div>
+
+      <main v-else ref="content" class="content">
+        <RouterView v-slot="{ Component }">
+          <Transition name="fade" mode="out-in">
+            <component :is="Component" />
+          </Transition>
+        </RouterView>
+      </main>
+
+      <AdvanceBar v-if="showAdvance" />
+      <!-- The rail is the grid, permanently, so a button leading back to the
+           grid would lead to what is already on screen. -->
+      <AppHomeBar v-if="showChrome && !desktop" />
+    </div>
 
     <div v-if="store.busy" class="loading">
       <div class="loading__bar"><div class="loading__sweep" /></div>

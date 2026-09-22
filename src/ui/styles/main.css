@@ -1971,7 +1971,15 @@ button, input, select, textarea {
   font-weight: 700;
 }
 
-@media (min-width: 620px) {
+/*
+ * Between a phone and a desktop: the phone, centred.
+ *
+ * A tablet in portrait, or a browser window somebody has narrowed, has more
+ * width than the layout wants and not enough for the rail and two panes. The
+ * honest answer at those sizes is the phone column rather than a cramped
+ * imitation of the desktop arrangement, so this band is unchanged.
+ */
+@media (min-width: 620px) and (max-width: 899.98px) {
   body { background: #030405; }
   #app {
     max-width: 520px;
@@ -1992,6 +2000,168 @@ button, input, select, textarea {
     max-width: 520px;
     transform: translateX(-50%);
   }
+}
+
+/* ---------------------------------------------------------------------------
+ * The desktop arrangement.
+ *
+ * Above 900px there is room for the rail, a list and what the list is about,
+ * which is the shape this game has wanted since the inbox became
+ * conversations. See `src/ui/wide.ts` for where the number comes from and
+ * `src/ui/panes.ts` for which screens are two-paned.
+ *
+ * Nothing in here restyles a screen. The rows, the type and the hairlines are
+ * the same ones the phone gets; what changes is how many of them are on screen
+ * at once, and that a destination is a click on a rail rather than a journey.
+ * ------------------------------------------------------------------------ */
+@media (min-width: 900px) {
+  body { background: var(--bg); }
+  #app { max-width: none; margin: 0; box-shadow: none; }
+
+  .app-shell--desktop {
+    flex-direction: row;
+    /* The safe-area padding is a phone concern and it pushes the rail off the
+       top of a window that has no notch. */
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+
+  .app-shell--desktop .app-frame {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    height: 100%;
+    /* A line of prose stops being readable somewhere around here, and a
+       finance table stretched across a 27-inch monitor is unreadable in a
+       different way. The frame is capped and the empty space is ground. */
+    max-width: 1180px;
+  }
+
+  /* Overlays cover the window rather than a column, because there is no
+     column any more. */
+  .loading, .overlay {
+    left: 0;
+    right: 0;
+    width: auto;
+    max-width: none;
+    transform: none;
+  }
+}
+
+/* The frame is only a wrapper below the breakpoint, where the shell itself is
+   still the column. */
+.app-frame {
+  display: contents;
+}
+@media (min-width: 900px) {
+  .app-shell--desktop .app-frame { display: flex; }
+}
+
+/* ---------------------------------------------------------------------------
+ * The rail
+ * ------------------------------------------------------------------------ */
+.rail {
+  flex: 0 0 auto;
+  width: 208px;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-sunken);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  padding-bottom: 12px;
+}
+
+.rail__club {
+  padding: 18px var(--pad) 14px;
+  border-bottom: 1px solid var(--hairline);
+  margin-bottom: 8px;
+}
+.rail__club-name {
+  font-weight: 700;
+  font-size: 0.95rem;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+.rail__club-sub {
+  font-size: 0.7rem;
+  color: var(--text-faint);
+  margin-top: 3px;
+}
+
+.rail__list { display: flex; flex-direction: column; gap: 1px; padding: 0 8px; }
+
+.rail__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 36px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-dim);
+  font-size: 0.82rem;
+  font-weight: 550;
+  text-align: left;
+  cursor: pointer;
+}
+.rail__item:hover { background: var(--bg-raised); color: var(--text); }
+.rail__item.is-active { background: var(--bg-raised-2); color: var(--accent); }
+
+.rail__icon { width: 17px; height: 17px; line-height: 0; flex: 0 0 auto; }
+.rail__icon svg { width: 17px; height: 17px; display: block; }
+.rail__label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+
+.rail__badge {
+  flex: 0 0 auto;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--danger);
+  color: #fff;
+  font-family: var(--font-num);
+  font-size: 0.625rem;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+}
+
+/* ---------------------------------------------------------------------------
+ * Two panes
+ *
+ * Each side scrolls on its own. One scrolling region holding both would mean
+ * reading to the bottom of a conversation scrolled the squad list beside it
+ * out of view, which is the whole thing this arrangement exists to prevent.
+ * ------------------------------------------------------------------------ */
+.panes {
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-columns: 340px minmax(0, 1fr);
+  min-height: 0;
+  overflow: hidden;
+}
+
+.panes__list {
+  overflow-y: auto;
+  border-right: 1px solid var(--border);
+  padding: var(--pad);
+  min-width: 0;
+}
+
+.panes__detail {
+  overflow-y: auto;
+  padding: var(--pad);
+  min-width: 0;
+}
+
+.pane-empty {
+  height: 100%;
+  display: grid;
+  place-items: center;
+  padding: var(--pad);
 }
 
 /* The coach's view of one of your players: who is speaking, in mono, then

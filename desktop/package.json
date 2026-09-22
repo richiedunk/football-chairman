@@ -1,0 +1,25 @@
+{
+  "name": "undisclosed-football-desktop",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Electron shell around the built web bundle, for Steam and the desktop stores.",
+  "main": "main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0"
+  },
+  "build": {
+    "appId": "com.undisclosedfootball.game",
+    "productName": "Undisclosed Football",
+    "directories": { "output": "out" },
+    "files": ["main.cjs", "package.json", "../dist/**/*"],
+    "win": { "target": "nsis" },
+    "linux": { "target": "AppImage", "category": "Game" },
+    "mac": { "target": "dmg", "category": "public.app-category.simulation-games" }
+  }
+}

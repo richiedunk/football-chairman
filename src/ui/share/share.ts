@@ -1,4 +1,4 @@
-import { isNative, platform } from '../../platform/native'
+import { canShareNatively, shareNatively } from '../../platform/native'
 import { cardToBlob } from './render'
 import type { ShareCard } from '../../engine/systems/shareCard'
 
@@ -13,9 +13,14 @@ import type { ShareCard } from '../../engine/systems/shareCard'
  *    inside the iOS WebView, which is most of the audience.
  * 2. **The Web Share API with text and a link.** Where files are refused but
  *    sharing is not.
- * 3. **The Capacitor share plugin.** The Android WebView has no
- *    `navigator.share` at all, so on native Android this is the only sheet
- *    there is. Text and a link only.
+ * 3. **The platform's own sheet**, through `platform/native.ts`. The Android
+ *    WebView has no `navigator.share` at all, so on a native build this is the
+ *    only sheet there is. Text and a link only.
+ *
+ *    Asked for by capability rather than by operating system. Nothing in this
+ *    file knows what Capacitor is or which platform it is running on, which is
+ *    the rule the rest of the codebase already keeps and this file briefly
+ *    did not.
  * 4. **Download the file and copy the link.** The desktop answer, and the
  *    final fallback everywhere.
  *
@@ -52,7 +57,7 @@ export interface ShareRequest {
  * rather than promising a sheet that will not open.
  */
 export function canShare(): boolean {
-  if (isNative()) return true
+  if (canShareNatively()) return true
   return typeof navigator !== 'undefined' && typeof navigator.share === 'function'
 }
 
@@ -104,30 +109,21 @@ async function tryShareText(request: ShareRequest): Promise<ShareResult | null> 
       })
       return { route: 'link', message: 'Shared without the image.' }
     } catch {
-      // Falls through: on Android's WebView this rejects for want of support
-      // rather than because the person changed their mind, and the plugin
-      // below is the route that actually works there.
+      // Falls through: in the Android WebView this rejects for want of support
+      // rather than because the person changed their mind, and the platform
+      // sheet below is the route that actually works there.
     }
   }
 
-  if (isNative()) {
-    try {
-      const { Share } = await import('@capacitor/share')
-      await Share.share({
-        title: request.card.title,
-        text: request.text,
-        url: request.url,
-        dialogTitle: 'Send it on',
-      })
-      return { route: 'native', message: 'Shared without the image.' }
-    } catch {
-      // The plugin throws when the sheet is dismissed, which is not a failure
-      // worth falling all the way through to a download for on a phone.
-      if (platform() === 'android' || platform() === 'ios') {
-        return { route: 'cancelled', message: '' }
-      }
-    }
-  }
+  const outcome = await shareNatively({
+    title: request.card.title,
+    text: request.text,
+    url: request.url,
+  })
+  if (outcome === 'shared') return { route: 'native', message: 'Shared without the image.' }
+  // Dismissed is an answer, not a failure. Saving a file to the device after
+  // somebody has closed the share sheet is doing the thing they just declined.
+  if (outcome === 'cancelled') return { route: 'cancelled', message: '' }
 
   return null
 }
@@ -212,13 +208,48 @@ export async function readClipboard(): Promise<string | null> {
   return null
 }
 
-/** Where a challenge link should point. */
+/** The public site, for every build that has no usable origin of its own. */
+export const PUBLIC_ORIGIN = 'https://undisclosedfootball.com'
+
+/** Addresses that only reach the machine already looking at them. */
+const LOOPBACK = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/i
+
+/**
+ * Where a challenge link should point.
+ *
+ * An address is only worth sending if somebody else could open it, and that
+ * is a question about the address rather than about the platform.
+ *
+ * Two kinds fail it. A page loaded from disk has no origin worth sending —
+ * Electron reports `file://`, other engines report the string "null", and
+ * either would have been concatenated into a link reading
+ * `file:///#/?challenge=…` without anything throwing, because both are
+ * perfectly valid strings. And a page served from a loopback address is
+ * reachable only by the person already looking at it, which covers
+ * `https://localhost` in the phone builds and a developer's own preview
+ * equally.
+ *
+ * Checking the address rather than asking which operating system this is
+ * means a shell nobody has written yet gets the right answer for free.
+ */
 export function shareOrigin(): string {
-  // A native build has no meaningful origin of its own — `capacitor://` and
-  // `https://localhost` are both useless in somebody else's messages — so the
-  // public site is named explicitly and the web build uses wherever it is
-  // actually served from.
-  if (isNative()) return 'https://undisclosedfootball.com'
-  if (typeof window === 'undefined') return 'https://undisclosedfootball.com'
-  return window.location.origin + window.location.pathname.replace(/index\.html$/, '')
+  if (typeof window === 'undefined') return PUBLIC_ORIGIN
+  return originFrom(window.location)
+}
+
+/**
+ * The decision, without a browser.
+ *
+ * Split out so it can be tested. The whole point of this function is what it
+ * does on the protocols the test runner does not have — `file:` and
+ * `capacitor:` — so a version reachable only through a real `window` is a
+ * version whose interesting cases are never checked.
+ */
+export function originFrom(
+  location: { protocol: string; origin: string; pathname: string },
+): string {
+  const { protocol, origin, pathname } = location
+  if (protocol !== 'http:' && protocol !== 'https:') return PUBLIC_ORIGIN
+  if (LOOPBACK.test(origin)) return PUBLIC_ORIGIN
+  return origin + pathname.replace(/index\.html$/, '')
 }

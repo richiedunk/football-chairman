@@ -96,6 +96,51 @@ export async function bindAppStateChange(onBackground: () => void): Promise<() =
   }
 }
 
+/**
+ * The share sheet.
+ *
+ * Here rather than in the screen that uses it, because this file is the one
+ * place allowed to know Capacitor exists — the README says so, and the first
+ * version of the share code broke that rule by importing the plugin directly
+ * and then asking `platform()` which operating system it was on, in a UI
+ * module. A component should be able to ask "can I share?" without knowing
+ * what an Android WebView is.
+ *
+ * The distinction the caller actually needs is between a sheet that was
+ * dismissed and a sheet that never opened, because only the second is a
+ * reason to fall back to saving a file. That question is answerable here and
+ * nowhere else: a rejected promise from the plugin means the person changed
+ * their mind, whereas the absence of the plugin means there was nothing to
+ * change their mind about.
+ */
+export type ShareOutcome = 'shared' | 'cancelled' | 'unavailable'
+
+export interface NativeSharePayload {
+  title?: string
+  text?: string
+  url?: string
+}
+
+/** Whether a native sheet exists to be opened at all. */
+export function canShareNatively(): boolean {
+  return isNative()
+}
+
+export async function shareNatively(payload: NativeSharePayload): Promise<ShareOutcome> {
+  if (!isNative()) return 'unavailable'
+  try {
+    const { Share } = await import('@capacitor/share')
+    await Share.share({ ...payload, dialogTitle: 'Send it on' })
+    return 'shared'
+  } catch {
+    // The plugin rejects both when the sheet is dismissed and when it is not
+    // installed. On a real device it is installed, so a rejection here is a
+    // person deciding not to send it — and falling through to a file download
+    // after somebody has said no is the wrong answer twice.
+    return 'cancelled'
+  }
+}
+
 export type HapticWeight = 'light' | 'medium' | 'heavy' | 'success' | 'warning' | 'error'
 
 /**
