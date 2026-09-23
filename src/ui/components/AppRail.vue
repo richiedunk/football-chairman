@@ -24,13 +24,23 @@ const router = useRouter()
 
 const current = computed(() => route.meta.tab ?? route.name)
 
+/**
+ * The one app the current screen belongs to.
+ *
+ * A screen with its own app (the ground, the boardroom) lights that app; one
+ * without (a player, a match) lights the app it hangs off. Checking both at
+ * once lit two rows on the ground's screen — Ground, and Club, which it is
+ * filed under.
+ */
+const activeId = computed(() => {
+  const exact = PHONE_APPS.find((app) => app.to === route.path)
+  if (exact) return exact.id
+  return String(current.value ?? '')
+})
+
 function active(to: string): boolean {
-  if (route.path === to) return true
-  // The rail lights for the section, not the exact page: a player profile is
-  // reached from the squad and belongs under it, which is what `meta.tab`
-  // already records for the phone's own back behaviour.
-  const id = to.replace(/^\//, '')
-  return current.value === id
+  const app = PHONE_APPS.find((a) => a.to === to)
+  return app ? app.id === activeId.value : false
 }
 
 const apps = computed(() =>
