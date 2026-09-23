@@ -145,3 +145,15 @@ describe('sender icons', () => {
     expect(senderIcon('Someone Else').role).toBe('Message')
   })
 })
+
+describe('squad numbers', () => {
+  it('are unique within a squad, with a keeper in the 1 shirt', async () => {
+    const { squadNumbers } = await import('../src/ui/art/shirtNumber')
+    const positions = ['GK', 'GK', 'GK', 'DC', 'DC', 'DC', 'DC', 'DL', 'DR', 'DM', 'MC', 'MC', 'MC', 'ML', 'MR', 'AM', 'AM', 'ST', 'ST', 'ST', 'ST', 'DC', 'MC', 'ST', 'GK'] as const
+    const squad = positions.map((position, i) => ({ id: `p${i * 31}`, position }))
+    const numbers = squadNumbers(squad)
+    expect(new Set(numbers.values()).size).toBe(squad.length)
+    const one = squad.find((p) => numbers.get(p.id) === 1)
+    expect(one?.position).toBe('GK')
+  })
+})

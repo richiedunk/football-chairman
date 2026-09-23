@@ -23,7 +23,37 @@ const BY_POSITION: Record<Position, readonly number[]> = {
   ST: [9, 9, 19, 14, 20, 30],
 }
 
-export function shirtNumber(player: { id: string; position: Position }): number {
+function shirtNumber(player: { id: string; position: Position }): number {
   const options = BY_POSITION[player.position] ?? [14, 17, 18, 19, 20, 21, 22, 23, 24]
   return options[hashString(`shirt:${player.id}`) % options.length]
+}
+
+/**
+ * Numbers for a whole squad, unique within it.
+ *
+ * Hashing each player on his own put two number 20s on the same pitch. So a
+ * squad is numbered together: in id order (stable as long as the squad is),
+ * each player takes his preferred number if it is free, then the next free
+ * number his position traditionally wears, then the first free from 12 up.
+ */
+export function squadNumbers(players: readonly { id: string; position: Position }[]): Map<string, number> {
+  const taken = new Set<number>()
+  const out = new Map<string, number>()
+  const ordered = [...players].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
+  // Keepers first, so number 1 goes to a keeper rather than to whichever
+  // outfielder's id happens to sort first.
+  ordered.sort((a, b) => Number(b.position === 'GK') - Number(a.position === 'GK'))
+  for (const p of ordered) {
+    // The first keeper gets the 1 shirt, whatever his id would say.
+    const preferred = p.position === 'GK' && !taken.has(1) ? 1 : shirtNumber(p)
+    let n = taken.has(preferred) ? undefined : preferred
+    if (n === undefined) n = (BY_POSITION[p.position] ?? []).find((x) => !taken.has(x))
+    if (n === undefined) {
+      n = 12
+      while (taken.has(n)) n++
+    }
+    taken.add(n)
+    out.set(p.id, n)
+  }
+  return out
 }

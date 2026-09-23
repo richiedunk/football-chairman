@@ -10,7 +10,7 @@ import PersonFace from '../components/PersonFace.vue'
 import AttrBar from '../components/AttrBar.vue'
 import PositionMap from '../components/PositionMap.vue'
 import StarRating from '../components/StarRating.vue'
-import { shirtNumber } from '../art/shirtNumber'
+import { numberFor } from '../shirtNumbers'
 import MeterBar from '../components/MeterBar.vue'
 import Dossier from '../components/Dossier.vue'
 import AppSheet from '../components/AppSheet.vue'
@@ -458,7 +458,7 @@ const internationalLine = computed(() => {
                itself and his position pinned to the frame. -->
           <span class="player-kit">
             <PersonFace :person="player" :club="currentClub" :size="68" />
-            <KitShirt v-if="currentClub" :club="currentClub" :number="shirtNumber(player)" :size="30" class="player-kit__shirt" />
+            <KitShirt v-if="currentClub" :club="currentClub" :number="numberFor(store, player)" :size="30" class="player-kit__shirt" />
             <PosBadge :position="player.position" class="player-kit__pos" />
           </span>
           <div class="grow" style="min-width: 0">

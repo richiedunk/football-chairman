@@ -2,7 +2,8 @@
 import { computed } from 'vue'
 import type { Position } from '../../engine/types'
 import KitShirt from './KitShirt.vue'
-import { shirtNumber } from '../art/shirtNumber'
+import { useGameStore } from '../../stores/game'
+import { numberFor } from '../shirtNumbers'
 
 /**
  * A side, laid out on a pitch in its shirts.
@@ -15,7 +16,7 @@ import { shirtNumber } from '../art/shirtNumber'
  * which is the point: you see where your signing played, or that he did not.
  */
 type Row = {
-  player: { id: string; knownAs: string; position: Position }
+  player: { id: string; knownAs: string; position: Position; clubId: string | null }
   rating?: number
 }
 
@@ -31,6 +32,7 @@ const props = withDefaults(
 )
 
 const emit = defineEmits<{ pick: [id: string] }>()
+const store = useGameStore()
 
 /** Depth up the pitch, as a percentage from the top. */
 const LINE: Record<Position, number> = {
@@ -92,7 +94,7 @@ function tone(rating: number): string {
       role="listitem"
       @click="emit('pick', row.player.id)"
     >
-      <KitShirt :club="club" :number="shirtNumber(row.player)" :size="34" :away="away" />
+      <KitShirt :club="club" :number="numberFor(store, row.player)" :size="34" :away="away" />
       <span class="pitch__name">{{ row.player.knownAs.split(' ').slice(-1)[0] }}</span>
       <span v-if="row.rating !== undefined" class="pitch__rating" :style="{ color: tone(row.rating) }">
         {{ row.rating.toFixed(1) }}
