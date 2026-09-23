@@ -66,6 +66,18 @@ describe('matchVerdict', () => {
     expect(v.verdict).toBe('par')
   })
 
+  it('never calls a hammering par, however good the side that did it', () => {
+    // A 0-6 home defeat by the champions was graded on points alone: nought
+    // taken, next to nothing expected, "par". The margin now has a say.
+    const six = matchVerdict(us, club('THEM', 92), fixture('US', 'THEM'), result(0, 6), null)
+    expect(six.verdict).toBe('dismal')
+    const three = matchVerdict(us, club('THEM', 92), fixture('US', 'THEM'), result(0, 3), null)
+    expect(three.verdict).toBe('poor')
+    // A narrow defeat at the champions is still what the game was worth.
+    const one = matchVerdict(us, club('THEM', 92), fixture('US', 'THEM'), result(0, 1), null)
+    expect(one.verdict).toBe('par')
+  })
+
   it('reads the score from the right side when away', () => {
     const v = matchVerdict(us, club('THEM', 50), fixture('THEM', 'US'), result(0, 2), null)
     expect(v.outcome).toBe('W')

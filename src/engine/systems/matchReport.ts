@@ -57,6 +57,8 @@ function pointsFor(outcome: 'W' | 'D' | 'L'): number {
   return outcome === 'W' ? 3 : outcome === 'D' ? 1 : 0
 }
 
+const GRADES: readonly Verdict[] = ['dismal', 'poor', 'par', 'good', 'outstanding']
+
 function gradeFor(taken: number, expected: number): Verdict {
   const delta = taken - expected
   if (delta >= 1.6) return 'outstanding'
@@ -64,6 +66,24 @@ function gradeFor(taken: number, expected: number): Verdict {
   if (delta >= -0.55) return 'par'
   if (delta >= -1.6) return 'poor'
   return 'dismal'
+}
+
+/**
+ * The scoreline has a say, but only on the way down.
+ *
+ * Points against expectation cannot see the margin, so a 6-0 home hammering by
+ * the champions scored the same as a 1-0 defeat there — "par", with the coach
+ * saying it was about right. Nobody in football reads a six-goal loss as par,
+ * however good the opposition. A three-goal defeat is at best poor, and five
+ * is dismal whoever did it to you.
+ *
+ * Wins get no matching floor. Putting six past the bottom club is what the
+ * fixture was worth, and saying otherwise is the congratulation the grade
+ * exists to withhold.
+ */
+function capForMargin(grade: Verdict, margin: number): Verdict {
+  const ceiling: Verdict = margin <= -5 ? 'dismal' : margin <= -3 ? 'poor' : 'outstanding'
+  return GRADES[Math.min(GRADES.indexOf(grade), GRADES.indexOf(ceiling))]
 }
 
 const HEADLINES: Record<Verdict, string> = {
@@ -198,7 +218,7 @@ export function matchVerdict(
   const outcome: 'W' | 'D' | 'L' = own > theirs ? 'W' : own === theirs ? 'D' : 'L'
 
   const expected = expectedPoints(club.reputation, opponent.reputation, isHome)
-  const verdict = gradeFor(pointsFor(outcome), expected)
+  const verdict = capForMargin(gradeFor(pointsFor(outcome), expected), own - theirs)
 
   const register = coachRegister(
     coach?.attributes?.mediaHandling ?? 50,
