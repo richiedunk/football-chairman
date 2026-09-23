@@ -2,6 +2,7 @@
 import { computed, inject, ref } from 'vue'
 import { useGameStore } from '../../stores/game'
 import PosBadge from '../components/PosBadge.vue'
+import PersonFace from '../components/PersonFace.vue'
 import MeterBar from '../components/MeterBar.vue'
 import AppDocument from '../components/AppDocument.vue'
 import { formatWage } from '../../engine/systems/valuation'
@@ -167,7 +168,10 @@ function autoPick() {
           :key="p.id"
           class="list__row list__row--static"
         >
-          <PosBadge :position="p.position" />
+          <span class="row-face">
+              <PersonFace :person="p" :club="store.club" :size="40" />
+              <PosBadge :position="p.position" class="row-face__pos" />
+            </span>
           <div class="list__main">
             <div class="list__primary">
               {{ listName(p) }}

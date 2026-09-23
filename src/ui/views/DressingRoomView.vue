@@ -6,6 +6,7 @@ import {
   influenceWord, readRoom, renewalAppetite, roomLabel, roomMeter, roomSummary,
 } from '../../engine/systems/dressingRoom'
 import MeterBar from '../components/MeterBar.vue'
+import PersonFace from '../components/PersonFace.vue'
 import Chevron from '../components/Chevron.vue'
 import { listName } from '../playerName'
 import { onARun, runWord } from '../../engine/systems/snub'
@@ -111,6 +112,7 @@ const renewalEffect = computed(() => {
             class="list__row"
             @click="router.push(`/player/${row.player.id}`)"
           >
+            <PersonFace :person="row.player" :club="store.club" :size="38" />
             <div class="list__main">
               <div class="list__primary">{{ listName(row.player) }}</div>
               <div class="list__secondary num">
@@ -162,6 +164,7 @@ const renewalEffect = computed(() => {
             class="list__row"
             @click="router.push(`/player/${row.player.id}`)"
           >
+            <PersonFace :person="row.player" :club="store.club" :size="38" />
             <div class="list__main">
               <div class="list__primary">{{ listName(row.player) }}</div>
               <div class="list__secondary num">

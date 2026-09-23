@@ -2,6 +2,7 @@
 import { computed, inject } from 'vue'
 import { useGameStore } from '../../stores/game'
 import PosBadge from '../components/PosBadge.vue'
+import PersonFace from '../components/PersonFace.vue'
 import MeterBar from '../components/MeterBar.vue'
 import StarRating from '../components/StarRating.vue'
 import { academyAssessment, INTAKE_WEEK } from '../../engine/systems/academy'
@@ -70,7 +71,10 @@ function promote(playerId: string) {
       <div class="list">
         <div v-for="entry in assessed" :key="entry.player.id">
           <button class="list__row" @click="$router.push(`/player/${entry.player.id}`)">
-            <PosBadge :position="entry.player.position" />
+            <span class="row-face">
+              <PersonFace :person="entry.player" :club="store.club" :size="40" />
+              <PosBadge :position="entry.player.position" class="row-face__pos" />
+            </span>
             <div class="list__main">
               <div class="list__primary">{{ entry.player.knownAs }}</div>
               <div class="list__secondary num">

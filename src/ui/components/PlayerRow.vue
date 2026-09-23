@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import PosBadge from './PosBadge.vue'
+import PersonFace from './PersonFace.vue'
 import { useGameStore } from '../../stores/game'
 import { formatMoney, formatWage } from '../../engine/systems/valuation'
 import { U21_AGE } from '../../engine/systems/registration'
@@ -76,7 +77,12 @@ function open() {
     :class="{ 'list__row--static': !clickable }"
     @click="open"
   >
-    <PosBadge :position="player.position" />
+    <!-- His face in his club's shirt, position pinned to the frame: the list
+         still sorts into colour bands, and it is a list of people. -->
+    <span class="row-face">
+      <PersonFace :person="player" :club="store.clubById(player.loanClubId ?? player.clubId ?? '')" :size="40" />
+      <PosBadge :position="player.position" class="row-face__pos" />
+    </span>
 
     <div class="list__main">
       <div class="list__primary">

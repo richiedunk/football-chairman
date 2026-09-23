@@ -2976,3 +2976,24 @@ input[type='radio'] {
 }
 .ledger-line__bar--in { background: var(--win); }
 .ledger-line__bar--out { background: var(--loss); opacity: 0.85; }
+
+/* A face at the head of a list row, with the position chip pinned to it. */
+.row-face {
+  position: relative;
+  flex: 0 0 auto;
+  width: 46px;
+  height: 44px;
+  display: grid;
+  place-items: center start;
+}
+.row-face__pos {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: auto;
+  height: 16px;
+  padding: 0 4px;
+  font-size: 0.54rem;
+  background: #0b0e12;
+  box-shadow: 0 0 0 1px var(--border-strong);
+}
