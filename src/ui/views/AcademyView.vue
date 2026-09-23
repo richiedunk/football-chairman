@@ -3,6 +3,7 @@ import { computed, inject } from 'vue'
 import { useGameStore } from '../../stores/game'
 import PosBadge from '../components/PosBadge.vue'
 import MeterBar from '../components/MeterBar.vue'
+import StarRating from '../components/StarRating.vue'
 import { academyAssessment, INTAKE_WEEK } from '../../engine/systems/academy'
 import { facilityGrade } from '../../engine/systems/facilities'
 import { staffEffectiveness } from '../../engine/world/staffGen'
@@ -34,11 +35,6 @@ function promote(playerId: string) {
   notify?.(result.message, result.ok ? 'success' : 'error')
 }
 
-function stars(n: number): string {
-  const full = Math.floor(n)
-  const half = n % 1 >= 0.5
-  return '★'.repeat(full) + (half ? '½' : '')
-}
 </script>
 
 <template>
@@ -82,9 +78,7 @@ function stars(n: number): string {
               </div>
             </div>
             <div class="list__trail">
-              <div class="list__value" style="color: var(--gold)">
-                {{ stars(entry.assessment.starRating) }}
-              </div>
+              <StarRating :stars="entry.assessment.starRating" :size="13" />
             </div>
           </button>
           <div class="card__body" style="padding-top: 0">

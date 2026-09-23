@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, inject, ref } from 'vue'
 import { useGameStore } from '../../stores/game'
+import StarRating from '../components/StarRating.vue'
 import MeterBar from '../components/MeterBar.vue'
 import AppSheet from '../components/AppSheet.vue'
 import { formatWage } from '../../engine/systems/valuation'
@@ -279,7 +280,7 @@ function answer(requestId: string, accept: boolean) {
           </div>
           <div class="list__trail">
             <div class="list__value">{{ staffEffectiveness(member) }}</div>
-            <div class="list__sub">RATING</div>
+            <StarRating :score="staffEffectiveness(member)" :size="10" />
           </div>
           <button
             class="btn btn--danger btn--sm"
@@ -336,7 +337,7 @@ function answer(requestId: string, accept: boolean) {
           </div>
           <div class="list__trail">
             <div class="list__value">{{ staffEffectiveness(c) }}</div>
-            <div class="list__sub">rating</div>
+            <StarRating :score="staffEffectiveness(c)" :size="10" />
           </div>
         </button>
         <div v-if="!roleCandidates.length" class="empty">

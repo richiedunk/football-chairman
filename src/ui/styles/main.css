@@ -2836,3 +2836,5 @@ button, input, select, textarea {
   background: var(--accent);
   color: var(--accent-ink);
 }
+
+.stars { display: inline-flex; gap: 1px; vertical-align: middle; line-height: 0; }

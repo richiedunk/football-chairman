@@ -7,6 +7,7 @@ import { isAwayOnDuty } from '../../engine/systems/international'
 import PosBadge from '../components/PosBadge.vue'
 import KitShirt from '../components/KitShirt.vue'
 import AttrBar from '../components/AttrBar.vue'
+import StarRating from '../components/StarRating.vue'
 import { shirtNumber } from '../art/shirtNumber'
 import MeterBar from '../components/MeterBar.vue'
 import Dossier from '../components/Dossier.vue'
@@ -505,7 +506,10 @@ const internationalLine = computed(() => {
         </div>
         <div class="stat">
           <div class="stat__label">For this level</div>
-          <div class="stat__value stat__value--sm">{{ stars ? `${stars}★` : '—' }}</div>
+          <div class="stat__value stat__value--sm">
+            <StarRating v-if="stars" :stars="stars" :size="14" />
+            <template v-else>—</template>
+          </div>
         </div>
       </div>
       <!-- The coach's view sits under the numbers, because it is what the
