@@ -3019,3 +3019,64 @@ input[type='radio'] {
 }
 .dial-pair { display: flex; justify-content: space-around; gap: 8px; }
 .medal { flex: 0 0 auto; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.45)); }
+
+/* The ninety minutes, home events above the line and away below. */
+.timeline {
+  position: relative;
+  height: 64px;
+  margin: 4px var(--pad) 12px;
+}
+.timeline__line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 31px;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.25);
+}
+.timeline__half {
+  position: absolute;
+  top: -4px;
+  width: 2px;
+  height: 11px;
+  background: rgba(255, 255, 255, 0.5);
+  font-size: 0;
+}
+.timeline__mark {
+  position: absolute;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.timeline__mark.is-home { top: 0; flex-direction: column-reverse; justify-content: flex-end; height: 30px; }
+.timeline__mark.is-away { top: 36px; }
+.timeline__mark i {
+  display: block;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: inset 0 0 0 3px var(--win);
+}
+.timeline__mark--ownGoal i { box-shadow: inset 0 0 0 3px var(--danger); }
+.timeline__mark--penaltyMissed i { background: transparent; box-shadow: inset 0 0 0 2px var(--danger); }
+.timeline__mark--redCard i { width: 8px; border-radius: 1.5px; background: var(--danger); box-shadow: none; }
+.timeline__mark b {
+  font-family: var(--font-display);
+  font-size: 0.56rem;
+  font-weight: 800;
+  color: var(--text-dim);
+}
+.timeline__end {
+  position: absolute;
+  top: 38px;
+  font-family: var(--font-display);
+  font-size: 0.52rem;
+  font-weight: 700;
+  color: var(--text-fainter);
+}
+.timeline__end--start { left: 0; }
+.timeline__end--end { right: 0; }

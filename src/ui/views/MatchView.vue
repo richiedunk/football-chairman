@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useGameStore } from '../../stores/game'
 import ClubCrest from '../components/ClubCrest.vue'
 import PitchLineup from '../components/PitchLineup.vue'
+import MatchTimeline from '../components/MatchTimeline.vue'
 import { manOfTheMatch, matchVerdict } from '../../engine/systems/matchReport'
 import type { MatchEvent, MatchResult } from '../../engine/types'
 
@@ -152,6 +153,7 @@ const EVENT_LABEL: Record<string, string> = {
       <div v-if="report.result.penalties" class="scoreboard__pens">
         {{ report.result.penalties.home }}–{{ report.result.penalties.away }} on penalties
       </div>
+      <MatchTimeline :events="report.result.events" :home-id="report.fixture.homeClubId" />
       <div class="scoreboard__verdict" :style="{ color: VERDICT_TONE[report.verdict.verdict] }">
         {{ report.verdict.headline }}
       </div>
@@ -168,8 +170,10 @@ const EVENT_LABEL: Record<string, string> = {
           <span class="facts__value">{{ row.home }}{{ row.unit ?? '' }}</span>
           <span class="facts__mid">
             <span class="facts__label">{{ row.label }}</span>
-            <span class="facts__bar">
-              <span class="facts__home" :style="{ width: `${row.share}%` }" />
+            <!-- Nothing either side is nobody's share: an empty track, not a
+                 half-blue one. -->
+            <span class="facts__bar" :class="{ 'is-empty': row.home + row.away === 0 }">
+              <span v-if="row.home + row.away > 0" class="facts__home" :style="{ width: `${row.share}%` }" />
             </span>
           </span>
           <span class="facts__value facts__value--away">{{ row.away }}{{ row.unit ?? '' }}</span>
@@ -338,6 +342,7 @@ const EVENT_LABEL: Record<string, string> = {
   background: rgba(255, 255, 255, 0.85);
   overflow: hidden;
 }
+.facts__bar.is-empty { background: rgba(255, 255, 255, 0.12); }
 .facts__home { display: block; height: 100%; background: var(--sel); }
 
 .report-event {
