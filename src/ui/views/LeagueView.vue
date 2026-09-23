@@ -4,6 +4,8 @@ import { useRoute } from 'vue-router'
 import { useRouter } from 'vue-router'
 import { useGameStore } from '../../stores/game'
 import FormRun from '../components/FormRun.vue'
+import ClubCrest from '../components/ClubCrest.vue'
+import FixtureLine from '../components/FixtureLine.vue'
 import { sortTable } from '../../engine/systems/board'
 import { survivorsOf, tieAggregate } from '../../engine/sim/cups'
 import Chevron from '../components/Chevron.vue'
@@ -251,7 +253,12 @@ const notStarted = computed(() => table.value.every((row) => row.played === 0))
           <tbody>
             <tr v-for="(row, i) in table" :key="row.clubId" :class="rowClass(i, row.clubId)">
               <td class="num">{{ i + 1 }}</td>
-              <td class="name truncate" style="max-width: 112px">{{ short(row.clubId) }}</td>
+              <td class="name" style="max-width: 136px">
+                <span class="club-cell">
+                  <ClubCrest :club="store.clubById(row.clubId)" :size="18" />
+                  <span class="truncate">{{ short(row.clubId) }}</span>
+                </span>
+              </td>
               <td class="num">{{ row.played }}</td>
               <td class="num">{{ row.won }}</td>
               <td class="num">{{ row.drawn }}</td>
@@ -275,10 +282,14 @@ const notStarted = computed(() => table.value.every((row) => row.played === 0))
       <div class="list">
         <div v-for="f in results" :key="f.id" class="list__row list__row--static">
           <div class="list__main">
-            <div class="list__primary">
-              {{ short(f.homeClubId) }} {{ f.result?.homeGoals }}–{{ f.result?.awayGoals }} {{ short(f.awayClubId) }}
-            </div>
-            <div class="list__secondary">Week {{ f.week }}</div>
+            <FixtureLine
+              :home="store.clubById(f.homeClubId)"
+              :away="store.clubById(f.awayClubId)"
+              :home-goals="f.result?.homeGoals"
+              :away-goals="f.result?.awayGoals"
+              :mine="store.club?.id"
+            />
+            <div class="list__secondary center" style="margin-top: 3px">Week {{ f.week }}</div>
           </div>
         </div>
         <div v-if="!results.length" class="empty">No matches played yet.</div>
@@ -289,8 +300,12 @@ const notStarted = computed(() => table.value.every((row) => row.played === 0))
       <div class="list">
         <div v-for="f in fixtures" :key="f.id" class="list__row list__row--static">
           <div class="list__main">
-            <div class="list__primary">{{ short(f.homeClubId) }} v {{ short(f.awayClubId) }}</div>
-            <div class="list__secondary">Week {{ f.week }}</div>
+            <FixtureLine
+              :home="store.clubById(f.homeClubId)"
+              :away="store.clubById(f.awayClubId)"
+              :mine="store.club?.id"
+            />
+            <div class="list__secondary center" style="margin-top: 3px">Week {{ f.week }}</div>
           </div>
         </div>
         <div v-if="!fixtures.length" class="empty">No fixtures remaining.</div>

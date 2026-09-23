@@ -382,6 +382,10 @@ const hub = computed(() => {
 
 <template>
   <div v-if="club" class="dash">
+    <!-- Two columns on a wide screen: what is happening on the pitch on the
+         left, what is waiting on you on the right. One column on a phone,
+         in the same order. -->
+    <div class="dash__col">
     <!-- The standing. Nothing on the screen competes with it. -->
     <section class="card dash-hero">
       <button class="dash-hero__top" @click="router.push('/league')">
@@ -462,6 +466,8 @@ const hub = computed(() => {
       </span>
     </button>
 
+    </div>
+    <div class="dash__col">
     <!-- Decisions, as an inbox rather than a grid. -->
     <section class="card">
       <div class="card__head">
@@ -562,6 +568,7 @@ const hub = computed(() => {
         </button>
       </div>
     </section>
+    </div>
   </div>
   <div v-else class="empty">No club loaded.</div>
 </template>
