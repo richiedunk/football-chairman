@@ -196,5 +196,25 @@ export function initials(title: string): string {
  */
 export function preview(item: InboxItem): string {
   const firstLine = item.body.split('\n').find((line) => line.trim().length > 0)
-  return (firstLine ?? item.subject).trim()
+  return shorten((firstLine ?? item.subject).trim())
+}
+
+/** Longest preview before it is cut, in characters. Two lines on a phone. */
+const PREVIEW_MAX = 96
+
+/**
+ * The first sentence, and no more than two lines of it.
+ *
+ * The list used to cut the whole first paragraph wherever one line ran out, so
+ * the chairman's welcome read "The partners have agreed a number of priorities
+ * alongsi…" — a word sliced in half, which reads as a rendering fault rather
+ * than as a preview. A sentence is the natural unit of "what did they say",
+ * and when even that is too long it is cut between words, not inside one.
+ */
+function shorten(line: string): string {
+  const sentence = /^.+?[.!?](?=\s|$)/.exec(line)?.[0] ?? line
+  if (sentence.length <= PREVIEW_MAX) return sentence
+  const cut = sentence.slice(0, PREVIEW_MAX)
+  const lastSpace = cut.lastIndexOf(' ')
+  return `${(lastSpace > PREVIEW_MAX / 2 ? cut.slice(0, lastSpace) : cut).replace(/[,;:—–-]+$/, '')}…`
 }

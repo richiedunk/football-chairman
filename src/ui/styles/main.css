@@ -1300,9 +1300,12 @@ button, input, select, textarea {
   font-size: 12px;
   line-height: 1.35;
   color: var(--text-faint);
+  /* Two lines, so a sentence can finish; see preview() in ui/threads.ts. */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 .chat-row.is-unread .thread__preview {
   color: var(--text-dim);
@@ -1836,14 +1839,16 @@ button, input, select, textarea {
   color: var(--text-fainter);
 }
 .notif__text {
-  display: block;
   margin-top: 3px;
   font-size: 13px;
   line-height: 1.35;
   color: var(--text);
+  /* Two lines, so a sentence can finish; see preview() in ui/threads.ts. */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 /* The ones over the cap, counted rather than listed. */
 .notif--more {
