@@ -4,6 +4,7 @@ import { computeValue, computeWageDemand, squadImportance, totalWageBill } from 
 import { releaseRegistration } from './registration'
 import { writeOffBookValue } from './finance'
 import { adjustForPlayer } from './agents'
+import { phrase } from './voice'
 import type { Club, Contract, GameState, Player, SquadStatus } from '../types'
 
 /**
@@ -240,7 +241,13 @@ export function processContracts(
     } else if (seasonsLeft === 1 && player.contract.weeksSinceRenewalRequest > 16 && rng.chance(0.06)) {
       alerts.push({
         player,
-        message: `${player.knownAs} has a year left on his deal and would like to discuss an extension.`,
+        message: phrase(`extend:${player.id}:${state.date.season}:${state.date.week}`, [
+          `${player.knownAs} has a year left on his deal and would like to discuss an extension.`,
+          `${player.knownAs}'s people have asked about a new contract. He is into his last year.`,
+          `One year left for ${player.knownAs}, and he has asked whether the club wants to talk.`,
+          `${player.knownAs} has been in to ask about his future. Twelve months to run on his deal.`,
+          `Note from ${player.knownAs}'s agent: last year of the contract, and they would like to open talks.`,
+        ]),
         urgent: false,
       })
       player.contract.weeksSinceRenewalRequest = 0
@@ -256,7 +263,15 @@ export function processContracts(
     ) {
       alerts.push({
         player,
-        message: `${player.knownAs} has been outstanding and is earning well below his market value. His agent has been in touch.`,
+        // He asks again if nothing is done, and the same sentence five times
+        // in a season read as the game forgetting it had already said it.
+        message: phrase(`underpaid:${player.id}:${state.date.season}:${state.date.week}`, [
+          `${player.knownAs} has been outstanding and is earning well below his market value. His agent has been in touch.`,
+          `${player.knownAs}'s agent has called again. His client is playing like one of the best in the squad and being paid like one of the worst.`,
+          `We have had ${player.knownAs}'s representative on. They know what he is worth to us, and it is not what we pay him.`,
+          `${player.knownAs} is asking for his contract to be looked at. On his form this season it is hard to argue.`,
+          `Another letter from ${player.knownAs}'s agent about his wages. He has earned a better deal and they know it.`,
+        ]),
         urgent: false,
       })
       player.contract.weeksSinceRenewalRequest = 0

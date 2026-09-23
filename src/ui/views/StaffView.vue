@@ -10,6 +10,7 @@ import {
 } from '../../engine/systems/board'
 import { expectedWage, ROLE_LABELS, STYLE_LABELS, staffEffectiveness } from '../../engine/world/staffGen'
 import { fullName } from '../playerName'
+import { ATTRIBUTE_LABELS } from '../../engine/world/attributes'
 import type { Staff, StaffRole } from '../../engine/types'
 import Chevron from '../components/Chevron.vue'
 
@@ -210,7 +211,7 @@ function answer(requestId: string, accept: boolean) {
         </p>
         <div class="chip-row mt">
           <span v-for="a in coach.coachProfile.valuedAttributes" :key="a" class="chip chip--accent">
-            values {{ a.replace(/([A-Z])/g, ' $1').toLowerCase() }}
+            values {{ (ATTRIBUTE_LABELS[a] ?? a).toLowerCase() }}
           </span>
         </div>
       </div>

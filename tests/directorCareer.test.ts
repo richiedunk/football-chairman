@@ -8,6 +8,7 @@ import {
   retirementHeadline,
   seasonsRemaining,
 } from '../src/engine/systems/directorCareer'
+import { lockedJobNote } from '../src/engine/systems/career'
 import { prepareNewGame, startCareerAt } from '../src/engine/newGame'
 import { advanceWeek } from '../src/engine/tick'
 import { simulated } from './support/simulated'
@@ -135,5 +136,22 @@ describe('careerSummary', () => {
 
     expect(retirementHeadline(careerSummary(state, 'choice'))).toBe('Pat Nevin steps down at 58')
     expect(retirementHeadline(careerSummary(state, 'age'))).toBe('Pat Nevin retires at 58')
+  })
+})
+
+describe('the jobs board says why a club will not see you', () => {
+  const director = (xp: number) => ({ xp }) as DirectorProfile
+
+  it('speaks in standing and seasons, not level numbers and XP', () => {
+    // It printed "Level 10 · Legendary — 88,000 XP away" on twenty rows before
+    // a new director reached a club that would interview them.
+    const note = lockedJobNote(director(0), 100)
+    expect(note).toBe('Wants Legendary standing · a career away')
+    expect(note).not.toMatch(/XP|Level \d/)
+  })
+
+  it('tells a near miss from a distant one', () => {
+    expect(lockedJobNote(director(0), 30)).toBe('Wants Journeyman standing · one good season off')
+    expect(lockedJobNote(director(0), 50)).toBe('Wants Established standing · a few seasons off')
   })
 })

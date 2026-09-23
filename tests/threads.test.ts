@@ -204,6 +204,35 @@ describe('grouping the inbox into threads', () => {
     expect(line).toBe('I need a centre-back.')
   })
 
+  it('stops at the end of the first sentence', () => {
+    const line = preview(item({
+      from: 'Chairman', subject: 'Welcome',
+      body: 'Welcome aboard, and thank you for coming. We have never employed a director of football.',
+    }))
+    expect(line).toBe('Welcome aboard, and thank you for coming.')
+  })
+
+  it('does not preview a message as a single word', () => {
+    const line = preview(item({
+      from: 'Chairman', subject: 'Welcome',
+      body: 'Welcome. This role is new. The remit is set out below.',
+    }))
+    expect(line).toBe('Welcome. This role is new.')
+  })
+
+  it('never cuts a word in half', () => {
+    // The chairman's opening line ran past two lines and was sliced inside
+    // "alongside" by the stylesheet. It is cut between words now, and marked.
+    const long = 'The partners have agreed a number of priorities alongside the league position, '
+      + 'and they would like you to hear them from me before you hear them from anybody else'
+    const line = preview(item({ from: 'Chairman', subject: 'Priorities', body: long }))
+    expect(line.endsWith('…')).toBe(true)
+    expect(line.length).toBeLessThanOrEqual(97)
+    const kept = line.slice(0, -1)
+    expect(long.startsWith(kept)).toBe(true)
+    expect(long[kept.length] === ' ' || long[kept.length] === ',').toBe(true)
+  })
+
   it('falls back to the subject when a body has nothing in it', () => {
     expect(preview(item({ from: 'Chairman', subject: 'Filed', body: '\n  \n' }))).toBe('Filed')
   })

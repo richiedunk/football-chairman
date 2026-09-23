@@ -22,7 +22,7 @@ beforeAll(() => {
     seed: 'CARD', directorName: 'Ray Vance', background: 'scout',
     worldSize: 'compact', homeNationId: 'eng', startingSeason: 2025,
   })
-  base = startCareerAt(setup, startingClubCandidates(setup.state)[0].id)
+  base = startCareerAt(setup, startingClubCandidates(setup.state)[0].id, undefined, { openingSigning: false })  // counts signings from a clean slate
 }, 180_000)
 
 function world(): GameState {

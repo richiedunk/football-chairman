@@ -19,6 +19,7 @@ import type {
   AttributeKey, Player, PlayerCareerSeason, Position, SquadStatus,
 } from '../../engine/types'
 import { fullName, nickname } from '../playerName'
+import { traitLabel } from '../traits'
 import { clauseState, clauseUpside } from '../../engine/systems/buyBack'
 import { U21_AGE } from '../../engine/systems/registration'
 import { coachView } from '../../engine/systems/coachView'
@@ -488,7 +489,7 @@ const internationalLine = computed(() => {
           </template>
         </div>
         <div v-if="player.traits.length" class="chip-row mt">
-          <span v-for="t in player.traits" :key="t" class="chip">{{ t.replace(/([A-Z])/g, ' $1').toLowerCase() }}</span>
+          <span v-for="t in player.traits" :key="t" class="chip">{{ traitLabel(t) }}</span>
         </div>
       </div>
 

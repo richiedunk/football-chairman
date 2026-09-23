@@ -1,5 +1,5 @@
 import { clamp, Rng } from '../rng'
-import { totalWageBill } from './valuation'
+import { formatMoney, totalWageBill } from './valuation'
 import { revenuePerHead } from './stadium'
 import {
   debtTolerance, lossCoverage, reserveRelease, wageBudgetShare,
@@ -21,10 +21,21 @@ export function processFinances(
   club: Club,
   rng: Rng,
   playedHomeThisWeek: { attendance: number } | null,
+  /**
+   * The balance before anything else left it this week. The director's salary
+   * is paid just ahead of this pass, and a club with a few thousand in the
+   * bank was already overdrawn by the time the pass looked — so the week the
+   * money ran out went unreported.
+   */
+  balanceAtStartOfWeek: number = club.finances.balance,
 ): string[] {
   const notes: string[] = []
   const ledger = club.finances.season
   const league = state.leagues[club.leagueId]
+  // Whether the club had money in the bank coming into the week, so the
+  // moment it runs out can be told apart from a club that has been at zero,
+  // borrowing its losses, for months.
+  const hadCash = balanceAtStartOfWeek > 0
 
   // --- Income ---------------------------------------------------------------
   if (playedHomeThisWeek) {
@@ -132,6 +143,12 @@ export function processFinances(
       const injection = Math.round(-club.finances.balance * coverage)
       club.finances.balance += injection
       ledger.otherIncome += injection
+      if (hadCash) {
+        notes.push(
+          `The club ran out of cash this week and the owner has covered ${formatMoney(injection)} of the shortfall. `
+          + 'That is their money, not ours, and they will be keeping count.',
+        )
+      }
     }
   }
 
@@ -140,6 +157,15 @@ export function processFinances(
     const shortfall = -club.finances.balance
     club.finances.debt += Math.round(shortfall * 1.05)
     club.finances.balance = 0
+    // Said once, when the money runs out. After that the balance sits at
+    // nothing and every week's loss goes on the loan; a message a week would
+    // be one nobody read by October.
+    if (hadCash) {
+      notes.push(
+        `The account is empty. This week's ${formatMoney(shortfall)} shortfall has gone onto the club's debt, `
+        + `which is now ${formatMoney(club.finances.debt)}. Until we make more than we spend, every week's loss will go the same way.`,
+      )
+    }
     // Crisis is for debt the club cannot plausibly service, and where that
     // line sits is the owner's business: a fund is comfortable with borrowing
     // that would frighten a supporters' trust.
@@ -175,7 +201,7 @@ export function processFinances(
       club.finances.debt = settled
       club.finances.inCrisis = false
       notes.push(
-        `The club's creditors have accepted a settlement, writing off ${written.toLocaleString()} `
+        `The club's creditors have accepted a settlement, writing off ${formatMoney(written)} `
         + 'of debt it was never going to repay. The books are survivable again.',
       )
     }
@@ -197,11 +223,11 @@ export function processFinances(
     if (rng.chance(0.55)) {
       club.finances.balance += amount
       ledger.otherIncome += amount
-      notes.push(`Unexpected income of ${amount.toLocaleString()} from commercial activity.`)
+      notes.push(`Unexpected income of ${formatMoney(amount)} from commercial activity.`)
     } else {
       club.finances.balance = Math.max(0, club.finances.balance - amount)
       ledger.otherCosts += amount
-      notes.push(`Unbudgeted costs of ${amount.toLocaleString()} — maintenance and compliance.`)
+      notes.push(`Unbudgeted costs of ${formatMoney(amount)} — maintenance and compliance.`)
     }
   }
 

@@ -60,11 +60,29 @@ export const clubWeek = phase({
       updateFanMood(state, club)
       // The director is on the payroll like everyone else, so his salary leaves
       // the same balance he is judged on.
+      const balanceAtStartOfWeek = club.finances.balance
       if (club.id === state.playerClubId) payDirectorSalary(state, club)
       const { newInjuries } = processInjuries(state, club, clubRng, played)
-      processFinances(state, club, clubRng, gateReceipts.has(club.id)
+      const moneyNotes = processFinances(state, club, clubRng, gateReceipts.has(club.id)
         ? { attendance: gateReceipts.get(club.id) ?? 0 }
-        : null)
+        : null, balanceAtStartOfWeek)
+      // These were returned "for the inbox" and dropped on the floor here, so
+      // a director was never told the account had run dry, that the board had
+      // imposed a transfer embargo, or that it had been lifted. The money
+      // simply moved: an overdraft became debt between one week and the next
+      // and the balance in the status bar jumped with nothing to say why.
+      if (club.id === state.playerClubId) {
+        for (const note of moneyNotes) {
+          addInboxItem(state, ids, {
+            category: 'finance',
+            subject: 'The accounts',
+            from: 'Club Secretary',
+            body: note,
+            urgent: /embargo/.test(note) && !/lifted/.test(note),
+            link: { view: 'finance' },
+          })
+        }
+      }
       progressProjects(club)
 
       // The ground wears out whether or not anyone is looking at it, and the

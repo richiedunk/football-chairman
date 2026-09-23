@@ -8,6 +8,7 @@ import {
 } from '../../systems/transfers'
 import { runAiSquadManagement } from '../../systems/aiSquad'
 import { processScouting } from '../../systems/scouting'
+import { scoutPitch } from '../../systems/scoutVoice'
 import { processTakeovers } from '../../systems/takeovers'
 import {
   generateDeadlineBids, isDeadlineWeek, runWorldDeadline,
@@ -181,11 +182,14 @@ export const scouting = phase({
       for (const player of discovered.slice(0, 3)) {
         const report = state.scoutReports[player.id]
         if (!report || report.recommendation < 62) continue
+        const scout = state.staff[report.scoutId]
         addInboxItem(state, ids, {
           category: 'scouting',
           subject: `Scout report: ${player.knownAs}`,
-          from: contact(state.staff[report.scoutId]?.knownAs, 'Scout'),
-          body: report.verdict,
+          from: contact(scout?.knownAs, 'Scout'),
+          body: scout
+            ? scoutPitch(player, player.clubId ? state.clubs[player.clubId]?.name ?? null : null, report.verdict, scout, week)
+            : report.verdict,
           link: { view: 'player', id: player.id },
         })
       }

@@ -320,7 +320,7 @@ function withdraw(negotiation: TransferNegotiation) {
             <div v-else class="list__sub">wk {{ t.week }}</div>
           </div>
         </div>
-        <div v-if="!recentWorldTransfers.length" class="empty">No transfers yet.</div>
+        <div v-if="!recentWorldTransfers.length" class="empty">Nobody has done a deal yet. Somebody always blinks first.</div>
       </div>
     </div>
 
@@ -328,7 +328,7 @@ function withdraw(negotiation: TransferNegotiation) {
       <button class="btn btn--ghost" @click="router.push('/agents')">
         Agents<span v-if="store.agentIntroductions.length"> ({{ store.agentIntroductions.length }} offered)</span>
       </button>
-      <button class="btn btn--ghost" @click="router.push('/scouting')">Scouting</button>
+      <button class="btn btn--ghost" @click="router.push('/data')">Data department</button>
     </div>
   </div>
 </template>
