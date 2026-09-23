@@ -49,6 +49,14 @@ export interface FaceDesign {
   brows: number
 }
 
+/**
+ * An age to draw someone at when the game does not know theirs — agents
+ * carry none. Seeded by id, so the same agent is the same age everywhere.
+ */
+export function apparentAge(id: string, min = 32, max = 60): number {
+  return min + (hashString(`age:${id}`) % (max - min + 1))
+}
+
 export function faceDesign(id: string, age: number): FaceDesign {
   const rand = stream(hashString(`face:${id}`))
   const skin = SKIN[Math.floor(rand() * SKIN.length)]

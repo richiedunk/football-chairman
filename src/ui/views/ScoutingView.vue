@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import PersonFace from '../components/PersonFace.vue'
 import { computed, ref } from 'vue'
 import { useGameStore } from '../../stores/game'
 import AppSheet from '../components/AppSheet.vue'
@@ -101,6 +102,7 @@ function apply() {
     <div class="card">
       <div class="list">
         <button v-for="scout in scouts" :key="scout.id" class="list__row" @click="openEditor(scout)">
+          <PersonFace :person="scout" kind="staff" :club="store.club" :size="38" />
           <div class="list__main">
             <div class="list__primary">{{ scout.knownAs }}</div>
             <div class="list__secondary">

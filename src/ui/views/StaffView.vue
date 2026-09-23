@@ -332,6 +332,7 @@ function answer(requestId: string, accept: boolean) {
     >
       <div v-if="!selectedStaff" class="list">
         <button v-for="c in roleCandidates" :key="c.id" class="list__row" @click="pickStaff(c)">
+          <PersonFace :person="c" kind="staff" :size="38" />
           <div class="list__main">
             <div class="list__primary">{{ c.knownAs }}</div>
             <div class="list__secondary">

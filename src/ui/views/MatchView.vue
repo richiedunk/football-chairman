@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useGameStore } from '../../stores/game'
 import ClubCrest from '../components/ClubCrest.vue'
@@ -55,11 +55,13 @@ const report = computed(() => {
     )
     .sort((a, b) => a.minute - b.minute)
 
-  const lineup = (isHome ? result.homeLineup : result.awayLineup)
+  const rated = (ids: string[]) => ids
     .map((id) => ({ player: store.player(id), rating: result.ratings[id] }))
     .filter((row): row is { player: NonNullable<typeof row.player>; rating: number } =>
       Boolean(row.player) && row.rating !== undefined)
     .sort((a, b) => b.rating - a.rating)
+  const lineup = rated(isHome ? result.homeLineup : result.awayLineup)
+  const theirLineup = rated(isHome ? result.awayLineup : result.homeLineup)
 
   return {
     fixture,
@@ -72,6 +74,7 @@ const report = computed(() => {
     competition: round ?? competition,
     notable,
     lineup,
+    theirLineup,
     ourGoals: isHome ? result.homeGoals : result.awayGoals,
     theirGoals: isHome ? result.awayGoals : result.homeGoals,
     // The trimmings only exist on a match the player can open, which is every
@@ -108,6 +111,9 @@ function comparison(result: MatchResult, homeId: string, awayId: string) {
   rows.push({ label: 'Red cards', home: count('redCard', homeId), away: count('redCard', awayId) })
   return rows.map((r) => ({ ...r, share: r.home + r.away === 0 ? 50 : (r.home / (r.home + r.away)) * 100 }))
 }
+
+/** Which side the pitch is showing. Yours first: it is your team he picked. */
+const side = ref<'ours' | 'theirs'>('ours')
 
 const VERDICT_TONE: Record<string, string> = {
   outstanding: 'var(--accent)',
@@ -206,16 +212,36 @@ const EVENT_LABEL: Record<string, string> = {
     <!-- The side he picked, on the pitch, rated. -->
     <section v-if="report.lineup.length" class="card">
       <div class="card__head">
-        <span class="card__title">Your side</span>
-        <span v-if="report.motm" class="card__title" style="color: var(--accent)">
+        <span class="card__title">Line-ups</span>
+        <span v-if="report.motm && side === 'ours'" class="card__title" style="color: var(--accent)">
           Best · {{ store.player(report.motm.playerId)?.knownAs }}
         </span>
       </div>
       <div class="card__body">
+        <div class="segmented mb">
+          <button class="segmented__item" :class="{ 'is-active': side === 'ours' }" @click="side = 'ours'">
+            {{ report.club.shortName || report.club.name }}
+          </button>
+          <button
+            v-if="report.theirLineup.length"
+            class="segmented__item"
+            :class="{ 'is-active': side === 'theirs' }"
+            @click="side = 'theirs'"
+          >
+            {{ report.opponent.shortName || report.opponent.name }}
+          </button>
+        </div>
         <PitchLineup
+          v-if="side === 'ours'"
           :club="report.club"
           :players="report.lineup"
           :highlight="report.motm?.playerId ?? null"
+          @pick="(id) => router.push(`/player/${id}`)"
+        />
+        <PitchLineup
+          v-else
+          :club="report.opponent"
+          :players="report.theirLineup"
           @pick="(id) => router.push(`/player/${id}`)"
         />
       </div>
