@@ -2,7 +2,7 @@ import { clamp, Rng } from '../rng'
 import type { IdFactory } from '../ids'
 import type { Club, GameState, ID, Player, SquadStatus } from '../types'
 import { addInboxItem } from './inbox'
-import { phrase } from './voice'
+import { freshPhrase } from './voice'
 
 /**
  * The player who was good enough to start and did not.
@@ -70,12 +70,19 @@ const LINES: readonly string[] = [
   'Quiet word from {name}. He is fit, he is training well, and he is not playing. He notices who is.',
   '{name} asked me a question I could not answer: what does he have to do to get picked?',
   '{name} is not making a scene about it, which is almost worse. He has stopped asking.',
+  '{name} caught me in the car park. Three games, not a minute. He wanted to know if it was something he had done.',
+  'I have had {name} in my office. He is not angry yet. He is confused, and confused turns into angry.',
+  '{name} wants a meeting with the coach. I have told him I will see what I can do, which is not much.',
+  'Word from the training ground: {name} has gone quiet. Three matches on the outside will do that.',
 ]
 
 const LONG_LINES: readonly string[] = [
   '{name} again. {weeks} matches now. He is asking whether anyone here rates him, and he means you as much as the coach.',
   '{name} has been left out {weeks} times running. His agent has started ringing me instead of him.',
   '{name}, {weeks} matches out. He was polite about it. He will not be next time.',
+  '{weeks} games and {name} has not had a kick. He asked me straight out whether he should be looking elsewhere.',
+  '{name} has stopped coming to me about it. He has started talking to the other lads instead, which is worse.',
+  'That is {weeks} matches for {name} without a game. His family have been on the phone. I did not know what to tell them.',
 ]
 
 export interface SnubOutcome {
@@ -126,14 +133,23 @@ export function applySnubs(
     const spoke = speaksUpAt(run) && player.morale < 62 && rng.chance(0.85)
     if (spoke) {
       const key = `snub:${player.id}:${state.date.season}:${state.date.week}`
+      const subject = `${player.knownAs} is not being picked`
+      // What he has already been heard to say, as templates, so a man who
+      // complains every few weeks all season is not given the same sentence
+      // each time.
+      const said = new Set(
+        state.inbox
+          .filter((item) => item.subject === subject)
+          .map((item) => item.body.replaceAll(player.knownAs, '{name}').replace(/\b\d+\b/, '{weeks}')),
+      )
       const body = run >= 7
-        ? phrase(key, LONG_LINES).replace('{weeks}', String(run))
-        : phrase(key, LINES)
+        ? freshPhrase(key, LONG_LINES, said).replace('{weeks}', String(run))
+        : freshPhrase(key, LINES, said)
       addInboxItem(state, ids, {
         category: 'player',
-        subject: `${player.knownAs} is not being picked`,
+        subject,
         from: 'Player Liaison',
-        body: body.replace('{name}', player.knownAs),
+        body: body.replaceAll('{name}', player.knownAs),
         urgent: false,
         link: { view: 'player', id: player.id },
       })

@@ -90,6 +90,10 @@ function forwarded(state: GameState, outletId: ID, headline: string, body: strin
     `Seen this in ${outlet}?`,
     `${outlet}, this morning:`,
     `Worth a look — ${outlet} are running this:`,
+    `${outlet} again. You will want to see this before anyone asks you about it:`,
+    `Heads up. ${outlet} have this:`,
+    `This is in ${outlet} today:`,
+    `Flagging this from ${outlet}:`,
   ])
   return `${opener}\n\n"${headline}"\n\n${body}`
 }

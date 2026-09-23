@@ -52,6 +52,26 @@ export function phrase(key: string, pool: readonly string[]): string {
 }
 
 /**
+ * A line from a pool, skipping any this person has already been given.
+ *
+ * `phrase` is stateless, so the same player complaining about the same thing
+ * three times in a season could be handed the same sentence three times: a
+ * voicecheck found one liaison line five times for one man. The caller knows
+ * what was said before — it is in the inbox — so the pick walks forward from
+ * the hashed line to the first one not already used. Once the pool is spent it
+ * falls back to the hashed line, because repeating is better than silence.
+ */
+export function freshPhrase(key: string, pool: readonly string[], said: ReadonlySet<string>): string {
+  if (pool.length === 0) return ''
+  const start = hash(key) % pool.length
+  for (let i = 0; i < pool.length; i++) {
+    const line = pool[(start + i) % pool.length]
+    if (!said.has(line)) return line
+  }
+  return pool[start]
+}
+
+/**
  * A number in [0, 1) from a key, for the places that want a *figure* varied
  * rather than a sentence — a newspaper's guess at a fee, say. Same key, same
  * number, on every platform, and no state carried. It is the phrase picker's

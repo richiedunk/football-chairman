@@ -32,6 +32,20 @@ export const SQUAD_STATUS_LABELS: Record<SquadStatus, string> = {
 }
 
 /**
+ * A squad status as a thing somebody is, for the middle of a sentence. The
+ * labels are headings — "First team" — and dropped into a sentence they read
+ * "he came here as a first team".
+ */
+const STATUS_NOUN: Record<SquadStatus, string> = {
+  star: 'star player',
+  firstTeam: 'first-team regular',
+  rotation: 'rotation player',
+  backup: 'squad player',
+  prospect: 'prospect',
+  surplus: 'spare part',
+}
+
+/**
  * Weekly morale pass for one club.
  *
  * Returns grievances worth telling the director about. Everything here is
@@ -68,9 +82,12 @@ export function processMorale(
         grievances.push({
           player,
           reason: phrase(`minutes:${player.id}:${state.date.season}:${state.date.week}`, [
-            `${player.knownAs} has been in to see me. He came here as ${withArticle(SQUAD_STATUS_LABELS[player.desiredStatus].toLowerCase())} and he isn't playing like one.`,
-            `Had ${player.knownAs} at my door about his minutes. He was promised ${SQUAD_STATUS_LABELS[player.desiredStatus].toLowerCase()} and he hasn't forgotten it.`,
-            `${player.knownAs} isn't happy. His words: he signed as ${withArticle(SQUAD_STATUS_LABELS[player.desiredStatus].toLowerCase())}. Hard to argue.`,
+            `${player.knownAs} has been in to see me. He came here as ${withArticle(STATUS_NOUN[player.desiredStatus])} and he isn't playing like one.`,
+            `Had ${player.knownAs} at my door about his minutes. He was told he'd be ${withArticle(STATUS_NOUN[player.desiredStatus])} and he hasn't forgotten it.`,
+            `${player.knownAs} isn't happy. His words: he signed as ${withArticle(STATUS_NOUN[player.desiredStatus])}. Hard to argue.`,
+            `${player.knownAs} wants to know what happened to being ${withArticle(STATUS_NOUN[player.desiredStatus])}. So do I, frankly.`,
+            `Another word from ${player.knownAs} about his minutes. He does not think he is being treated as ${withArticle(STATUS_NOUN[player.desiredStatus])}, and on the numbers he is right.`,
+            `${player.knownAs} is sulking in training. He was sold this move as ${withArticle(STATUS_NOUN[player.desiredStatus])} and he is not getting it.`,
           ]),
           severity: player.morale < 28 ? 'high' : 'medium',
         })
