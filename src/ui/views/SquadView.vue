@@ -9,9 +9,32 @@ import { auditSquadDepth } from '../../engine/sim/selection'
 import { ELEVEN, fieldable } from '../../engine/systems/matchday'
 import type { Player, Position } from '../../engine/types'
 import Chevron from '../components/Chevron.vue'
+import PitchLineup from '../components/PitchLineup.vue'
 import AppSheet from '../components/AppSheet.vue'
 
 const store = useGameStore()
+
+/**
+ * The eleven the coach picked last time out, on a pitch. Not a projection:
+ * the engine picks a side on matchday and does not keep a "first choice"
+ * between games, so the last side he actually fielded is the honest answer
+ * to "who is he playing?" — and the question a director checks first after
+ * a signing.
+ */
+const lastXI = computed(() => {
+  const last = store.recentResults[0]
+  const club = store.club
+  if (!last || !club) return null
+  const isHome = last.fixture.homeClubId === club.id
+  const ids = isHome ? last.result.homeLineup : last.result.awayLineup
+  const players = ids
+    .map((id) => store.player(id))
+    .filter((p): p is Player => Boolean(p))
+    .map((player) => ({ player, rating: last.result.ratings[player.id] }))
+  if (players.length < 7) return null
+  const opponent = store.clubById(isHome ? last.fixture.awayClubId : last.fixture.homeClubId)
+  return { players, week: last.fixture.week, opponent: opponent?.shortName ?? 'them', fixtureId: last.fixture.id }
+})
 const router = useRouter()
 
 type SortKey = 'position' | 'ability' | 'age' | 'value' | 'wage' | 'form' | 'morale' | 'contract' | 'apps'
@@ -209,6 +232,23 @@ const fieldableNow = computed(() => {
             <div class="list__secondary">Best rated {{ d.bestRating || '—' }}</div>
           </div>
         </div>
+      </div>
+    </div>
+
+    <div v-if="lastXI" class="card">
+      <div class="card__head">
+        <span class="card__title">Last XI</span>
+        <button class="card__title dash-link" @click="router.push(`/match/${lastXI.fixtureId}`)">
+          v {{ lastXI.opponent }} · week {{ lastXI.week }}
+        </button>
+      </div>
+      <div class="card__body">
+        <PitchLineup
+          v-if="store.club"
+          :club="store.club"
+          :players="lastXI.players"
+          @pick="(id) => router.push(`/player/${id}`)"
+        />
       </div>
     </div>
 

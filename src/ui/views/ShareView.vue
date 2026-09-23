@@ -2,6 +2,7 @@
 import { computed, inject, onMounted, ref, watch } from 'vue'
 import { useGameStore } from '../../stores/game'
 import { drawCard } from '../share/render'
+import { cachedCrest, loadCrest } from '../share/crestImage'
 import { canShare, copyText } from '../share/share'
 import { describeTarget } from '../../engine/systems/challenge'
 import type { ShareCardKind } from '../../engine/systems/shareCard'
@@ -56,6 +57,7 @@ function paint(): void {
   drawCard(element, content, {
     width: previewWidth(),
     codeLabel: content.challenge ? 'CHALLENGE' : undefined,
+    crest: cachedCrest(store.club?.id),
   })
 }
 
@@ -66,6 +68,8 @@ onMounted(() => {
   // renders in the fallback and looks nothing like the game — so paint once
   // now for responsiveness and again when the fonts confirm.
   paint()
+  // The crest decodes asynchronously too; paint again when it lands.
+  if (store.club) void loadCrest(store.club).then((image) => image && paint())
   if (typeof document !== 'undefined' && 'fonts' in document) {
     void (document as Document & { fonts: FontFaceSet }).fonts.ready.then(paint)
   }

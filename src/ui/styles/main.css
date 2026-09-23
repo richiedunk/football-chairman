@@ -1613,10 +1613,13 @@ button, input, select, textarea {
   margin: 14px auto 12px;
   padding: 3px 11px;
   border-radius: var(--radius-pill);
-  background: var(--bg-raised);
-  font-size: 9.5px;
-  letter-spacing: 0.09em;
-  color: var(--text-faint);
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid var(--border);
+  font-family: var(--font-display);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
 }
 
 /* Theirs is not a bubble. The phone doc settled this before the screen was
@@ -1631,10 +1634,18 @@ button, input, select, textarea {
   margin-bottom: 8px;
   padding: 9px 0 7px;
 }
+/* Theirs sits on a panel now the ground is a pitch: bare text over the
+   stripes and the centre circle was legible but looked unfinished. Yours
+   stays the lime-edged bubble on the right, so who said what still reads
+   before a word of it does. */
 .bubble--in {
   margin-right: auto;
-  padding-left: 12px;
-  border-bottom: 1px solid var(--hairline);
+  padding: 10px 13px 8px;
+  border-radius: var(--radius);
+  border-bottom-left-radius: 3px;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  box-shadow: var(--panel-shadow);
 }
 .bubble--out {
   max-width: 84%;
@@ -1647,10 +1658,12 @@ button, input, select, textarea {
 }
 .bubble__who {
   margin-bottom: 4px;
-  font-size: 9.5px;
+  font-family: var(--font-display);
+  font-size: 0.6rem;
+  font-weight: 800;
   letter-spacing: 0.07em;
   text-transform: uppercase;
-  color: var(--text-faint);
+  color: var(--sel);
 }
 .bubble__text {
   margin: 0;
@@ -2838,3 +2851,12 @@ button, input, select, textarea {
 }
 
 .stars { display: inline-flex; gap: 1px; vertical-align: middle; line-height: 0; }
+
+/* Native checkboxes and radios, in the game's selection colour rather than
+   the platform's default blue. */
+input[type='checkbox'],
+input[type='radio'] {
+  accent-color: var(--sel);
+  width: 18px;
+  height: 18px;
+}

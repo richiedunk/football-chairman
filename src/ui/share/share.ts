@@ -48,6 +48,8 @@ export interface ShareRequest {
   url?: string
   /** Suggested file name, without an extension. */
   filename: string
+  /** The club's crest, decoded, when there is one to draw. */
+  crest?: CanvasImageSource | null
 }
 
 /**
@@ -64,6 +66,7 @@ export function canShare(): boolean {
 export async function shareCard(request: ShareRequest): Promise<ShareResult> {
   const blob = await cardToBlob(request.card, {
     codeLabel: request.card.challenge ? 'CHALLENGE' : undefined,
+    crest: request.crest ?? null,
   })
 
   if (blob && (await tryShareFile(blob, request))) {
