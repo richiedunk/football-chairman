@@ -7,7 +7,7 @@ import AppSheet from '../components/AppSheet.vue'
 import ContractNegotiator from '../components/ContractNegotiator.vue'
 import { formatMoney } from '../../engine/systems/valuation'
 import { facilityGrade } from '../../engine/systems/facilities'
-import { canTakeJobAt, levelFor, levelRequiredFor, xpNeededFor } from '../../engine/systems/career'
+import { canTakeJobAt, levelFor, lockedJobNote } from '../../engine/systems/career'
 import type { Club } from '../../engine/types'
 import type { ContractOffer } from '../../engine/systems/directorContract'
 
@@ -16,9 +16,14 @@ import type { ContractOffer } from '../../engine/systems/directorContract'
  *
  * Every club in the country is listed, grouped by division, with the ones your
  * record does not yet justify shown greyed out alongside the level they need.
- * A locked entry that simply refuses is a wall; one that names the level and
- * the XP gap is a target, and it lets a new director see the whole ladder they
+ * A locked entry that simply refuses is a wall; one that names the standing
+ * it wants is a target, and it lets a new director see the whole ladder they
  * are about to start climbing.
+ *
+ * The divisions with a job you can take come first. The board used to run
+ * from the top flight down, so a new director scrolled past twenty padlocks
+ * before reaching a club that would see them, and the first impression of
+ * the game was everything it would not let them do.
  */
 
 const router = useRouter()
@@ -49,10 +54,11 @@ const divisions = computed(() => {
   return Array.from(byLeague.entries())
     .map(([leagueId, clubs]) => ({
       league: s.leagues[leagueId],
-      clubs: clubs.sort((a, b) => b.reputation - a.reputation),
+      clubs: clubs.sort((a, b) => Number(isOpen(b)) - Number(isOpen(a)) || b.reputation - a.reputation),
     }))
     .filter((entry) => Boolean(entry.league))
-    .sort((a, b) => a.league.tier - b.league.tier)
+    .sort((a, b) =>
+      Number(b.clubs.some(isOpen)) - Number(a.clubs.some(isOpen)) || a.league.tier - b.league.tier)
 })
 
 const openCount = computed(
@@ -64,10 +70,7 @@ function isOpen(club: Club): boolean {
 }
 
 function lockNote(club: Club): string {
-  if (!director.value) return ''
-  const required = levelRequiredFor(club.reputation)
-  const gap = xpNeededFor(director.value, club.reputation)
-  return `Level ${required.level} · ${required.title} — ${gap.toLocaleString()} XP away`
+  return director.value ? lockedJobNote(director.value, club.reputation) : ''
 }
 
 function summaryFor(club: Club) {
@@ -130,7 +133,7 @@ function agree(offer: ContractOffer) {
     <h1>Jobs board</h1>
     <p class="small muted mb">
       {{ openCount }} of {{ setup.candidates().length }} clubs will interview you.
-      You are <strong>{{ level.title }}</strong> — {{ level.description.toLowerCase() }}
+      You are <strong>{{ level.title }}</strong>. {{ level.description }}
     </p>
 
     <label class="row small mb" style="gap: 6px">

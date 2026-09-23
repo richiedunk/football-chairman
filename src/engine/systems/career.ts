@@ -285,6 +285,27 @@ export function xpNeededFor(director: DirectorProfile, clubReputation: number): 
 }
 
 /**
+ * Why a club on the jobs board will not see you, in the board's words.
+ *
+ * This printed "Level 10 · Legendary — 88,000 XP away" on twenty rows before
+ * a new director reached one they could take: a progress bar from a different
+ * kind of game, in a game whose every other line is written by somebody. The
+ * standing is still named, because it is the ladder the career screen shows,
+ * but the distance is said the way a chairman would say it.
+ */
+export function lockedJobNote(director: DirectorProfile, clubReputation: number): string {
+  const required = levelRequiredFor(clubReputation)
+  const current = levelFor(director.xp)
+  const steps = required.level - current.level
+  const distance =
+    steps <= 1 ? 'one good season off'
+      : steps <= 3 ? 'a few seasons off'
+        : steps <= 6 ? 'years off'
+          : 'a career away'
+  return `Wants ${required.title} standing · ${distance}`
+}
+
+/**
  * Clubs offered at the start of a brand-new career. Deliberately a short list
  * of genuinely struggling clubs — the opening position is meant to be a mess
  * you have to fix, not a choice between good options.
