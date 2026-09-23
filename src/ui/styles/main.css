@@ -3113,3 +3113,29 @@ input[type='radio'] {
   pointer-events: none;
 }
 .climb__tip span { display: block; font-size: 0.64rem; color: var(--text-faint); }
+
+/* Your offer against their asking price: a fill for the offer, a tick for
+   the price. */
+.gap-bar {
+  position: relative;
+  height: 8px;
+  margin: 2px 0 12px;
+  border-radius: 4px;
+  background: var(--track);
+}
+.gap-bar__offer {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--sel), var(--accent));
+}
+.gap-bar__ask {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 3px;
+  margin-left: -1.5px;
+  border-radius: 2px;
+  background: #fff;
+  box-shadow: 0 0 0 2px #0b0e12;
+}

@@ -2,6 +2,7 @@
 import { computed, inject } from 'vue'
 import { useRouter } from 'vue-router'
 import { useGameStore } from '../../stores/game'
+import PersonFace from '../components/PersonFace.vue'
 import ClubCrest from '../components/ClubCrest.vue'
 import PlayerRow from '../components/PlayerRow.vue'
 import { formatMoney, formatWage } from '../../engine/systems/valuation'
@@ -162,12 +163,30 @@ function withdraw(negotiation: TransferNegotiation) {
       <div class="section-title">Live negotiations</div>
       <div v-for="n in active" :key="n.id" class="card">
         <div class="card__head">
-          <div class="grow truncate">
-            <span class="bold">{{ store.player(n.playerId)?.knownAs ?? 'Unknown' }}</span>
+          <div class="row grow" style="gap: 10px; min-width: 0">
+            <PersonFace
+              v-if="store.player(n.playerId)"
+              :person="store.player(n.playerId)!"
+              :club="store.clubById(store.player(n.playerId)!.clubId ?? '')"
+              :size="36"
+            />
+            <div class="grow" style="min-width: 0">
+              <div class="bold truncate">{{ store.player(n.playerId)?.knownAs ?? 'Unknown' }}</div>
+              <div class="tiny muted row" style="gap: 5px">
+                <ClubCrest :club="store.clubById(store.player(n.playerId)?.clubId ?? '')" :size="14" />
+                <span class="truncate">{{ store.clubById(store.player(n.playerId)?.clubId ?? '')?.name ?? 'Free agent' }}</span>
+              </div>
+            </div>
           </div>
           <span class="chip chip--info">{{ STAGE_LABELS[n.stage] }}</span>
         </div>
         <div class="card__body">
+          <!-- How far apart you are: your offer against their price, on one
+               track, so a gap reads as a gap before the figures do. -->
+          <div class="gap-bar" :title="`Your offer is ${Math.round((n.offeredFee / Math.max(1, n.askingPrice)) * 100)}% of their price`">
+            <span class="gap-bar__offer" :style="{ width: `${Math.min(100, (n.offeredFee / Math.max(1, n.askingPrice * 1.15)) * 100)}%` }" />
+            <span class="gap-bar__ask" :style="{ left: `${(1 / 1.15) * 100}%` }" />
+          </div>
           <div class="row row--between small">
             <span class="muted">Your offer</span>
             <span class="num">{{ formatMoney(n.offeredFee, store.currency) }}</span>
