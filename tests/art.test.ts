@@ -133,3 +133,15 @@ describe('faces', () => {
     }
   })
 })
+
+describe('sender icons', () => {
+  it('read the role off the sender', async () => {
+    const { senderIcon } = await import('../src/ui/senderIcon')
+    expect(senderIcon('Chairman').role).toBe('Board')
+    expect(senderIcon('Luca Neri (Head Coach)').role).toBe('Coaching')
+    expect(senderIcon('Your representative').role).toBe('Agent')
+    expect(senderIcon('Priya Shah (Head Scout)').role).toBe('Scouting')
+    expect(senderIcon('Club Secretary').role).toBe('Admin')
+    expect(senderIcon('Someone Else').role).toBe('Message')
+  })
+})

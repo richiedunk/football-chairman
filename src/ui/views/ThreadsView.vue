@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { senderIcon } from '../senderIcon'
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useGameStore } from '../../stores/game'
@@ -78,6 +79,11 @@ function when(thread: Thread): string {
         :class="{ 'is-unread': thread.unread > 0, 'is-urgent': thread.urgent }"
         @click="open(thread)"
       >
+        <span class="chat-row__icon" :title="senderIcon(thread.title).role" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path :d="senderIcon(thread.title).d" />
+          </svg>
+        </span>
         <span class="chat-row__main">
           <span class="chat-row__top">
             <span class="chat-row__name">{{ thread.title }}</span>
