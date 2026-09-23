@@ -83,6 +83,18 @@ function when(ts: number) {
   mask-image: linear-gradient(180deg, #000 70%, transparent);
 }
 .start__scene :deep(svg) { width: 100%; height: 100%; display: block; }
+/* A window wider than a phone: the ground at a fixed size, centred, with
+   the pitch background running out either side. */
+@media (min-width: 700px) {
+  .start__scene {
+    left: 50%;
+    right: auto;
+    width: 860px;
+    max-height: none;
+    transform: translateX(-50%);
+  }
+  .title { padding-top: 330px; }
+}
 .title {
   position: relative;
   padding: min(46vw, 190px) 0 24px;
