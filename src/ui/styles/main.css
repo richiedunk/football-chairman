@@ -3341,3 +3341,15 @@ input[type='radio'] {
 .dash-item:focus-visible {
   outline-offset: -2px;
 }
+.choice__icon {
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-dim);
+}
+.choice__icon svg { width: 20px; height: 20px; }
+.choice.is-chosen .choice__icon { background: var(--sel-wash); color: var(--sel); }
