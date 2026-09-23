@@ -10,6 +10,7 @@ import { ELEVEN, fieldable } from '../../engine/systems/matchday'
 import type { Player, Position } from '../../engine/types'
 import Chevron from '../components/Chevron.vue'
 import PitchLineup from '../components/PitchLineup.vue'
+import DepthPitch from '../components/DepthPitch.vue'
 import AppSheet from '../components/AppSheet.vue'
 
 const store = useGameStore()
@@ -220,18 +221,12 @@ const fieldableNow = computed(() => {
     </button>
 
     <div v-if="showDepth" class="card">
-      <div class="card__head"><span class="card__title">Depth by position</span></div>
-      <div class="list">
-        <div v-for="d in depth" :key="d.position" class="list__row list__row--static">
-          <span class="pos">{{ d.position }}</span>
-          <div class="list__main">
-            <div class="list__primary">
-              {{ d.count }} option{{ d.count === 1 ? '' : 's' }}
-              <span v-if="d.shortage" class="chip chip--warn">Thin</span>
-            </div>
-            <div class="list__secondary">Best rated {{ d.bestRating || '—' }}</div>
-          </div>
-        </div>
+      <div class="card__head">
+        <span class="card__title">Depth by position</span>
+        <span class="card__title">Options · best</span>
+      </div>
+      <div class="card__body">
+        <DepthPitch :depth="depth" />
       </div>
     </div>
 
