@@ -547,7 +547,7 @@ const internationalLine = computed(() => {
     <!-- Attributes -->
     <div v-if="knowsAttributes || report?.attributeEstimates" class="card">
       <div class="card__head"><span class="card__title">Attributes</span></div>
-      <div class="card__body">
+      <div class="card__body attr-columns">
         <div v-for="group in visibleGroups" :key="group.label" class="mb">
           <div class="attr-group">{{ group.label }}</div>
           <div v-for="key in group.keys" :key="key" class="row" style="gap: 8px; margin-bottom: 4px">
