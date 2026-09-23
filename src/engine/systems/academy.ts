@@ -2,6 +2,8 @@ import { clamp, Rng } from '../rng'
 import { generateYouthIntake } from '../world/playerGen'
 import { staffEffectiveness } from '../world/staffGen'
 import { computeValue, computeWageDemand } from './valuation'
+import { withArticle } from './voice'
+import { positionWord } from './scoutVoice'
 import type { Club, GameState, Player, Staff } from '../types'
 import type { IdFactory } from '../ids'
 import type { NameGenerator } from '../names/generator'
@@ -106,9 +108,13 @@ export function produceIntake(
   }
 
   const best = players.slice().sort((a, b) => b.potentialAbility - a.potentialAbility)[0]
+  // In his voice, because he sends it. This read "The academy director is
+  // most excited about Isaac Fenwick, a 18-year-old DL" — the sender writing
+  // about himself in the third person, the wrong article and a position code.
+  const cameThrough = players.length === 1 ? 'One lad has' : `${players.length} lads have`
   const summary = best
-    ? `${players.length} players have come through this year's intake. The academy director is most excited about ${best.knownAs}, a ${best.age}-year-old ${best.position}.`
-    : 'This year\'s intake has produced nobody the academy director rates.'
+    ? `${cameThrough} come through. The one I'm excited about is ${best.knownAs} — ${withArticle(`${best.age}-year-old`)} ${positionWord(best.position)}.`
+    : 'Nobody in this year\'s group I would put my name to, if I am honest.'
 
   return { players, summary }
 }
