@@ -320,10 +320,11 @@ const notStarted = computed(() => table.value.every((row) => row.played === 0))
             <span class="small muted">
               {{ entry.competition.winnerId ? 'Winners' : entry.currentRound?.name ?? 'Not yet under way' }}
             </span>
-            <span
-              v-if="entry.competition.winnerId"
-              class="chip chip--gold"
-            >{{ store.clubById(entry.competition.winnerId)?.shortName }}</span>
+            <span v-if="entry.competition.winnerId" class="row" style="gap: 6px">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3" /></svg>
+              <ClubCrest :club="store.clubById(entry.competition.winnerId)" :size="18" />
+              <span class="chip chip--gold">{{ store.clubById(entry.competition.winnerId)?.shortName }}</span>
+            </span>
             <span
               v-else-if="entry.entered"
               class="chip"
@@ -346,16 +347,17 @@ const notStarted = computed(() => table.value.every((row) => row.played === 0))
               {{ short(leg.awayClubId) }}
             </div>
           </template>
-          <div v-else-if="entry.tie" class="small">
-            {{ short(entry.tie.homeClubId) }}
-            <template v-if="entry.tie.result">
-              {{ entry.tie.result.homeGoals }}–{{ entry.tie.result.awayGoals }}
-              <span v-if="entry.tie.result.penalties" class="tiny faint">
-                ({{ entry.tie.result.penalties.home }}–{{ entry.tie.result.penalties.away }} pens)
-              </span>
-            </template>
-            <template v-else> v </template>
-            {{ short(entry.tie.awayClubId) }}
+          <div v-else-if="entry.tie">
+            <FixtureLine
+              :home="store.clubById(entry.tie.homeClubId)"
+              :away="store.clubById(entry.tie.awayClubId)"
+              :home-goals="entry.tie.result?.homeGoals"
+              :away-goals="entry.tie.result?.awayGoals"
+              :mine="store.club?.id"
+            />
+            <div v-if="entry.tie.result?.penalties" class="tiny faint center" style="margin-top: 4px">
+              {{ entry.tie.result.penalties.home }}–{{ entry.tie.result.penalties.away }} on penalties
+            </div>
           </div>
           <div v-else-if="!entry.entered" class="small muted">
             {{ entry.competition.entrantIds.length }} clubs are in it. You are not.
