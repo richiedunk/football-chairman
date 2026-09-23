@@ -913,7 +913,13 @@ button, input, select, textarea {
 .form-dot--L { background: var(--loss); color: #fff; }
 /* In a table column there is no room for letters; the tiles shrink to pips. */
 .form-run--compact { gap: 2px; }
-.form-run--compact .form-dot { width: 7px; height: 12px; border-radius: 2px; }
+.form-run--compact .form-dot { width: 6px; height: 12px; border-radius: 2px; }
+/* A phone has no room for a full league table plus crests plus form: the
+   cells tighten, and the club column gives way first. */
+@media (max-width: 480px) {
+  .table th, .table td { padding-left: 3px; padding-right: 3px; }
+  .table td.name { max-width: 104px !important; }
+}
 
 /* ------------------------------------------------------------- dashboard - */
 
@@ -3245,3 +3251,68 @@ input[type='radio'] {
 .content > div > .card:nth-of-type(3), .dash__col > .card:nth-of-type(3) { animation-delay: 0.08s; }
 .content > div > .card:nth-of-type(4), .dash__col > .card:nth-of-type(4) { animation-delay: 0.12s; }
 .content > div > .card:nth-of-type(n + 5), .dash__col > .card:nth-of-type(n + 5) { animation-delay: 0.16s; }
+
+/* A club's road through a cup: a vertical line of rounds. */
+.cup-run { list-style: none; margin: 0; padding: 4px 0 0; }
+.cup-run__step {
+  position: relative;
+  display: grid;
+  grid-template-columns: 14px 112px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+}
+.cup-run__step::before {
+  content: '';
+  position: absolute;
+  left: 6px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: rgba(255, 255, 255, 0.12);
+}
+.cup-run__step:first-child::before { top: 50%; }
+.cup-run__step:last-child::before { bottom: 50%; }
+.cup-run__dot {
+  position: relative;
+  z-index: 1;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #0b0e12;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+}
+.cup-run__step.is-won .cup-run__dot { background: var(--win); border-color: var(--win); }
+.cup-run__step.is-lost .cup-run__dot { background: var(--loss); border-color: var(--loss); }
+.cup-run__step.is-next .cup-run__dot { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-wash); }
+.cup-run__step.is-ahead { opacity: 0.45; }
+.cup-run__round {
+  font-family: var(--font-display);
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cup-run__tie { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 0.84rem; font-weight: 600; }
+.cup-run__score {
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+.cup-run__step.is-won .cup-run__score { color: var(--win); }
+.cup-run__step.is-lost .cup-run__score { color: var(--loss); }
+.cup-run__tag {
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-family: var(--font-display);
+  font-size: 0.56rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}

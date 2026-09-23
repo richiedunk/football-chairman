@@ -6,6 +6,7 @@ import { useGameStore } from '../../stores/game'
 import FormRun from '../components/FormRun.vue'
 import ClubCrest from '../components/ClubCrest.vue'
 import FixtureLine from '../components/FixtureLine.vue'
+import CupRun from '../components/CupRun.vue'
 import { sortTable } from '../../engine/systems/board'
 import { survivorsOf, tieAggregate } from '../../engine/sim/cups'
 import Chevron from '../components/Chevron.vue'
@@ -363,6 +364,11 @@ const notStarted = computed(() => table.value.every((row) => row.played === 0))
             {{ entry.competition.entrantIds.length }} clubs are in it. You are not.
           </div>
           <div v-else class="small muted">No tie this round.</div>
+        </div>
+        <!-- The road so far, once there has been more than one round of it. -->
+        <div v-if="entry.entered && store.club && entry.competition.rounds.length > 1" class="card__body" style="border-top: 1px solid var(--hairline)">
+          <div class="attr-group">Your run</div>
+          <CupRun :competition="entry.competition" :club-id="store.club.id" />
         </div>
       </div>
     </template>
