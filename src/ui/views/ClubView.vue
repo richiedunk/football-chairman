@@ -9,6 +9,8 @@ import { confidenceLabel } from '../../engine/systems/board'
 import { credibilityLabel } from '../../engine/systems/media'
 import { levelFor } from '../../engine/systems/career'
 import Chevron from '../components/Chevron.vue'
+import ClubCrest from '../components/ClubCrest.vue'
+import KitShirt from '../components/KitShirt.vue'
 
 const store = useGameStore()
 const router = useRouter()
@@ -79,9 +81,12 @@ const sections = computed(() => [
   <div v-if="club">
     <div class="card">
       <div
-        class="card__body"
-        :style="{ background: `linear-gradient(135deg, ${club.colors.primary}22, transparent)` }"
+        class="card__body row"
+        style="gap: 14px; align-items: center"
+        :style="{ background: `linear-gradient(135deg, ${club.colors.primary}33, transparent)` }"
       >
+        <ClubCrest :club="club" :size="72" />
+        <div class="grow">
         <h1>{{ club.name }}</h1>
         <div class="small muted">
           {{ club.nickname }} · {{ club.city }} · founded {{ club.founded }}
@@ -91,6 +96,11 @@ const sections = computed(() => [
           <span class="chip">Rep {{ club.reputation }}</span>
           <span class="chip">{{ club.facilities.stadium.name }}</span>
         </div>
+        </div>
+        <span class="club-kits">
+          <KitShirt :club="club" :size="34" />
+          <KitShirt :club="club" :size="34" away />
+        </span>
       </div>
       <div class="stat-grid">
         <div class="stat">

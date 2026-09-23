@@ -2,6 +2,7 @@
 import { computed, inject, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useGameStore } from '../../stores/game'
+import ClubCrest from '../components/ClubCrest.vue'
 import MeterBar from '../components/MeterBar.vue'
 import { CAREER_LEVELS, levelFor, levelProgress, nextLevel, ordinal } from '../../engine/systems/career'
 import { acceptJobOffer } from '../../engine/season'
@@ -304,7 +305,10 @@ const CHALLENGE_STATUS: Record<ChallengeStatus, string> = {
       <div class="section-title">Approaches</div>
       <div v-for="offer in director.jobOffers" :key="offer.id" class="card card--boxed" style="border-color: var(--accent)">
         <div class="card__head">
-          <span class="card__title">{{ offer.clubName }}</span>
+          <span class="row" style="gap: 8px">
+            <ClubCrest :club="store.clubById(offer.clubId)" :size="24" />
+            <span class="card__title">{{ offer.clubName }}</span>
+          </span>
           <span class="chip chip--accent">Rep {{ offer.clubReputation }}</span>
         </div>
         <div class="card__body">
@@ -365,6 +369,7 @@ const CHALLENGE_STATUS: Record<ChallengeStatus, string> = {
     <div class="card">
       <div class="list">
         <div v-for="(entry, i) in director.careerHistory.slice().reverse()" :key="i" class="list__row list__row--static">
+          <ClubCrest :club="store.clubById(entry.clubId)" :size="30" />
           <div class="list__main">
             <div class="list__primary">{{ entry.clubName }}</div>
             <div class="list__secondary">

@@ -2,6 +2,7 @@
 import { computed, inject } from 'vue'
 import { useRouter } from 'vue-router'
 import { useGameStore } from '../../stores/game'
+import ClubCrest from '../components/ClubCrest.vue'
 import PlayerRow from '../components/PlayerRow.vue'
 import { formatMoney, formatWage } from '../../engine/systems/valuation'
 import { effectiveOfferValue } from '../../engine/systems/transfers'
@@ -307,7 +308,13 @@ function withdraw(negotiation: TransferNegotiation) {
         <div v-for="t in recentWorldTransfers" :key="t.id" class="list__row list__row--static">
           <div class="list__main">
             <div class="list__primary">{{ t.playerName }}</div>
-            <div class="list__secondary">{{ t.fromClubName }} → {{ t.toClubName }}</div>
+            <div class="list__secondary transfer-route">
+              <ClubCrest v-if="t.fromClubId" :club="store.clubById(t.fromClubId)" :size="15" />
+              <span class="truncate">{{ t.fromClubName }}</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-label="to"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+              <ClubCrest :club="store.clubById(t.toClubId)" :size="15" />
+              <span class="truncate">{{ t.toClubName }}</span>
+            </div>
           </div>
           <div class="list__trail">
             <div class="list__value">
