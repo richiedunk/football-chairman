@@ -2,6 +2,7 @@
 import { computed, inject, ref } from 'vue'
 import { useGameStore } from '../../stores/game'
 import MeterBar from '../components/MeterBar.vue'
+import DialGauge from '../components/DialGauge.vue'
 import { assessFanMood, confidenceLabel, MANDATE_LABELS } from '../../engine/systems/board'
 import {
   lossCoverage, OWNER_LABELS, ownerSummary, ownerTraits, wageBudgetShare,
@@ -142,11 +143,11 @@ const weakestFacility = computed<FacilityKind>(
 
     <div class="card">
       <div class="card__body">
-        <div class="row row--between mb">
-          <span class="small muted">Confidence in you</span>
-          <span class="bold">{{ confidenceLabel(club.board.confidence) }}</span>
-        </div>
-        <MeterBar :value="club.board.confidence" />
+        <DialGauge
+          :value="club.board.confidence"
+          label="Confidence in you"
+          :reading="`Confidence · ${confidenceLabel(club.board.confidence)}`"
+        />
         <div v-if="club.board.warnings > 0" class="chip chip--danger mt">
           {{ club.board.warnings }} of 3 formal warnings issued
         </div>

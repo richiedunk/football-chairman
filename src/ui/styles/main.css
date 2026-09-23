@@ -2997,3 +2997,25 @@ input[type='radio'] {
   background: #0b0e12;
   box-shadow: 0 0 0 1px var(--border-strong);
 }
+
+/* A half-dial for a mood: board confidence, press credibility. */
+.dial { position: relative; margin: 0 auto; text-align: center; }
+.dial svg { display: block; width: 100%; height: auto; }
+.dial__figure {
+  margin-top: -6px;
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  font-weight: 900;
+  line-height: 1;
+}
+.dial__label {
+  margin-top: 4px;
+  font-family: var(--font-display);
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.dial-pair { display: flex; justify-content: space-around; gap: 8px; }
+.medal { flex: 0 0 auto; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.45)); }
