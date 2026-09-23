@@ -78,6 +78,23 @@ describe('matchVerdict', () => {
     expect(one.verdict).toBe('par')
   })
 
+  it('fills in the opponent and the score rather than printing the slots', () => {
+    // Some lines name who it was against and what it finished. Every cell is
+    // checked, so a line with a typo in its slot cannot hide in a rare verdict.
+    const them = { id: 'THEM', reputation: 50, name: 'Barnet' } as Club
+    let named = 0
+    for (const [h, a] of [[0, 6], [0, 3], [0, 1], [1, 1], [2, 1], [5, 0]]) {
+      for (let c = 0; c < 40; c++) {
+        const him = ({ id: `C${c}`, attributes: { mediaHandling: c * 2.5 }, coachProfile: { dofRelationship: 100 - c * 2.5 } }) as Staff
+        const f = ({ ...fixture('US', 'THEM'), id: `F${c}` }) as Fixture
+        const line = matchVerdict(us, them, f, result(h, a), him).coachLine
+        expect(line, line).not.toMatch(/[{}]/)
+        if (line.includes('Barnet')) named++
+      }
+    }
+    expect(named, 'no line ever named the opponent').toBeGreaterThan(0)
+  })
+
   it('reads the score from the right side when away', () => {
     const v = matchVerdict(us, club('THEM', 50), fixture('THEM', 'US'), result(0, 2), null)
     expect(v.outcome).toBe('W')
