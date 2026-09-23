@@ -797,7 +797,12 @@ function generateOutlets(rng: Rng, ids: IdFactory, def: NationDef): MediaOutlet[
   const outlets: MediaOutlet[] = []
   const make = (name: string, credibility: number, sensationalism: number): MediaOutlet => ({
     id: ids.next(ID_PREFIX.outlet),
-    name: `${name} (${def.code})`,
+    // The paper's own name. It used to carry the nation's code as well — "The
+    // Chronicle (ENG)" — to tell apart two countries' papers that drew the
+    // same masthead, and every reader saw that bracket on every cutting.
+    // Nothing looks an outlet up by name, and a paper is only ever shown
+    // beside its own nation's football.
+    name,
     nationId: def.id,
     credibility: clamp(Math.round(rng.normal(credibility, 8)), 5, 98),
     sensationalism: clamp(Math.round(rng.normal(sensationalism, 10)), 5, 98),

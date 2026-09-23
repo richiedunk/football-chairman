@@ -170,8 +170,9 @@ export function findThread(threads: Thread[], key: string): Thread | null {
  * recognisable at a glance and recognising the sender at a glance is the only
  * thing the avatar is for.
  *
- * Bracketed suffixes are dropped: every outlet is named "The Chronicle (ENG)"
- * and a monogram of TE tells the reader nothing.
+ * Bracketed suffixes are dropped: outlets used to be named "The Chronicle
+ * (ENG)", a save older than format 22 may still hold a sender written that
+ * way, and a monogram of TE tells the reader nothing.
  */
 export function initials(title: string): string {
   const words = title
