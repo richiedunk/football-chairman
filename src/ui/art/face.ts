@@ -53,8 +53,10 @@ export function faceDesign(id: string, age: number): FaceDesign {
   const rand = stream(hashString(`face:${id}`))
   const skin = SKIN[Math.floor(rand() * SKIN.length)]
 
-  // Colour first, then age takes it: a player of 34 may be going grey, a
-  // coach of 60 almost certainly is.
+  // Colour first, then age takes it. Gently: a squad is sixteen to
+  // thirty-six, and the first pass greyed and balded players from 34, which
+  // made a dressing room look like a bowls club. Grey is for the coaching
+  // staff, mostly, and white for the ones past sixty.
   let hair: string = weighted(rand, [
     [HAIR.black, 5],
     [HAIR.darkBrown, 5],
@@ -63,9 +65,9 @@ export function faceDesign(id: string, age: number): FaceDesign {
     [HAIR.blond, 2],
     [HAIR.ginger, 1],
   ] as const)
-  const greying = age >= 52 ? 0.85 : age >= 42 ? 0.45 : age >= 34 ? 0.12 : 0
+  const greying = age >= 60 ? 0.75 : age >= 52 ? 0.45 : age >= 44 ? 0.2 : age >= 38 ? 0.05 : 0
   const greyRoll = rand()
-  if (greyRoll < greying) hair = age >= 58 && greyRoll < greying * 0.5 ? HAIR.white : HAIR.grey
+  if (greyRoll < greying) hair = age >= 64 && greyRoll < greying * 0.4 ? HAIR.white : HAIR.grey
 
   let style = weighted<HairStyle>(rand, [
     ['buzz', 4],
@@ -77,20 +79,26 @@ export function faceDesign(id: string, age: number): FaceDesign {
     ['long', 1],
     ['bald', 1],
   ])
-  const recedes = rand() < (age >= 45 ? 0.5 : age >= 35 ? 0.2 : 0.02)
+  const recedes = rand() < (age >= 58 ? 0.4 : age >= 48 ? 0.22 : age >= 38 ? 0.06 : 0)
   if (recedes && style !== 'bald' && style !== 'afro') style = 'receding'
 
   const beard = weighted<Beard>(rand, [
     ['none', age < 21 ? 12 : 6],
     ['stubble', 4],
     ['full', age < 21 ? 0 : 2],
-    ['moustache', age >= 40 ? 1 : 0.2],
+    ['moustache', age >= 45 ? 1 : 0.1],
     ['goatee', 1],
   ])
 
   return { skin, hair, style, beard, width: 17 + rand() * 3, brows: rand() }
 }
 
+/**
+ * The head is an ellipse whose crown sits at about y = 17. A cubic from ear
+ * to ear peaks at a quarter of the ends plus three quarters of the controls,
+ * so the outer controls are pulled up to 5-7: anything lower and the crown
+ * shows above the hair, which reads as a bald head in a headband.
+ */
 function hairSvg(style: HairStyle, hair: string, w: number): string {
   const l = 50 - w
   const r = 50 + w
@@ -98,11 +106,13 @@ function hairSvg(style: HairStyle, hair: string, w: number): string {
     case 'bald':
       return ''
     case 'buzz':
-      return `<path d="M${l} 40C${l} 22 ${r} 22 ${r} 40C${r - 3} 30 ${l + 3} 30 ${l} 40Z" fill="${hair}" opacity="0.85"/>`
+      // A close crop: the whole top of the head, thin, down to a natural
+      // hairline — the first pass drew a crescent that read as a headband.
+      return `<path d="M${l} 44C${l - 1} 7 ${r + 1} 7 ${r} 44C${r - 1} 35 ${r - 3} 29 50 28C${l + 3} 29 ${l + 1} 35 ${l} 44Z" fill="${hair}" opacity="0.62"/>`
     case 'short':
-      return `<path d="M${l - 1} 42C${l - 3} 18 ${r + 3} 18 ${r + 1} 42C${r - 2} 31 ${l + 12} 28 ${l - 1} 42Z" fill="${hair}"/>`
+      return `<path d="M${l - 1} 42C${l - 3} 6 ${r + 3} 6 ${r + 1} 42C${r - 2} 31 ${l + 12} 28 ${l - 1} 42Z" fill="${hair}"/>`
     case 'sidePart':
-      return `<path d="M${l - 1} 43C${l - 4} 16 ${r + 4} 16 ${r + 1} 43C${r} 32 ${r - 8} 27 ${46} 27C${l + 8} 29 ${l + 1} 33 ${l - 1} 43Z" fill="${hair}"/><path d="M46 21V27" stroke="${shade(hair, 0.4)}" stroke-width="0.8"/>`
+      return `<path d="M${l - 1} 43C${l - 4} 5 ${r + 4} 5 ${r + 1} 43C${r} 32 ${r - 8} 27 ${46} 27C${l + 8} 29 ${l + 1} 33 ${l - 1} 43Z" fill="${hair}"/><path d="M46 21V27" stroke="${shade(hair, 0.4)}" stroke-width="0.8"/>`
     case 'quiff':
       return `<path d="M${l - 1} 42C${l - 4} 20 ${l + 6} 12 52 13C${r + 2} 13 ${r + 4} 24 ${r + 1} 42C${r - 2} 32 ${l + 10} 28 ${l - 1} 42Z" fill="${hair}"/>`
     case 'curly': {
@@ -118,7 +128,9 @@ function hairSvg(style: HairStyle, hair: string, w: number): string {
     case 'long':
       return `<path d="M${l - 2} 58C${l - 6} 30 ${l} 16 50 16C${r} 16 ${r + 6} 30 ${r + 2} 58L${r - 2} 58C${r} 40 ${r - 4} 30 50 29C${l + 4} 30 ${l} 40 ${l + 2} 58Z" fill="${hair}"/>`
     case 'receding':
-      return `<path d="M${l - 1} 44C${l - 2} 30 ${l + 2} 24 ${l + 5} 24C${l + 3} 30 ${l + 2} 36 ${l} 44Z" fill="${hair}"/><path d="M${r + 1} 44C${r + 2} 30 ${r - 2} 24 ${r - 5} 24C${r - 3} 30 ${r - 2} 36 ${r} 44Z" fill="${hair}"/>`
+      // Short on top with the temples gone back: a high M-shaped hairline,
+      // not the two side tufts of the first pass, which read as eighty.
+      return `<path d="M${l - 1} 42C${l - 3} 6 ${r + 3} 6 ${r + 1} 42C${r} 34 ${r - 2} 28 ${r - 6} 26C${56} 25 53 28 50 27C47 28 44 25 ${l + 6} 26C${l + 2} 28 ${l} 34 ${l - 1} 42Z" fill="${hair}"/>`
   }
 }
 
@@ -163,10 +175,12 @@ export function faceSvg(input: FaceInput): string {
         `<path d="M41 70L50 88L44 100H34Z M59 70L50 88L56 100H66Z" fill="#252c36"/>`
 
   const brows = 37 + d.brows * 2
+  // Lines only on the genuinely older: a forehead crease past fifty, the
+  // cheek lines past sixty. Nobody on a playing staff gets either.
   const lines =
-    input.age >= 38
-      ? `<path d="M41 ${brows - 4}H59" stroke="${shade(d.skin, 0.3)}" stroke-width="0.7" opacity="0.6"/>` +
-        (input.age >= 50 ? `<path d="M38 50C39 53 40 54 41 55M62 50C61 53 60 54 59 55" stroke="${shade(d.skin, 0.3)}" stroke-width="0.8" fill="none" opacity="0.7"/>` : '')
+    input.age >= 50
+      ? `<path d="M42 ${brows - 4}H58" stroke="${shade(d.skin, 0.3)}" stroke-width="0.6" opacity="0.45"/>` +
+        (input.age >= 60 ? `<path d="M38 50C39 53 40 54 41 55M62 50C61 53 60 54 59 55" stroke="${shade(d.skin, 0.3)}" stroke-width="0.8" fill="none" opacity="0.7"/>` : '')
       : ''
 
   return (
