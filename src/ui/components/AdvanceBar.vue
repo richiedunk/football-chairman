@@ -93,9 +93,10 @@ async function press() {
     router.push('/career')
     return
   }
+  // The end of a season gets its own screen, the review, rather than a
+  // notice and the career page.
   if (tick?.seasonEnded) {
-    notify?.('Season complete.', 'success')
-    router.push('/career')
+    router.push('/season')
     return
   }
   // The match is the week's payoff. It gets a screen rather than a toast that

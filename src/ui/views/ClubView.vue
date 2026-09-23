@@ -170,6 +170,9 @@ const sections = computed(() => [
 
     <template v-if="club.history.length">
       <div class="section-title">History</div>
+      <button class="btn btn--ghost btn--block mb" @click="$router.push('/season')">
+        Review last season
+      </button>
       <div class="card">
         <ClimbChart v-if="climb" :points="climb.points" :bands="climb.bands" />
         <div class="table__scroll">
