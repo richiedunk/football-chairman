@@ -45,7 +45,8 @@ const marks = computed(() =>
       <i />
       <b>{{ m.minute }}'</b>
     </span>
-    <span class="timeline__end timeline__end--start">0'</span>
-    <span class="timeline__end timeline__end--end">{{ length }}'</span>
+    <!-- The ends are labelled unless an away mark is sitting on the label. -->
+    <span v-if="!marks.some((m) => !m.home && m.left < 7)" class="timeline__end timeline__end--start">0'</span>
+    <span v-if="!marks.some((m) => !m.home && m.left > 93)" class="timeline__end timeline__end--end">{{ length }}'</span>
   </div>
 </template>

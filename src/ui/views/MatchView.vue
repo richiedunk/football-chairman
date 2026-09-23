@@ -135,6 +135,7 @@ const EVENT_LABEL: Record<string, string> = {
 
 <template>
   <div v-if="report" class="match">
+    <div class="match__story">
     <!-- The scoreboard: two crests, two name plates and the score between
          them, home side first. -->
     <section class="card scoreboard">
@@ -209,6 +210,8 @@ const EVENT_LABEL: Record<string, string> = {
       “{{ report.verdict.coachLine }}”
     </section>
 
+    </div>
+    <div class="match__sides">
     <!-- The side he picked, on the pitch, rated. -->
     <section v-if="report.lineup.length" class="card">
       <div class="card__head">
@@ -246,12 +249,25 @@ const EVENT_LABEL: Record<string, string> = {
         />
       </div>
     </section>
+    </div>
   </div>
 
   <div v-else class="empty">That match has not been played.</div>
 </template>
 
 <style scoped>
+/* On a wide screen the story reads down the left and the line-ups stand on
+   the right, so the pitch is not a 1,100px-wide field at the foot of a
+   scroll. */
+@media (min-width: 1100px) {
+  .match {
+    display: grid;
+    grid-template-columns: minmax(0, 1.25fr) minmax(360px, 1fr);
+    gap: 14px;
+    align-items: start;
+  }
+  .match__sides { position: sticky; top: 0; }
+}
 .scoreboard {
   text-align: center;
   background:
