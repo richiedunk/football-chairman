@@ -3155,3 +3155,38 @@ input[type='radio'] {
 .chat-row__icon svg { width: 19px; height: 19px; }
 .chat-row.is-unread .chat-row__icon { color: #fff; border-color: rgba(255, 255, 255, 0.22); }
 .chat-row.is-urgent .chat-row__icon { color: var(--danger); border-color: var(--danger-dim); }
+
+/* The next few opponents, as a strip of crests. */
+.coming-up__row {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 4px;
+  padding: 10px 8px 12px;
+}
+.coming-up__tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.coming-up__name {
+  max-width: 100%;
+  font-family: var(--font-display);
+  font-size: 0.62rem;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.coming-up__meta {
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.07);
+  font-family: var(--font-display);
+  font-size: 0.54rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--text-faint);
+}
+.coming-up__meta.is-home { background: var(--sel-wash); color: var(--sel); }

@@ -122,6 +122,20 @@ const nextMatch = computed(() => {
 })
 
 /**
+ * The fixtures after the next one, as a strip of opponents: who is coming,
+ * home or away, and in which week. Enough to see a run of hard games before
+ * it arrives.
+ */
+const comingUp = computed(() => {
+  const c = club.value
+  if (!c) return []
+  return store.upcomingFixtures.slice(1, 6).map((f) => {
+    const isHome = f.homeClubId === c.id
+    return { id: f.id, week: f.week, isHome, opponent: store.clubById(isHome ? f.awayClubId : f.homeClubId) }
+  }).filter((f) => f.opponent)
+})
+
+/**
  * The coach, on the home screen, with the one number that matters weekly in a
  * game where somebody else picks the team: how many of the players you
  * signed he actually started. In his own voice, because he has one now, and
@@ -454,6 +468,17 @@ const hub = computed(() => {
         {{ unavailable || 'Fully fit' }}
       </span>
     </button>
+
+    <div v-if="comingUp.length" class="card coming-up">
+      <div class="card__head"><span class="card__title">Coming up</span></div>
+      <div class="coming-up__row">
+        <div v-for="f in comingUp" :key="f.id" class="coming-up__tile">
+          <ClubCrest :club="f.opponent" :size="30" />
+          <span class="coming-up__name">{{ f.opponent!.shortName || f.opponent!.name }}</span>
+          <span class="coming-up__meta" :class="f.isHome ? 'is-home' : ''">{{ f.isHome ? 'H' : 'A' }} · W{{ f.week }}</span>
+        </div>
+      </div>
+    </div>
 
     <!-- The coach. He picks the team, so here is what he did with yours. -->
     <button v-if="coachSays" class="card dash-coach" @click="router.push('/staff')">
