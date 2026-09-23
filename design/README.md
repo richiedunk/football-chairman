@@ -1,6 +1,45 @@
 # UI directions
 
-## The direction (top row of the canvas)
+## The direction: Stadium
+
+The terminal build (below) was correct and joyless: near-black, hairlines,
+mono caps everywhere, and nothing on screen that said football. The Stadium
+pass keeps its information design — one number per screen that matters most,
+one contextual advance button, dense scannable lists — and puts it in a
+football ground. Reference points were Football Chairman Pro, calmer, and
+generic football-manager UI kits: dark glass panels over a floodlit pitch.
+
+- **The ground is a pitch at night.** `--stadium` in `main.css`: mown stripes,
+  the centre circle and halfway line, two floodlight pools and a heavy smoke,
+  all CSS gradients. The floodlights pick up a wash of the club's colour.
+- **Panels, not hairlines.** Every `.card` is smoked glass with a header strip.
+  The pitch showing between panels is what makes a screen read as football.
+- **Montserrat is the voice.** Headings, labels, buttons and every figure,
+  with tabular numerals so columns still line up. Inter carries prose.
+  JetBrains Mono is kept for nothing on screen by default; `--font-mono`
+  remains for the documents register if it wants it back.
+- **Colour has one meaning each.** Lime `#C8FF4D`: the thing you do next.
+  Green / amber / red: good / caution / bad. Blue `--sel`: selected, and star
+  ratings. Club colour: identity. Position families follow the genre:
+  keeper orange, defence green, midfield blue, attack red.
+- **Club colour leaves the header.** The band is still `headerBand()` so text
+  is always legible, but the club now dresses the floodlights, edges the
+  standing panel and the phone plate, and is worn — as a crest, a kit, a tie.
+- **Everything is generated.** `src/ui/art/`: a crest and a kit for every
+  club from its id and two colours, a face for every player and member of
+  staff from their id and age. Deterministic, no assets, no storage. Crests
+  are generic heraldry and never imitate a real badge.
+- **The title is drawn in.** Scoreboards with crests and a score plate, match
+  facts as split bars, the side on a pitch in its shirts, a plan of the ground
+  from above, the undisclosed part of a scout's range as a hatched band.
+- **Buttons are plates.** Bordered rectangles with a top light; the primary is
+  the lime plate. The advance button is the same, capped at 520px on desktop.
+
+Superseded from the direction below: "nothing below the strip is ever
+club-coloured", "Numbers in mono", and the two-button home bar (it is five
+tabs now: Home, Club, Squad, Market, Inbox).
+
+## The previous direction: Terminal (top row of the canvas)
 
 `Main.dc.html` · `SquadC.dc.html` · `Advance.dc.html` · `Header.dc.html`
 
