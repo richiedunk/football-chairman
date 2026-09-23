@@ -313,6 +313,14 @@ const EVENT_LABEL: Record<string, string> = {
   line-height: 1;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
 }
+/* The score lands a beat after the panel: the one moment in the week worth
+   a flourish. */
+@keyframes score-in {
+  0% { opacity: 0; transform: scale(0.6); }
+  70% { opacity: 1; transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+.scoreboard__score { animation: score-in 0.45s 0.15s cubic-bezier(0.3, 0.8, 0.3, 1.2) both; }
 .scoreboard__ft {
   padding: 3px 6px;
   border-radius: 4px;

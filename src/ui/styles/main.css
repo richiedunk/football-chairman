@@ -1488,6 +1488,9 @@ button, input, select, textarea {
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
+    /* A staggered entrance would otherwise still hold content back for
+       its delay, just without the movement. */
+    animation-delay: 0s !important;
     transition-duration: 0.01ms !important;
   }
 }
@@ -3218,3 +3221,27 @@ input[type='radio'] {
   text-transform: uppercase;
   color: var(--text-faint);
 }
+
+/* ---------------------------------------------------------------------------
+ * Arrival.
+ *
+ * Panels settle in as a screen opens, a few tens of milliseconds apart, so
+ * the eye is led down the page rather than handed all of it at once. Short
+ * enough never to be waited on; transform and opacity only, so it runs on
+ * the compositor. The reduced-motion rule above turns it off entirely.
+ * ------------------------------------------------------------------------ */
+@keyframes settle {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+.content > div > .card,
+.content > div > .hub,
+.content > div > .apps,
+.content > .dash .dash__col > .card,
+.panes__detail > div > .card {
+  animation: settle 0.32s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.content > div > .card:nth-of-type(2), .dash__col > .card:nth-of-type(2) { animation-delay: 0.04s; }
+.content > div > .card:nth-of-type(3), .dash__col > .card:nth-of-type(3) { animation-delay: 0.08s; }
+.content > div > .card:nth-of-type(4), .dash__col > .card:nth-of-type(4) { animation-delay: 0.12s; }
+.content > div > .card:nth-of-type(n + 5), .dash__col > .card:nth-of-type(n + 5) { animation-delay: 0.16s; }
