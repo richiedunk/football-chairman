@@ -72,7 +72,11 @@ export function unit(key: string): number {
  * dictionary — an hour, a unicorn — do not occur in them.
  */
 export function article(word: string): string {
-  return /^[aeiou]/i.test(word.trim()) ? 'an' : 'a'
+  const w = word.trim()
+  // Numbers are read aloud: "an 18-year-old", "an 8-week job", "an 11-man
+  // wall" — and "a 1,800-seat stand", which starts with "one".
+  if (/^\d/.test(w)) return /^(8|1[18](?![\d,]))/.test(w) ? 'an' : 'a'
+  return /^[aeiou]/i.test(w) ? 'an' : 'a'
 }
 
 /** The same word with its article in front of it. */

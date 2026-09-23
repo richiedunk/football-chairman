@@ -1,7 +1,7 @@
 import { clamp, Rng } from '../rng'
 import { ratingForPositionCached } from '../world/attributes'
 import { computeAskingPrice, computeWageDemand } from './valuation'
-import { phrase } from './voice'
+import { scoutVerdict } from './scoutVoice'
 import type {
   AttributeKey, Club, GameState, ID, Player, Position, ScoutAssignment, ScoutReport, Staff,
 } from '../types'
@@ -258,7 +258,7 @@ export function buildReport(
     abilityRange,
     potentialRange,
     attributeEstimates,
-    verdict: writeVerdict(player, abilityCentre, potentialCentre, knowledge, scout),
+    verdict: scoutVerdict(player, abilityCentre, potentialCentre, knowledge, scout),
     recommendation: computeRecommendation(state, club, player, abilityCentre, potentialCentre),
     estimatedFee,
     estimatedWage,
@@ -317,56 +317,6 @@ function isRelevantAttribute(position: Position, key: AttributeKey): boolean {
   const keeperKeys: AttributeKey[] = ['reflexes', 'handling', 'distribution', 'command']
   if (position === 'GK') return keeperKeys.includes(key)
   return !keeperKeys.includes(key)
-}
-
-function writeVerdict(
-  player: Player,
-  ability: number,
-  potential: number,
-  knowledge: number,
-  scout: Staff,
-): string {
-  // First person, and varied. This read "Jude Holloway has seen him once" —
-  // the scout writing about himself in the third person — and it was the same
-  // sentence every time, so four reports in a row from the same man were
-  // word-for-word identical on screen. It is the message a director gets most
-  // often, which made it the worst one to have written by nobody.
-  if (knowledge < 20) {
-    return phrase(`firstlook:${scout.id}:${player.id}`, [
-      `Seen him once. Too early to say — I want another look before I commit.`,
-      `One viewing so far. Nothing I'd hang a recommendation on yet.`,
-      `I've watched him once. Give me a few more games before you act on anything.`,
-      `Early days — one game. Worth watching again, but I'm not saying more than that.`,
-    ])
-  }
-
-  const headroom = potential - ability
-  const parts: string[] = []
-
-  const opener = `open:${scout.id}:${player.id}`
-  if (ability >= 155) parts.push(phrase(opener, ['Outstanding at this level', 'He is far too good for this level', 'Exceptional — miles above what he is playing in']))
-  else if (ability >= 130) parts.push(phrase(opener, ['A very good player', 'Genuinely good, this one', 'Well worth your time']))
-  else if (ability >= 105) parts.push(phrase(opener, ['A solid professional', 'Dependable, no more and no less', 'He does a job, week in week out']))
-  else if (ability >= 80) parts.push(phrase(opener, ['Lower-division standard', 'He is what he is — lower division', 'Honest enough, but this is his level']))
-  else parts.push(phrase(opener, ['Not up to much', 'I would not bother', 'There is nothing here']))
-
-  if (headroom > 45 && player.age <= 21) parts.push('with a genuinely high ceiling')
-  else if (headroom > 22) parts.push('with room to improve')
-  else if (player.age >= 31) parts.push('and past his best')
-  else parts.push('at or near his ceiling')
-
-  // Personality read, which is where a good scout earns his money — and where
-  // an unreliable one does real damage.
-  if (knowledge >= 60) {
-    const read = `read:${scout.id}:${player.id}`
-    if (player.traits.includes('professional')) parts.push(phrase(read, ['He trains impeccably.', 'First in, last out. Every day.', 'You could not fault his professionalism.']))
-    else if (player.traits.includes('disruptive')) parts.push(phrase(read, ['I have to warn you: he is trouble in a dressing room.', 'Be careful. He poisons a room.', 'Talented, but I would not have him near your squad.']))
-    else if (player.traits.includes('hothead')) parts.push(phrase(read, ['Discipline worries me.', 'He loses his head, and it costs.', 'Watch his temper.']))
-    else if (player.traits.includes('injuryProne')) parts.push(phrase(read, ['His injury history worries me.', 'He breaks down a lot. Check the medical.', 'Fit, he is good. He is not fit often.']))
-    else if (player.traits.includes('leader')) parts.push(phrase(read, ['A natural leader.', 'Others listen to him. That is worth something.', 'He runs the dressing room, in the good way.']))
-  }
-
-  return `${parts.join(' ')}${parts[parts.length - 1].endsWith('.') ? '' : '.'}`
 }
 
 /**
