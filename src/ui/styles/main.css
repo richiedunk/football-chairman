@@ -2783,8 +2783,8 @@ button, input, select, textarea {
 }
 .player-kit__shirt {
   position: absolute;
-  top: -6px;
-  right: -12px;
+  bottom: -6px;
+  left: -8px;
 }
 .player-kit__pos {
   position: absolute;
@@ -3080,3 +3080,4 @@ input[type='radio'] {
 }
 .timeline__end--start { left: 0; }
 .timeline__end--end { right: 0; }
+.pos-map { display: block; width: 52px; height: auto; flex: 0 0 auto; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4)); }

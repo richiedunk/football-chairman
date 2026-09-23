@@ -8,6 +8,7 @@ import PosBadge from '../components/PosBadge.vue'
 import KitShirt from '../components/KitShirt.vue'
 import PersonFace from '../components/PersonFace.vue'
 import AttrBar from '../components/AttrBar.vue'
+import PositionMap from '../components/PositionMap.vue'
 import StarRating from '../components/StarRating.vue'
 import { shirtNumber } from '../art/shirtNumber'
 import MeterBar from '../components/MeterBar.vue'
@@ -460,7 +461,7 @@ const internationalLine = computed(() => {
             <KitShirt v-if="currentClub" :club="currentClub" :number="shirtNumber(player)" :size="30" class="player-kit__shirt" />
             <PosBadge :position="player.position" class="player-kit__pos" />
           </span>
-          <div class="grow">
+          <div class="grow" style="min-width: 0">
             <h1 style="font-size: 1.2rem">{{ fullName(player) }}</h1>
             <div class="small muted">
               <!-- The nickname only when it is a real one. A profile that
@@ -476,6 +477,7 @@ const internationalLine = computed(() => {
               </template>
             </div>
           </div>
+          <PositionMap :primary="player.position" :alt="player.altPositions" />
         </div>
 
         <div v-if="player.injury" class="chip chip--danger mt">
