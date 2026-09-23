@@ -78,7 +78,7 @@ breakpoint, and it can wait until a deal is in conversation — Apple TV is the
 platform Arcade cares least about, and a Deck build is playable with its
 trackpad and keyboard in the meantime.
 
-### 2. A guaranteed first hour
+### 2. A guaranteed first hour — built, as an opening rather than a scenario
 
 **Unlocks:** every pitch. This is what a curator actually plays.
 **Cost:** days. It is a scenario, and the seam for scenarios already exists
@@ -101,6 +101,21 @@ behind "Choose your own club".
 
 The same build is the demo for a publisher, the one-season build for a web
 portal, and the free half of free-with-unlock. One artefact, four uses.
+
+**What was built** is smaller than a scenario and applies to every career
+rather than one authored club. `systems/openingSigning.ts` has the board agree
+a deal before you arrive, for a player the coach will not pick. It chooses him
+by putting each candidate into the squad for a moment and asking the real
+selector for two dozen team sheets, so what is staged and what happens on
+Saturday agree. The chairman tells you about the deal and the coach tells you
+what he thinks of it, in his own register. After that nothing is forced.
+`scripts/openingcheck.ts` measures it: across 24 careers the signing was left
+out of the first match in 20 of the 23 that staged one, and out of at least one
+of the first three in all 23. The first competitive match is week six, five
+advances in.
+
+The single authored club for a curator build is still worth making. It can now
+be a seed and a club choice rather than new engine work.
 
 ### 3. Cloud save through the platform, not a server
 

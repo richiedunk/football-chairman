@@ -200,6 +200,9 @@ describe('the same seed hands over the same club', () => {
       startingSeason: decoded.season,
     })
 
+    // They start the career too, which is what the challenge screen does, and
+    // the start stages the same opening signing from the same seed.
+    startCareerAt(theirs, decoded.clubId)
     const club = theirs.state.clubs[decoded.clubId]
     expect(club).toBeDefined()
     expect(club.name).toBe(decoded.clubName)
@@ -224,6 +227,7 @@ describe('the same seed hands over the same club', () => {
       homeNationId: decoded.nationId,
       startingSeason: decoded.season,
     })
+    startCareerAt(sameNameAsSender, decoded.clubId)
     const twin = sameNameAsSender.state.clubs[decoded.clubId]
     expect(twin.squad).toEqual(club.squad)
     expect(twin.finances.wageBudget).toBe(club.finances.wageBudget)

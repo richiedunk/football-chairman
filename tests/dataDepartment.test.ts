@@ -17,7 +17,7 @@ beforeAll(() => {
     seed: 'DATADEPT', directorName: 'T', background: 'scout',
     worldSize: 'compact', homeNationId: 'eng', startingSeason: 2025,
   })
-  state = startCareerAt(setup, startingClubCandidates(setup.state)[0].id)
+  state = startCareerAt(setup, startingClubCandidates(setup.state)[0].id, undefined, { openingSigning: false })  // the world these margins were measured on
   club = state.clubs[state.playerClubId!]
   club.finances.transferBudget = 50_000_000
 }, 180_000)

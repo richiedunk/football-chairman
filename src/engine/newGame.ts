@@ -8,6 +8,7 @@ import { assignScout } from './systems/scouting'
 import { addInboxItem } from './systems/inbox'
 import { chairmanRegister, pickBy } from './systems/voice'
 import { refreshSquadStatuses } from './systems/morale'
+import { stageOpeningSigning } from './systems/openingSigning'
 import { MANDATE_BRIEFS, setSeasonExpectation, setSeasonMandates } from './systems/board'
 import { contractTermsFor, signContract, type ContractOffer } from './systems/directorContract'
 import type { Club, DirectorBackground, GameState, ID, Staff } from './types'
@@ -122,10 +123,20 @@ export function prepareNewGame(options: NewGameOptions): NewGameSetup {
  * headless tests and tooling can start a career without going through the
  * negotiation; in that case the club's opening terms are signed as-is.
  */
+export interface StartOptions {
+  /**
+   * Stage the board's signing that the coach did not want. On for every
+   * career a person starts; off only for tests and tools that need a squad
+   * exactly as the world generated it.
+   */
+  openingSigning?: boolean
+}
+
 export function startCareerAt(
   setup: NewGameSetup,
   clubId: ID,
   contract?: ContractOffer,
+  options: StartOptions = {},
 ): GameState {
   const { state, ids } = setup
   const club = state.clubs[clubId]
@@ -160,6 +171,10 @@ export function startCareerAt(
       maxAge: 30,
     })
   }
+
+  // Staged before the welcome is written, so the welcome is the first thing
+  // in the inbox and the deal sits just beneath it.
+  if (options.openingSigning !== false) stageOpeningSigning(state, ids, club)
 
   writeOpeningInbox(state, ids, club)
   state.nextId = ids.value
