@@ -207,9 +207,17 @@ describe('grouping the inbox into threads', () => {
   it('stops at the end of the first sentence', () => {
     const line = preview(item({
       from: 'Chairman', subject: 'Welcome',
-      body: 'Welcome aboard. We have never employed a director of football.',
+      body: 'Welcome aboard, and thank you for coming. We have never employed a director of football.',
     }))
-    expect(line).toBe('Welcome aboard.')
+    expect(line).toBe('Welcome aboard, and thank you for coming.')
+  })
+
+  it('does not preview a message as a single word', () => {
+    const line = preview(item({
+      from: 'Chairman', subject: 'Welcome',
+      body: 'Welcome. This role is new. The remit is set out below.',
+    }))
+    expect(line).toBe('Welcome. This role is new.')
   })
 
   it('never cuts a word in half', () => {

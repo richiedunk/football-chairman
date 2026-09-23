@@ -212,7 +212,13 @@ const PREVIEW_MAX = 96
  * and when even that is too long it is cut between words, not inside one.
  */
 function shorten(line: string): string {
-  const sentence = /^.+?[.!?](?=\s|$)/.exec(line)?.[0] ?? line
+  const sentences = line.match(/.+?[.!?](?=\s|$)/g)?.map((x) => x.trim()) ?? [line]
+  // A first sentence of a word or two — "Welcome.", "Right." — previews as
+  // nothing at all, so it takes the next one with it when there is room.
+  let sentence = sentences[0]
+  if (sentence.length < 24 && sentences[1] && sentence.length + 1 + sentences[1].length <= PREVIEW_MAX) {
+    sentence = `${sentence} ${sentences[1]}`
+  }
   if (sentence.length <= PREVIEW_MAX) return sentence
   const cut = sentence.slice(0, PREVIEW_MAX)
   const lastSpace = cut.lastIndexOf(' ')

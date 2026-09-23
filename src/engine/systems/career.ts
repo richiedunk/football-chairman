@@ -269,19 +269,13 @@ export function sackedBy(director: DirectorProfile): Set<ID> {
  *
  * Used by the jobs board to show *why* a job is closed to you and what it
  * would take — a locked entry that says nothing is just a wall, whereas one
- * that names the level and the XP gap is a target.
+ * that names the standing it wants is a target.
  */
-export function levelRequiredFor(clubReputation: number): CareerLevel {
+function levelRequiredFor(clubReputation: number): CareerLevel {
   for (const level of CAREER_LEVELS) {
     if (clubReputation <= level.maxClubReputation) return level
   }
   return CAREER_LEVELS[CAREER_LEVELS.length - 1]
-}
-
-/** XP still needed before a club of this standing will consider you. */
-export function xpNeededFor(director: DirectorProfile, clubReputation: number): number {
-  const required = levelRequiredFor(clubReputation)
-  return Math.max(0, required.xpRequired - director.xp)
 }
 
 /**

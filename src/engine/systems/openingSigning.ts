@@ -95,7 +95,7 @@ interface Assessment {
  * squad list, or nobody who fits — and then a career simply starts without
  * it. A career is not worth breaking for a set piece.
  */
-export function chooseOpeningSigning(state: GameState, club: Club): Assessment | null {
+function chooseOpeningSigning(state: GameState, club: Club): Assessment | null {
   const coachStaff: Staff | null = club.headCoachId ? state.staff[club.headCoachId] ?? null : null
   const coach = coachStaff?.coachProfile ?? null
   if (!coach) return null

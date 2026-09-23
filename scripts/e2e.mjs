@@ -112,13 +112,13 @@ await step('generate world', async () => {
 })
 
 await step('locked jobs are shown as targets', async () => {
-  const locked = await page.locator('.list__row:has-text("XP away")').count()
+  const locked = await page.locator('.list__row:has-text("standing ·")').count()
   if (locked === 0) throw new Error('no locked jobs shown on the board')
   console.log(`   ${locked} jobs locked behind career level`)
 })
 
 await step('take a job', async () => {
-  // Open jobs carry a wage-budget line; locked ones carry an XP requirement.
+  // Open jobs carry a wage-budget line; locked ones say the standing they want.
   await tap('.list__row:has-text("/wk wages") >> nth=0')
   await page.waitForSelector('.btn:has-text("Open contract talks")')
   await page.screenshot({ path: `${SHOT}/04-club-detail.png` })
