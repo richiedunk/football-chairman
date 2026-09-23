@@ -146,6 +146,7 @@ export function startCareerAt(
 
   applyBackgroundPerks(state, club)
 
+
   const league = state.leagues[club.leagueId]
   if (league) {
     setSeasonExpectation(state, club, league)
@@ -175,6 +176,17 @@ export function startCareerAt(
   // Staged before the welcome is written, so the welcome is the first thing
   // in the inbox and the deal sits just beneath it.
   if (options.openingSigning !== false) stageOpeningSigning(state, ids, club)
+
+  // A club can be generated overdrawn, and the first week's finances then
+  // folded the overdraft into its debt: the welcome letter quoted one balance,
+  // the status bar showed another a click later, and nothing said why. The
+  // position is settled before you arrive instead, as borrowing the club
+  // already has, so the letter and the first screen are the truth. It comes
+  // after the board's opening deal, whose fee can be what tips it.
+  if (club.finances.balance < 0) {
+    club.finances.debt += -club.finances.balance
+    club.finances.balance = 0
+  }
 
   writeOpeningInbox(state, ids, club)
   state.nextId = ids.value
