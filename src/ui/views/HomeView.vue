@@ -13,6 +13,7 @@ import { ratingForPositionCached } from '../../engine/world/attributes'
 import FormRun from '../components/FormRun.vue'
 import Chevron from '../components/Chevron.vue'
 import ClubCrest from '../components/ClubCrest.vue'
+import PersonFace from '../components/PersonFace.vue'
 
 /**
  * The dashboard.
@@ -457,7 +458,8 @@ const hub = computed(() => {
     <!-- The coach. He picks the team, so here is what he did with yours. -->
     <button v-if="coachSays" class="card dash-coach" @click="router.push('/staff')">
       <span class="dash-coach__head">
-        <span class="dash-coach__who"><span class="dash-coach__role">Head coach</span> {{ coachSays.name }}</span>
+        <PersonFace v-if="store.headCoach" :person="store.headCoach" kind="staff" :club="club" :size="40" />
+        <span class="dash-coach__who grow"><span class="dash-coach__role">Head coach</span> {{ coachSays.name }}</span>
         <span class="dash-coach__count" :style="{ color: coachSays.tone }">{{ coachSays.headline }}</span>
       </span>
       <span v-if="coachSays.line" class="dash-coach__line">“{{ coachSays.line }}”</span>

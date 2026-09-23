@@ -6,6 +6,7 @@ import { readCareerRecord } from '../../engine/systems/careerRecord'
 import { isAwayOnDuty } from '../../engine/systems/international'
 import PosBadge from '../components/PosBadge.vue'
 import KitShirt from '../components/KitShirt.vue'
+import PersonFace from '../components/PersonFace.vue'
 import AttrBar from '../components/AttrBar.vue'
 import StarRating from '../components/StarRating.vue'
 import { shirtNumber } from '../art/shirtNumber'
@@ -452,9 +453,11 @@ const internationalLine = computed(() => {
     <div class="card">
       <div class="card__body">
         <div class="row" style="gap: 12px; align-items: center">
-          <!-- In his club's shirt, if he has a club. -->
+          <!-- His face, in his club's shirt if he has a club, with the shirt
+               itself and his position pinned to the frame. -->
           <span class="player-kit">
-            <KitShirt v-if="currentClub" :club="currentClub" :number="shirtNumber(player)" :size="58" />
+            <PersonFace :person="player" :club="currentClub" :size="68" />
+            <KitShirt v-if="currentClub" :club="currentClub" :number="shirtNumber(player)" :size="30" class="player-kit__shirt" />
             <PosBadge :position="player.position" class="player-kit__pos" />
           </span>
           <div class="grow">

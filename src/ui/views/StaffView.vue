@@ -2,6 +2,7 @@
 import { computed, inject, ref } from 'vue'
 import { useGameStore } from '../../stores/game'
 import StarRating from '../components/StarRating.vue'
+import PersonFace from '../components/PersonFace.vue'
 import MeterBar from '../components/MeterBar.vue'
 import AppSheet from '../components/AppSheet.vue'
 import { formatWage } from '../../engine/systems/valuation'
@@ -163,9 +164,10 @@ function answer(requestId: string, accept: boolean) {
         <span class="chip chip--info">{{ STYLE_LABELS[coach.coachProfile.style] }}</span>
       </div>
       <div class="card__body">
-        <div class="row row--between mb">
-          <div>
-            <div class="bold">{{ coach.knownAs }}</div>
+        <div class="row mb" style="gap: 12px">
+          <PersonFace :person="coach" kind="staff" :club="store.club" :size="60" />
+          <div class="grow">
+            <div class="bold" style="font-family: var(--font-display); font-size: 1.05rem">{{ coach.knownAs }}</div>
             <div class="tiny muted">
               {{ coach.age }}y · {{ coach.coachProfile.formation }} ·
               {{ formatWage(coach.contract?.wage ?? 0, store.currency) }}/wk
@@ -271,6 +273,7 @@ function answer(requestId: string, accept: boolean) {
       </div>
       <div class="list">
         <div v-for="member in post.holders" :key="member.id" class="list__row list__row--static">
+          <PersonFace :person="member" kind="staff" :club="store.club" :size="38" />
           <div class="list__main">
             <div class="list__primary">{{ fullName(member) }}</div>
             <div class="list__secondary num">

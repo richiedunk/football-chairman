@@ -107,3 +107,29 @@ describe('kits', () => {
     expect(home).not.toBe(away)
   })
 })
+
+describe('faces', () => {
+  it('are a pure function of the person', async () => {
+    const { faceSvg, faceDesign } = await import('../src/ui/art/face')
+    const input = { id: 'p42', age: 27, kind: 'player' as const, primary: '#d71920', secondary: '#ffffff' }
+    expect(faceSvg(input)).toBe(faceSvg(input))
+    expect(faceDesign('p42', 27)).toEqual(faceDesign('p42', 27))
+  })
+
+  it('grey with age more often than not', async () => {
+    const { faceDesign } = await import('../src/ui/art/face')
+    const grey = (age: number) =>
+      Array.from({ length: 200 }, (_, i) => faceDesign(`s${i}`, age)).filter((d) => ['#9a9a9a', '#dedede'].includes(d.hair)).length
+    expect(grey(22)).toBe(0)
+    expect(grey(60)).toBeGreaterThan(120)
+  })
+
+  it('never draws a broken path', async () => {
+    const { faceSvg } = await import('../src/ui/art/face')
+    for (let i = 0; i < 300; i++) {
+      const svg = faceSvg({ id: `x${i}`, age: 16 + (i % 50), kind: i % 3 ? 'player' : 'staff' })
+      expect(svg).not.toContain('NaN')
+      expect(svg).not.toContain('undefined')
+    }
+  })
+})
