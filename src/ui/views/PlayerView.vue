@@ -5,6 +5,9 @@ import { useGameStore } from '../../stores/game'
 import { readCareerRecord } from '../../engine/systems/careerRecord'
 import { isAwayOnDuty } from '../../engine/systems/international'
 import PosBadge from '../components/PosBadge.vue'
+import KitShirt from '../components/KitShirt.vue'
+import AttrBar from '../components/AttrBar.vue'
+import { shirtNumber } from '../art/shirtNumber'
 import MeterBar from '../components/MeterBar.vue'
 import Dossier from '../components/Dossier.vue'
 import AppSheet from '../components/AppSheet.vue'
@@ -120,22 +123,17 @@ const stars = computed(() => {
   return ability > 0 ? starsForLeague(ability, l.reputation) : 0
 })
 
-function attributeDisplay(key: AttributeKey): string {
+/** The exact figure, for a player whose attributes the club can see. */
+function attributeValue(key: AttributeKey): number | null {
   const p = player.value
-  if (!p) return '—'
-  if (knowsAttributes.value) return String(p.attributes[key])
-  const estimate = report.value?.attributeEstimates[key]
-  if (!estimate) return '?'
-  return estimate[0] === estimate[1] ? String(estimate[0]) : `${estimate[0]}–${estimate[1]}`
+  if (!p || !knowsAttributes.value) return null
+  return p.attributes[key]
 }
 
-function attributeWidth(key: AttributeKey): number {
-  const p = player.value
-  if (!p) return 0
-  if (knowsAttributes.value) return (p.attributes[key] / 20) * 100
-  const estimate = report.value?.attributeEstimates[key]
-  if (!estimate) return 0
-  return ((estimate[0] + estimate[1]) / 2 / 20) * 100
+/** The scout's range, for everyone else. */
+function attributeRange(key: AttributeKey): readonly [number, number] | null {
+  if (knowsAttributes.value) return null
+  return report.value?.attributeEstimates[key] ?? null
 }
 
 const visibleGroups = computed(() =>
@@ -452,8 +450,12 @@ const internationalLine = computed(() => {
     <!-- Identity -->
     <div class="card">
       <div class="card__body">
-        <div class="row" style="gap: 12px">
-          <PosBadge :position="player.position" />
+        <div class="row" style="gap: 12px; align-items: center">
+          <!-- In his club's shirt, if he has a club. -->
+          <span class="player-kit">
+            <KitShirt v-if="currentClub" :club="currentClub" :number="shirtNumber(player)" :size="58" />
+            <PosBadge :position="player.position" class="player-kit__pos" />
+          </span>
           <div class="grow">
             <h1 style="font-size: 1.2rem">{{ fullName(player) }}</h1>
             <div class="small muted">
@@ -538,13 +540,10 @@ const internationalLine = computed(() => {
       <div class="card__head"><span class="card__title">Attributes</span></div>
       <div class="card__body">
         <div v-for="group in visibleGroups" :key="group.label" class="mb">
-          <div class="tiny faint bold" style="text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px">
-            {{ group.label }}
-          </div>
+          <div class="attr-group">{{ group.label }}</div>
           <div v-for="key in group.keys" :key="key" class="row" style="gap: 8px; margin-bottom: 4px">
             <span class="small muted" style="width: 92px; flex: 0 0 auto">{{ ATTRIBUTE_LABELS[key] }}</span>
-            <div class="grow"><MeterBar :value="attributeWidth(key)" :semantic="false" /></div>
-            <span class="tiny num" style="width: 44px; text-align: right">{{ attributeDisplay(key) }}</span>
+            <AttrBar :value="attributeValue(key)" :range="attributeRange(key)" />
           </div>
         </div>
       </div>

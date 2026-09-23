@@ -2,18 +2,21 @@
 import { computed, watchEffect } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useGameStore } from '../../stores/game'
-import { headerBand } from '../colour'
+import { headerBand, parseHex } from '../colour'
 import { screenLabel } from '../screens'
 import { findThread, groupThreads } from '../threads'
+import ClubCrest from './ClubCrest.vue'
 
 const store = useGameStore()
 const route = useRoute()
 const router = useRouter()
 
-// Everything is a sub-page now: the home screen is the only root, so every
-// app has somewhere real to go back to. That was not true under a tab bar,
-// where "back" from a tab root led nowhere.
-const showBack = computed(() => route.name !== 'phone')
+// Everything is a sub-page of the home screen, except the destinations on the
+// bottom bar: a tab is a place you switch to, not one you drilled into, so a
+// back arrow there leads somewhere arbitrary. On desktop the rail is the tab
+// bar and the same holds.
+const TAB_ROOTS = new Set(['phone', 'home', 'squad', 'transfers', 'inbox'])
+const showBack = computed(() => !TAB_ROOTS.has(String(route.name)))
 
 // The Club app is about the club, so it is named after it — everything else
 // carries its own name with the club demoted to the line beneath. Under a tab
@@ -60,6 +63,10 @@ watchEffect(() => {
   root.style.setProperty('--club-band', band.value.band)
   root.style.setProperty('--club-strip', band.value.strip)
   root.style.setProperty('--club-strip-alt', band.value.stripAlt ?? band.value.strip)
+  // The floodlights pick up the club's colour, faintly. It is the one place
+  // the raw primary is used on a large area, so it is kept to a wash.
+  const rgb = parseHex(band.value.strip)
+  root.style.setProperty('--club-glow', rgb ? `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.2)` : 'rgba(255, 255, 255, 0.05)')
 })
 </script>
 
@@ -68,6 +75,8 @@ watchEffect(() => {
     <button v-if="showBack" class="topbar__back" aria-label="Back" @click="router.back()">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6" /></svg>
     </button>
+
+    <ClubCrest v-if="!plain && store.club" :club="store.club" :size="34" class="topbar__crest" />
 
     <div class="topbar__title">
       <div class="topbar__club">{{ title }}</div>

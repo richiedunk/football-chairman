@@ -4,6 +4,8 @@ import { useRouter } from 'vue-router'
 import { useSetupStore } from '../../stores/setup'
 import { useGameStore } from '../../stores/game'
 import AppSheet from '../components/AppSheet.vue'
+import ClubCrest from '../components/ClubCrest.vue'
+import KitShirt from '../components/KitShirt.vue'
 import ContractNegotiator from '../components/ContractNegotiator.vue'
 import { formatMoney } from '../../engine/systems/valuation'
 import { facilityGrade } from '../../engine/systems/facilities'
@@ -153,11 +155,10 @@ function agree(offer: ContractOffer) {
               :style="isOpen(club) ? '' : 'opacity: 0.42'"
               @click="openDetail(club)"
             >
-              <span
-                class="pos"
-                :style="{ background: club.colors.primary + '2b', borderColor: club.colors.primary }"
-                aria-hidden="true"
-              >{{ isOpen(club) ? '' : '🔒' }}</span>
+              <span class="crest-slot" aria-hidden="true">
+                <ClubCrest :club="club" :size="30" />
+                <svg v-if="!isOpen(club)" class="crest-slot__lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V7a4 4 0 018 0v4" /></svg>
+              </span>
               <div class="list__main">
                 <div class="list__primary">{{ club.name }}</div>
                 <div class="list__secondary">
@@ -186,6 +187,11 @@ function agree(offer: ContractOffer) {
       :subtitle="`${state?.leagues[detail.leagueId]?.name} · ${detail.city} · founded ${detail.founded}`"
       @close="detail = null"
     >
+      <div class="sheet-hero">
+        <KitShirt :club="detail" :size="50" away />
+        <ClubCrest :club="detail" :size="88" />
+        <KitShirt :club="detail" :size="50" :number="9" />
+      </div>
       <div class="stat-grid mb">
         <div class="stat">
           <div class="stat__label">Balance</div>

@@ -4,7 +4,6 @@ import { useRouter } from 'vue-router'
 import { useGameStore } from '../../stores/game'
 import { threadKey } from '../threads'
 import { ordinal } from '../../engine/systems/career'
-import { headerBand } from '../colour'
 import { confidenceLabel } from '../../engine/systems/board'
 import { formatMoney } from '../../engine/systems/valuation'
 import { isAwayOnDuty } from '../../engine/systems/international'
@@ -13,6 +12,7 @@ import type { Fixture, MatchResult } from '../../engine/types'
 import { ratingForPositionCached } from '../../engine/world/attributes'
 import FormRun from '../components/FormRun.vue'
 import Chevron from '../components/Chevron.vue'
+import ClubCrest from '../components/ClubCrest.vue'
 
 /**
  * The dashboard.
@@ -23,9 +23,10 @@ import Chevron from '../components/Chevron.vue'
  * has to read the whole page to find the one thing that changed.
  *
  * So: the standing is enormous because it is why the app gets opened, the
- * match is a raised band because it is the one scheduled event, decisions read
- * as an inbox because that is what they are, and the six departments are a
- * small chart rather than six tiles. Everything is still a tap target.
+ * match is drawn as a fixture — two crests and a VS — because it is the one
+ * scheduled event, decisions read as an inbox because that is what they are,
+ * and the six departments are a small chart rather than six tiles. Each sits
+ * on its own panel over the pitch. Everything is still a tap target.
  */
 const store = useGameStore()
 const router = useRouter()
@@ -96,15 +97,26 @@ const nextMatch = computed(() => {
     f.competitionType === 'league'
       ? null
       : s.cups[f.competitionId]?.rounds.find((r) => r.round === f.round)?.name ?? null
+  const ours = store.table.findIndex((r) => r.clubId === c.id) + 1
+  const ourRow = ours > 0 ? store.table[ours - 1] : null
+  const us = {
+    club: c,
+    standing: ourRow ? `${ours}${ordinal(ours).toUpperCase()} · ${ourRow.points} PTS` : null,
+    form: ourRow?.form ?? [],
+  }
+  const them = {
+    club: opponent,
+    standing: row ? `${rank}${ordinal(rank).toUpperCase()} · ${row.points} PTS` : null,
+    form: row?.form ?? [],
+  }
   return {
     opponent,
     isHome,
+    // Home side on the left, the way a fixture is always written.
+    left: isHome ? us : them,
+    right: isHome ? them : us,
     weeksAway: Math.max(0, f.week - s.date.week),
     competition: round ?? competition,
-    standing: row ? `${rank}${ordinal(rank).toUpperCase()} · ${row.points} PTS` : null,
-    // The opponent's colour, put through the same readability rule so a white
-    // or yellow club is still visible against the raised band.
-    colour: headerBand(opponent.colors.primary, opponent.colors.secondary).strip,
   }
 })
 
@@ -167,6 +179,14 @@ const away = computed(() => {
  * straight through to `summary` left those rows blank — a result with no words
  * and no scoreline, which reads as a bug because it is one.
  */
+/** The scoreline from our side, and whether it was a win, draw or loss. */
+function score(entry: { fixture: Fixture; result: MatchResult }) {
+  const isHome = entry.fixture.homeClubId === club.value?.id
+  const us = isHome ? entry.result.homeGoals : entry.result.awayGoals
+  const them = isHome ? entry.result.awayGoals : entry.result.homeGoals
+  return { text: `${us}-${them}`, outcome: us > them ? 'W' : us < them ? 'L' : 'D' }
+}
+
 function resultLine(entry: { fixture: Fixture; result: MatchResult }): string {
   if (entry.result.summary) return entry.result.summary
   const c = club.value
@@ -208,9 +228,9 @@ const waiting = computed(() => {
       title: item.subject,
       detail: item.urgent
         ? expires !== null
-          ? `${expires} WEEK${expires === 1 ? '' : 'S'} TO ANSWER`
-          : 'NEEDS AN ANSWER'
-        : item.from.toUpperCase(),
+          ? `${expires} week${expires === 1 ? '' : 's'} to answer`
+          : 'Needs an answer'
+        : item.from,
       tone: item.urgent ? 'var(--danger)' : 'var(--warn)',
       // Into the conversation, not the list of them. The dashboard names one
       // specific thing that is waiting, and landing on the list would ask the
@@ -226,7 +246,7 @@ const waiting = computed(() => {
     items.push({
       key: 'deadline',
       title: `${store.deadlineOffers.length} deadline-day offer${store.deadlineOffers.length === 1 ? '' : 's'}`,
-      detail: 'GONE WHEN THE WINDOW SHUTS TONIGHT',
+      detail: 'Gone when the window shuts tonight',
       tone: 'var(--danger)',
       to: '/deadline',
     })
@@ -239,7 +259,7 @@ const waiting = computed(() => {
     items.push({
       key: 'expiring',
       title: `${expiring} contract${expiring === 1 ? '' : 's'} expiring`,
-      detail: 'THEY LEAVE FOR NOTHING IF NOTHING IS AGREED',
+      detail: 'They leave for nothing if nothing is agreed',
       tone: 'var(--warn)',
       to: '/squad',
     })
@@ -250,7 +270,7 @@ const waiting = computed(() => {
     items.push({
       key: 'unhappy',
       title: `${unhappy} unhappy player${unhappy === 1 ? '' : 's'}`,
-      detail: 'LOW MORALE DRAGS FORM AND INVITES THE PRESS',
+      detail: 'Low morale drags form and invites the press',
       tone: 'var(--text-fainter)',
       to: '/squad',
     })
@@ -363,25 +383,26 @@ const hub = computed(() => {
 <template>
   <div v-if="club" class="dash">
     <!-- The standing. Nothing on the screen competes with it. -->
-    <section class="dash-standing">
-      <button class="dash-standing__top" @click="router.push('/league')">
-        <div class="row" style="gap: 14px; align-items: flex-start">
+    <section class="card dash-hero">
+      <button class="dash-hero__top" @click="router.push('/league')">
+        <ClubCrest :club="club" :size="62" />
+        <div class="dash-hero__standing">
+          <div class="dash-hero__label">{{ store.league?.name ?? 'League' }}</div>
           <div class="dash-standing__figure">
             <span class="dash-standing__pos">{{ position || '—' }}</span>
             <span v-if="position" class="dash-standing__ord">{{ ordinal(position) }}</span>
           </div>
-          <div class="col" style="gap: 7px; padding-top: 4px">
-            <div class="dash-standing__meta">
-              {{ myRow?.points ?? 0 }} PTS<template v-if="gap"> · <span class="faint">{{ gap }}</span></template>
-            </div>
-            <FormRun :form="myRow?.form ?? []" />
-          </div>
         </div>
-        <Chevron style="margin-top: 5px" />
+        <div class="dash-hero__side">
+          <div class="dash-hero__pts"><span class="num">{{ myRow?.points ?? 0 }}</span> PTS</div>
+          <div v-if="gap" class="dash-hero__gap">{{ gap }}</div>
+          <FormRun :form="myRow?.form ?? []" />
+        </div>
+        <Chevron />
       </button>
 
       <button class="dash-board" @click="router.push('/board')">
-        <span class="dash-board__label">BOARD</span>
+        <span class="dash-board__label">Board</span>
         <div class="dash-board__track">
           <div
             class="dash-board__fill"
@@ -389,105 +410,117 @@ const hub = computed(() => {
           />
         </div>
         <span class="dash-board__value" :style="{ color: targetTone }">
-          TARGET {{ target }}{{ ordinal(target).toUpperCase() }}
+          Target {{ target }}{{ ordinal(target) }}
         </span>
         <Chevron :size="13" />
       </button>
     </section>
 
-    <!-- The one scheduled event of the week, so it looks like an event. -->
-    <button v-if="nextMatch" class="dash-match" @click="router.push('/league')">
-      <span class="dash-match__colour" :style="{ background: nextMatch.colour }" />
-      <span class="grow">
-        <span class="dash-match__when">
-          {{ nextMatch.weeksAway <= 0 ? 'THIS WEEK' : nextMatch.weeksAway === 1 ? 'NEXT WEEK' : `IN ${nextMatch.weeksAway} WEEKS` }}
-          · {{ nextMatch.isHome ? 'HOME' : 'AWAY' }}
-        </span>
-        <span class="dash-match__who">{{ nextMatch.opponent.name }}</span>
-      </span>
-      <span class="dash-match__trail">
-        {{ nextMatch.standing ?? nextMatch.competition }}<br>
-        <span class="dash-fitness" :style="{ color: unavailable ? 'var(--danger)' : 'var(--text-faint)' }">
-          {{ unavailable || 'FULLY FIT' }}
+    <!-- The one scheduled event of the week, drawn as a fixture: two crests
+         and a VS, home side on the left, the way it is on every matchday
+         graphic. -->
+    <button v-if="nextMatch" class="card dash-fixture" @click="router.push('/league')">
+      <span class="dash-fixture__head">
+        <span>Next match</span>
+        <span class="dash-fixture__when">
+          {{ nextMatch.competition }} ·
+          {{ nextMatch.weeksAway <= 0 ? 'This week' : nextMatch.weeksAway === 1 ? 'Next week' : `In ${nextMatch.weeksAway} weeks` }}
         </span>
       </span>
-      <Chevron />
+      <span class="dash-fixture__teams">
+        <span class="dash-fixture__side">
+          <ClubCrest :club="nextMatch.left.club" :size="54" />
+          <span class="dash-fixture__name">{{ nextMatch.left.club.shortName || nextMatch.left.club.name }}</span>
+          <span class="dash-fixture__standing">{{ nextMatch.left.standing ?? '—' }}</span>
+          <FormRun :form="nextMatch.left.form" />
+        </span>
+        <span class="dash-fixture__vs">
+          <span class="dash-fixture__vs-mark">VS</span>
+          <span class="dash-fixture__venue">{{ nextMatch.isHome ? 'Home' : 'Away' }}</span>
+        </span>
+        <span class="dash-fixture__side">
+          <ClubCrest :club="nextMatch.right.club" :size="54" />
+          <span class="dash-fixture__name">{{ nextMatch.right.club.shortName || nextMatch.right.club.name }}</span>
+          <span class="dash-fixture__standing">{{ nextMatch.right.standing ?? '—' }}</span>
+          <FormRun :form="nextMatch.right.form" />
+        </span>
+      </span>
+      <span class="dash-fixture__foot" :class="{ 'is-bad': unavailable }">
+        {{ unavailable || 'Fully fit' }}
+      </span>
     </button>
 
     <!-- The coach. He picks the team, so here is what he did with yours. -->
-    <button v-if="coachSays" class="dash-coach" @click="router.push('/staff')">
+    <button v-if="coachSays" class="card dash-coach" @click="router.push('/staff')">
       <span class="dash-coach__head">
-        <span class="dash-coach__who">{{ coachSays.name.toUpperCase() }}</span>
+        <span class="dash-coach__who"><span class="dash-coach__role">Head coach</span> {{ coachSays.name }}</span>
         <span class="dash-coach__count" :style="{ color: coachSays.tone }">{{ coachSays.headline }}</span>
       </span>
       <span v-if="coachSays.line" class="dash-coach__line">“{{ coachSays.line }}”</span>
       <span v-if="coachSays.leftOut.length" class="dash-coach__out">
-        LEFT OUT · {{ coachSays.leftOut.join(', ').toUpperCase() }}
+        Left out · {{ coachSays.leftOut.join(', ') }}
       </span>
     </button>
 
     <!-- Decisions, as an inbox rather than a grid. -->
-    <div class="card__head" style="padding-top: 16px">
-      <span class="card__title">Waiting on you</span>
-      <span class="card__title" :style="{ color: waiting.length ? 'var(--danger)' : undefined }">
-        {{ waiting.length }}
-      </span>
-    </div>
-    <button
-      v-for="item in waiting"
-      :key="item.key"
-      class="dash-item"
-      @click="router.push(item.to)"
-    >
-      <span class="dash-item__severity" :style="{ background: item.tone }" />
-      <span class="grow">
-        <span class="dash-item__title">{{ item.title }}</span>
-        <span class="dash-item__detail">{{ item.detail }}</span>
-      </span>
-      <Chevron :size="14" />
-    </button>
-    <div v-if="!waiting.length" class="dash-item" style="cursor: default">
-      <span class="dash-item__severity" style="background: var(--border-strong)" />
-      <span class="grow">
-        <span class="dash-item__title muted">Nothing pressing</span>
-        <span class="dash-item__detail">A RARE WEEK</span>
-      </span>
-    </div>
+    <section class="card">
+      <div class="card__head">
+        <span class="card__title">Waiting on you</span>
+        <span class="dash-count" :class="{ 'is-live': waiting.length }">{{ waiting.length }}</span>
+      </div>
+      <button
+        v-for="item in waiting"
+        :key="item.key"
+        class="dash-item"
+        @click="router.push(item.to)"
+      >
+        <span class="dash-item__severity" :style="{ background: item.tone }" />
+        <span class="grow">
+          <span class="dash-item__title">{{ item.title }}</span>
+          <span class="dash-item__detail">{{ item.detail }}</span>
+        </span>
+        <Chevron :size="14" />
+      </button>
+      <div v-if="!waiting.length" class="dash-item" style="cursor: default">
+        <span class="dash-item__severity" style="background: var(--border-strong)" />
+        <span class="grow">
+          <span class="dash-item__title muted">Nothing pressing</span>
+          <span class="dash-item__detail">A rare week</span>
+        </span>
+      </div>
+    </section>
 
     <!-- The estate: six departments as one chart, six tap targets. -->
-    <div class="card__head" style="padding-top: 18px">
-      <span class="card__title">Your estate</span>
-      <button class="card__title" style="background: none; border: 0; cursor: pointer" @click="router.push('/club')">
-        EVERYTHING ELSE
-      </button>
-    </div>
-    <div class="estate">
-      <button
-        v-for="d in estate"
-        :key="d.key"
-        class="estate__col"
-        :aria-label="`${d.label} ${d.value} out of 100`"
-        @click="router.push(d.to)"
-      >
-        <span class="estate__value" :style="{ color: d.value >= 60 ? 'var(--text)' : 'var(--text-dim)' }">
-          {{ d.value }}
-        </span>
-        <span class="estate__track">
-          <span
-            class="estate__fill"
-            :style="{ height: `${Math.max(3, d.value)}%`, background: barColour(d.value) }"
-          />
-        </span>
-        <span class="estate__label">{{ d.label }}</span>
-      </button>
-    </div>
+    <section class="card">
+      <div class="card__head">
+        <span class="card__title">Your estate</span>
+        <button class="card__title dash-link" @click="router.push('/club')">Everything else</button>
+      </div>
+      <div class="estate">
+        <button
+          v-for="d in estate"
+          :key="d.key"
+          class="estate__col"
+          :aria-label="`${d.label} ${d.value} out of 100`"
+          @click="router.push(d.to)"
+        >
+          <span class="estate__value" :style="{ color: d.value >= 60 ? 'var(--text)' : 'var(--text-dim)' }">
+            {{ d.value }}
+          </span>
+          <span class="estate__track">
+            <span
+              class="estate__fill"
+              :style="{ height: `${Math.max(3, d.value)}%`, background: barColour(d.value) }"
+            />
+          </span>
+          <span class="estate__label">{{ d.label }}</span>
+        </button>
+      </div>
+    </section>
 
-    <!-- The rest of the club. The five tabs cover the daily loop; this is
-         everything else, named and one tap away, because the alternative is
-         remembering that a Facilities screen exists at all. -->
-    <div class="card__head" style="padding-top: 18px">
-      <span class="card__title">Run the club</span>
-    </div>
+    <!-- The rest of the club, named and one tap away, because the
+         alternative is remembering that a Facilities screen exists at all. -->
+    <div class="section-title">Run the club</div>
     <div class="hub">
       <button v-for="place in hub" :key="place.to" class="hub__item" @click="router.push(place.to)">
         <span class="hub__icon" aria-hidden="true">
@@ -500,10 +533,10 @@ const hub = computed(() => {
       </button>
     </div>
 
-    <!-- Recent results, as a list of scorelines rather than a card of cards. -->
-    <template v-if="store.recentResults.length">
-      <div class="card__head" style="padding-top: 18px">
-        <span class="card__title">Recent</span>
+    <!-- Recent results, each with its scoreline on a coloured tile. -->
+    <section v-if="store.recentResults.length" class="card mt">
+      <div class="card__head">
+        <span class="card__title">Recent results</span>
       </div>
       <div class="list">
         <button
@@ -512,22 +545,23 @@ const hub = computed(() => {
           class="list__row"
           @click="router.push(`/match/${entry.fixture.id}`)"
         >
+          <span class="score-tile" :class="`score-tile--${score(entry).outcome}`">{{ score(entry).text }}</span>
           <div class="list__main">
             <div class="list__primary">{{ resultLine(entry) }}</div>
             <div class="list__secondary">
-              W{{ entry.fixture.week }} ·
+              Week {{ entry.fixture.week }} ·
               {{ entry.fixture.competitionType === 'league'
-                ? 'LEAGUE'
-                : (store.game?.cups[entry.fixture.competitionId]?.name ?? 'CUP').toUpperCase() }}
+                ? 'League'
+                : (store.game?.cups[entry.fixture.competitionId]?.name ?? 'Cup') }}
               <template v-if="entry.result.attendance">
-                · {{ entry.result.attendance.toLocaleString() }} IN
+                · {{ entry.result.attendance.toLocaleString() }} in
               </template>
             </div>
           </div>
           <Chevron :size="14" />
         </button>
       </div>
-    </template>
+    </section>
   </div>
   <div v-else class="empty">No club loaded.</div>
 </template>

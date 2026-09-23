@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useGameStore } from '../../stores/game'
 import { PHONE_APPS } from '../apps'
+import ClubCrest from '../components/ClubCrest.vue'
 import { badgeFor as countFor } from '../appBadge'
 import { isOpen, preview, threadKey } from '../threads'
 
@@ -58,6 +59,8 @@ const date = computed(() => store.game?.date ?? null)
 <template>
   <div class="phone">
     <div class="phone__plate">
+      <ClubCrest v-if="club" :club="club" :size="64" />
+      <div class="grow">
       <div class="phone__club">{{ club?.name ?? 'Undisclosed Football' }}</div>
       <div class="phone__when num">
         <span v-if="date">{{ date.season }}/{{ String((date.season + 1) % 100).padStart(2, '0') }}</span>
@@ -74,12 +77,13 @@ const date = computed(() => store.game?.date ?? null)
            pressing" above four unread messages is the screen contradicting
            itself. -->
       <div v-else-if="!notifications.length" class="phone__waiting num">NOTHING PRESSING</div>
+      </div>
     </div>
 
     <!-- The stack. Between the plate and the apps, which is where a phone puts
          it, and gone entirely when there is nothing waiting rather than left
          as an empty box saying so. -->
-    <div v-if="notifications.length" class="notifs">
+    <div v-if="notifications.length" class="notifs card">
       <button
         v-for="item in notifications"
         :key="item.id"

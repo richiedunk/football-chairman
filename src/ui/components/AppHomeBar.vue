@@ -2,60 +2,72 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useGameStore } from '../../stores/game'
+import { PHONE_APPS } from '../apps'
+import { badgeFor } from '../appBadge'
 
 /**
- * The phone's own navigation, in place of a tab bar.
+ * The bottom bar.
  *
- * Five fixed tabs was the wrong shape for thirty screens, and the four that
- * were not tabs were reached by drilling through the one that was. The home
- * screen replaces it: everything is one tap from there.
+ * The phone's home screen is still the index of everything, but two buttons
+ * — Home and Inbox — left half the width of the bar as dead space and put the
+ * three places a director goes every single week (the club, the squad, the
+ * market) a tap further away than they need to be. Five slots, the home
+ * screen first, the inbox last where a thumb finds it.
  *
- * Two affordances, because that is what the reader actually needs everywhere.
- * Home, which is the phone. And the inbox, because it is the interrupt channel
- * and putting it two taps away would undo the reason the tab moved to the
- * middle in the first place.
+ * Icons and badges come from the same list as the home screen and the desktop
+ * rail, so the three never drift apart.
  */
 const store = useGameStore()
 const route = useRoute()
 const router = useRouter()
 
-const onHome = computed(() => route.name === 'phone')
-const onInbox = computed(() => route.meta.tab === 'inbox')
+const HOME_ICON = 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z'
+const TABS = ['home', 'squad', 'transfers', 'inbox'] as const
+
+const items = computed(() => [
+  {
+    id: 'phone',
+    label: 'Home',
+    to: '/phone',
+    d: HOME_ICON,
+    extra: undefined as string | undefined,
+    badge: 0,
+    active: route.name === 'phone',
+  },
+  ...TABS.map((id) => {
+    const app = PHONE_APPS.find((a) => a.id === id)!
+    return {
+      id,
+      label: app.label,
+      to: app.to,
+      d: app.d,
+      extra: app.extra,
+      badge: badgeFor(store, app),
+      active: route.meta.tab === id || route.name === id,
+    }
+  }),
+])
 </script>
 
 <template>
   <nav class="homebar">
     <button
+      v-for="item in items"
+      :key="item.id"
       class="homebar__item"
-      :class="{ 'is-active': onHome }"
-      :aria-current="onHome ? 'page' : undefined"
-      @click="router.push('/phone')"
+      :class="{ 'is-active': item.active }"
+      :aria-current="item.active ? 'page' : undefined"
+      @click="router.push(item.to)"
     >
       <span class="homebar__icon" aria-hidden="true">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="4" y="4" width="7" height="7" rx="1.6" />
-          <rect x="13" y="4" width="7" height="7" rx="1.6" />
-          <rect x="4" y="13" width="7" height="7" rx="1.6" />
-          <rect x="13" y="13" width="7" height="7" rx="1.6" />
+          <path :d="item.d" />
+          <path v-if="item.extra" :d="item.extra" />
         </svg>
       </span>
-      <span>Home</span>
-    </button>
-
-    <button
-      class="homebar__item"
-      :class="{ 'is-active': onInbox }"
-      :aria-current="onInbox ? 'page' : undefined"
-      @click="router.push('/inbox')"
-    >
-      <span class="homebar__icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M4 4h16v16H4zM4 8l8 5 8-5" />
-        </svg>
-      </span>
-      <span>Inbox</span>
-      <span v-if="store.unread > 0" class="homebar__badge">
-        {{ store.unread > 99 ? '99+' : store.unread }}
+      <span>{{ item.label }}</span>
+      <span v-if="item.badge > 0" class="homebar__badge">
+        {{ item.badge > 99 ? '99+' : item.badge }}
       </span>
     </button>
   </nav>

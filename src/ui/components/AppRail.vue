@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useGameStore } from '../../stores/game'
 import { PHONE_APPS } from '../apps'
 import { badgeFor } from '../appBadge'
+import ClubCrest from './ClubCrest.vue'
 
 /**
  * The apps, down the side.
@@ -39,8 +40,11 @@ const apps = computed(() =>
 <template>
   <nav class="rail" aria-label="Apps">
     <div class="rail__club">
-      <div class="rail__club-name">{{ store.club?.name ?? 'Undisclosed Football' }}</div>
-      <div class="rail__club-sub num">{{ store.dateLabel }}</div>
+      <ClubCrest v-if="store.club" :club="store.club" :size="44" />
+      <div class="grow">
+        <div class="rail__club-name">{{ store.club?.name ?? 'Undisclosed Football' }}</div>
+        <div class="rail__club-sub num">{{ store.dateLabel }}</div>
+      </div>
     </div>
 
     <div class="rail__list">

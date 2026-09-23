@@ -91,25 +91,23 @@ async function begin() {
 
     <div class="section-title">Where you came from</div>
     <div class="card">
-      <div class="list">
+      <div class="list" role="radiogroup" aria-label="Where you came from">
+        <!-- One of five, so a radio: a checkbox beside each option suggested
+             you could tick several. -->
         <button
           v-for="bg in BACKGROUNDS"
           :key="bg.id"
-          class="list__row"
+          class="list__row choice"
+          :class="{ 'is-chosen': background === bg.id }"
+          role="radio"
+          :aria-checked="background === bg.id"
           @click="background = bg.id"
         >
-          <div
-            class="pos"
-            :class="background === bg.id ? 'pos--MID' : ''"
-            style="width: 26px"
-            aria-hidden="true"
-          >{{ background === bg.id ? '✓' : '' }}</div>
+          <span class="choice__radio" aria-hidden="true" />
           <div class="list__main">
             <div class="list__primary">{{ bg.label }}</div>
             <div class="list__secondary" style="white-space: normal">{{ bg.description }}</div>
-            <div class="tiny" style="color: var(--accent); white-space: normal; margin-top: 3px">
-              {{ bg.perk }}
-            </div>
+            <div class="choice__perk">{{ bg.perk }}</div>
           </div>
         </button>
       </div>

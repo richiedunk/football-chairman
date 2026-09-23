@@ -258,7 +258,7 @@ const notStarted = computed(() => table.value.every((row) => row.played === 0))
               <td class="num">{{ row.lost }}</td>
               <td class="num">{{ row.goalsFor - row.goalsAgainst > 0 ? '+' : '' }}{{ row.goalsFor - row.goalsAgainst }}</td>
               <td class="num bold">{{ row.points }}</td>
-              <td><FormRun :form="row.form" /></td>
+              <td><FormRun :form="row.form" compact /></td>
             </tr>
           </tbody>
         </table>

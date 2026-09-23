@@ -325,10 +325,12 @@ function withdraw(negotiation: TransferNegotiation) {
     </div>
 
     <div class="btn-row mt" style="padding-bottom: 8px">
+      <!-- Scouting is already beside Find players at the top; a second copy
+           of it down here was the same door twice. -->
       <button class="btn btn--ghost" @click="router.push('/agents')">
         Agents<span v-if="store.agentIntroductions.length"> ({{ store.agentIntroductions.length }} offered)</span>
       </button>
-      <button class="btn btn--ghost" @click="router.push('/scouting')">Scouting</button>
+      <button class="btn btn--ghost" @click="router.push('/data')">Data department</button>
     </div>
   </div>
 </template>
