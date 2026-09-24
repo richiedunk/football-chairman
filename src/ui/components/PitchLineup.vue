@@ -22,7 +22,7 @@ type Row = {
 
 const props = withDefaults(
   defineProps<{
-    club: { id: string; colors: { primary: string; secondary: string } }
+    club: { id: string; name: string; colors: { primary: string; secondary: string } }
     players: Row[]
     /** The player to pick out: best on the day, or the one you signed. */
     highlight?: string | null

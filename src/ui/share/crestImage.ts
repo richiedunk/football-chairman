@@ -17,7 +17,7 @@ export function loadCrest(club: ClubLike): Promise<HTMLImageElement | null> {
   if (hit) return Promise.resolve(hit)
   if (typeof Image === 'undefined') return Promise.resolve(null)
   const svg = crestSvg({
-    id: club.id,
+    id: club.name,
     name: club.shortName || club.name,
     primary: club.colors.primary,
     secondary: club.colors.secondary,

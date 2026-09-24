@@ -5,7 +5,7 @@ import { kitSvg } from '../art/kit'
 /** A club's generated shirt, optionally numbered. See `src/ui/art/kit.ts`. */
 const props = withDefaults(
   defineProps<{
-    club: { id: string; colors: { primary: string; secondary: string } } | null | undefined
+    club: { id: string; name: string; colors: { primary: string; secondary: string } } | null | undefined
     number?: number | string
     size?: number
     away?: boolean
@@ -17,7 +17,9 @@ const svg = computed(() => {
   const c = props.club
   if (!c) return ''
   return kitSvg({
-    id: c.id,
+    // Seeded by name, not id: ids are minted afresh with every world, and
+    // a club should wear the same crest and kit in every career.
+    id: c.name,
     primary: c.colors.primary,
     secondary: c.colors.secondary,
     number: props.number,

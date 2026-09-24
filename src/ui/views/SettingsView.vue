@@ -2,6 +2,8 @@
 import { computed, inject, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useGameStore } from '../../stores/game'
+import ClubCrest from '../components/ClubCrest.vue'
+import KitShirt from '../components/KitShirt.vue'
 import {
   AUTOSAVE_SLOT, deleteSave, exportSave, importSave, listBackups, listSaves, saveGame,
   storageName, storageQuota,
@@ -10,6 +12,20 @@ import type { SaveSlotMeta } from '../../storage/adapter'
 import { auth, type AccountIdentity, type SignInProvider } from '../../platform/services'
 
 const store = useGameStore()
+
+const showCrests = ref(false)
+const nationName = computed(() => {
+  const c = store.club
+  return (c && store.game?.nations[c.nationId]?.name) ?? 'your country'
+})
+const nationClubs = computed(() => {
+  const c = store.club
+  const s = store.game
+  if (!c || !s) return []
+  return Object.values(s.clubs)
+    .filter((x) => x.nationId === c.nationId)
+    .sort((a, b) => (s.leagues[a.leagueId]?.tier ?? 9) - (s.leagues[b.leagueId]?.tier ?? 9) || a.name.localeCompare(b.name))
+})
 const router = useRouter()
 const notify = inject<(t: string, k?: 'info' | 'error' | 'success') => void>('notify')
 
@@ -345,6 +361,22 @@ function mb(bytes: number) {
         <div class="row row--between small">
           <span class="muted">Players</span>
           <span class="num">{{ Object.keys(store.game?.players ?? {}).length }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Every club in your country, crest and kit, for the curious and for
+         spotting a generated crest that has come out badly. Closed by
+         default: drawing five hundred of them is not free. -->
+    <button class="btn btn--ghost btn--block mt" @click="showCrests = !showCrests">
+      {{ showCrests ? 'Hide' : 'Show' }} the crests of {{ nationName }}
+    </button>
+    <div v-if="showCrests" class="card mt">
+      <div class="crest-gallery">
+        <div v-for="club in nationClubs" :key="club.id" class="crest-gallery__item">
+          <ClubCrest :club="club" :size="48" />
+          <KitShirt :club="club" :size="28" />
+          <span class="crest-gallery__name">{{ club.shortName || club.name }}</span>
         </div>
       </div>
     </div>

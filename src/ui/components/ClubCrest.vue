@@ -21,7 +21,9 @@ const svg = computed(() => {
   const c = props.club
   if (!c) return ''
   return crestSvg({
-    id: c.id,
+    // Seeded by name, not id: ids are minted afresh with every world, and
+    // a club should wear the same crest and kit in every career.
+    id: c.name,
     name: c.shortName || c.name,
     primary: c.colors.primary,
     secondary: c.colors.secondary,

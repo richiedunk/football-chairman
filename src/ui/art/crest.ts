@@ -219,7 +219,9 @@ export function crestSvg(input: CrestInput): string {
     const label = escape(input.name.length <= 14 ? input.name.toUpperCase() : initials(input.name))
     const band = inkOn(trim) === WHITE_HEX ? trim : shade(base, 0.45)
     const bandInk = inkOn(band)
-    const width = Math.min(64, 8 + label.length * 5.2)
+    // Narrow enough to sit inside the shield where it tapers at the foot;
+    // a long name is squeezed by textLength rather than clipped by the edge.
+    const width = Math.min(50, 8 + label.length * 4.6)
     ribbon =
       `<rect x="${50 - width / 2 - 4}" y="79" width="${width + 8}" height="13" rx="2" fill="${band}" stroke="${bandInk === WHITE_HEX ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.25)'}" stroke-width="1"/>` +
       `<text x="50" y="88.6" text-anchor="middle" font-family="Montserrat Variable, Montserrat, Arial, sans-serif" font-weight="800" font-size="7.4" fill="${bandInk}" textLength="${width}" lengthAdjust="spacingAndGlyphs">${label}</text>`
