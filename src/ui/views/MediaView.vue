@@ -5,6 +5,7 @@ import MeterBar from '../components/MeterBar.vue'
 import DialGauge from '../components/DialGauge.vue'
 import Cutting from '../components/Cutting.vue'
 import AppSheet from '../components/AppSheet.vue'
+import { outletCharacter } from '../press'
 import {
   BRIEFING_OPTIONS, credibilityLabel, issueBriefing, respondToStory, RESPONSE_LABELS,
   STORY_KIND_LABELS,
@@ -139,14 +140,24 @@ const RESPONSES: MediaResponse[] = ['noComment', 'deny', 'confirm', 'backPlayer'
     <div class="section-title">Newspapers</div>
     <div class="card">
       <div class="list">
-        <div v-for="o in outlets" :key="o.id" class="list__row list__row--static">
+        <!-- Each paper in its own masthead voice, the same one its cuttings
+             wear below, so a name is recognisable before a story is read. -->
+        <div
+          v-for="o in outlets"
+          :key="o.id"
+          class="list__row list__row--static"
+          :class="outletCharacter(o.credibility, o.sensationalism).className"
+        >
           <div class="list__main">
-            <div class="list__primary">{{ o.name }}</div>
-            <div class="list__secondary">
-              Credibility {{ o.credibility }} · sensationalism {{ o.sensationalism }}
+            <div class="list__primary cutting__title">{{ o.name }}</div>
+            <div class="list__secondary" :title="`Credibility ${o.credibility} · sensationalism ${o.sensationalism}`">
+              {{ outletCharacter(o.credibility, o.sensationalism).standing }}
             </div>
           </div>
-          <div style="width: 66px"><MeterBar :value="o.relationship" /></div>
+          <div class="outlet-rel">
+            <MeterBar :value="o.relationship" />
+            <span class="tiny faint">Relationship</span>
+          </div>
         </div>
       </div>
     </div>
