@@ -19,6 +19,32 @@ const router = useRouter()
 const route = useRoute()
 const store = useGameStore()
 const saves = ref<SaveSlotMeta[]>([])
+/** Set once the save list has been read, so the pitch does not flash up for
+ *  somebody who has a career and is about to see it listed. */
+const checked = ref(false)
+
+/**
+ * The game in three sentences, for somebody who has never played it. Shown
+ * only before the first career: after that the title screen is a way back in,
+ * and a returning player does not need the premise explained again.
+ */
+const PITCH = [
+  {
+    title: 'You buy players you cannot fully see',
+    text: 'Every signing is a scout\'s range, not a number. Pay for more scouting and the range narrows.',
+    d: 'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z',
+  },
+  {
+    title: 'Someone else picks the team',
+    text: 'The head coach decides who plays. If he does not rate your record signing, your record signing sits.',
+    d: 'M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2M9 3a4 4 0 100 8 4 4 0 000-8zM22 21v-2a4 4 0 00-3-3.87',
+  },
+  {
+    title: 'Your phone does not stop',
+    text: 'The chairman, agents, the press and the coach all want an answer, and some of them will not wait.',
+    d: 'M7 2h10v20H7zM11 18h2',
+  },
+]
 const error = ref('')
 
 /**
@@ -40,6 +66,7 @@ onMounted(refresh)
 async function refresh() {
   try {
     saves.value = await listSaves()
+    checked.value = true
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Could not read saved games.'
   }
@@ -131,6 +158,10 @@ function when(ts: number) {
   color: var(--text-dim);
 }
 .start__actions { max-width: 420px; margin: 0 auto; }
+.pitch-cards { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+.pitch-card { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; margin: 0; }
+.pitch-card__title { font-family: var(--font-display); font-size: 0.86rem; font-weight: 800; }
+.pitch-card__text { margin: 3px 0 0; font-size: 0.78rem; line-height: 1.45; color: var(--text-dim); }
 .start__legal {
   max-width: 34em;
   margin: 18px auto 0;
@@ -179,9 +210,22 @@ function when(ts: number) {
       </button>
     </template>
 
-    <button v-else class="btn btn--primary btn--block" @click="router.push('/new')">
-      Start a new career
-    </button>
+    <template v-else>
+      <div v-if="checked && !saves.length" class="pitch-cards">
+        <div v-for="item in PITCH" :key="item.title" class="card pitch-card">
+          <span class="choice__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path :d="item.d" /></svg>
+          </span>
+          <div>
+            <div class="pitch-card__title">{{ item.title }}</div>
+            <p class="pitch-card__text">{{ item.text }}</p>
+          </div>
+        </div>
+      </div>
+      <button class="btn btn--primary btn--block" @click="router.push('/new')">
+        Start a new career
+      </button>
+    </template>
 
     <div v-if="error" class="card mt">
       <div class="card__body small" style="color: var(--danger)">{{ error }}</div>
