@@ -402,7 +402,7 @@ const hub = computed(() => {
          in the same order. -->
     <div class="dash__col">
     <!-- The standing. Nothing on the screen competes with it. -->
-    <section class="card dash-hero">
+    <section class="card dash-hero dash-standing">
       <button class="dash-hero__top" @click="router.push('/league')">
         <ClubCrest :club="club" :size="62" />
         <div class="dash-hero__standing">
@@ -464,7 +464,7 @@ const hub = computed(() => {
           <FormRun :form="nextMatch.right.form" />
         </span>
       </span>
-      <span class="dash-fixture__foot" :class="{ 'is-bad': unavailable }">
+      <span class="dash-fixture__foot dash-fitness" :class="{ 'is-bad': unavailable }">
         {{ unavailable || 'Fully fit' }}
       </span>
     </button>

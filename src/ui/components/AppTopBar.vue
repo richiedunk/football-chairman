@@ -11,12 +11,10 @@ const store = useGameStore()
 const route = useRoute()
 const router = useRouter()
 
-// Everything is a sub-page of the home screen, except the destinations on the
-// bottom bar: a tab is a place you switch to, not one you drilled into, so a
-// back arrow there leads somewhere arbitrary. On desktop the rail is the tab
-// bar and the same holds.
-const TAB_ROOTS = new Set(['phone', 'home', 'squad', 'transfers', 'inbox'])
-const showBack = computed(() => !TAB_ROOTS.has(String(route.name)))
+// Everything is a sub-page now: the home screen is the only root, so every
+// app has somewhere real to go back to. The bottom bar's tabs are shortcuts
+// into apps, not roots of their own, and keep the arrow like everything else.
+const showBack = computed(() => route.name !== 'phone')
 
 // The Club app is about the club, so it is named after it — everything else
 // carries its own name with the club demoted to the line beneath. Under a tab

@@ -211,7 +211,7 @@ let reportsSeen = 0
 async function clearMatchReports() {
   for (let i = 0; i < 4 && page.url().includes('#/match/'); i++) {
     await readNotice()
-    if (!(await page.locator('.report-score__goals').count())) {
+    if (!(await page.locator('.scoreboard__score').count())) {
       throw new Error('match report rendered without a scoreline')
     }
     reportsSeen++
@@ -435,22 +435,26 @@ await step('a match report can be reopened and reads in full', async () => {
   const recent = page.locator('.list__row:has-text("W")').first()
   await page.locator('text=Recent').waitFor({ timeout: 15000 })
   await tap(recent)
-  await page.waitForSelector('.report-score__goals', { timeout: 15000 })
+  await page.waitForSelector('.scoreboard__score', { timeout: 15000 })
 
-  const score = (await page.textContent('.report-score__goals'))?.replace(/\s+/g, '')
-  if (!/^\d+.\d+$/.test(score ?? '')) throw new Error(`unreadable scoreline: ${score}`)
-  const stats = await page.locator('.report-stats__cell').count()
-  if (stats !== 3) throw new Error(`expected three match figures, got ${stats}`)
+  // The scoreboard reads "2 FT 1": the two scores either side of the FT tag.
+  const score = (await page.textContent('.scoreboard__score'))?.replace(/\s+/g, '').replace('FT', '-')
+  if (!/^\d+-\d+$/.test(score ?? '')) throw new Error(`unreadable scoreline: ${score}`)
+  // Possession, shots and on target when the match was played in detail,
+  // then the cards, which every match has.
+  const stats = await page.locator('.facts__row').count()
+  if (stats < 2) throw new Error(`expected the match facts, got ${stats} rows`)
   // Not eleven. `selection.ts` lets a club short of fit players start with
   // fewer, so a random world can legitimately produce a ten-man teamsheet —
   // asserting eleven here tested an engine property the engine does not hold,
   // from the UI, and failed intermittently. That defect is written down in
   // docs/bugs.md; what this step can honestly check is that the report renders
   // a plausible teamsheet rather than a broken one.
-  const ratings = await page.locator('.report-rating').count()
+  // The side, as laid out on the pitch, each with a rating.
+  const ratings = await page.locator('.pitch__player .pitch__rating').count()
   if (ratings < 9) throw new Error(`teamsheet is not a teamsheet: ${ratings} rated`)
   if (ratings < 11) console.log(`   note: ${ratings} rated — a club was short`)
-  const verdict = (await page.textContent('.report-score__verdict'))?.trim()
+  const verdict = (await page.textContent('.scoreboard__verdict'))?.trim()
   if (!verdict) throw new Error('no verdict on the result')
   console.log(`   ${score} · ${ratings} rated · "${verdict}"`)
   await page.screenshot({ path: `${SHOT}/07-match.png`, fullPage: true })
