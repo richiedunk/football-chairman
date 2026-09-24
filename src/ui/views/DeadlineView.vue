@@ -251,8 +251,11 @@ function player(id: string) {
       <div class="card__body deadline-wait">
         <div class="deadline-clock is-out num">{{ String(nextDeadline.away).padStart(2, '0') }}</div>
         <div>
-          <div class="bold">{{ nextDeadline.away === 1 ? 'One week' : `${nextDeadline.away} weeks` }} to go</div>
-          <div class="small muted">{{ nextDeadline.label }}, week {{ nextDeadline.week }}</div>
+          <div class="bold">The window is not closing today</div>
+          <div class="small muted">
+            {{ nextDeadline.away === 1 ? 'One week' : `${nextDeadline.away} weeks` }} to the
+            {{ nextDeadline.label.toLowerCase() }}, week {{ nextDeadline.week }}
+          </div>
           <div class="tiny" :style="{ color: windowNow ? 'var(--win)' : 'var(--text-faint)', marginTop: '4px' }">
             {{ windowNow ? `${windowNow} is open` : 'The window is shut' }}
           </div>
