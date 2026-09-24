@@ -9,11 +9,50 @@ import { confidenceLabel } from '../../engine/systems/board'
 import { credibilityLabel } from '../../engine/systems/media'
 import { levelFor } from '../../engine/systems/career'
 import Chevron from '../components/Chevron.vue'
+import ClubCrest from '../components/ClubCrest.vue'
+import KitShirt from '../components/KitShirt.vue'
+import ClimbChart, { type ClimbBand, type ClimbPoint } from '../components/ClimbChart.vue'
 
 const store = useGameStore()
+
 const router = useRouter()
 
 const club = computed(() => store.club)
+
+/**
+ * The club's finishes placed in its country's pyramid, for the chart. Only
+ * worth drawing with two seasons or more; one point is not a line.
+ */
+const climb = computed(() => {
+  const s = store.game
+  const c = club.value
+  if (!s || !c || c.history.length < 2) return null
+  const pyramid = Object.values(s.leagues)
+    .filter((l) => l.nationId === c.nationId)
+    .sort((a, b) => a.tier - b.tier)
+  // Clubs in the tiers above each tier: a tier with parallel divisions
+  // counts once, at the size of its first.
+  const above = new Map<number, number>()
+  const bands: ClimbBand[] = []
+  let running = 0
+  for (const league of pyramid) {
+    if (above.has(league.tier)) continue
+    above.set(league.tier, running)
+    bands.push({ tier: league.tier, name: league.name, from: running + 1, to: running + league.clubIds.length })
+    running += league.clubIds.length
+  }
+  const points: ClimbPoint[] = c.history.slice(-20).map((h) => {
+    const tier = s.leagues[h.leagueId]?.tier ?? bands[bands.length - 1]?.tier ?? 1
+    return { season: h.season, position: h.position, leagueName: h.leagueName, tier, rank: (above.get(tier) ?? 0) + h.position }
+  })
+  // Only the divisions the club has actually been in, and one either side,
+  // so a club that has lived in tiers 3 and 4 is not drawn as a speck at the
+  // bottom of a ten-tier chart.
+  const tiers = points.map((p) => p.tier)
+  const lo = Math.max(1, Math.min(...tiers) - 1)
+  const hi = Math.max(...tiers) + 1
+  return { points, bands: bands.filter((b) => b.tier >= lo && b.tier <= hi) }
+})
 const level = computed(() => levelFor(store.game?.director.xp ?? 0))
 const registered = computed(() => {
   const r = store.registration
@@ -79,9 +118,12 @@ const sections = computed(() => [
   <div v-if="club">
     <div class="card">
       <div
-        class="card__body"
-        :style="{ background: `linear-gradient(135deg, ${club.colors.primary}22, transparent)` }"
+        class="card__body row"
+        style="gap: 14px; align-items: center"
+        :style="{ background: `linear-gradient(135deg, ${club.colors.primary}33, transparent)` }"
       >
+        <ClubCrest :club="club" :size="72" />
+        <div class="grow">
         <h1>{{ club.name }}</h1>
         <div class="small muted">
           {{ club.nickname }} · {{ club.city }} · founded {{ club.founded }}
@@ -91,6 +133,11 @@ const sections = computed(() => [
           <span class="chip">Rep {{ club.reputation }}</span>
           <span class="chip">{{ club.facilities.stadium.name }}</span>
         </div>
+        </div>
+        <span class="club-kits">
+          <KitShirt :club="club" :size="34" />
+          <KitShirt :club="club" :size="34" away />
+        </span>
       </div>
       <div class="stat-grid">
         <div class="stat">
@@ -123,7 +170,11 @@ const sections = computed(() => [
 
     <template v-if="club.history.length">
       <div class="section-title">History</div>
+      <button class="btn btn--ghost btn--block mb" @click="$router.push('/season')">
+        Review last season
+      </button>
       <div class="card">
+        <ClimbChart v-if="climb" :points="climb.points" :bands="climb.bands" />
         <div class="table__scroll">
           <table class="table">
             <thead>

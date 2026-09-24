@@ -66,14 +66,17 @@ const TONE: Record<Notice['kind'], string> = {
 <style scoped>
 /* Full bleed, and over everything including the tab bar: a message you must
    acknowledge should not share the screen with the buttons that navigate away
-   from it. */
+   from it. On the pitch, like everything else, with the message on a panel
+   under the floodlights. */
 .notice {
   position: fixed;
   inset: 0;
   z-index: 300;
-  background: var(--bg);
+  background: var(--stadium);
+  background-color: var(--bg-sunken);
   display: flex;
   flex-direction: column;
+  align-items: center;
   padding-top: env(safe-area-inset-top);
   padding-bottom: env(safe-area-inset-bottom);
 }
@@ -83,42 +86,47 @@ const TONE: Record<Notice['kind'], string> = {
   flex-direction: column;
   justify-content: center;
   gap: 14px;
-  padding: 0 24px;
+  width: 100%;
+  max-width: 520px;
+  padding: 0 var(--pad);
 }
 .notice__rule {
-  width: 44px;
-  height: 4px;
-  border-radius: 2px;
+  width: 52px;
+  height: 5px;
+  border-radius: 3px;
 }
 .notice__label {
-  font-family: var(--font-num);
-  font-size: 0.64rem;
-  letter-spacing: 0.13em;
+  font-family: var(--font-display);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 .notice__text {
-  font-size: 1.35rem;
-  font-weight: 500;
-  line-height: 1.35;
-  letter-spacing: -0.02em;
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
   margin: 0;
+  text-shadow: 0 2px 16px rgba(0, 0, 0, 0.6);
 }
 .notice__foot {
   flex: 0 0 auto;
+  width: 100%;
+  max-width: 520px;
   padding: 0 var(--pad) 16px;
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 .notice__count {
-  font-family: var(--font-num);
-  font-size: 0.62rem;
-  letter-spacing: 0.11em;
+  font-family: var(--font-display);
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   color: var(--text-faint);
   text-align: center;
-}
-
-@media (min-width: 620px) {
-  .notice { max-width: 520px; left: 50%; transform: translateX(-50%); }
 }
 </style>

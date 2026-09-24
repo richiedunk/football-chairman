@@ -22,9 +22,11 @@ export const LAST_MATCH_WEEK = 44
  */
 function roundRobinRounds(clubIds: ID[]): { home: ID; away: ID }[][] {
   const clubs = clubIds.slice()
-  // Odd club counts get a bye marker so the rotation still works.
+  // Odd club counts get a bye marker so the rotation still works. It takes
+  // the fixed pivot seat, so whoever rests is always the club opposite it,
+  // and that club's venues still alternate either side of the rest.
   const bye = '__bye__'
-  if (clubs.length % 2 === 1) clubs.push(bye)
+  if (clubs.length % 2 === 1) clubs.unshift(bye)
 
   const n = clubs.length
   const roundsPerHalf = n - 1
@@ -40,8 +42,13 @@ function roundRobinRounds(clubIds: ID[]): { home: ID; away: ID }[][] {
       const a = ordered[i]
       const b = ordered[n - 1 - i]
       if (a === bye || b === bye) continue
-      // Alternate home advantage by round so no club has a run of home games.
-      if ((round + i) % 2 === 0) pairings.push({ home: a, away: b })
+      // Home advantage by board, the Berger way. The pivot (board 0) swaps
+      // every round. Every other club moves one board per round, so deciding
+      // its venue by the board's parity alone makes it alternate; the earlier
+      // (round + board) parity stayed constant as both moved together, and a
+      // club could go seventeen league games without an away trip.
+      const aAtHome = i === 0 ? round % 2 === 0 : i % 2 === 1
+      if (aAtHome) pairings.push({ home: a, away: b })
       else pairings.push({ home: b, away: a })
     }
     firstHalf.push(pairings)

@@ -63,6 +63,7 @@ const routes: RouteRecordRaw[] = [
   { path: '/match/:id', name: 'match', component: () => import('./ui/views/MatchView.vue'), meta: { tab: 'home' } },
   { path: '/league', name: 'league', component: () => import('./ui/views/LeagueView.vue'), meta: { tab: 'league' } },
   { path: '/league/:id', name: 'league-detail', component: () => import('./ui/views/LeagueView.vue'), meta: { tab: 'league', title: 'League table' } },
+  { path: '/season', name: 'season', component: () => import('./ui/views/SeasonView.vue'), meta: { tab: 'home', title: 'Season review' } },
   { path: '/career', name: 'career', component: () => import('./ui/views/CareerView.vue'), meta: { tab: 'home', plain: true } },
   { path: '/achievements', name: 'achievements', component: () => import('./ui/views/AchievementsView.vue'), meta: { tab: 'home', plain: true } },
   { path: '/share', name: 'share', component: () => import('./ui/views/ShareView.vue'), meta: { tab: 'home', plain: true, title: 'Send it on' } },

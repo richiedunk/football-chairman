@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useGameStore } from '../../stores/game'
-import { headerBand } from '../colour'
+import ClubCrest from '../components/ClubCrest.vue'
+import PitchLineup from '../components/PitchLineup.vue'
+import MatchTimeline from '../components/MatchTimeline.vue'
 import { manOfTheMatch, matchVerdict } from '../../engine/systems/matchReport'
-import type { MatchEvent } from '../../engine/types'
+import type { MatchEvent, MatchResult } from '../../engine/types'
 
 /**
  * The match report.
@@ -53,11 +55,13 @@ const report = computed(() => {
     )
     .sort((a, b) => a.minute - b.minute)
 
-  const lineup = (isHome ? result.homeLineup : result.awayLineup)
+  const rated = (ids: string[]) => ids
     .map((id) => ({ player: store.player(id), rating: result.ratings[id] }))
     .filter((row): row is { player: NonNullable<typeof row.player>; rating: number } =>
       Boolean(row.player) && row.rating !== undefined)
     .sort((a, b) => b.rating - a.rating)
+  const lineup = rated(isHome ? result.homeLineup : result.awayLineup)
+  const theirLineup = rated(isHome ? result.awayLineup : result.homeLineup)
 
   return {
     fixture,
@@ -70,6 +74,7 @@ const report = computed(() => {
     competition: round ?? competition,
     notable,
     lineup,
+    theirLineup,
     ourGoals: isHome ? result.homeGoals : result.awayGoals,
     theirGoals: isHome ? result.awayGoals : result.homeGoals,
     // The trimmings only exist on a match the player can open, which is every
@@ -79,10 +84,36 @@ const report = computed(() => {
     theirShots: isHome ? (result.shots?.away ?? 0) : (result.shots?.home ?? 0),
     ourOnTarget: isHome ? (result.shotsOnTarget?.home ?? 0) : (result.shotsOnTarget?.away ?? 0),
     ourPossession: isHome ? (result.possession ?? 50) : 100 - (result.possession ?? 50),
-    ourColour: headerBand(club.colors.primary, club.colors.secondary).strip,
-    theirColour: headerBand(opponent.colors.primary, opponent.colors.secondary).strip,
+    // The scoreboard is written home side first, as every scoreboard is,
+    // whichever side the director works for.
+    home: isHome ? club : opponent,
+    away: isHome ? opponent : club,
+    stats: comparison(result, fixture.homeClubId, fixture.awayClubId),
   }
 })
+
+/**
+ * Home against away, one row per number: the post-match graphic. Each row
+ * carries both figures and the home share, for the split bar.
+ */
+function comparison(result: MatchResult, homeId: string, awayId: string) {
+  const count = (type: MatchEvent['type'], clubId: string) =>
+    result.events.filter((e) => e.type === type && e.clubId === clubId).length
+  const rows: { label: string; home: number; away: number; unit?: string }[] = []
+  if (result.possession !== undefined) {
+    rows.push({ label: 'Possession', home: Math.round(result.possession), away: 100 - Math.round(result.possession), unit: '%' })
+  }
+  if (result.shots) rows.push({ label: 'Shots', home: result.shots.home, away: result.shots.away })
+  if (result.shotsOnTarget) {
+    rows.push({ label: 'On target', home: result.shotsOnTarget.home, away: result.shotsOnTarget.away })
+  }
+  rows.push({ label: 'Yellow cards', home: count('yellowCard', homeId), away: count('yellowCard', awayId) })
+  rows.push({ label: 'Red cards', home: count('redCard', homeId), away: count('redCard', awayId) })
+  return rows.map((r) => ({ ...r, share: r.home + r.away === 0 ? 50 : (r.home / (r.home + r.away)) * 100 }))
+}
+
+/** Which side the pitch is showing. Yours first: it is your team he picked. */
+const side = ref<'ours' | 'theirs'>('ours')
 
 const VERDICT_TONE: Record<string, string> = {
   outstanding: 'var(--accent)',
@@ -100,271 +131,325 @@ const EVENT_LABEL: Record<string, string> = {
   redCard: 'RED',
   injury: 'INJURY',
 }
-
-function ratingTone(rating: number): string {
-  if (rating >= 7.5) return 'var(--accent)'
-  if (rating >= 6.5) return 'var(--text)'
-  if (rating >= 5.5) return 'var(--text-dim)'
-  return 'var(--danger)'
-}
 </script>
 
 <template>
-  <div v-if="report" class="dash">
-    <!-- The scoreline, at a size that makes it the point of the screen. -->
-    <section class="report-score">
-      <div class="report-score__meta">
-        {{ report.competition.toUpperCase() }} · {{ report.isHome ? 'HOME' : 'AWAY' }} ·
-        W{{ report.fixture.week }}
+  <div v-if="report" class="match">
+    <div class="match__story">
+    <!-- The scoreboard: two crests, two name plates and the score between
+         them, home side first. -->
+    <section class="card scoreboard">
+      <div class="scoreboard__banner">
+        {{ report.competition }} · Week {{ report.fixture.week }}
       </div>
-      <div class="report-score__line">
-        <span class="report-score__side">
-          <span class="report-score__bar" :style="{ background: report.ourColour }" />
-          <span class="report-score__club">{{ report.club.shortName || report.club.name }}</span>
+      <div class="scoreboard__line">
+        <span class="scoreboard__team">
+          <ClubCrest :club="report.home" :size="48" />
+          <span class="scoreboard__name">{{ report.home.shortName || report.home.name }}</span>
         </span>
-        <span class="report-score__goals">
-          {{ report.ourGoals }}<span class="report-score__dash">–</span>{{ report.theirGoals }}
+        <span class="scoreboard__score">
+          <span>{{ report.result.homeGoals }}</span>
+          <span class="scoreboard__ft">FT</span>
+          <span>{{ report.result.awayGoals }}</span>
         </span>
-        <span class="report-score__side report-score__side--right">
-          <span class="report-score__club">{{ report.opponent.shortName || report.opponent.name }}</span>
-          <span class="report-score__bar" :style="{ background: report.theirColour }" />
+        <span class="scoreboard__team scoreboard__team--away">
+          <ClubCrest :club="report.away" :size="48" />
+          <span class="scoreboard__name">{{ report.away.shortName || report.away.name }}</span>
         </span>
       </div>
-      <div
-        v-if="report.result.penalties"
-        class="report-score__meta"
-        style="text-align: center"
-      >
-        {{ report.result.penalties.home }}–{{ report.result.penalties.away }} ON PENALTIES
+      <div v-if="report.result.penalties" class="scoreboard__pens">
+        {{ report.result.penalties.home }}–{{ report.result.penalties.away }} on penalties
       </div>
-      <div
-        class="report-score__verdict"
-        :style="{ color: VERDICT_TONE[report.verdict.verdict] }"
-      >{{ report.verdict.headline }}</div>
+      <MatchTimeline :events="report.result.events" :home-id="report.fixture.homeClubId" />
+      <div class="scoreboard__verdict" :style="{ color: VERDICT_TONE[report.verdict.verdict] }">
+        {{ report.verdict.headline }}
+      </div>
+      <div v-if="report.result.attendance" class="scoreboard__crowd">
+        {{ report.result.attendance.toLocaleString() }} in attendance
+      </div>
     </section>
 
-    <!-- The three numbers that say how the game went. -->
-    <div class="report-stats">
-      <div class="report-stats__cell">
-        <div class="report-stats__value">{{ Math.round(report.ourPossession) }}<span class="report-stats__unit">%</span></div>
-        <div class="report-stats__label">POSSESSION</div>
+    <!-- Match facts, home on the left, with a split bar per row. -->
+    <section class="card">
+      <div class="card__head"><span class="card__title">Match facts</span></div>
+      <div class="facts">
+        <div v-for="row in report.stats" :key="row.label" class="facts__row">
+          <span class="facts__value">{{ row.home }}{{ row.unit ?? '' }}</span>
+          <span class="facts__mid">
+            <span class="facts__label">{{ row.label }}</span>
+            <!-- Nothing either side is nobody's share: an empty track, not a
+                 half-blue one. -->
+            <span class="facts__bar" :class="{ 'is-empty': row.home + row.away === 0 }">
+              <span v-if="row.home + row.away > 0" class="facts__home" :style="{ width: `${row.share}%` }" />
+            </span>
+          </span>
+          <span class="facts__value facts__value--away">{{ row.away }}{{ row.unit ?? '' }}</span>
+        </div>
       </div>
-      <div class="report-stats__cell">
-        <div class="report-stats__value">{{ report.ourShots }}<span class="report-stats__unit">/{{ report.theirShots }}</span></div>
-        <div class="report-stats__label">SHOTS</div>
-      </div>
-      <div class="report-stats__cell">
-        <div class="report-stats__value">{{ (report.result.attendance ?? 0).toLocaleString() }}</div>
-        <div class="report-stats__label">ATTENDANCE</div>
-      </div>
-    </div>
+    </section>
 
     <!-- What actually happened. -->
-    <template v-if="report.notable.length">
+    <section v-if="report.notable.length" class="card">
       <div class="card__head"><span class="card__title">How it went</span></div>
       <div
         v-for="(event, i) in report.notable"
         :key="i"
         class="report-event"
+        :class="{ 'report-event--away': event.clubId === report.away.id }"
       >
         <span class="report-event__minute">{{ event.minute }}'</span>
-        <span
-          class="report-event__bar"
-          :style="{ background: event.clubId === report.club.id ? report.ourColour : report.theirColour }"
-        />
+        <span class="report-event__icon" :class="`report-event__icon--${event.type}`" aria-hidden="true" />
         <span class="grow report-event__text">{{ event.text }}</span>
-        <span
-          class="report-event__type"
-          :style="{ color: ['redCard', 'injury', 'ownGoal', 'penaltyMissed'].includes(event.type) ? 'var(--danger)' : 'var(--text-faint)' }"
-        >{{ EVENT_LABEL[event.type] ?? event.type.toUpperCase() }}</span>
+        <span class="report-event__type">{{ EVENT_LABEL[event.type] ?? event.type.toUpperCase() }}</span>
       </div>
-    </template>
+    </section>
 
     <!-- The coach's read. The one football opinion in the game that is his. -->
-    <template v-if="report.verdict.coachLine">
-      <div class="card__head">
-        <span class="card__title">{{ store.headCoach?.knownAs ?? 'The head coach' }}</span>
-      </div>
-      <div class="report-quote">“{{ report.verdict.coachLine }}”</div>
-    </template>
+    <section v-if="report.verdict.coachLine" class="card report-quote">
+      <span class="report-quote__who">{{ store.headCoach?.knownAs ?? 'The head coach' }}</span>
+      “{{ report.verdict.coachLine }}”
+    </section>
 
-    <!-- Ratings, best first, because the question is who played well. -->
-    <template v-if="report.lineup.length">
+    </div>
+    <div class="match__sides">
+    <!-- The side he picked, on the pitch, rated. -->
+    <section v-if="report.lineup.length" class="card">
       <div class="card__head">
-        <span class="card__title">Ratings</span>
-        <span v-if="report.motm" class="card__title" style="color: var(--accent)">
-          {{ store.player(report.motm.playerId)?.knownAs }}
+        <span class="card__title">Line-ups</span>
+        <span v-if="report.motm && side === 'ours'" class="card__title" style="color: var(--accent)">
+          Best · {{ store.player(report.motm.playerId)?.knownAs }}
         </span>
       </div>
-      <button
-        v-for="row in report.lineup"
-        :key="row.player.id"
-        class="report-rating"
-        @click="router.push(`/player/${row.player.id}`)"
-      >
-        <span class="report-rating__value" :style="{ color: ratingTone(row.rating) }">
-          {{ row.rating.toFixed(1) }}
-        </span>
-        <span class="grow truncate">{{ row.player.knownAs }}</span>
-        <span class="report-rating__pos">{{ row.player.position }}</span>
-        <span
-          v-if="report.motm && row.player.id === report.motm.playerId"
-          class="chip chip--accent"
-        >Best</span>
-      </button>
-    </template>
+      <div class="card__body">
+        <div class="segmented mb">
+          <button class="segmented__item" :class="{ 'is-active': side === 'ours' }" @click="side = 'ours'">
+            {{ report.club.shortName || report.club.name }}
+          </button>
+          <button
+            v-if="report.theirLineup.length"
+            class="segmented__item"
+            :class="{ 'is-active': side === 'theirs' }"
+            @click="side = 'theirs'"
+          >
+            {{ report.opponent.shortName || report.opponent.name }}
+          </button>
+        </div>
+        <PitchLineup
+          v-if="side === 'ours'"
+          :club="report.club"
+          :players="report.lineup"
+          :highlight="report.motm?.playerId ?? null"
+          @pick="(id) => router.push(`/player/${id}`)"
+        />
+        <PitchLineup
+          v-else
+          :club="report.opponent"
+          :players="report.theirLineup"
+          @pick="(id) => router.push(`/player/${id}`)"
+        />
+      </div>
+    </section>
+    </div>
   </div>
 
   <div v-else class="empty">That match has not been played.</div>
 </template>
 
 <style scoped>
-.report-score {
-  padding: 20px var(--pad) 18px;
-  border-bottom: 1px solid var(--border);
+/* On a wide screen the story reads down the left and the line-ups stand on
+   the right, so the pitch is not a 1,100px-wide field at the foot of a
+   scroll. */
+@media (min-width: 1100px) {
+  .match {
+    display: grid;
+    grid-template-columns: minmax(0, 1.25fr) minmax(360px, 1fr);
+    gap: 14px;
+    align-items: start;
+  }
+  .match__sides { position: sticky; top: 0; }
+}
+.scoreboard {
+  text-align: center;
+  background:
+    radial-gradient(ellipse 90% 80% at 50% 0%, rgba(63, 214, 122, 0.16), transparent 70%),
+    var(--panel);
+}
+.scoreboard__banner {
+  display: inline-block;
+  margin-top: 12px;
+  padding: 4px 18px;
+  border-radius: 4px;
+  background: linear-gradient(180deg, #4be08a, #23a85a);
+  color: #06140b;
+  font-family: var(--font-display);
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  clip-path: polygon(6% 0, 94% 0, 100% 100%, 0 100%);
+}
+.scoreboard__line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  padding: 16px 10px 8px;
+}
+.scoreboard__team {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-}
-.report-score__meta {
-  font-family: var(--font-num);
-  font-size: 0.6rem;
-  letter-spacing: 0.11em;
-  color: var(--text-faint);
-}
-.report-score__line {
-  display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-.report-score__side {
-  flex: 1 1 0;
+  gap: 7px;
   min-width: 0;
+}
+.scoreboard__name {
+  max-width: 100%;
+  padding: 4px 10px;
+  background: linear-gradient(180deg, #2a313b, #151a21);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  font-family: var(--font-display);
+  font-size: 0.86rem;
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.scoreboard__score {
   display: flex;
   align-items: center;
   gap: 8px;
-}
-.report-score__side--right { justify-content: flex-end; }
-.report-score__bar {
-  flex: 0 0 auto;
-  width: 3px;
-  height: 26px;
-  border-radius: 2px;
-}
-.report-score__club {
-  font-size: 0.92rem;
-  font-weight: 600;
-  letter-spacing: -0.015em;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.report-score__goals {
-  flex: 0 0 auto;
-  font-family: var(--font-num);
-  font-size: 2.6rem;
-  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #f5f7f9, #cfd6de);
+  color: #0b0e12;
+  font-family: var(--font-display);
+  font-size: 2.2rem;
+  font-weight: 900;
   line-height: 1;
-  letter-spacing: -0.04em;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
 }
-.report-score__dash { color: var(--text-fainter); padding: 0 3px; }
-.report-score__verdict {
-  font-size: 1.05rem;
-  font-weight: 600;
-  letter-spacing: -0.02em;
+/* The score lands a beat after the panel: the one moment in the week worth
+   a flourish. */
+@keyframes score-in {
+  0% { opacity: 0; transform: scale(0.6); }
+  70% { opacity: 1; transform: scale(1.06); }
+  100% { transform: scale(1); }
 }
-
-.report-stats {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1px;
-  background: var(--hairline);
-  border-bottom: 1px solid var(--border);
+.scoreboard__score { animation: score-in 0.45s 0.15s cubic-bezier(0.3, 0.8, 0.3, 1.2) both; }
+.scoreboard__ft {
+  padding: 3px 6px;
+  border-radius: 4px;
+  background: #0b0e12;
+  color: var(--win);
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
 }
-.report-stats__cell { background: var(--bg); padding: 11px var(--pad); }
-.report-stats__value {
-  font-family: var(--font-num);
-  font-size: 1.05rem;
+.scoreboard__pens,
+.scoreboard__crowd {
+  font-family: var(--font-display);
+  font-size: 0.62rem;
   font-weight: 700;
-  letter-spacing: -0.02em;
-}
-.report-stats__unit { color: var(--text-faint); font-size: 0.8rem; font-weight: 500; }
-.report-stats__label {
-  font-family: var(--font-num);
-  font-size: 0.55rem;
-  letter-spacing: 0.11em;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   color: var(--text-faint);
-  margin-top: 3px;
 }
+.scoreboard__verdict {
+  padding: 4px var(--pad) 6px;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 800;
+  line-height: 1.3;
+}
+.scoreboard__crowd { padding-bottom: 14px; }
+
+.facts { padding: 6px var(--pad) 10px; }
+.facts__row {
+  display: grid;
+  grid-template-columns: 44px 1fr 44px;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+}
+.facts__value {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 800;
+}
+.facts__value--away { text-align: right; }
+.facts__mid { display: flex; flex-direction: column; gap: 4px; }
+.facts__label {
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-dim);
+}
+.facts__bar {
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.85);
+  overflow: hidden;
+}
+.facts__bar.is-empty { background: rgba(255, 255, 255, 0.12); }
+.facts__home { display: block; height: 100%; background: var(--sel); }
 
 .report-event {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 10px;
   padding: 9px var(--pad);
   border-top: 1px solid var(--hairline);
-  font-size: 0.84rem;
 }
+.card__head + .report-event { border-top: 0; }
 .report-event__minute {
   flex: 0 0 auto;
   width: 30px;
-  padding-top: 2px;
-  font-family: var(--font-num);
-  font-size: 0.7rem;
-  color: var(--text-faint);
+  font-family: var(--font-display);
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--text-dim);
 }
-.report-event__bar {
+.report-event__icon {
   flex: 0 0 auto;
-  width: 3px;
-  align-self: stretch;
-  min-height: 18px;
-  border-radius: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--text-faint);
 }
-.report-event__text { line-height: 1.35; }
+.report-event__icon--goal,
+.report-event__icon--penaltyScored { background: #fff; box-shadow: inset 0 0 0 3px var(--win); }
+.report-event__icon--ownGoal { background: #fff; box-shadow: inset 0 0 0 3px var(--danger); }
+.report-event__icon--redCard { width: 9px; border-radius: 2px; background: var(--danger); }
+.report-event__icon--injury { background: var(--warn); }
+.report-event__icon--penaltyMissed { background: transparent; box-shadow: inset 0 0 0 2px var(--danger); }
+.report-event__text { font-size: 0.86rem; line-height: 1.35; }
+.report-event--away .report-event__text { color: var(--text-dim); }
 .report-event__type {
   flex: 0 0 auto;
-  align-self: flex-start;
-  padding-top: 2px;
-  font-family: var(--font-num);
+  font-family: var(--font-display);
   font-size: 0.58rem;
-  letter-spacing: 0.08em;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: var(--text-faint);
 }
 
 .report-quote {
-  padding: 4px var(--pad) 14px;
-  font-size: 0.95rem;
+  padding: 14px var(--pad);
+  font-size: 1rem;
+  font-style: italic;
   line-height: 1.45;
-  color: var(--text);
 }
-
-.report-rating {
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  width: 100%;
-  min-height: var(--tap);
-  padding: 8px var(--pad);
-  background: none;
-  border: 0;
-  border-top: 1px solid var(--hairline);
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
-  font-size: 0.88rem;
-}
-.report-rating:active { background: var(--bg-raised); }
-.report-rating__value {
-  flex: 0 0 auto;
-  width: 30px;
-  font-family: var(--font-num);
-  font-size: 0.92rem;
-  font-weight: 700;
-}
-.report-rating__pos {
-  flex: 0 0 auto;
-  font-family: var(--font-num);
-  font-size: 0.62rem;
+.report-quote__who {
+  display: block;
+  margin-bottom: 5px;
+  font-family: var(--font-display);
+  font-style: normal;
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   color: var(--text-faint);
 }
 </style>

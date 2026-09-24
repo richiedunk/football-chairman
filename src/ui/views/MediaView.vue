@@ -2,6 +2,7 @@
 import { computed, inject, ref, watch } from 'vue'
 import { useGameStore } from '../../stores/game'
 import MeterBar from '../components/MeterBar.vue'
+import DialGauge from '../components/DialGauge.vue'
 import Cutting from '../components/Cutting.vue'
 import AppSheet from '../components/AppSheet.vue'
 import {
@@ -106,16 +107,15 @@ const RESPONSES: MediaResponse[] = ['noComment', 'deny', 'confirm', 'backPlayer'
 
     <div class="card">
       <div class="card__body">
-        <div class="row row--between mb">
-          <span class="small muted">Credibility</span>
-          <span class="bold">{{ credibilityLabel(standing.credibility) }}</span>
+        <div class="dial-pair">
+          <DialGauge
+            :value="standing.credibility"
+            label="Credibility"
+            :reading="credibilityLabel(standing.credibility)"
+            :size="150"
+          />
+          <DialGauge :value="standing.goodwill" label="Goodwill" :size="150" />
         </div>
-        <MeterBar :value="standing.credibility" />
-        <div class="row row--between mb mt">
-          <span class="small muted">Goodwill</span>
-          <span class="small num">{{ Math.round(standing.goodwill) }}</span>
-        </div>
-        <MeterBar :value="standing.goodwill" />
 
         <div v-if="standing.fabricationsPlanted > 0" class="row row--between small mt">
           <span class="muted">Stories you invented</span>

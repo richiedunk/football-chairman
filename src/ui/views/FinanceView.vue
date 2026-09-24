@@ -44,6 +44,19 @@ const costLines = computed(() => {
   ].filter((x) => x.value > 0)
 })
 
+/**
+ * Each line of the books as a share of the bigger side, so the income bars
+ * and the spending bars are drawn to the same scale and the eye can compare
+ * the wage bill with the gate without reading either figure.
+ */
+const scale = computed(() => {
+  const l = ledger.value
+  return l ? Math.max(1, ledgerIncome(l), ledgerExpenditure(l)) : 1
+})
+function share(value: number): number {
+  return Math.max(1, Math.min(100, (value / scale.value) * 100))
+}
+
 const squadCost = computed(() => {
   const s = store.game
   const c = club.value
@@ -210,9 +223,12 @@ const committed = computed(() => {
           <span class="bold small">Income</span>
           <span class="bold num pos-val">{{ formatMoney(ledgerIncome(ledger), store.currency) }}</span>
         </div>
-        <div v-for="line in incomeLines" :key="line.label" class="row row--between small">
-          <span class="muted">{{ line.label }}</span>
-          <span class="num">{{ formatMoney(line.value, store.currency) }}</span>
+        <div v-for="line in incomeLines" :key="line.label" class="ledger-line">
+          <div class="row row--between small">
+            <span class="muted">{{ line.label }}</span>
+            <span class="num">{{ formatMoney(line.value, store.currency) }}</span>
+          </div>
+          <span class="ledger-line__bar ledger-line__bar--in" :style="{ width: `${share(line.value)}%` }" />
         </div>
 
         <div class="divider" />
@@ -221,9 +237,12 @@ const committed = computed(() => {
           <span class="bold small">Expenditure</span>
           <span class="bold num neg-val">{{ formatMoney(ledgerExpenditure(ledger), store.currency) }}</span>
         </div>
-        <div v-for="line in costLines" :key="line.label" class="row row--between small">
-          <span class="muted">{{ line.label }}</span>
-          <span class="num">{{ formatMoney(line.value, store.currency) }}</span>
+        <div v-for="line in costLines" :key="line.label" class="ledger-line">
+          <div class="row row--between small">
+            <span class="muted">{{ line.label }}</span>
+            <span class="num">{{ formatMoney(line.value, store.currency) }}</span>
+          </div>
+          <span class="ledger-line__bar ledger-line__bar--out" :style="{ width: `${share(line.value)}%` }" />
         </div>
 
         <div class="divider" />

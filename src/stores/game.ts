@@ -46,6 +46,7 @@ import {
 } from '../engine/systems/challenge'
 import { allVerdicts, type SuccessorVerdict } from '../engine/systems/successor'
 import { shareCard as sendCard, shareOrigin, type ShareResult } from '../ui/share/share'
+import { cachedCrest } from '../ui/share/crestImage'
 import { executeTransfer } from '../engine/systems/transfers'
 import { canAfford } from '../engine/systems/finance'
 import { haptic } from '../platform/native'
@@ -1044,6 +1045,7 @@ export const useGameStore = defineStore('game', () => {
       text,
       url: linkFor(card),
       filename: `${card.kind}-${card.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+      crest: cachedCrest(club.value?.id),
     })
   }
 

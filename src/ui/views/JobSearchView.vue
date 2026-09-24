@@ -5,7 +5,7 @@ import { useGameStore } from '../../stores/game'
 import { acceptJobOffer } from '../../engine/season'
 import { formatWage } from '../../engine/systems/valuation'
 import { ordinal } from '../../engine/systems/career'
-import { headerBand } from '../colour'
+import ClubCrest from '../components/ClubCrest.vue'
 import Chevron from '../components/Chevron.vue'
 
 /**
@@ -28,10 +28,7 @@ const openCount = computed(() => store.vacancies.filter((o) => !o.barred).length
 const posts = computed(() =>
   store.vacancies.map((offer) => {
     const club = store.clubById(offer.clubId)
-    return {
-      offer,
-      colour: club ? headerBand(club.colors.primary, club.colors.secondary).strip : '#3a3d45',
-    }
+    return { offer, club }
   }),
 )
 
@@ -83,7 +80,7 @@ function take(offerId: string) {
         :class="{ 'search-post--barred': p.offer.barred }"
         @click="p.offer.barred ? undefined : take(p.offer.id)"
       >
-        <span class="search-post__colour" :style="{ background: p.colour }" />
+        <ClubCrest :club="p.club" :size="34" />
         <div class="list__main">
           <div class="list__primary">
             {{ p.offer.clubName }}
@@ -163,13 +160,6 @@ function take(offerId: string) {
   margin-top: 6px;
 }
 .search-head__note { font-size: 0.88rem; color: var(--text-dim); margin-top: 8px; }
-.search-post__colour {
-  flex: 0 0 auto;
-  width: 3px;
-  align-self: stretch;
-  min-height: 34px;
-  border-radius: 2px;
-}
 .search-post__pitch {
   font-size: 0.78rem;
   color: var(--text-dim);

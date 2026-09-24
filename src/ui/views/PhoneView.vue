@@ -3,6 +3,8 @@ import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useGameStore } from '../../stores/game'
 import { PHONE_APPS } from '../apps'
+import ClubCrest from '../components/ClubCrest.vue'
+import { ordinal } from '../../engine/systems/career'
 import { badgeFor as countFor } from '../appBadge'
 import { isOpen, preview, threadKey } from '../threads'
 
@@ -52,12 +54,27 @@ function openNotification(from: string) {
 }
 
 const club = computed(() => store.club)
+
+/** Where the club stands and who is next, for the plate. */
+const glance = computed(() => {
+  const c = club.value
+  const f = store.nextFixture
+  const s = store.game
+  if (!c || !s) return null
+  const position = store.leaguePosition
+  const isHome = f ? f.homeClubId === c.id : false
+  const opponent = f ? store.clubById(isHome ? f.awayClubId : f.homeClubId) : null
+  // When it is, the advance button already says.
+  return { position, opponent, isHome }
+})
 const date = computed(() => store.game?.date ?? null)
 </script>
 
 <template>
   <div class="phone">
     <div class="phone__plate">
+      <ClubCrest v-if="club" :club="club" :size="64" />
+      <div class="grow">
       <div class="phone__club">{{ club?.name ?? 'Undisclosed Football' }}</div>
       <div class="phone__when num">
         <span v-if="date">{{ date.season }}/{{ String((date.season + 1) % 100).padStart(2, '0') }}</span>
@@ -74,12 +91,21 @@ const date = computed(() => store.game?.date ?? null)
            pressing" above four unread messages is the screen contradicting
            itself. -->
       <div v-else-if="!notifications.length" class="phone__waiting num">NOTHING PRESSING</div>
+      <div v-if="glance" class="phone__glance">
+        <span v-if="glance.position" class="phone__pos">{{ glance.position }}{{ ordinal(glance.position) }}</span>
+        <template v-if="glance.opponent">
+          <span class="phone__next">Next</span>
+          <ClubCrest :club="glance.opponent" :size="18" />
+          <span class="truncate">{{ glance.opponent.shortName || glance.opponent.name }} ({{ glance.isHome ? 'H' : 'A' }})</span>
+        </template>
+      </div>
+      </div>
     </div>
 
     <!-- The stack. Between the plate and the apps, which is where a phone puts
          it, and gone entirely when there is nothing waiting rather than left
          as an empty box saying so. -->
-    <div v-if="notifications.length" class="notifs">
+    <div v-if="notifications.length" class="notifs card">
       <button
         v-for="item in notifications"
         :key="item.id"

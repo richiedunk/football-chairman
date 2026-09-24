@@ -254,16 +254,33 @@ function player(id: string) {
  * digit changes and a countdown that wobbles reads as broken rather than as
  * urgent.
  */
+/* A stadium clock: amber digits on a black plate, glowing, and breathing
+   while the window is still open. */
+@keyframes clock-glow {
+  50% { text-shadow: 0 0 6px rgba(255, 176, 32, 0.4); }
+}
 .deadline-clock {
-  font-size: 1.9rem;
+  padding: 6px 10px 5px;
+  border-radius: 6px;
+  background: #050607;
+  border: 1px solid rgba(255, 176, 32, 0.35);
+  box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.8);
+  font-family: var(--font-mono);
+  font-size: 1.7rem;
   font-weight: 700;
   line-height: 1;
-  letter-spacing: -0.04em;
   color: var(--warn);
+  text-shadow: 0 0 14px rgba(255, 176, 32, 0.7);
   font-variant-numeric: tabular-nums;
   flex-shrink: 0;
+  animation: clock-glow 1.4s ease-in-out infinite;
 }
-.deadline-clock.is-out { color: var(--text-fainter); }
+.deadline-clock.is-out {
+  color: var(--text-fainter);
+  border-color: var(--border);
+  text-shadow: none;
+  animation: none;
+}
 
 .deadline-track {
   height: 3px;

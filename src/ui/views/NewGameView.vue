@@ -6,6 +6,16 @@ import { NATION_DEFS } from '../../engine/world/nations'
 import { randomSeed } from '../../engine/rng'
 import { useSetupStore } from '../../stores/setup'
 import type { DirectorBackground } from '../../engine/types'
+
+/** A glyph for each way into the job, beside its name. */
+const BACKGROUND_ICON: Record<DirectorBackground, string> = {
+  formerPlayer: 'M5 20h14l-1-4-5-1-2-7H6zM6 8V4h4v4',
+  agent: 'M4 8h16v11H4zM9 8V5h6v3M4 13h16',
+  analyst: 'M3 3v18h18M7 15l4-4 3 3 5-6',
+  financier: 'M12 2v20M17 6H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6',
+  scout: 'M6 14a3 3 0 1 0 0 6 3 3 0 0 0 0-6zM18 14a3 3 0 1 0 0 6 3 3 0 0 0 0-6zM9 17h6M5 14l2-9h3l1 9M19 14l-2-9h-3l-1 9',
+  academyCoach: 'M22 10L12 5 2 10l10 5 10-5zM6 12v5c0 1 2.7 2 6 2s6-1 6-2v-5',
+}
 import type { WorldSize } from '../../engine/world/worldGen'
 
 const router = useRouter()
@@ -91,25 +101,26 @@ async function begin() {
 
     <div class="section-title">Where you came from</div>
     <div class="card">
-      <div class="list">
+      <div class="list" role="radiogroup" aria-label="Where you came from">
+        <!-- One of five, so a radio: a checkbox beside each option suggested
+             you could tick several. -->
         <button
           v-for="bg in BACKGROUNDS"
           :key="bg.id"
-          class="list__row"
+          class="list__row choice"
+          :class="{ 'is-chosen': background === bg.id }"
+          role="radio"
+          :aria-checked="background === bg.id"
           @click="background = bg.id"
         >
-          <div
-            class="pos"
-            :class="background === bg.id ? 'pos--MID' : ''"
-            style="width: 26px"
-            aria-hidden="true"
-          >{{ background === bg.id ? '✓' : '' }}</div>
+          <span class="choice__radio" aria-hidden="true" />
+          <span class="choice__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path :d="BACKGROUND_ICON[bg.id]" /></svg>
+          </span>
           <div class="list__main">
             <div class="list__primary">{{ bg.label }}</div>
             <div class="list__secondary" style="white-space: normal">{{ bg.description }}</div>
-            <div class="tiny" style="color: var(--accent); white-space: normal; margin-top: 3px">
-              {{ bg.perk }}
-            </div>
+            <div class="choice__perk">{{ bg.perk }}</div>
           </div>
         </button>
       </div>

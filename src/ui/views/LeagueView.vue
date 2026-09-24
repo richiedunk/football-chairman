@@ -4,6 +4,9 @@ import { useRoute } from 'vue-router'
 import { useRouter } from 'vue-router'
 import { useGameStore } from '../../stores/game'
 import FormRun from '../components/FormRun.vue'
+import ClubCrest from '../components/ClubCrest.vue'
+import FixtureLine from '../components/FixtureLine.vue'
+import CupRun from '../components/CupRun.vue'
 import { sortTable } from '../../engine/systems/board'
 import { survivorsOf, tieAggregate } from '../../engine/sim/cups'
 import Chevron from '../components/Chevron.vue'
@@ -251,14 +254,19 @@ const notStarted = computed(() => table.value.every((row) => row.played === 0))
           <tbody>
             <tr v-for="(row, i) in table" :key="row.clubId" :class="rowClass(i, row.clubId)">
               <td class="num">{{ i + 1 }}</td>
-              <td class="name truncate" style="max-width: 112px">{{ short(row.clubId) }}</td>
+              <td class="name" style="max-width: 136px">
+                <span class="club-cell">
+                  <ClubCrest :club="store.clubById(row.clubId)" :size="18" />
+                  <span class="truncate">{{ short(row.clubId) }}</span>
+                </span>
+              </td>
               <td class="num">{{ row.played }}</td>
               <td class="num">{{ row.won }}</td>
               <td class="num">{{ row.drawn }}</td>
               <td class="num">{{ row.lost }}</td>
               <td class="num">{{ row.goalsFor - row.goalsAgainst > 0 ? '+' : '' }}{{ row.goalsFor - row.goalsAgainst }}</td>
               <td class="num bold">{{ row.points }}</td>
-              <td><FormRun :form="row.form" /></td>
+              <td><FormRun :form="row.form" compact /></td>
             </tr>
           </tbody>
         </table>
@@ -275,10 +283,14 @@ const notStarted = computed(() => table.value.every((row) => row.played === 0))
       <div class="list">
         <div v-for="f in results" :key="f.id" class="list__row list__row--static">
           <div class="list__main">
-            <div class="list__primary">
-              {{ short(f.homeClubId) }} {{ f.result?.homeGoals }}–{{ f.result?.awayGoals }} {{ short(f.awayClubId) }}
-            </div>
-            <div class="list__secondary">Week {{ f.week }}</div>
+            <FixtureLine
+              :home="store.clubById(f.homeClubId)"
+              :away="store.clubById(f.awayClubId)"
+              :home-goals="f.result?.homeGoals"
+              :away-goals="f.result?.awayGoals"
+              :mine="store.club?.id"
+            />
+            <div class="list__secondary center" style="margin-top: 3px">Week {{ f.week }}</div>
           </div>
         </div>
         <div v-if="!results.length" class="empty">No matches played yet.</div>
@@ -289,8 +301,12 @@ const notStarted = computed(() => table.value.every((row) => row.played === 0))
       <div class="list">
         <div v-for="f in fixtures" :key="f.id" class="list__row list__row--static">
           <div class="list__main">
-            <div class="list__primary">{{ short(f.homeClubId) }} v {{ short(f.awayClubId) }}</div>
-            <div class="list__secondary">Week {{ f.week }}</div>
+            <FixtureLine
+              :home="store.clubById(f.homeClubId)"
+              :away="store.clubById(f.awayClubId)"
+              :mine="store.club?.id"
+            />
+            <div class="list__secondary center" style="margin-top: 3px">Week {{ f.week }}</div>
           </div>
         </div>
         <div v-if="!fixtures.length" class="empty">No fixtures remaining.</div>
@@ -305,10 +321,11 @@ const notStarted = computed(() => table.value.every((row) => row.played === 0))
             <span class="small muted">
               {{ entry.competition.winnerId ? 'Winners' : entry.currentRound?.name ?? 'Not yet under way' }}
             </span>
-            <span
-              v-if="entry.competition.winnerId"
-              class="chip chip--gold"
-            >{{ store.clubById(entry.competition.winnerId)?.shortName }}</span>
+            <span v-if="entry.competition.winnerId" class="row" style="gap: 6px">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3" /></svg>
+              <ClubCrest :club="store.clubById(entry.competition.winnerId)" :size="18" />
+              <span class="chip chip--gold">{{ store.clubById(entry.competition.winnerId)?.shortName }}</span>
+            </span>
             <span
               v-else-if="entry.entered"
               class="chip"
@@ -331,21 +348,27 @@ const notStarted = computed(() => table.value.every((row) => row.played === 0))
               {{ short(leg.awayClubId) }}
             </div>
           </template>
-          <div v-else-if="entry.tie" class="small">
-            {{ short(entry.tie.homeClubId) }}
-            <template v-if="entry.tie.result">
-              {{ entry.tie.result.homeGoals }}–{{ entry.tie.result.awayGoals }}
-              <span v-if="entry.tie.result.penalties" class="tiny faint">
-                ({{ entry.tie.result.penalties.home }}–{{ entry.tie.result.penalties.away }} pens)
-              </span>
-            </template>
-            <template v-else> v </template>
-            {{ short(entry.tie.awayClubId) }}
+          <div v-else-if="entry.tie">
+            <FixtureLine
+              :home="store.clubById(entry.tie.homeClubId)"
+              :away="store.clubById(entry.tie.awayClubId)"
+              :home-goals="entry.tie.result?.homeGoals"
+              :away-goals="entry.tie.result?.awayGoals"
+              :mine="store.club?.id"
+            />
+            <div v-if="entry.tie.result?.penalties" class="tiny faint center" style="margin-top: 4px">
+              {{ entry.tie.result.penalties.home }}–{{ entry.tie.result.penalties.away }} on penalties
+            </div>
           </div>
           <div v-else-if="!entry.entered" class="small muted">
             {{ entry.competition.entrantIds.length }} clubs are in it. You are not.
           </div>
           <div v-else class="small muted">No tie this round.</div>
+        </div>
+        <!-- The road so far, once there has been more than one round of it. -->
+        <div v-if="entry.entered && store.club && entry.competition.rounds.length > 1" class="card__body" style="border-top: 1px solid var(--hairline)">
+          <div class="attr-group">Your run</div>
+          <CupRun :competition="entry.competition" :club-id="store.club.id" />
         </div>
       </div>
     </template>

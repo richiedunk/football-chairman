@@ -3,6 +3,8 @@ import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useGameStore } from '../../stores/game'
 import MeterBar from '../components/MeterBar.vue'
+import ClubCrest from '../components/ClubCrest.vue'
+import KitShirt from '../components/KitShirt.vue'
 import { formatMoney, formatWage } from '../../engine/systems/valuation'
 import { MANDATE_LABELS } from '../../engine/systems/board'
 import { facilityGrade } from '../../engine/systems/facilities'
@@ -77,12 +79,19 @@ const concerns = computed(() => {
 
 <template>
   <div v-if="club">
-    <div class="card" :style="{ borderTop: `3px solid ${club.colors.primary}` }">
-      <div class="card__body" style="text-align: center; padding: 20px 14px">
-        <div class="tiny faint" style="text-transform: uppercase; letter-spacing: 0.1em">
+    <!-- The handover: the crest, the kits, the name. The first time the club
+         is yours, so it gets the one screen dressed entirely in its colours. -->
+    <div class="card welcome-hero" :style="{ '--hero': club.colors.primary }">
+      <div class="card__body" style="text-align: center; padding: 22px 14px 18px">
+        <div class="welcome-hero__art">
+          <KitShirt :club="club" :size="58" away class="welcome-hero__kit" />
+          <ClubCrest :club="club" :size="104" />
+          <KitShirt :club="club" :size="58" :number="10" class="welcome-hero__kit" />
+        </div>
+        <div class="tiny faint" style="text-transform: uppercase; letter-spacing: 0.1em; margin-top: 14px">
           Welcome to
         </div>
-        <div class="bold" style="font-size: 1.5rem; margin: 5px 0 2px">{{ club.name }}</div>
+        <h1 style="font-size: 1.6rem; margin: 5px 0 2px">{{ club.name }}</h1>
         <div class="small muted">
           {{ club.nickname }} · {{ club.city }}<span v-if="founded"> · founded {{ founded }}</span>
         </div>

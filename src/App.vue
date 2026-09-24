@@ -262,6 +262,16 @@ onUnmounted(() => {
     </div>
 
     <div v-if="store.busy" class="loading">
+      <!-- A ball rolled along the touchline while the week runs. Transform
+           animation only, so it keeps moving while the tick blocks the
+           main thread. -->
+      <div class="loading__track">
+        <span class="loading__roller"><svg class="loading__ball" viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="10.5" fill="#fff" stroke="#0b0e12" stroke-width="1.4" />
+          <path d="M12 7.6l4.2 3-1.6 4.9H9.4l-1.6-4.9z" fill="#0b0e12" />
+          <path d="M12 7.6V2M16.2 10.6l5.2-1.7M14.6 15.5l3.2 4.4M9.4 15.5l-3.2 4.4M7.8 10.6L2.6 8.9" stroke="#0b0e12" stroke-width="1.3" />
+        </svg></span>
+      </div>
       <div class="loading__bar"><div class="loading__sweep" /></div>
       <div class="loading__line">{{ loadingLine }}</div>
       <div class="loading__task">{{ store.busyMessage }}</div>

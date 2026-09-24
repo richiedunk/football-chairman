@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import PersonFace from '../components/PersonFace.vue'
+import { apparentAge } from '../art/face'
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useGameStore } from '../../stores/game'
@@ -78,6 +80,7 @@ function ourClients(agent: Agent) {
       <div class="list">
         <template v-for="agent in agents" :key="agent.id">
           <button class="list__row" style="width: 100%; text-align: left" @click="toggle(agent)">
+            <PersonFace :person="{ id: agent.id, age: apparentAge(agent.id) }" kind="staff" :size="38" />
             <div class="list__main">
               <div class="list__primary">
                 {{ agent.name }}

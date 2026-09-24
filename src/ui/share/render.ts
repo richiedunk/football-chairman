@@ -24,9 +24,11 @@ import type { ShareCard } from '../../engine/systems/shareCard'
  * ## The rules it follows
  *
  * The design system's rules, because a card that does not look like the game
- * advertises a different game. Club colour in the band and nowhere else, and
- * through `headerBand` so that Norwich yellow and Real Madrid white are still
- * legible. Numbers in the mono face, prose in Inter. One accent.
+ * advertises a different game: the floodlit pitch as the ground, the club's
+ * band across the top through `headerBand` (so Norwich yellow and Real Madrid
+ * white are still legible) with the generated crest on it, the rows on a
+ * smoked panel, Montserrat for figures and headings, Inter for the voice.
+ * One accent.
  */
 
 /**
@@ -39,21 +41,28 @@ import type { ShareCard } from '../../engine/systems/shareCard'
 const CARD_W = 1080
 const CARD_H = 1350
 
-const INK = '#dde1e6'
-const DIM = '#98a0ac'
-const FAINT = '#6b7280'
-const GROUND = '#08090b'
+const INK = '#f0f3f6'
+const DIM = '#b2bac5'
+const FAINT = '#858e9a'
+const GROUND = '#06080a'
 const ACCENT = '#c8ff4d'
-const HAIRLINE = '#22262e'
+const HAIRLINE = 'rgba(255,255,255,0.08)'
+const PANEL = 'rgba(9,12,16,0.82)'
 
 const SANS = 'Inter, "Inter Variable", system-ui, -apple-system, sans-serif'
-const MONO = '"JetBrains Mono", "JetBrains Mono Variable", ui-monospace, monospace'
+const DISPLAY = '"Montserrat Variable", Montserrat, Inter, system-ui, sans-serif'
 
 export interface RenderOptions {
   /** Pixel width to draw at. Height follows the 4:5 frame. */
   width?: number
   /** A QR-style block of the challenge code, when one should be on the card. */
   codeLabel?: string
+  /**
+   * The club's crest, already decoded. Optional because an image loads
+   * asynchronously and drawing is not: the caller paints once without it and
+   * again when it arrives, the same way it waits for the fonts.
+   */
+  crest?: CanvasImageSource | null
 }
 
 /**
@@ -87,8 +96,8 @@ export function drawCard(
 
   const band = headerBand(card.colors.primary, card.colors.secondary)
 
-  ground(ctx)
-  header(ctx, card, band)
+  ground(ctx, band.strip)
+  header(ctx, card, band, options.crest ?? null)
   headline(ctx, card)
   // The line follows the rows rather than sitting at a fixed height: a card
   // with five rows and one with six would otherwise be laid out to different
@@ -98,13 +107,59 @@ export function drawCard(
   footer(ctx, card, options.codeLabel)
 }
 
-function ground(ctx: CanvasRenderingContext2D): void {
+/** The floodlit pitch the whole game stands on, at card size. */
+function ground(ctx: CanvasRenderingContext2D, glow: string): void {
   ctx.fillStyle = GROUND
+  ctx.fillRect(0, 0, CARD_W, CARD_H)
+
+  // Mown stripes.
+  for (let x = 0, i = 0; x < CARD_W; x += 120, i++) {
+    ctx.fillStyle = i % 2 ? '#0e2a17' : '#12331c'
+    ctx.fillRect(x, 0, 120, CARD_H)
+  }
+  // Centre circle and halfway line, faint.
+  ctx.strokeStyle = 'rgba(255,255,255,0.07)'
+  ctx.lineWidth = 4
+  ctx.beginPath()
+  ctx.arc(CARD_W / 2, CARD_H * 0.55, 230, 0, Math.PI * 2)
+  ctx.stroke()
+  ctx.fillStyle = 'rgba(255,255,255,0.06)'
+  ctx.fillRect(CARD_W / 2 - 2, 0, 4, CARD_H)
+
+  // The smoke over it, heavier towards the foot so the rows stay legible.
+  const smoke = ctx.createLinearGradient(0, 0, 0, CARD_H)
+  smoke.addColorStop(0, 'rgba(4,6,8,0.35)')
+  smoke.addColorStop(0.45, 'rgba(4,6,8,0.72)')
+  smoke.addColorStop(1, 'rgba(4,6,8,0.94)')
+  ctx.fillStyle = smoke
+  ctx.fillRect(0, 0, CARD_W, CARD_H)
+
+  // Two floodlight pools, and a wash of the club's colour between them.
+  for (const x of [120, CARD_W - 120]) {
+    const light = ctx.createRadialGradient(x, 0, 0, x, 0, 620)
+    light.addColorStop(0, 'rgba(220,235,255,0.22)')
+    light.addColorStop(1, 'rgba(220,235,255,0)')
+    ctx.fillStyle = light
+    ctx.fillRect(0, 0, CARD_W, CARD_H)
+  }
+  const wash = ctx.createRadialGradient(CARD_W / 2, 0, 0, CARD_W / 2, 0, 900)
+  wash.addColorStop(0, withAlpha(glow, 0.22))
+  wash.addColorStop(1, withAlpha(glow, 0))
+  ctx.fillStyle = wash
   ctx.fillRect(0, 0, CARD_W, CARD_H)
 }
 
+/** A hex colour at an opacity, for canvas gradients. */
+function withAlpha(hex: string, alpha: number): string {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim())
+  if (!m) return `rgba(255,255,255,${alpha * 0.25})`
+  const n = parseInt(m[1], 16)
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${alpha})`
+}
+
 /**
- * The band, and the 3px strip of untouched club colour beneath it.
+ * The band, fading into the floodlights, the club's colours as a trim
+ * beneath it, and the crest standing on the right.
  *
  * Lifted straight from the app's header rather than reinvented, because a
  * card is the app's header seen by somebody who has never opened the app.
@@ -113,36 +168,61 @@ function header(
   ctx: CanvasRenderingContext2D,
   card: ShareCard,
   band: ReturnType<typeof headerBand>,
+  crest: CanvasImageSource | null,
 ): void {
   const H = 260
-  ctx.fillStyle = band.band
+  const fade = ctx.createLinearGradient(0, 0, CARD_W, 0)
+  fade.addColorStop(0, band.band)
+  fade.addColorStop(0.5, band.band)
+  fade.addColorStop(1, withAlpha(band.band, 0.55))
+  ctx.fillStyle = fade
   ctx.fillRect(0, 0, CARD_W, H)
   ctx.fillStyle = band.strip
-  ctx.fillRect(0, H, CARD_W, 10)
+  ctx.fillRect(0, H, CARD_W, 8)
+  ctx.fillStyle = band.stripAlt ?? band.strip
+  ctx.fillRect(0, H + 8, CARD_W, 5)
+
+  const textRight = crest ? CARD_W - 280 : CARD_W - 60
+  if (crest) {
+    ctx.save()
+    ctx.shadowColor = 'rgba(0,0,0,0.5)'
+    ctx.shadowBlur = 24
+    ctx.shadowOffsetY = 8
+    ctx.drawImage(crest, CARD_W - 250, 28, 190, 217)
+    ctx.restore()
+  }
 
   ctx.fillStyle = '#ffffff'
-  ctx.font = `700 ${fit(ctx, card.title, 62, CARD_W - 120, '700 %SIZEpx ' + SANS)}px ${SANS}`
-  ctx.letterSpacing = '-0.02em'
-  ctx.fillText(truncate(ctx, card.title, CARD_W - 120), 60, 140)
+  ctx.font = `800 ${fit(ctx, card.title, 64, textRight - 60, '800 %SIZEpx ' + DISPLAY)}px ${DISPLAY}`
+  ctx.letterSpacing = '-0.01em'
+  ctx.fillText(truncate(ctx, card.title, textRight - 60), 60, 140)
   ctx.letterSpacing = '0px'
 
-  ctx.fillStyle = 'rgba(255,255,255,0.72)'
-  ctx.font = `500 30px ${SANS}`
-  ctx.fillText(truncate(ctx, card.subtitle, CARD_W - 120), 60, 196)
+  ctx.fillStyle = 'rgba(255,255,255,0.75)'
+  ctx.font = `700 26px ${DISPLAY}`
+  ctx.letterSpacing = '0.08em'
+  ctx.fillText(truncate(ctx, card.subtitle.toUpperCase(), textRight - 60), 60, 196)
+  ctx.letterSpacing = '0px'
 }
 
 /** The one thing read at arm's length. */
 function headline(ctx: CanvasRenderingContext2D, card: ShareCard): void {
+  ctx.save()
+  ctx.shadowColor = 'rgba(0,0,0,0.55)'
+  ctx.shadowBlur = 30
   ctx.fillStyle = INK
-  ctx.font = `700 190px ${MONO}`
+  ctx.font = `800 190px ${DISPLAY}`
   ctx.letterSpacing = '-0.04em'
   ctx.fillText(card.headline.value, 60, 470)
+  ctx.restore()
+  ctx.font = `800 190px ${DISPLAY}`
+  ctx.letterSpacing = '-0.04em'
   const width = ctx.measureText(card.headline.value).width
   ctx.letterSpacing = '0px'
 
   ctx.fillStyle = ACCENT
-  ctx.font = `600 26px ${MONO}`
-  ctx.letterSpacing = '0.14em'
+  ctx.font = `800 28px ${DISPLAY}`
+  ctx.letterSpacing = '0.12em'
   ctx.fillText(card.headline.caption, 60 + width + 28, 470)
   ctx.letterSpacing = '0px'
 }
@@ -155,27 +235,39 @@ function headline(ctx: CanvasRenderingContext2D, card: ShareCard): void {
  * beats a column you have to read.
  */
 function rows(ctx: CanvasRenderingContext2D, card: ShareCard): number {
-  let y = 570
-  const step = 78
+  let y = 580
+  const step = 76
   const shown = card.rows.slice(0, 6)
 
-  for (const row of shown) {
-    ctx.fillStyle = HAIRLINE
-    ctx.fillRect(60, y - 44, CARD_W - 120, 1)
+  // The rows sit on a panel, as every list in the game does.
+  if (shown.length) {
+    ctx.fillStyle = PANEL
+    roundRect(ctx, 40, y - 64, CARD_W - 80, shown.length * step + 30, 22)
+    ctx.fill()
+    ctx.strokeStyle = HAIRLINE
+    ctx.lineWidth = 2
+    ctx.stroke()
+  }
+
+  shown.forEach((row, i) => {
+    if (i > 0) {
+      ctx.fillStyle = HAIRLINE
+      ctx.fillRect(72, y - 46, CARD_W - 144, 2)
+    }
 
     ctx.fillStyle = DIM
     ctx.font = `500 30px ${SANS}`
     ctx.textAlign = 'left'
-    ctx.fillText(row.label, 60, y)
+    ctx.fillText(row.label, 76, y)
 
     ctx.fillStyle = row.undisclosed ? ACCENT : INK
-    ctx.font = `${row.undisclosed ? 600 : 500} 32px ${MONO}`
+    ctx.font = `800 32px ${DISPLAY}`
     ctx.textAlign = 'right'
-    ctx.fillText(truncate(ctx, row.value, CARD_W - 480), CARD_W - 60, y)
+    ctx.fillText(truncate(ctx, row.value, CARD_W - 500), CARD_W - 76, y)
     ctx.textAlign = 'left'
 
     y += step
-  }
+  })
   return y
 }
 
@@ -211,8 +303,8 @@ function footer(
   ctx.fillRect(60, CARD_H - 120, CARD_W - 120, 1)
 
   ctx.fillStyle = FAINT
-  ctx.font = `600 24px ${MONO}`
-  ctx.letterSpacing = '0.16em'
+  ctx.font = `700 24px ${DISPLAY}`
+  ctx.letterSpacing = '0.14em'
   ctx.fillText(card.footer, 60, CARD_H - 62)
 
   if (codeLabel) {
@@ -222,6 +314,17 @@ function footer(
     ctx.textAlign = 'left'
   }
   ctx.letterSpacing = '0px'
+}
+
+/** A rounded rectangle path; `ctx.roundRect` is too new to rely on. */
+function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number): void {
+  ctx.beginPath()
+  ctx.moveTo(x + r, y)
+  ctx.arcTo(x + w, y, x + w, y + h, r)
+  ctx.arcTo(x + w, y + h, x, y + h, r)
+  ctx.arcTo(x, y + h, x, y, r)
+  ctx.arcTo(x, y, x + w, y, r)
+  ctx.closePath()
 }
 
 // ---------------------------------------------------------------------------

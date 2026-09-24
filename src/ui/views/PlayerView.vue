@@ -5,11 +5,17 @@ import { useGameStore } from '../../stores/game'
 import { readCareerRecord } from '../../engine/systems/careerRecord'
 import { isAwayOnDuty } from '../../engine/systems/international'
 import PosBadge from '../components/PosBadge.vue'
+import KitShirt from '../components/KitShirt.vue'
+import PersonFace from '../components/PersonFace.vue'
+import AttrBar from '../components/AttrBar.vue'
+import PositionMap from '../components/PositionMap.vue'
+import StarRating from '../components/StarRating.vue'
+import { numberFor } from '../shirtNumbers'
 import MeterBar from '../components/MeterBar.vue'
 import Dossier from '../components/Dossier.vue'
 import AppSheet from '../components/AppSheet.vue'
 import { formatMoney, formatWage } from '../../engine/systems/valuation'
-import { ATTRIBUTE_GROUPS, ATTRIBUTE_LABELS } from '../../engine/world/attributes'
+import { ATTRIBUTE_GROUPS, ATTRIBUTE_LABELS, positionGroup } from '../../engine/world/attributes'
 import { formatRange, knowledgeLabel, starsForLeague } from '../../engine/systems/scouting'
 import { SQUAD_STATUS_LABELS } from '../../engine/systems/morale'
 import { suggestRenewal, type RenewalOffer } from '../../engine/systems/contracts'
@@ -121,22 +127,48 @@ const stars = computed(() => {
   return ability > 0 ? starsForLeague(ability, l.reputation) : 0
 })
 
-function attributeDisplay(key: AttributeKey): string {
+/**
+ * Others your scouts have filed on who play where he plays and whose
+ * reported ability overlaps his. The comparison a director makes before
+ * paying for one of them, without going back to the search screen. Only
+ * scouted players: an unscouted name next to a report would be a guess
+ * dressed as an alternative.
+ */
+const similar = computed(() => {
+  const s = store.game
   const p = player.value
-  if (!p) return '—'
-  if (knowsAttributes.value) return String(p.attributes[key])
-  const estimate = report.value?.attributeEstimates[key]
-  if (!estimate) return '?'
-  return estimate[0] === estimate[1] ? String(estimate[0]) : `${estimate[0]}–${estimate[1]}`
+  const r = report.value
+  if (!s || !p || !r || isOurs.value) return []
+  const [lo, hi] = r.abilityRange
+  const mid = (lo + hi) / 2
+  return Object.entries(s.scoutReports)
+    .filter(([id]) => id !== p.id)
+    .map(([id, rep]) => ({ other: s.players[id], rep }))
+    .filter(({ other, rep }) =>
+      other
+      // Same family rather than same slot: early in a save there are too few
+      // reports for an exact position to turn anything up.
+      && positionGroup(other.position) === positionGroup(p.position)
+      && other.clubId !== store.club?.id
+      && rep.abilityRange[1] >= lo
+      && rep.abilityRange[0] <= hi)
+    .sort((a, b) =>
+      Math.abs((a.rep.abilityRange[0] + a.rep.abilityRange[1]) / 2 - mid)
+      - Math.abs((b.rep.abilityRange[0] + b.rep.abilityRange[1]) / 2 - mid))
+    .slice(0, 6)
+})
+
+/** The exact figure, for a player whose attributes the club can see. */
+function attributeValue(key: AttributeKey): number | null {
+  const p = player.value
+  if (!p || !knowsAttributes.value) return null
+  return p.attributes[key]
 }
 
-function attributeWidth(key: AttributeKey): number {
-  const p = player.value
-  if (!p) return 0
-  if (knowsAttributes.value) return (p.attributes[key] / 20) * 100
-  const estimate = report.value?.attributeEstimates[key]
-  if (!estimate) return 0
-  return ((estimate[0] + estimate[1]) / 2 / 20) * 100
+/** The scout's range, for everyone else. */
+function attributeRange(key: AttributeKey): readonly [number, number] | null {
+  if (knowsAttributes.value) return null
+  return report.value?.attributeEstimates[key] ?? null
 }
 
 const visibleGroups = computed(() =>
@@ -453,9 +485,15 @@ const internationalLine = computed(() => {
     <!-- Identity -->
     <div class="card">
       <div class="card__body">
-        <div class="row" style="gap: 12px">
-          <PosBadge :position="player.position" />
-          <div class="grow">
+        <div class="row" style="gap: 12px; align-items: center">
+          <!-- His face, in his club's shirt if he has a club, with the shirt
+               itself and his position pinned to the frame. -->
+          <span class="player-kit">
+            <PersonFace :person="player" :club="currentClub" :size="68" />
+            <KitShirt v-if="currentClub" :club="currentClub" :number="numberFor(store, player)" :size="30" class="player-kit__shirt" />
+            <PosBadge :position="player.position" class="player-kit__pos" />
+          </span>
+          <div class="grow" style="min-width: 0">
             <h1 style="font-size: 1.2rem">{{ fullName(player) }}</h1>
             <div class="small muted">
               <!-- The nickname only when it is a real one. A profile that
@@ -471,6 +509,7 @@ const internationalLine = computed(() => {
               </template>
             </div>
           </div>
+          <PositionMap :primary="player.position" :alt="player.altPositions" />
         </div>
 
         <div v-if="player.injury" class="chip chip--danger mt">
@@ -504,7 +543,10 @@ const internationalLine = computed(() => {
         </div>
         <div class="stat">
           <div class="stat__label">For this level</div>
-          <div class="stat__value stat__value--sm">{{ stars ? `${stars}★` : '—' }}</div>
+          <div class="stat__value stat__value--sm">
+            <StarRating v-if="stars" :stars="stars" :size="14" />
+            <template v-else>—</template>
+          </div>
         </div>
       </div>
       <!-- The coach's view sits under the numbers, because it is what the
@@ -534,18 +576,29 @@ const internationalLine = computed(() => {
       </div>
     </div>
 
+    <!-- Alternatives your scouts have already seen. -->
+    <div v-if="similar.length" class="card">
+      <div class="card__head"><span class="card__title">Also on file</span></div>
+      <div class="similar">
+        <button v-for="{ other, rep } in similar" :key="other!.id" class="similar__item" @click="router.push(`/player/${other!.id}`)">
+          <PersonFace :person="other!" :club="store.clubById(other!.clubId ?? '')" :size="46" />
+          <PosBadge :position="other!.position" class="similar__pos" />
+          <span class="similar__name">{{ other!.knownAs.split(' ').slice(-1)[0] }}</span>
+          <span class="similar__range">{{ rep.abilityRange[0] }}–{{ rep.abilityRange[1] }}</span>
+          <span class="similar__fee">{{ formatMoney(rep.estimatedFee[1], store.currency) }}</span>
+        </button>
+      </div>
+    </div>
+
     <!-- Attributes -->
     <div v-if="knowsAttributes || report?.attributeEstimates" class="card">
       <div class="card__head"><span class="card__title">Attributes</span></div>
-      <div class="card__body">
+      <div class="card__body attr-columns">
         <div v-for="group in visibleGroups" :key="group.label" class="mb">
-          <div class="tiny faint bold" style="text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px">
-            {{ group.label }}
-          </div>
+          <div class="attr-group">{{ group.label }}</div>
           <div v-for="key in group.keys" :key="key" class="row" style="gap: 8px; margin-bottom: 4px">
             <span class="small muted" style="width: 92px; flex: 0 0 auto">{{ ATTRIBUTE_LABELS[key] }}</span>
-            <div class="grow"><MeterBar :value="attributeWidth(key)" :semantic="false" /></div>
-            <span class="tiny num" style="width: 44px; text-align: right">{{ attributeDisplay(key) }}</span>
+            <AttrBar :value="attributeValue(key)" :range="attributeRange(key)" />
           </div>
         </div>
       </div>

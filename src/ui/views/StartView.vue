@@ -13,11 +13,38 @@ import { useGameStore } from '../../stores/game'
 import { challengeFromUrl } from '../../engine/systems/challenge'
 import { deleteSave, listSaves, storageName } from '../../storage/saves'
 import type { SaveSlotMeta } from '../../storage/adapter'
+import StadiumScene from '../components/StadiumScene.vue'
 
 const router = useRouter()
 const route = useRoute()
 const store = useGameStore()
 const saves = ref<SaveSlotMeta[]>([])
+/** Set once the save list has been read, so the pitch does not flash up for
+ *  somebody who has a career and is about to see it listed. */
+const checked = ref(false)
+
+/**
+ * The game in three sentences, for somebody who has never played it. Shown
+ * only before the first career: after that the title screen is a way back in,
+ * and a returning player does not need the premise explained again.
+ */
+const PITCH = [
+  {
+    title: 'You buy players you cannot fully see',
+    text: 'Every signing is a scout\'s range, not a number. Pay for more scouting and the range narrows.',
+    d: 'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z',
+  },
+  {
+    title: 'Someone else picks the team',
+    text: 'The head coach decides who plays. If he does not rate your record signing, your record signing sits.',
+    d: 'M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2M9 3a4 4 0 100 8 4 4 0 000-8zM22 21v-2a4 4 0 00-3-3.87',
+  },
+  {
+    title: 'Your phone does not stop',
+    text: 'The chairman, agents, the press and the coach all want an answer, and some of them will not wait.',
+    d: 'M7 2h10v20H7zM11 18h2',
+  },
+]
 const error = ref('')
 
 /**
@@ -39,6 +66,7 @@ onMounted(refresh)
 async function refresh() {
   try {
     saves.value = await listSaves()
+    checked.value = true
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Could not read saved games.'
   }
@@ -67,51 +95,100 @@ function when(ts: number) {
 </script>
 
 <style scoped>
-.title { padding: 34px 0 26px; }
-.title__rule {
-  width: 44px;
-  height: 4px;
-  border-radius: 2px;
-  background: var(--accent);
-  margin-bottom: 20px;
+.start { position: relative; }
+/* The ground sits behind the title, bleeding to the edges of the screen. */
+.start__scene {
+  position: absolute;
+  top: calc(var(--pad) * -1);
+  left: calc(var(--pad) * -1);
+  right: calc(var(--pad) * -1);
+  aspect-ratio: 400 / 240;
+  max-height: 340px;
+  overflow: hidden;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(180deg, #000 70%, transparent);
+  mask-image: linear-gradient(180deg, #000 70%, transparent);
+}
+.start__scene :deep(svg) { width: 100%; height: 100%; display: block; }
+/* A window wider than a phone: the ground at a fixed size, centred, with
+   the pitch background running out either side. */
+@media (min-width: 700px) {
+  .start__scene {
+    left: 50%;
+    right: auto;
+    width: 860px;
+    max-height: none;
+    transform: translateX(-50%);
+  }
+  .title { padding-top: 330px; }
+}
+.title {
+  position: relative;
+  padding: min(46vw, 190px) 0 24px;
+  text-align: center;
 }
 .title__badge {
   display: block;
-  width: 118px;
+  width: 108px;
   height: auto;
-  margin: 6px 0 14px;
+  margin: 0 auto 12px;
+  filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.7)) drop-shadow(0 0 22px rgba(200, 255, 77, 0.25));
 }
 .title__name {
-  font-size: 2.4rem;
+  font-size: 2.5rem;
+  font-weight: 900;
+  line-height: 0.95;
+  letter-spacing: -0.03em;
+  text-transform: uppercase;
+  text-shadow: 0 4px 20px rgba(0, 0, 0, 0.7);
+}
+.title__name span {
+  display: block;
+  font-size: 0.52em;
   font-weight: 700;
-  line-height: 0.98;
-  letter-spacing: -0.045em;
+  letter-spacing: 0.32em;
+  margin-top: 6px;
+  color: var(--accent);
 }
 .title__strap {
-  margin-top: 14px;
+  margin: 14px auto 0;
   max-width: 22em;
-  font-size: 0.88rem;
+  font-size: 0.9rem;
   line-height: 1.5;
   color: var(--text-dim);
+}
+.start__actions { max-width: 420px; margin: 0 auto; }
+.pitch-cards { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+.pitch-card { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; margin: 0; }
+.pitch-card__title { font-family: var(--font-display); font-size: 0.86rem; font-weight: 800; }
+.pitch-card__text { margin: 3px 0 0; font-size: 0.78rem; line-height: 1.45; color: var(--text-dim); }
+.start__legal {
+  max-width: 34em;
+  margin: 18px auto 0;
+  padding: 0 12px 10px;
+  font-size: 0.64rem;
+  line-height: 1.5;
+  color: var(--text-fainter);
+  text-align: center;
 }
 </style>
 
 <template>
-  <div>
-    <!-- The wordmark is the mark. An emoji ball was a full-colour cartoon on
-         a screen that has no other colour, and it undersold the game. -->
+  <div class="start">
+    <div class="start__scene"><StadiumScene /></div>
+    <!-- The badge and the wordmark, under the floodlights. -->
     <div class="title">
-      <div class="title__rule" />
       <!-- The badge, then the wordmark. The mark exists now and the title
            screen was the one place still describing the game in text alone. -->
       <img class="title__badge" :src="badgeUrl" alt="" aria-hidden="true" width="118" height="106" />
-      <h1 class="title__name">Undisclosed<br />Football</h1>
+      <h1 class="title__name">Undisclosed<span>Football</span></h1>
       <p class="title__strap">
         You run recruitment, contracts, the academy and the books.
         Someone else picks the team.
       </p>
     </div>
 
+    <div class="start__actions">
     <template v-if="incoming">
       <div class="card" style="background: var(--accent-wash); border-color: var(--accent-dim)">
         <div class="card__body">
@@ -133,9 +210,22 @@ function when(ts: number) {
       </button>
     </template>
 
-    <button v-else class="btn btn--primary btn--block" @click="router.push('/new')">
-      Start a new career
-    </button>
+    <template v-else>
+      <div v-if="checked && !saves.length" class="pitch-cards">
+        <div v-for="item in PITCH" :key="item.title" class="card pitch-card">
+          <span class="choice__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path :d="item.d" /></svg>
+          </span>
+          <div>
+            <div class="pitch-card__title">{{ item.title }}</div>
+            <p class="pitch-card__text">{{ item.text }}</p>
+          </div>
+        </div>
+      </div>
+      <button class="btn btn--primary btn--block" @click="router.push('/new')">
+        Start a new career
+      </button>
+    </template>
 
     <div v-if="error" class="card mt">
       <div class="card__body small" style="color: var(--danger)">{{ error }}</div>
@@ -162,11 +252,13 @@ function when(ts: number) {
       </div>
     </template>
 
+    </div>
+
     <p class="tiny faint center mt">
       Saves are stored on this device ({{ storageName() }}). Clearing site data removes them.
     </p>
 
-    <p class="tiny faint center" style="padding: 0 12px 10px; line-height: 1.5">
+    <p class="start__legal">
       Club names are used only to identify the real clubs taking part. No club, competition
       or individual endorses this game or is associated with it, and all third-party trade
       marks belong to their owners. Every player, member of staff and ground in the game is

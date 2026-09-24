@@ -5,6 +5,7 @@ import { router } from './router'
 // Fonts are vendored rather than pulled from a CDN: the packaged app has to
 // look right with no network, and a phone on a train is the normal case.
 import '@fontsource-variable/inter'
+import '@fontsource-variable/montserrat'
 import '@fontsource-variable/jetbrains-mono'
 import './ui/styles/main.css'
 import { initialiseNative, isNative } from './platform/native'

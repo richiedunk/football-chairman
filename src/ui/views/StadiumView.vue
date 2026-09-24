@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, inject, ref } from 'vue'
 import { useGameStore } from '../../stores/game'
+import GroundPlan from '../components/GroundPlan.vue'
 import MeterBar from '../components/MeterBar.vue'
 import AppSheet from '../components/AppSheet.vue'
 import { formatMoney } from '../../engine/systems/valuation'
@@ -221,6 +222,18 @@ function conditionLabel(condition: number): string {
 
     <!-- Stands -->
     <div class="section-title">The stands</div>
+    <div class="card">
+      <div class="card__body">
+        <GroundPlan :stands="stadium.stands" />
+        <div class="ground-plan__key">
+          <span><i style="background: #3fd67a" />Sound</span>
+          <span><i style="background: #ffb020" />Tired</span>
+          <span><i style="background: #ff5a52" />Poor</span>
+          <span><i style="background: repeating-linear-gradient(45deg, #8a929e 0 2px, #4a525e 2px 4px)" />Terrace</span>
+          <span><i style="background: #e9eef3" />Roofed</span>
+        </div>
+      </div>
+    </div>
     <div v-for="stand in stadium.stands" :key="stand.id" class="card">
       <div class="card__head">
         <span class="card__title">{{ stand.name }}</span>

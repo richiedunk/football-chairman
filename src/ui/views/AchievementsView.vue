@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import MedalIcon from '../components/MedalIcon.vue'
 import { computed, inject, ref } from 'vue'
 import { useGameStore } from '../../stores/game'
 import { achievements as achievementService, capabilities } from '../../platform/services'
@@ -61,13 +62,9 @@ async function openPlatform() {
             v-for="item in group.items"
             :key="item.id"
             class="list__row list__row--static"
-            :style="item.earned ? '' : 'opacity: 0.55'"
+            :style="item.earned ? '' : 'opacity: 0.6'"
           >
-            <div
-              class="pos"
-              style="width: 30px"
-              :style="item.earned ? 'background: var(--accent-wash); color: var(--accent)' : ''"
-            >{{ item.earned ? '★' : '·' }}</div>
+            <MedalIcon :earned="item.earned" :rare="item.rare" />
             <div class="list__main">
               <div class="list__primary">
                 {{ item.name }}

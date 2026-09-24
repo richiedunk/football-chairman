@@ -8,8 +8,10 @@
  *
  * So the header band is the club's colour pushed into a narrow band of dark
  * lightness, and an untouched strip of the real colour sits beneath it. The
- * identity is still on screen; the text is still legible. Nothing else in the
- * app is club-coloured, so no club can break the palette.
+ * identity is still on screen; the text is still legible. Anywhere else the
+ * club's colour appears — the floodlight wash, the crest, the kit — it is
+ * either a faint wash or on a shape with its own outline, never a surface
+ * that text sits on, so no club can break the palette.
  */
 
 export interface Rgb {

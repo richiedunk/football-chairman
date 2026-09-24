@@ -2,6 +2,7 @@
 import { computed, inject, ref } from 'vue'
 import { useGameStore } from '../../stores/game'
 import MeterBar from '../components/MeterBar.vue'
+import DialGauge from '../components/DialGauge.vue'
 import { assessFanMood, confidenceLabel, MANDATE_LABELS } from '../../engine/systems/board'
 import {
   lossCoverage, OWNER_LABELS, ownerSummary, ownerTraits, wageBudgetShare,
@@ -105,6 +106,20 @@ const gap = computed(() => {
  * bigger the ask, the less willing they are and the more it costs you when
  * they say no. So the chip names the axis and the direction.
  */
+/** A glyph for each kind of ask, so the list is scanned by shape. */
+const REQUEST_ICON: Record<BoardRequestKind, string> = {
+  transferFunds: 'M16 3h5v5M21 3l-7 7M8 21H3v-5M3 21l7-7',
+  wageBudget: 'M4 7h16v12H4zM4 11h16M8 15h3',
+  fundFacility: 'M3 21h18M6 21V9l6-4 6 4v12M10 21v-5h4v5',
+  fundStadium: 'M2 18h20M4 18v-4a8 8 0 0 1 16 0v4M12 6V4M9 14h6',
+  lowerExpectation: 'M12 5v14M6 13l6 6 6-6',
+  moreTime: 'M12 7v5l3 2M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z',
+  dismissCoach: 'M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2M9 3a4 4 0 100 8 4 4 0 000-8zM17 8l5 5M22 8l-5 5',
+  takeLoan: 'M3 10l9-6 9 6M5 10v8M9 10v8M15 10v8M19 10v8M3 21h18',
+}
+/** How much it costs to be refused, as pips: one, two or three. */
+const RISK_PIPS: Record<BoardRequestOption['risk'], number> = { low: 1, medium: 2, high: 3 }
+
 const RISK_CHIP: Record<BoardRequestOption['risk'], string> = {
   low: 'Easy ask',
   medium: 'Big ask',
@@ -142,11 +157,11 @@ const weakestFacility = computed<FacilityKind>(
 
     <div class="card">
       <div class="card__body">
-        <div class="row row--between mb">
-          <span class="small muted">Confidence in you</span>
-          <span class="bold">{{ confidenceLabel(club.board.confidence) }}</span>
-        </div>
-        <MeterBar :value="club.board.confidence" />
+        <DialGauge
+          :value="club.board.confidence"
+          label="Confidence in you"
+          :reading="`Confidence · ${confidenceLabel(club.board.confidence)}`"
+        />
         <div v-if="club.board.warnings > 0" class="chip chip--danger mt">
           {{ club.board.warnings }} of 3 formal warnings issued
         </div>
@@ -248,18 +263,26 @@ const weakestFacility = computed<FacilityKind>(
           :style="option.available ? '' : 'opacity: 0.45'"
           @click="openRequest(option)"
         >
+          <span class="choice__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path :d="REQUEST_ICON[option.kind]" /></svg>
+          </span>
           <div class="list__main">
-            <div class="list__primary">{{ option.label }}</div>
+            <div class="list__primary" style="white-space: normal">{{ option.label }}</div>
             <div class="list__secondary" style="white-space: normal">
               {{ option.available ? option.description : option.unavailableReason }}
             </div>
           </div>
           <span
             v-if="option.available"
-            class="chip"
-            :class="option.risk === 'high' ? 'chip--danger' : option.risk === 'medium' ? 'chip--warn' : ''"
+            class="risk"
+            :class="`risk--${option.risk}`"
             :title="RISK_LABELS[option.risk]"
-          >{{ RISK_CHIP[option.risk] }}</span>
+          >
+            <span class="risk__pips" aria-hidden="true">
+              <i v-for="n in 3" :key="n" :class="{ 'is-on': n <= RISK_PIPS[option.risk] }" />
+            </span>
+            <span class="risk__label">{{ RISK_CHIP[option.risk] }}</span>
+          </span>
         </button>
       </div>
       <div class="card__body">

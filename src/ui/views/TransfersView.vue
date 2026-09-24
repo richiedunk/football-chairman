@@ -2,6 +2,8 @@
 import { computed, inject } from 'vue'
 import { useRouter } from 'vue-router'
 import { useGameStore } from '../../stores/game'
+import PersonFace from '../components/PersonFace.vue'
+import ClubCrest from '../components/ClubCrest.vue'
 import PlayerRow from '../components/PlayerRow.vue'
 import { formatMoney, formatWage } from '../../engine/systems/valuation'
 import { effectiveOfferValue } from '../../engine/systems/transfers'
@@ -161,12 +163,30 @@ function withdraw(negotiation: TransferNegotiation) {
       <div class="section-title">Live negotiations</div>
       <div v-for="n in active" :key="n.id" class="card">
         <div class="card__head">
-          <div class="grow truncate">
-            <span class="bold">{{ store.player(n.playerId)?.knownAs ?? 'Unknown' }}</span>
+          <div class="row grow" style="gap: 10px; min-width: 0">
+            <PersonFace
+              v-if="store.player(n.playerId)"
+              :person="store.player(n.playerId)!"
+              :club="store.clubById(store.player(n.playerId)!.clubId ?? '')"
+              :size="36"
+            />
+            <div class="grow" style="min-width: 0">
+              <div class="bold truncate">{{ store.player(n.playerId)?.knownAs ?? 'Unknown' }}</div>
+              <div class="tiny muted row" style="gap: 5px">
+                <ClubCrest :club="store.clubById(store.player(n.playerId)?.clubId ?? '')" :size="14" />
+                <span class="truncate">{{ store.clubById(store.player(n.playerId)?.clubId ?? '')?.name ?? 'Free agent' }}</span>
+              </div>
+            </div>
           </div>
           <span class="chip chip--info">{{ STAGE_LABELS[n.stage] }}</span>
         </div>
         <div class="card__body">
+          <!-- How far apart you are: your offer against their price, on one
+               track, so a gap reads as a gap before the figures do. -->
+          <div class="gap-bar" :title="`Your offer is ${Math.round((n.offeredFee / Math.max(1, n.askingPrice)) * 100)}% of their price`">
+            <span class="gap-bar__offer" :style="{ width: `${Math.min(100, (n.offeredFee / Math.max(1, n.askingPrice * 1.15)) * 100)}%` }" />
+            <span class="gap-bar__ask" :style="{ left: `${(1 / 1.15) * 100}%` }" />
+          </div>
           <div class="row row--between small">
             <span class="muted">Your offer</span>
             <span class="num">{{ formatMoney(n.offeredFee, store.currency) }}</span>
@@ -307,7 +327,13 @@ function withdraw(negotiation: TransferNegotiation) {
         <div v-for="t in recentWorldTransfers" :key="t.id" class="list__row list__row--static">
           <div class="list__main">
             <div class="list__primary">{{ t.playerName }}</div>
-            <div class="list__secondary">{{ t.fromClubName }} → {{ t.toClubName }}</div>
+            <div class="list__secondary transfer-route">
+              <ClubCrest v-if="t.fromClubId" :club="store.clubById(t.fromClubId)" :size="15" />
+              <span class="truncate">{{ t.fromClubName }}</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-label="to"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+              <ClubCrest :club="store.clubById(t.toClubId)" :size="15" />
+              <span class="truncate">{{ t.toClubName }}</span>
+            </div>
           </div>
           <div class="list__trail">
             <div class="list__value">
@@ -325,6 +351,8 @@ function withdraw(negotiation: TransferNegotiation) {
     </div>
 
     <div class="btn-row mt" style="padding-bottom: 8px">
+      <!-- Scouting is already beside Find players at the top; a second copy
+           of it down here was the same door twice. -->
       <button class="btn btn--ghost" @click="router.push('/agents')">
         Agents<span v-if="store.agentIntroductions.length"> ({{ store.agentIntroductions.length }} offered)</span>
       </button>
