@@ -15,7 +15,7 @@ import MeterBar from '../components/MeterBar.vue'
 import Dossier from '../components/Dossier.vue'
 import AppSheet from '../components/AppSheet.vue'
 import { formatMoney, formatWage } from '../../engine/systems/valuation'
-import { ATTRIBUTE_GROUPS, ATTRIBUTE_LABELS } from '../../engine/world/attributes'
+import { ATTRIBUTE_GROUPS, ATTRIBUTE_LABELS, positionGroup } from '../../engine/world/attributes'
 import { formatRange, knowledgeLabel, starsForLeague } from '../../engine/systems/scouting'
 import { SQUAD_STATUS_LABELS } from '../../engine/systems/morale'
 import { suggestRenewal, type RenewalOffer } from '../../engine/systems/contracts'
@@ -124,6 +124,37 @@ const stars = computed(() => {
       ? (report.value.abilityRange[0] + report.value.abilityRange[1]) / 2
       : 0
   return ability > 0 ? starsForLeague(ability, l.reputation) : 0
+})
+
+/**
+ * Others your scouts have filed on who play where he plays and whose
+ * reported ability overlaps his. The comparison a director makes before
+ * paying for one of them, without going back to the search screen. Only
+ * scouted players: an unscouted name next to a report would be a guess
+ * dressed as an alternative.
+ */
+const similar = computed(() => {
+  const s = store.game
+  const p = player.value
+  const r = report.value
+  if (!s || !p || !r || isOurs.value) return []
+  const [lo, hi] = r.abilityRange
+  const mid = (lo + hi) / 2
+  return Object.entries(s.scoutReports)
+    .filter(([id]) => id !== p.id)
+    .map(([id, rep]) => ({ other: s.players[id], rep }))
+    .filter(({ other, rep }) =>
+      other
+      // Same family rather than same slot: early in a save there are too few
+      // reports for an exact position to turn anything up.
+      && positionGroup(other.position) === positionGroup(p.position)
+      && other.clubId !== store.club?.id
+      && rep.abilityRange[1] >= lo
+      && rep.abilityRange[0] <= hi)
+    .sort((a, b) =>
+      Math.abs((a.rep.abilityRange[0] + a.rep.abilityRange[1]) / 2 - mid)
+      - Math.abs((b.rep.abilityRange[0] + b.rep.abilityRange[1]) / 2 - mid))
+    .slice(0, 6)
 })
 
 /** The exact figure, for a player whose attributes the club can see. */
@@ -541,6 +572,20 @@ const internationalLine = computed(() => {
         <p v-else class="small muted">
           Your scouts have not watched this player. Send one to build a picture before committing money.
         </p>
+      </div>
+    </div>
+
+    <!-- Alternatives your scouts have already seen. -->
+    <div v-if="similar.length" class="card">
+      <div class="card__head"><span class="card__title">Also on file</span></div>
+      <div class="similar">
+        <button v-for="{ other, rep } in similar" :key="other!.id" class="similar__item" @click="router.push(`/player/${other!.id}`)">
+          <PersonFace :person="other!" :club="store.clubById(other!.clubId ?? '')" :size="46" />
+          <PosBadge :position="other!.position" class="similar__pos" />
+          <span class="similar__name">{{ other!.knownAs.split(' ').slice(-1)[0] }}</span>
+          <span class="similar__range">{{ rep.abilityRange[0] }}–{{ rep.abilityRange[1] }}</span>
+          <span class="similar__fee">{{ formatMoney(rep.estimatedFee[1], store.currency) }}</span>
+        </button>
       </div>
     </div>
 
