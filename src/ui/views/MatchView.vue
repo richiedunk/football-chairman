@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useGameStore } from '../../stores/game'
 import ClubCrest from '../components/ClubCrest.vue'
 import PitchLineup from '../components/PitchLineup.vue'
-import MatchTimeline from '../components/MatchTimeline.vue'
+import MomentumWave from '../components/MomentumWave.vue'
 import { matchInPlay } from '../liveMatch'
 import { manOfTheMatch, matchVerdict } from '../../engine/systems/matchReport'
 import type { MatchEvent, MatchResult } from '../../engine/types'
@@ -248,17 +248,25 @@ const EVENT_LABEL: Record<string, string> = {
         </span>
       </div>
       <template v-if="live">
-        <div class="live-clock" aria-hidden="true">
-          <span class="live-clock__fill" :style="{ width: `${(clock / fullTime) * 100}%` }" />
-          <span class="live-clock__ht" />
-        </div>
+        <MomentumWave
+          :events="report.result.events"
+          :home-id="report.fixture.homeClubId"
+          :home-colors="report.home.colors"
+          :away-colors="report.away.colors"
+          :clock="clock"
+        />
         <button class="btn btn--ghost btn--sm live-skip" @click="stopLive">Skip to full time</button>
       </template>
       <template v-else>
         <div v-if="report.result.penalties" class="scoreboard__pens">
           {{ report.result.penalties.home }}–{{ report.result.penalties.away }} on penalties
         </div>
-        <MatchTimeline :events="report.result.events" :home-id="report.fixture.homeClubId" />
+        <MomentumWave
+          :events="report.result.events"
+          :home-id="report.fixture.homeClubId"
+          :home-colors="report.home.colors"
+          :away-colors="report.away.colors"
+        />
         <div class="scoreboard__verdict" :style="{ color: VERDICT_TONE[report.verdict.verdict] }">
           {{ report.verdict.headline }}
         </div>
@@ -458,16 +466,6 @@ const EVENT_LABEL: Record<string, string> = {
   100% { transform: scale(1); }
 }
 .scoreboard__score.is-live .scoreboard__goals { display: inline-block; animation: goal-pop 0.5s ease-out; }
-.live-clock {
-  position: relative;
-  height: 4px;
-  margin: 8px var(--pad) 10px;
-  border-radius: 2px;
-  background: rgba(255, 255, 255, 0.15);
-  overflow: hidden;
-}
-.live-clock__fill { display: block; height: 100%; background: var(--win); transition: width 0.13s linear; }
-.live-clock__ht { position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; background: rgba(255, 255, 255, 0.5); }
 .live-skip { margin: 0 auto 14px; }
 .live-feed { padding: 6px 0; max-height: 52vh; overflow-y: auto; }
 .live-feed__line {
