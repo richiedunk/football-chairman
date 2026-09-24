@@ -3461,3 +3461,49 @@ input[type='radio'] {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* A facility's level as rungs, with the league marked above. */
+.ladder { position: relative; padding-top: 16px; }
+.ladder__marks { position: absolute; inset: 0 0 auto 0; height: 14px; }
+.ladder__mark {
+  position: absolute;
+  transform: translateX(-50%);
+  font-family: var(--font-num);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.ladder__mark::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 12px;
+  border: 4px solid transparent;
+  border-top-color: currentColor;
+  transform: translateX(-50%);
+}
+.ladder__mark--best { color: var(--text-dim); }
+.ladder__rungs { display: grid; grid-template-columns: repeat(20, 1fr); gap: 3px; }
+.ladder__rungs i { height: 12px; border-radius: 2px; background: rgba(255, 255, 255, 0.08); }
+.ladder__rungs i.is-on.ladder__rung--low { background: var(--danger); }
+.ladder__rungs i.is-on.ladder__rung--mid { background: var(--warn); }
+.ladder__rungs i.is-on.ladder__rung--high { background: var(--win); }
+.ladder__rungs i.is-on.ladder__rung--world { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+.ladder__rungs i.is-next { background: transparent; outline: 1.5px dashed var(--sel); outline-offset: -1.5px; animation: rung-pulse 1.6s ease-in-out infinite; }
+@keyframes rung-pulse { 50% { opacity: 0.35; } }
+@media (prefers-reduced-motion: reduce) { .ladder__rungs i.is-next { animation: none; } }
+
+.facility-head { display: flex; align-items: center; gap: 12px; }
+.facility-head .choice__icon { width: 32px; height: 32px; }
+
+.director-head { display: flex; align-items: center; gap: 14px; }
+.director-head h1 { margin: 0 0 2px; }
+
+.policy-now { display: flex; gap: 14px; align-items: flex-start; }
+.policy-now__icon { width: 44px; height: 44px; background: var(--sel-wash); color: var(--sel); }
+.policy-now__icon svg { width: 24px; height: 24px; }
+.division-bar { height: 4px; margin-top: 6px; border-radius: 2px; background: rgba(255, 255, 255, 0.18); }
+.division-bar.is-ours { background: var(--sel); }
+.list__primary.is-ours { color: var(--sel); }

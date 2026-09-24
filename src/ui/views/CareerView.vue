@@ -4,6 +4,8 @@ import { useRouter } from 'vue-router'
 import { useGameStore } from '../../stores/game'
 import ClubCrest from '../components/ClubCrest.vue'
 import MeterBar from '../components/MeterBar.vue'
+import PersonFace from '../components/PersonFace.vue'
+import { BACKGROUNDS } from '../../engine/newGame'
 import { CAREER_LEVELS, levelFor, levelProgress, nextLevel, ordinal } from '../../engine/systems/career'
 import { acceptJobOffer } from '../../engine/season'
 import { formatMoney, formatWage } from '../../engine/systems/valuation'
@@ -22,6 +24,8 @@ const router = useRouter()
 const notify = inject<(t: string, k?: 'info' | 'error' | 'success') => void>('notify')
 
 const director = computed(() => store.game?.director ?? null)
+const backgroundLabel = computed(() =>
+  BACKGROUNDS.find((b) => b.id === director.value?.background)?.label ?? '')
 const level = computed(() => levelFor(director.value?.xp ?? 0))
 const upcoming = computed(() => nextLevel(director.value?.xp ?? 0))
 const progress = computed(() => levelProgress(director.value?.xp ?? 0))
@@ -136,7 +140,20 @@ const CHALLENGE_STATUS: Record<ChallengeStatus, string> = {
 
 <template>
   <div v-if="director">
-    <h1 class="mb">{{ director.name }}</h1>
+    <!-- You, drawn the way everybody else in the game is drawn, and ageing
+         with the clock below: the grey arrives in the fifties, as it should. -->
+    <div class="director-head mb">
+      <PersonFace
+        :person="{ id: `director:${director.name}`, age: director.age }"
+        kind="staff"
+        :club="store.club"
+        :size="76"
+      />
+      <div>
+        <h1>{{ director.name }}</h1>
+        <div class="small muted">{{ backgroundLabel }}</div>
+      </div>
+    </div>
 
     <!-- A career taken on from somebody else's link is a career with a point
          to it, and the point belongs where the record is read. Judged by the

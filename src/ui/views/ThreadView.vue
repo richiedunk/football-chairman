@@ -62,6 +62,15 @@ function send(item: InboxItem, optionId: string) {
   if (outcome && !item.decision?.outcomeText) notify?.(outcome, 'success')
 }
 
+/**
+ * A second tap can land after the first has answered and before the buttons
+ * re-render, when there is nothing left to answer. It is dropped, not sent.
+ */
+function reply(optionId: string) {
+  const item = answering()
+  if (item) send(item, optionId)
+}
+
 function follow(item: InboxItem) {
   if (!item.link) return
   if (!followLink(router, item.link)) notify?.('That screen is no longer there.', 'error')
@@ -204,7 +213,7 @@ function weekBreak(index: number): string | null {
         :key="option.id"
         class="reply"
         :disabled="!option.available"
-        @click="send(answering()!, option.id)"
+        @click="reply(option.id)"
       >
         <span class="reply__label">{{ option.label }}</span>
         <!-- The consequence stays on the chip. A row of bare labels is a
