@@ -346,7 +346,7 @@ function withdraw(negotiation: TransferNegotiation) {
             <div v-else class="list__sub">wk {{ t.week }}</div>
           </div>
         </div>
-        <div v-if="!recentWorldTransfers.length" class="empty">No transfers yet.</div>
+        <div v-if="!recentWorldTransfers.length" class="empty">Nobody has done a deal yet. Somebody always blinks first.</div>
       </div>
     </div>
 

@@ -417,35 +417,38 @@ function conditionLabel(condition: number): string {
       </div>
 
       <div class="list">
-        <div v-for="bid in bids" :key="bid.architectId">
-          <button
-            class="list__row"
-            :style="bid.available ? '' : 'opacity: 0.45'"
-            @click="bid.available && award(bid.architectId)"
-          >
-            <div class="list__main">
-              <div class="list__primary">{{ bid.firm }}</div>
-              <div class="list__secondary" style="white-space: normal">
-                {{ bid.available ? bid.note : bid.unavailableReason }}
-              </div>
+        <!-- The firm's record sits inside its own row. It used to be a strip
+             of chips below the row, level with nothing, so a reader could not
+             tell whether "a gamble" described the firm above it or below. -->
+        <button
+          v-for="bid in bids"
+          :key="bid.architectId"
+          class="list__row"
+          :style="bid.available ? '' : 'opacity: 0.45'"
+          @click="bid.available && award(bid.architectId)"
+        >
+          <div class="list__main">
+            <div class="list__primary">{{ bid.firm }}</div>
+            <div class="list__secondary" style="white-space: normal">
+              {{ bid.available ? bid.note : bid.unavailableReason }}
             </div>
-            <div class="list__trail">
-              <div class="list__value">{{ formatMoney(bid.cost, store.currency) }}</div>
-              <div class="list__sub">{{ bid.weeks }} weeks</div>
+            <div v-if="bid.available" class="chip-row" style="margin-top: 6px">
+              <span class="chip" :class="RISK_CLASS[bid.risk]">Record: {{ bid.risk }}</span>
+              <span
+                v-if="financing === 'cash' && bid.cost > club.finances.balance"
+                class="chip chip--danger"
+              >more than the club has</span>
+              <span
+                v-else-if="financing === 'borrow' && bid.cost > borrowCeiling"
+                class="chip chip--danger"
+              >beyond what anyone will lend</span>
             </div>
-          </button>
-          <div v-if="bid.available" class="card__body" style="padding-top: 0; padding-bottom: 8px">
-            <span class="chip" :class="RISK_CLASS[bid.risk]">{{ bid.risk }}</span>
-            <span
-              v-if="financing === 'cash' && bid.cost > club.finances.balance"
-              class="chip chip--danger"
-            >more than the club has</span>
-            <span
-              v-else-if="financing === 'borrow' && bid.cost > borrowCeiling"
-              class="chip chip--danger"
-            >beyond what anyone will lend</span>
           </div>
-        </div>
+          <div class="list__trail">
+            <div class="list__value">{{ formatMoney(bid.cost, store.currency) }}</div>
+            <div class="list__sub">{{ bid.weeks }} weeks</div>
+          </div>
+        </button>
         <div v-if="bids.length === 0" class="empty">No firm has tendered for this work.</div>
       </div>
 

@@ -1736,4 +1736,4 @@ export interface GameSettings {
   liveDeadline?: boolean
 }
 
-export const SAVE_VERSION = 21
+export const SAVE_VERSION = 22

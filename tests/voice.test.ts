@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  article, boardTone, chairmanRegister, coachRegister, contact, phrase, pickBy, withArticle,
+  article, boardTone, freshPhrase, chairmanRegister, coachRegister, contact, phrase, pickBy, withArticle,
 } from '../src/engine/systems/voice'
 import { prepareNewGame, startCareerAt } from '../src/engine/newGame'
 import { startingClubCandidates } from '../src/engine/systems/career'
@@ -188,5 +188,24 @@ describe('a chairman writes like the man he is', () => {
       // once already and the fact is what the test is protecting.
       expect(body, `${kind} owner never mentions wages`).toMatch(/£[\d,]+ a week/)
     }
+  })
+})
+
+describe('freshPhrase', () => {
+  const pool = ['one', 'two', 'three'] as const
+
+  it('never gives somebody a line they have already had while the pool lasts', () => {
+    // The liaison handed one player the same sentence five times in a season.
+    const said = new Set<string>()
+    for (let i = 0; i < pool.length; i++) said.add(freshPhrase(`k${i}`, pool, said))
+    expect(said.size).toBe(pool.length)
+  })
+
+  it('repeats rather than falls silent once every line has been used', () => {
+    expect(pool).toContain(freshPhrase('k', pool, new Set(pool)))
+  })
+
+  it('agrees with phrase when nothing has been said yet', () => {
+    expect(freshPhrase('some-key', pool, new Set())).toBe(phrase('some-key', pool))
   })
 })

@@ -9,6 +9,7 @@ import MeterBar from '../components/MeterBar.vue'
 import PersonFace from '../components/PersonFace.vue'
 import Chevron from '../components/Chevron.vue'
 import { listName } from '../playerName'
+import { traitLine } from '../traits'
 import { onARun, runWord } from '../../engine/systems/snub'
 
 /**
@@ -117,7 +118,7 @@ const renewalEffect = computed(() => {
               <div class="list__primary">{{ listName(row.player) }}</div>
               <div class="list__secondary num">
                 {{ row.player.position }} · {{ row.player.age }} ·
-                {{ row.player.traits.join(', ').toUpperCase() || 'NO TRAITS' }}
+                {{ traitLine(row.player.traits).toUpperCase() || 'NOTHING OF NOTE' }}
               </div>
             </div>
             <span class="list__value pos-val">{{ influenceWord(row.influence) }}</span>
@@ -169,7 +170,7 @@ const renewalEffect = computed(() => {
               <div class="list__primary">{{ listName(row.player) }}</div>
               <div class="list__secondary num">
                 {{ row.player.position }} · {{ row.player.age }} ·
-                {{ row.player.traits.join(', ').toUpperCase() || 'NO TRAITS' }}
+                {{ traitLine(row.player.traits).toUpperCase() || 'NOTHING OF NOTE' }}
               </div>
             </div>
             <span class="list__value neg-val">{{ influenceWord(row.influence) }}</span>

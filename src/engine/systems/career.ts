@@ -269,19 +269,34 @@ export function sackedBy(director: DirectorProfile): Set<ID> {
  *
  * Used by the jobs board to show *why* a job is closed to you and what it
  * would take — a locked entry that says nothing is just a wall, whereas one
- * that names the level and the XP gap is a target.
+ * that names the standing it wants is a target.
  */
-export function levelRequiredFor(clubReputation: number): CareerLevel {
+function levelRequiredFor(clubReputation: number): CareerLevel {
   for (const level of CAREER_LEVELS) {
     if (clubReputation <= level.maxClubReputation) return level
   }
   return CAREER_LEVELS[CAREER_LEVELS.length - 1]
 }
 
-/** XP still needed before a club of this standing will consider you. */
-export function xpNeededFor(director: DirectorProfile, clubReputation: number): number {
+/**
+ * Why a club on the jobs board will not see you, in the board's words.
+ *
+ * This printed "Level 10 · Legendary — 88,000 XP away" on twenty rows before
+ * a new director reached one they could take: a progress bar from a different
+ * kind of game, in a game whose every other line is written by somebody. The
+ * standing is still named, because it is the ladder the career screen shows,
+ * but the distance is said the way a chairman would say it.
+ */
+export function lockedJobNote(director: DirectorProfile, clubReputation: number): string {
   const required = levelRequiredFor(clubReputation)
-  return Math.max(0, required.xpRequired - director.xp)
+  const current = levelFor(director.xp)
+  const steps = required.level - current.level
+  const distance =
+    steps <= 1 ? 'one good season off'
+      : steps <= 3 ? 'a few seasons off'
+        : steps <= 6 ? 'years off'
+          : 'a career away'
+  return `Wants ${required.title} standing · ${distance}`
 }
 
 /**

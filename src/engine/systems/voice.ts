@@ -52,6 +52,26 @@ export function phrase(key: string, pool: readonly string[]): string {
 }
 
 /**
+ * A line from a pool, skipping any this person has already been given.
+ *
+ * `phrase` is stateless, so the same player complaining about the same thing
+ * three times in a season could be handed the same sentence three times: a
+ * voicecheck found one liaison line five times for one man. The caller knows
+ * what was said before — it is in the inbox — so the pick walks forward from
+ * the hashed line to the first one not already used. Once the pool is spent it
+ * falls back to the hashed line, because repeating is better than silence.
+ */
+export function freshPhrase(key: string, pool: readonly string[], said: ReadonlySet<string>): string {
+  if (pool.length === 0) return ''
+  const start = hash(key) % pool.length
+  for (let i = 0; i < pool.length; i++) {
+    const line = pool[(start + i) % pool.length]
+    if (!said.has(line)) return line
+  }
+  return pool[start]
+}
+
+/**
  * A number in [0, 1) from a key, for the places that want a *figure* varied
  * rather than a sentence — a newspaper's guess at a fee, say. Same key, same
  * number, on every platform, and no state carried. It is the phrase picker's
@@ -72,7 +92,11 @@ export function unit(key: string): number {
  * dictionary — an hour, a unicorn — do not occur in them.
  */
 export function article(word: string): string {
-  return /^[aeiou]/i.test(word.trim()) ? 'an' : 'a'
+  const w = word.trim()
+  // Numbers are read aloud: "an 18-year-old", "an 8-week job", "an 11-man
+  // wall" — and "a 1,800-seat stand", which starts with "one".
+  if (/^\d/.test(w)) return /^(8|1[18](?![\d,]))/.test(w) ? 'an' : 'a'
+  return /^[aeiou]/i.test(w) ? 'an' : 'a'
 }
 
 /** The same word with its article in front of it. */

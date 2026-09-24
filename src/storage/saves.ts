@@ -583,6 +583,18 @@ function migrate(state: GameState): GameState {
     state.version = 21
   }
 
+  // v22: a paper is called by its name. Outlets were generated as "The
+  // Chronicle (ENG)", and the bracket was printed on every cutting, every
+  // masthead and every undisclosed fee.
+  if (state.version < 22) {
+    for (const outlet of Object.values(state.outlets ?? {})) {
+      if (outlet && typeof outlet.name === 'string') {
+        outlet.name = outlet.name.replace(/\s*\([A-Z]{2,4}\)\s*$/, '')
+      }
+    }
+    state.version = 22
+  }
+
   state.version = SAVE_VERSION
   return state
 }

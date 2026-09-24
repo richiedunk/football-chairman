@@ -104,6 +104,12 @@ function stripToVersion(state: GameState, version: number): GameState {
     if (s.director.contract) bag(s.director.contract).signedSeason = 2025
   }
 
+  if (version < 22) {
+    // Outlets were named with their nation's code in brackets. The fixture's
+    // are generated without it, so it goes back on to give v22 work to do.
+    for (const outlet of Object.values(s.outlets)) outlet.name = `${outlet.name} (ENG)`
+  }
+
   if (version < 21) {
     // A listing did not carry the club's own advert. The fixture's offers are
     // freshly built and have one, so it has to come off or the migration is
@@ -237,7 +243,7 @@ async function loadFrom(version: number, slotId: string): Promise<GameState> {
   return loaded!
 }
 
-const HISTORICAL = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+const HISTORICAL = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21]
 
 describe('every historical format still loads', () => {
   for (const version of HISTORICAL) {
@@ -314,6 +320,13 @@ describe('every historical format still loads', () => {
     for (const listing of listings) {
       expect(typeof listing.advert, `v21: ${listing.clubName} has no advert`).toBe('string')
       expect(listing.advert, `v21: ${listing.clubName}'s advert is empty`).toBeTruthy()
+    }
+
+    // v22: a paper is called by its name, not its name and a country code.
+    const outlets = Object.values(loaded.outlets)
+    expect(outlets.length, 'fixture carries no outlet to migrate').toBeGreaterThan(0)
+    for (const outlet of outlets) {
+      expect(outlet.name, 'v22: outlet still carries its nation code').not.toMatch(/\(/)
     }
 
     await deleteSave('mig-all')

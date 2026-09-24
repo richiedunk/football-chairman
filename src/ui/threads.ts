@@ -170,8 +170,9 @@ export function findThread(threads: Thread[], key: string): Thread | null {
  * recognisable at a glance and recognising the sender at a glance is the only
  * thing the avatar is for.
  *
- * Bracketed suffixes are dropped: every outlet is named "The Chronicle (ENG)"
- * and a monogram of TE tells the reader nothing.
+ * Bracketed suffixes are dropped: outlets used to be named "The Chronicle
+ * (ENG)", a save older than format 22 may still hold a sender written that
+ * way, and a monogram of TE tells the reader nothing.
  */
 export function initials(title: string): string {
   const words = title
@@ -195,5 +196,31 @@ export function initials(title: string): string {
  */
 export function preview(item: InboxItem): string {
   const firstLine = item.body.split('\n').find((line) => line.trim().length > 0)
-  return (firstLine ?? item.subject).trim()
+  return shorten((firstLine ?? item.subject).trim())
+}
+
+/** Longest preview before it is cut, in characters. Two lines on a phone. */
+const PREVIEW_MAX = 96
+
+/**
+ * The first sentence, and no more than two lines of it.
+ *
+ * The list used to cut the whole first paragraph wherever one line ran out, so
+ * the chairman's welcome read "The partners have agreed a number of priorities
+ * alongsi…" — a word sliced in half, which reads as a rendering fault rather
+ * than as a preview. A sentence is the natural unit of "what did they say",
+ * and when even that is too long it is cut between words, not inside one.
+ */
+function shorten(line: string): string {
+  const sentences = line.match(/.+?[.!?](?=\s|$)/g)?.map((x) => x.trim()) ?? [line]
+  // A first sentence of a word or two — "Welcome.", "Right." — previews as
+  // nothing at all, so it takes the next one with it when there is room.
+  let sentence = sentences[0]
+  if (sentence.length < 24 && sentences[1] && sentence.length + 1 + sentences[1].length <= PREVIEW_MAX) {
+    sentence = `${sentence} ${sentences[1]}`
+  }
+  if (sentence.length <= PREVIEW_MAX) return sentence
+  const cut = sentence.slice(0, PREVIEW_MAX)
+  const lastSpace = cut.lastIndexOf(' ')
+  return `${(lastSpace > PREVIEW_MAX / 2 ? cut.slice(0, lastSpace) : cut).replace(/[,;:—–-]+$/, '')}…`
 }
