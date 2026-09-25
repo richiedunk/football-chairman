@@ -14,6 +14,15 @@ import AppSheet from '../components/AppSheet.vue'
  * because a director who cannot see the mechanism is being asked to trust a
  * label — but the thing he chooses is the position, not the numbers.
  */
+const ICON: Record<PhilosophyId, string> = {
+  developAndSell: 'M4 20h4v-5H4zM10 20h4V10h-4zM16 20h4V4h-4zM15 4h5v5',
+  winNow: 'M7 4h10v5a5 5 0 01-10 0zM7 6H4v2a3 3 0 003 3M17 6h3v2a3 3 0 01-3 3M12 14v4M8 21h8M10 18h4',
+  valueHunting: 'M11 4a7 7 0 100 14 7 7 0 000-14zM21 21l-5-5M11 8v6M9 9.5c0-1 1-1.5 2-1.5s2 .5 2 1.5-4 1-4 2.5 1 1.5 2 1.5 2-.5 2-1.5',
+  homegrown: 'M3 11l9-7 9 7M5 10v10h14V10M12 20v-5M12 15c-2 0-3-1.5-3-3 1.5 0 3 1 3 3zM12 15c2 0 3-1.5 3-3-1.5 0-3 1-3 3',
+  starNames: 'M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.4 6.7 19.4l1.2-6L3.4 9.3l6-.7z',
+  unstated: 'M12 3a9 9 0 100 18 9 9 0 000-18zM9.5 9.5a2.5 2.5 0 114 2c-1 .7-1.5 1.2-1.5 2.5M12 17h.01',
+}
+
 const store = useGameStore()
 const notify = inject<(t: string, k?: 'info' | 'error' | 'success') => void>('notify')
 
@@ -56,6 +65,8 @@ const division = computed(() => {
   return [...counts].sort((a, b) => b[1] - a[1])
 })
 
+const divisionTotal = computed(() => Math.max(1, ...division.value.map(([, n]) => n)))
+
 function confirm() {
   const p = proposal.value
   if (!p || !p.ok) return
@@ -69,10 +80,15 @@ function confirm() {
   <div v-if="club && current">
     <div class="section-title">What kind of club we are</div>
     <div class="card">
-      <div class="card__body">
+      <div class="card__body policy-now">
+        <span class="choice__icon policy-now__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path :d="ICON[current.id]" /></svg>
+        </span>
+        <div>
         <div class="bold" style="font-size: 1.05rem">{{ current.name }}</div>
         <p class="small muted" style="margin: 6px 0 0">{{ current.summary }}</p>
         <p class="small" style="margin: 8px 0 0; color: var(--warn)">{{ current.tradeOff }}</p>
+        </div>
       </div>
       <div class="card__body" style="border-top: 1px solid var(--border)">
         <div class="tiny faint">
@@ -93,6 +109,9 @@ function confirm() {
           :disabled="o.isCurrent"
           @click="pending = o.philosophy.id"
         >
+          <span class="choice__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path :d="ICON[o.philosophy.id]" /></svg>
+          </span>
           <div class="list__main">
             <div class="list__primary">{{ o.philosophy.name }}</div>
             <div class="list__secondary" style="white-space: normal">{{ o.philosophy.summary }}</div>
@@ -110,7 +129,10 @@ function confirm() {
     <div class="card">
       <div class="list">
         <div v-for="[name, count] in division" :key="name" class="list__row list__row--static">
-          <div class="list__main"><div class="list__primary">{{ name }}</div></div>
+          <div class="list__main">
+            <div class="list__primary" :class="{ 'is-ours': name === current.name }">{{ name }}</div>
+            <div class="division-bar" :style="{ width: `${(count / divisionTotal) * 100}%` }" :class="{ 'is-ours': name === current.name }" />
+          </div>
           <div class="list__value num">{{ count }}</div>
         </div>
       </div>

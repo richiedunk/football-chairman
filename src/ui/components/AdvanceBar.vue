@@ -3,6 +3,7 @@ import { computed, inject } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useGameStore } from '../../stores/game'
 import { advanceIntent } from '../advance'
+import { matchInPlay } from '../liveMatch'
 
 /**
  * The one button that is always in the same place.
@@ -131,7 +132,7 @@ async function press() {
           aria-hidden="true"
         ><path d="M5 12h14M13 6l6 6-6 6" /></svg>
       </span>
-      <span class="advance__sub">{{ intent.detail }}</span>
+      <span class="advance__sub">{{ matchInPlay ? 'Match in progress' : intent.detail }}</span>
     </button>
   </div>
 </template>

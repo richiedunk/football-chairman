@@ -3,6 +3,8 @@ import { crestDesign, crestSvg, initials } from '../src/ui/art/crest'
 import { kitPattern, kitSvg } from '../src/ui/art/kit'
 import { clubPair, inkOn, tooClose } from '../src/ui/art/palette'
 import { hashString, stream } from '../src/ui/art/seed'
+import { momentum } from '../src/ui/art/momentum'
+import type { MatchEvent } from '../src/engine/types'
 import { REAL_CLUBS } from '../src/engine/world/realClubs'
 
 const clubs = Object.values(REAL_CLUBS).flat(2)
@@ -155,5 +157,29 @@ describe('squad numbers', () => {
     expect(new Set(numbers.values()).size).toBe(squad.length)
     const one = squad.find((p) => numbers.get(p.id) === 1)
     expect(one?.position).toBe('GK')
+  })
+})
+
+describe('momentum', () => {
+  const ev = (minute: number, type: MatchEvent['type'], clubId: string): MatchEvent =>
+    ({ minute, type, clubId, playerId: 'p', text: '' })
+
+  it('puts pressure on the side that made the chance, around the minute it came', () => {
+    const m = momentum([ev(30, 'goal', 'H'), ev(70, 'save', 'A')], 'H')
+    expect(m.home[30]).toBeGreaterThan(m.home[10])
+    expect(m.home[30]).toBeGreaterThan(m.away[30])
+    expect(m.away[70]).toBeGreaterThan(m.home[70])
+    for (const v of [...m.home, ...m.away]) expect(v).toBeLessThanOrEqual(1)
+  })
+
+  it('credits an own goal to the side it was scored against', () => {
+    const m = momentum([ev(50, 'ownGoal', 'A')], 'H')
+    expect(m.home[50]).toBeGreaterThan(0)
+    expect(m.away[50]).toBe(0)
+  })
+
+  it('ignores bookings and substitutions', () => {
+    const m = momentum([ev(20, 'yellowCard', 'H'), ev(60, 'substitution', 'A')], 'H')
+    expect(Math.max(...m.home, ...m.away)).toBe(0)
   })
 })

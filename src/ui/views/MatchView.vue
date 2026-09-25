@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useGameStore } from '../../stores/game'
 import ClubCrest from '../components/ClubCrest.vue'
 import PitchLineup from '../components/PitchLineup.vue'
-import MatchTimeline from '../components/MatchTimeline.vue'
+import MomentumWave from '../components/MomentumWave.vue'
+import { matchInPlay } from '../liveMatch'
 import { manOfTheMatch, matchVerdict } from '../../engine/systems/matchReport'
 import type { MatchEvent, MatchResult } from '../../engine/types'
 
@@ -112,6 +113,95 @@ function comparison(result: MatchResult, homeId: string, awayId: string) {
   return rows.map((r) => ({ ...r, share: r.home + r.away === 0 ? 50 : (r.home / (r.home + r.away)) * 100 }))
 }
 
+/**
+ * The match, live.
+ *
+ * The engine plays a match in one go and records every event with its minute,
+ * so a result can be replayed rather than merely announced. A match you have
+ * just been handed ticks through its ninety minutes in about twelve seconds:
+ * the clock runs, goals land on the scoreboard in the minute they were scored,
+ * and a commentary feed fills beneath it. Then the full report.
+ *
+ * Only for a match fresh off the week (the advance queue). One reopened from
+ * the results list is history, and goes straight to the report. Skippable at
+ * any point, and never shown under reduced motion, where it would be a twelve
+ * second wait with nothing moving.
+ */
+const MINUTE_MS = 130
+const reducedMotion = typeof window !== 'undefined'
+  && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+const live = ref(false)
+watch(live, (on) => { matchInPlay.value = on }, { immediate: true })
+const clock = ref(0)
+let timer: ReturnType<typeof setInterval> | null = null
+
+function stopLive() {
+  if (timer) clearInterval(timer)
+  timer = null
+  live.value = false
+}
+
+watch(
+  () => String(route.params.id ?? ''),
+  (id) => {
+    stopLive()
+    if (!id || reducedMotion || !store.matchQueue.includes(id)) return
+    live.value = true
+    clock.value = 0
+    timer = setInterval(() => {
+      clock.value += 1
+      if (clock.value >= fullTime.value) stopLive()
+    }, MINUTE_MS)
+  },
+  { immediate: true },
+)
+onUnmounted(() => {
+  stopLive()
+  matchInPlay.value = false
+})
+
+/** Ninety, or later if something happened in stoppage time. */
+const fullTime = computed(() =>
+  Math.max(90, ...(report.value?.result.events.map((e) => e.minute) ?? [90])))
+
+/** The score at the current minute, from the goals scored so far. */
+const liveScore = computed(() => {
+  const r = report.value
+  if (!r) return { home: 0, away: 0 }
+  let home = 0
+  let away = 0
+  for (const e of r.result.events) {
+    if (e.minute > clock.value) continue
+    const scoring = e.type === 'goal' || e.type === 'penaltyScored'
+    const own = e.type === 'ownGoal'
+    if (!scoring && !own) continue
+    const forHome = own ? e.clubId !== r.fixture.homeClubId : e.clubId === r.fixture.homeClubId
+    if (forHome) home++
+    else away++
+  }
+  return { home, away }
+})
+
+/** Everything that has happened so far, newest first, with the breaks marked. */
+const commentary = computed(() => {
+  const r = report.value
+  if (!r) return []
+  const lines: { key: string; minute: number; text: string; kind: string; home: boolean }[] = [
+    { key: 'ko', minute: 0, text: 'Kick-off.', kind: 'break', home: true },
+  ]
+  if (clock.value >= 45) lines.push({ key: 'ht', minute: 45, text: 'Half-time.', kind: 'break', home: true })
+  r.result.events
+    .filter((e) => e.minute <= clock.value && e.text)
+    .forEach((e, i) => lines.push({
+      key: `${i}-${e.minute}-${e.type}`,
+      minute: e.minute,
+      text: e.text,
+      kind: e.type,
+      home: e.clubId === r.fixture.homeClubId,
+    }))
+  return lines.sort((a, b) => b.minute - a.minute || (a.kind === 'break' ? 1 : -1))
+})
+
 /** Which side the pitch is showing. Yours first: it is your team he picked. */
 const side = ref<'ours' | 'theirs'>('ours')
 
@@ -147,28 +237,59 @@ const EVENT_LABEL: Record<string, string> = {
           <ClubCrest :club="report.home" :size="48" />
           <span class="scoreboard__name">{{ report.home.shortName || report.home.name }}</span>
         </span>
-        <span class="scoreboard__score">
-          <span>{{ report.result.homeGoals }}</span>
-          <span class="scoreboard__ft">FT</span>
-          <span>{{ report.result.awayGoals }}</span>
+        <span class="scoreboard__score" :class="{ 'is-live': live }">
+          <span :key="`h${live ? liveScore.home : 'ft'}`" class="scoreboard__goals">{{ live ? liveScore.home : report.result.homeGoals }}</span>
+          <span class="scoreboard__ft">{{ live ? `${clock}'` : 'FT' }}</span>
+          <span :key="`a${live ? liveScore.away : 'ft'}`" class="scoreboard__goals">{{ live ? liveScore.away : report.result.awayGoals }}</span>
         </span>
         <span class="scoreboard__team scoreboard__team--away">
           <ClubCrest :club="report.away" :size="48" />
           <span class="scoreboard__name">{{ report.away.shortName || report.away.name }}</span>
         </span>
       </div>
-      <div v-if="report.result.penalties" class="scoreboard__pens">
-        {{ report.result.penalties.home }}–{{ report.result.penalties.away }} on penalties
-      </div>
-      <MatchTimeline :events="report.result.events" :home-id="report.fixture.homeClubId" />
-      <div class="scoreboard__verdict" :style="{ color: VERDICT_TONE[report.verdict.verdict] }">
-        {{ report.verdict.headline }}
-      </div>
+      <template v-if="live">
+        <MomentumWave
+          :events="report.result.events"
+          :home-id="report.fixture.homeClubId"
+          :home-colors="report.home.colors"
+          :away-colors="report.away.colors"
+          :clock="clock"
+        />
+        <button class="btn btn--ghost btn--sm live-skip" @click="stopLive">Skip to full time</button>
+      </template>
+      <template v-else>
+        <div v-if="report.result.penalties" class="scoreboard__pens">
+          {{ report.result.penalties.home }}–{{ report.result.penalties.away }} on penalties
+        </div>
+        <MomentumWave
+          :events="report.result.events"
+          :home-id="report.fixture.homeClubId"
+          :home-colors="report.home.colors"
+          :away-colors="report.away.colors"
+        />
+        <div class="scoreboard__verdict" :style="{ color: VERDICT_TONE[report.verdict.verdict] }">
+          {{ report.verdict.headline }}
+        </div>
+      </template>
       <div v-if="report.result.attendance" class="scoreboard__crowd">
         {{ report.result.attendance.toLocaleString() }} in attendance
       </div>
     </section>
 
+    <!-- The commentary, while the match is being played out. -->
+    <section v-if="live" class="card live-feed" aria-live="polite">
+      <div
+        v-for="line in commentary"
+        :key="line.key"
+        class="live-feed__line"
+        :class="[`is-${line.kind}`, line.home ? 'is-home' : 'is-away']"
+      >
+        <span class="live-feed__minute">{{ line.kind === 'break' ? '' : `${line.minute}'` }}</span>
+        <span class="live-feed__text">{{ line.text }}</span>
+      </div>
+    </section>
+
+    <template v-if="!live">
     <!-- Match facts, home on the left, with a split bar per row. -->
     <section class="card">
       <div class="card__head"><span class="card__title">Match facts</span></div>
@@ -210,8 +331,9 @@ const EVENT_LABEL: Record<string, string> = {
       “{{ report.verdict.coachLine }}”
     </section>
 
+    </template>
     </div>
-    <div class="match__sides">
+    <div v-if="!live" class="match__sides">
     <!-- The side he picked, on the pitch, rated. -->
     <section v-if="report.lineup.length" class="card">
       <div class="card__head">
@@ -337,6 +459,35 @@ const EVENT_LABEL: Record<string, string> = {
   100% { transform: scale(1); }
 }
 .scoreboard__score { animation: score-in 0.45s 0.15s cubic-bezier(0.3, 0.8, 0.3, 1.2) both; }
+.scoreboard__score.is-live { animation: none; }
+/* A goal: the number that changed pops. Keyed on the score, so it replays. */
+@keyframes goal-pop {
+  0% { transform: scale(1.6); color: var(--win); }
+  100% { transform: scale(1); }
+}
+.scoreboard__score.is-live .scoreboard__goals { display: inline-block; animation: goal-pop 0.5s ease-out; }
+.live-skip { margin: 0 auto 14px; }
+.live-feed { padding: 6px 0; max-height: 52vh; overflow-y: auto; }
+.live-feed__line {
+  display: grid;
+  grid-template-columns: 38px 1fr;
+  gap: 8px;
+  padding: 7px var(--pad);
+  border-bottom: 1px solid var(--hairline);
+  font-size: 0.86rem;
+  animation: settle 0.3s ease-out both;
+}
+.live-feed__line:last-child { border-bottom: 0; }
+.live-feed__minute { font-family: var(--font-display); font-weight: 800; color: var(--text-dim); }
+.live-feed__line.is-away .live-feed__text { color: var(--text-dim); }
+.live-feed__line.is-break { font-family: var(--font-display); font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; font-size: 0.7rem; color: var(--text-faint); }
+.live-feed__line.is-goal, .live-feed__line.is-penaltyScored, .live-feed__line.is-ownGoal {
+  background: linear-gradient(90deg, rgba(63, 214, 122, 0.18), transparent);
+  font-weight: 700;
+}
+.live-feed__line.is-goal .live-feed__text::before,
+.live-feed__line.is-penaltyScored .live-feed__text::before { content: 'GOAL · '; color: var(--win); font-family: var(--font-display); font-weight: 900; }
+.live-feed__line.is-redCard { background: linear-gradient(90deg, rgba(255, 90, 82, 0.18), transparent); }
 .scoreboard__ft {
   padding: 3px 6px;
   border-radius: 4px;

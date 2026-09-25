@@ -3044,66 +3044,6 @@ input[type='radio'] {
 .dial-pair { display: flex; justify-content: space-around; gap: 8px; }
 .medal { flex: 0 0 auto; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.45)); }
 
-/* The ninety minutes, home events above the line and away below. */
-.timeline {
-  position: relative;
-  height: 64px;
-  margin: 4px var(--pad) 12px;
-}
-.timeline__line {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 31px;
-  height: 3px;
-  border-radius: 2px;
-  background: rgba(255, 255, 255, 0.25);
-}
-.timeline__half {
-  position: absolute;
-  top: -4px;
-  width: 2px;
-  height: 11px;
-  background: rgba(255, 255, 255, 0.5);
-  font-size: 0;
-}
-.timeline__mark {
-  position: absolute;
-  transform: translateX(-50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-}
-.timeline__mark.is-home { top: 0; flex-direction: column-reverse; justify-content: flex-end; height: 30px; }
-.timeline__mark.is-away { top: 36px; }
-.timeline__mark i {
-  display: block;
-  width: 11px;
-  height: 11px;
-  border-radius: 50%;
-  background: #fff;
-  box-shadow: inset 0 0 0 3px var(--win);
-}
-.timeline__mark--ownGoal i { box-shadow: inset 0 0 0 3px var(--danger); }
-.timeline__mark--penaltyMissed i { background: transparent; box-shadow: inset 0 0 0 2px var(--danger); }
-.timeline__mark--redCard i { width: 8px; border-radius: 1.5px; background: var(--danger); box-shadow: none; }
-.timeline__mark b {
-  font-family: var(--font-display);
-  font-size: 0.56rem;
-  font-weight: 800;
-  color: var(--text-dim);
-}
-.timeline__end {
-  position: absolute;
-  top: 38px;
-  font-family: var(--font-display);
-  font-size: 0.52rem;
-  font-weight: 700;
-  color: var(--text-fainter);
-}
-.timeline__end--start { left: 0; }
-.timeline__end--end { right: 0; }
 .pos-map { display: block; width: 52px; height: auto; flex: 0 0 auto; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4)); }
 
 /* A club's finishes through the pyramid. */
@@ -3461,3 +3401,91 @@ input[type='radio'] {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* A facility's level as rungs, with the league marked above. */
+.ladder { position: relative; padding-top: 16px; }
+.ladder__marks { position: absolute; inset: 0 0 auto 0; height: 14px; }
+.ladder__mark {
+  position: absolute;
+  transform: translateX(-50%);
+  font-family: var(--font-num);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.ladder__mark::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 12px;
+  border: 4px solid transparent;
+  border-top-color: currentColor;
+  transform: translateX(-50%);
+}
+.ladder__mark--best { color: var(--text-dim); }
+.ladder__rungs { display: grid; grid-template-columns: repeat(20, 1fr); gap: 3px; }
+.ladder__rungs i { height: 12px; border-radius: 2px; background: rgba(255, 255, 255, 0.08); }
+.ladder__rungs i.is-on.ladder__rung--low { background: var(--danger); }
+.ladder__rungs i.is-on.ladder__rung--mid { background: var(--warn); }
+.ladder__rungs i.is-on.ladder__rung--high { background: var(--win); }
+.ladder__rungs i.is-on.ladder__rung--world { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+.ladder__rungs i.is-next { background: transparent; outline: 1.5px dashed var(--sel); outline-offset: -1.5px; animation: rung-pulse 1.6s ease-in-out infinite; }
+@keyframes rung-pulse { 50% { opacity: 0.35; } }
+@media (prefers-reduced-motion: reduce) { .ladder__rungs i.is-next { animation: none; } }
+
+.facility-head { display: flex; align-items: center; gap: 12px; }
+.facility-head .choice__icon { width: 32px; height: 32px; }
+
+.director-head { display: flex; align-items: center; gap: 14px; }
+.director-head h1 { margin: 0 0 2px; }
+
+.policy-now { display: flex; gap: 14px; align-items: flex-start; }
+.policy-now__icon { width: 44px; height: 44px; background: var(--sel-wash); color: var(--sel); }
+.policy-now__icon svg { width: 24px; height: 24px; }
+.division-bar { height: 4px; margin-top: 6px; border-radius: 2px; background: rgba(255, 255, 255, 0.18); }
+.division-bar.is-ours { background: var(--sel); }
+.list__primary.is-ours { color: var(--sel); }
+
+/* Momentum: who was on top, minute by minute. */
+.momentum { position: relative; height: 64px; margin: 4px var(--pad) 12px; }
+.momentum__goal b, .momentum__red b {
+  position: absolute;
+  left: calc(100% + 3px);
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: var(--font-display);
+  font-size: 0.56rem;
+  font-weight: 800;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+.momentum svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.momentum__goal {
+  position: absolute;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2.5px solid;
+  transform: translate(-50%, -50%);
+  animation: settle 0.3s ease-out;
+}
+.momentum__goal.is-home { top: 6px; }
+.momentum__goal.is-away { top: calc(100% - 6px); }
+.momentum-legend { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-faint); letter-spacing: 0.04em; }
+.momentum__red {
+  position: absolute;
+  width: 7px;
+  height: 10px;
+  border-radius: 1.5px;
+  background: var(--danger);
+  transform: translate(-50%, -50%);
+}
+.momentum__red.is-home { top: 6px; }
+.momentum__red.is-away { top: calc(100% - 6px); }
+
+/* A newspaper's standing with the club, labelled so the bar is not a guess. */
+.outlet-rel { width: 76px; flex: 0 0 auto; display: flex; flex-direction: column; gap: 4px; align-items: flex-end; }
+.outlet-rel > :first-child { width: 100%; }

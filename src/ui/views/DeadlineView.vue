@@ -6,7 +6,8 @@ import PosBadge from '../components/PosBadge.vue'
 import { formatMoney, formatWage } from '../../engine/systems/valuation'
 import { WINDOW_CHOICES } from '../../engine/systems/deadlineClock'
 import AppSheet from '../components/AppSheet.vue'
-import type { DeadlineOpportunity } from '../../engine/systems/deadlineDay'
+import { SUMMER_DEADLINE_WEEK, WINTER_DEADLINE_WEEK, type DeadlineOpportunity } from '../../engine/systems/deadlineDay'
+import { isTransferWindowOpen, windowLabel } from '../../engine/sim/schedule'
 
 /**
  * Deadline day.
@@ -74,6 +75,23 @@ const offers = computed(() => store.deadlineOffers)
 const taken = computed(() => store.deadlineTaken)
 const budget = computed(() => store.club?.finances.transferBudget ?? 0)
 const busy = ref<string | null>(null)
+
+/**
+ * The season as a strip of fifty-two weeks, windows shaded and the two
+ * deadline days marked, for the weeks when this screen has nothing on it.
+ * "Come back later" is only useful if it says when.
+ */
+const week = computed(() => store.game?.date.week ?? 1)
+const seasonWeeks = Array.from({ length: 52 }, (_, i) => i + 1)
+const nextDeadline = computed(() => {
+  const w = week.value
+  const ahead = [SUMMER_DEADLINE_WEEK, WINTER_DEADLINE_WEEK]
+    .map((d) => ({ week: d, away: (d - w + 52) % 52 }))
+    .filter((d) => d.away > 0)
+    .sort((a, b) => a.away - b.away)[0]
+  return { ...ahead, label: ahead.week === WINTER_DEADLINE_WEEK ? 'Winter deadline' : 'Summer deadline' }
+})
+const windowNow = computed(() => (isTransferWindowOpen(week.value) ? windowLabel(week.value) : null))
 
 const KIND_LABEL: Record<DeadlineOpportunity['kind'], string> = {
   hijack: 'Hijack',
@@ -230,9 +248,37 @@ function player(id: string) {
 
   <div v-else>
     <div class="card">
-      <div class="card__body" style="text-align: center">
-        <div class="bold">The window is not closing today</div>
-        <p class="small muted" style="margin: 8px 0 0">
+      <div class="card__body deadline-wait">
+        <div class="deadline-clock is-out num">{{ String(nextDeadline.away).padStart(2, '0') }}</div>
+        <div>
+          <div class="bold">The window is not closing today</div>
+          <div class="small muted">
+            {{ nextDeadline.away === 1 ? 'One week' : `${nextDeadline.away} weeks` }} to the
+            {{ nextDeadline.label.toLowerCase() }}, week {{ nextDeadline.week }}
+          </div>
+          <div class="tiny" :style="{ color: windowNow ? 'var(--win)' : 'var(--text-faint)', marginTop: '4px' }">
+            {{ windowNow ? `${windowNow} is open` : 'The window is shut' }}
+          </div>
+        </div>
+      </div>
+      <div class="card__body" style="border-top: 1px solid var(--border)">
+        <div class="season-strip" aria-hidden="true">
+          <i
+            v-for="w in seasonWeeks"
+            :key="w"
+            :class="{
+              'is-window': isTransferWindowOpen(w),
+              'is-deadline': w === SUMMER_DEADLINE_WEEK || w === WINTER_DEADLINE_WEEK,
+              'is-now': w === week,
+            }"
+          />
+        </div>
+        <div class="season-strip__legend tiny faint">
+          <span><i class="is-now" />This week</span>
+          <span><i class="is-window" />Window open</span>
+          <span><i class="is-deadline" />Deadline day</span>
+        </div>
+        <p class="small muted" style="margin: 12px 0 0">
           Deadline day is the last week of each window. Come back then, when everybody
           else has run out of time too.
         </p>
@@ -275,6 +321,19 @@ function player(id: string) {
   flex-shrink: 0;
   animation: clock-glow 1.4s ease-in-out infinite;
 }
+.deadline-wait { display: flex; align-items: center; gap: 16px; }
+.deadline-wait .deadline-clock { font-size: 2.2rem; }
+.season-strip { display: grid; grid-template-columns: repeat(52, 1fr); gap: 1px; height: 22px; }
+.season-strip i { background: rgba(255, 255, 255, 0.06); border-radius: 1px; }
+.season-strip i.is-window { background: rgba(63, 214, 122, 0.35); }
+.season-strip i.is-deadline { background: var(--warn); }
+.season-strip i.is-now { background: #fff; box-shadow: 0 0 6px rgba(255, 255, 255, 0.7); }
+.season-strip__legend { display: flex; gap: 14px; margin-top: 8px; }
+.season-strip__legend span { display: inline-flex; align-items: center; gap: 5px; }
+.season-strip__legend i { width: 8px; height: 8px; border-radius: 1px; }
+.season-strip__legend i.is-now { background: #fff; }
+.season-strip__legend i.is-window { background: rgba(63, 214, 122, 0.35); }
+.season-strip__legend i.is-deadline { background: var(--warn); }
 .deadline-clock.is-out {
   color: var(--text-fainter);
   border-color: var(--border);
