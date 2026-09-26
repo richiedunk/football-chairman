@@ -1,8 +1,8 @@
 import { clamp, Rng } from '../rng'
 import { IdFactory } from '../ids'
-import { computeAskingPrice, computeWageDemand } from './valuation'
+import { computeAskingPrice, computeWageDemand, formatMoney } from './valuation'
 import { wageHeadroom } from './contracts'
-import { moveAppeal } from './transfers'
+import { firstTeamStandard, moveAppeal, roundFee } from './transfers'
 import { addInboxItem, addNews } from './inbox'
 import { seniorSquad } from './aiSquad'
 import { agentFor } from './agents'
@@ -93,10 +93,15 @@ export function generateOpportunities(
   const squad = seniorSquad(state, club)
   const out: DeadlineOpportunity[] = []
 
+  // Players who would get into this side, measured against the side itself.
+  // The band used to hang off the club's reputation, which lower down sits far
+  // below its players: a fourth-tier club was offered men worse than its own
+  // reserves, every one of them on the £250 floor wage.
+  const standard = firstTeamStandard(state, club)
   const candidates = Object.values(state.players).filter((p) => {
     if (p.clubId === club.id || p.isAcademy || p.loanClubId) return false
-    if (p.currentAbility < club.reputation * 0.95) return false
-    if (p.currentAbility > club.reputation * 1.7) return false
+    if (p.currentAbility < standard * 0.97) return false
+    if (p.currentAbility > standard * 1.4) return false
     return true
   })
   if (candidates.length === 0) return []
@@ -110,7 +115,7 @@ export function generateOpportunities(
 
     const discount = deadlineDiscount(state, player)
     const asking = seller ? computeAskingPrice(state, player, seller, club) : 0
-    const fee = Math.round(asking * (1 - discount))
+    const fee = roundFee(asking * (1 - discount))
     const wage = Math.round(computeWageDemand(player, league, nation))
 
     if (fee > club.finances.transferBudget) continue
@@ -184,23 +189,28 @@ export function generateDeadlineBids(
       (c) => c.id !== club.id
         && !c.finances.inCrisis
         && c.reputation > club.reputation - 12
-        && c.finances.transferBudget >= player.value,
+        && c.finances.transferBudget >= player.value
+        // Only a club he would play for. Desperation on deadline day does not
+        // stretch to a European giant bidding for a lower-league reserve.
+        && player.currentAbility >= firstTeamStandard(state, c) * 0.92,
     )
     if (suitors.length === 0) continue
     const buyer = rng.pick(suitors)
     // Deadline bids come in above the odds, because the buyer has run out of
     // alternatives too.
-    const fee = Math.round(computeAskingPrice(state, player, club, buyer) * rng.float(1.0, 1.35))
+    const fee = roundFee(computeAskingPrice(state, player, club, buyer) * rng.float(1.0, 1.35))
+    if (fee <= 0) continue
+    const price = formatMoney(fee, state.settings.currency)
 
     addInboxItem(state, ids, {
       category: 'transfer',
       subject: `Deadline-day bid for ${player.knownAs}`,
       from: 'Recruitment',
-      body: `${buyer.name} have bid ${fee.toLocaleString()} for ${player.knownAs}, and they want an `
+      body: `${buyer.name} have bid ${price} for ${player.knownAs}, and they want an `
         + 'answer before the window shuts. There is no time to go back to them for more.',
       urgent: true,
       decision: {
-        prompt: `${buyer.name} bid ${fee.toLocaleString()}. The window shuts in hours.`,
+        prompt: `${buyer.name} bid ${price}. The window shuts in hours.`,
         options: [
           { id: 'accept', label: 'Accept', hint: 'Take the money and move on.', available: true },
           { id: 'reject', label: 'Reject', hint: 'Keep him and lose the fee.', available: true },

@@ -368,5 +368,6 @@ export function openCareerEntry(
     trophies: [],
     netSpend: 0,
     xpEarned: 0,
+    signedPlayerIds: [],
   })
 }

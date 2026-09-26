@@ -109,6 +109,7 @@ export function acceptJobOffer(
     trophies: [],
     netSpend: 0,
     xpEarned: 0,
+    signedPlayerIds: [],
   })
 
   // A new club means a clean scouting slate — the reports belonged to the

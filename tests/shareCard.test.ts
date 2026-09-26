@@ -84,6 +84,9 @@ describe('the season card', () => {
         fee: 1_000_000, kind: 'permanent',
       })
     }
+    // As executeTransfer does, they go on the director's spell too.
+    const spell = state.director.careerHistory.find((e) => e.clubId === club.id && e.toSeason === null)
+    if (spell) spell.signedPlayerIds = [a, b]
     state.players[a].snubbedRun = 4
     state.players[b].snubbedRun = 3
 

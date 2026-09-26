@@ -121,6 +121,9 @@ describe('your signings', () => {
       fee: 1_000_000, kind: 'permanent',
     }
     state.completedTransfers.unshift(record)
+    // As executeTransfer does: a deal on your watch goes on your spell too.
+    const spell = state.director.careerHistory.find((e) => e.clubId === club.id && e.toSeason === null)!
+    if (season >= spell.fromSeason && !spell.signedPlayerIds!.includes(p.id)) spell.signedPlayerIds!.push(p.id)
     return record
   }
 
@@ -139,6 +142,20 @@ describe('your signings', () => {
     // A deal from before your time is not yours, however it turned out.
     sign(squad[5], state.date.season - 2)
     expect(yourSignings(state, club).map((p) => p.id)).not.toContain(squad[5].id)
+  })
+
+  it('still remembers a signing once the world\'s transfer log has moved on', () => {
+    // The log keeps the last 400 deals. By October the AI clubs' business had
+    // pushed an August signing out of it and the panel said "no signings".
+    const before = yourSignings(state, club).map((p) => p.id)
+    expect(before.length).toBeGreaterThan(0)
+    const saved = state.completedTransfers
+    state.completedTransfers = []
+    try {
+      expect(yourSignings(state, club).map((p) => p.id)).toEqual(before)
+    } finally {
+      state.completedTransfers = saved
+    }
   })
 
   it('counts a signing once however many times he was bought', () => {
@@ -178,12 +195,13 @@ describe('your signings', () => {
     // `scripts/voicecheck.ts` played a season and caught him saying "Nothing
     // of yours to pick from yet" twenty-four times, seven of them in a row.
     // Silence is the fix, so silence is the thing under test.
-    const before = state.completedTransfers
-    state.completedTransfers = []
+    const spell = state.director.careerHistory.find((e) => e.clubId === club.id && e.toSeason === null)!
+    const before = spell.signedPlayerIds
+    spell.signedPlayerIds = []
     try {
       expect(signingsVerdict(state, club, null)!.line).toBe('')
     } finally {
-      state.completedTransfers = before
+      spell.signedPlayerIds = before
     }
   })
 

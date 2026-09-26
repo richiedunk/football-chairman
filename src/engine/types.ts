@@ -1605,6 +1605,14 @@ export interface DirectorCareerEntry {
   trophies: string[]
   netSpend: number
   xpEarned: number
+  /**
+   * Everyone brought in during this spell, by transfer or loan. The coach
+   * panel read this off the world's transfer log, which keeps only the last
+   * four hundred deals, so a signing made in August had dropped out of it by
+   * October and the panel said you had signed nobody. Absent on older saves,
+   * which fall back to the log.
+   */
+  signedPlayerIds?: ID[]
 }
 
 export interface XpAward {

@@ -188,6 +188,12 @@ export function yourSignings(state: GameState, club: Club): Player[] {
   const spell = state.director.careerHistory.find((e) => e.clubId === club.id && e.toSeason === null)
   if (!spell) return []
   const here = new Set<string>([...club.squad, ...club.loanedIn])
+  if (spell.signedPlayerIds) {
+    return spell.signedPlayerIds
+      .filter((id) => here.has(id))
+      .map((id) => state.players[id])
+      .filter((p): p is Player => Boolean(p))
+  }
   const seen = new Set<string>()
   const out: Player[] = []
   for (const t of state.completedTransfers as CompletedTransfer[]) {

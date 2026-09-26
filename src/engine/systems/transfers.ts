@@ -594,6 +594,15 @@ function settleArrivalRegistration(
   })
 }
 
+/** Put a player the human club has just brought in on the director's spell there. */
+function noteDirectorSigning(state: GameState, buyer: Club, playerId: ID): void {
+  if (buyer.id !== state.playerClubId) return
+  const spell = state.director.careerHistory.find((e) => e.clubId === buyer.id && e.toSeason === null)
+  if (!spell) return
+  spell.signedPlayerIds ??= []
+  if (!spell.signedPlayerIds.includes(playerId)) spell.signedPlayerIds.push(playerId)
+}
+
 export function executeTransfer(
   state: GameState,
   ctx: TransferContext,
@@ -635,6 +644,7 @@ export function executeTransfer(
       kind,
     }
     state.completedTransfers.unshift(record)
+    noteDirectorSigning(state, buyer, player.id)
     if (state.completedTransfers.length > 400) state.completedTransfers.length = 400
     return
   }
@@ -748,6 +758,7 @@ export function executeTransfer(
   }
   state.completedTransfers.unshift(record)
   if (state.completedTransfers.length > 400) state.completedTransfers.length = 400
+  noteDirectorSigning(state, buyer, player.id)
 }
 
 // ---------------------------------------------------------------------------
@@ -1306,6 +1317,10 @@ export function generateIncomingOffers(
 
     const suitors = Object.values(state.clubs).filter((c) => {
       if (c.id === club.id || c.finances.inCrisis) return false
+      // A club bids for a player who would get into its side. Picking suitors
+      // by money and reputation alone had Milan and Monaco bidding for
+      // third-tier players, which no scout at either would put on a list.
+      if (player.currentAbility < firstTeamStandard(state, c) * 0.92) return false
       const price = computeAskingPrice(state, player, club, c)
       return c.finances.transferBudget >= price * 0.8
         && moveAppeal(state, player, c) > 0.5
@@ -1315,11 +1330,39 @@ export function generateIncomingOffers(
     const buyer = ctx.rng.weighted(suitors, suitors.map((c) => c.reputation))
     const asking = computeAskingPrice(state, player, club, buyer)
     // Opening bids come in below the asking price, as they do in reality.
-    const fee = Math.round((asking * ctx.rng.float(0.6, 1.05)) / 10_000) * 10_000
+    // Rounded to a step that suits the figure: a flat £10,000 turned every bid
+    // for a lower-league player into £0, and the game passed those on as
+    // serious offers.
+    const fee = roundFee(asking * ctx.rng.float(0.6, 1.05))
+    if (fee <= 0) continue
     offers.push({ player, buyer, fee })
   }
 
   return offers
+}
+
+/** A fee as a club would write it: to the thousand, or the ten thousand once it is large. */
+export function roundFee(amount: number): number {
+  const step = amount < 250_000 ? 1_000 : amount < 5_000_000 ? 10_000 : 100_000
+  return Math.round(amount / step) * step
+}
+
+/**
+ * The level a player has to reach to get into this club's side: the ability of
+ * its eleventh-best senior. Reputation stands in for this elsewhere, and at the
+ * top it is close enough; lower down it is not — a fourth-tier club with a
+ * reputation of 24 fields a side whose eleventh man is in the forties — so
+ * anything asking "would he improve them" asks the squad instead.
+ */
+export function firstTeamStandard(state: GameState, club: Club): number {
+  const abilities: number[] = []
+  for (const id of club.squad) {
+    const p = state.players[id]
+    if (p && !p.isAcademy && !p.loanClubId) abilities.push(p.currentAbility)
+  }
+  if (abilities.length === 0) return club.reputation
+  abilities.sort((a, b) => b - a)
+  return abilities[Math.min(10, abilities.length - 1)]
 }
 
 function formatShort(amount: number): string {

@@ -418,11 +418,19 @@ export const jobOffers = phase({
     }
 
     const level = levelFor(state.director.xp)
+    // When clubs have actually called, say so rather than recite the level's
+    // stock line. The two came from the same representative in the same week,
+    // and "lower-league clubs will take your call" beside an approach from
+    // Celtic read as two people who had not spoken to each other.
+    const offers = state.director.jobOffers
+    const standing = offers.length > 0
+      ? `That was enough for ${listNames(offers.map((o) => o.clubName))} to come calling — the details are in my other message.`
+      : level.description
     addInboxItem(state, ids, {
       category: 'board',
       subject: `Season review — ${state.director.xpThisSeason.toLocaleString()} XP earned`,
       from: 'Your representative',
-      body: `You finished the season on ${state.director.xp.toLocaleString()} career XP, which puts you at ${level.title}. ${level.description}`,
+      body: `You finished the season on ${state.director.xp.toLocaleString()} career XP, which puts you at ${level.title}. ${standing}`,
       link: { view: 'career' },
     })
 
@@ -431,6 +439,12 @@ export const jobOffers = phase({
     state.director.earningsThisSeason = 0
   },
 })
+
+/** "A", "A and B", "A, B and C". */
+function listNames(names: string[]): string {
+  if (names.length <= 1) return names[0] ?? ''
+  return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`
+}
 
 /**
  * After the review, so the season just finished is counted as worked at the age

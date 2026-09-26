@@ -17,7 +17,7 @@ import {
   availableRequests, makeRequest, weeksUntilNextRequest,
 } from '../src/engine/systems/boardRequests'
 import { expectedWage } from '../src/engine/world/staffGen'
-import { issueBriefing, checkForExposure } from '../src/engine/systems/media'
+import { issueBriefing, checkForExposure, generateOrganicStories } from '../src/engine/systems/media'
 import { computeValue, formatMoney, totalWageBill } from '../src/engine/systems/valuation'
 import {
   awardContract, baseCost, decayStadium, inviteTenders, progressStadiumWork, revenuePerHead,
@@ -330,6 +330,23 @@ describe('career progression', () => {
 })
 
 describe('media', () => {
+  it('crowns one player "best by some distance" per season, not three', () => {
+    const state = freshWorld('STANDOUT')
+    const club = state.clubs[state.playerClubId!]
+    const squad = club.squad.map((id) => state.players[id]).filter((p) => p && !p.isAcademy)
+    for (const p of squad.slice(0, 6)) { p.form = 90; p.stats.appearances = 10 }
+    const ctx = { rng: new Rng('standout'), ids: new IdFactory(9500) }
+    for (let i = 0; i < 200; i++) {
+      // Shuffle who is in the best form, as a season would.
+      squad.slice(0, 6).forEach((p, j) => { p.form = 83 + ((i * 7 + j * 13) % 15) })
+      generateOrganicStories(state, ctx)
+    }
+    const crowned = new Set(state.mediaStories
+      .filter((st) => st.kind === 'formPraise' && st.body.includes('by some distance'))
+      .map((st) => st.subjectPlayerIds[0]))
+    expect(crowned.size).toBe(1)
+  })
+
   it('charges credibility for fabricating, and more when exposed', () => {
     const state = freshWorld('MEDIA')
     const outlet = Object.values(state.outlets)[0]
@@ -915,6 +932,24 @@ describe('stadium', () => {
     // which removed the point of comparing them.
     expect(distinctCosts.size).toBeGreaterThan(3)
     expect(distinctWeeks.size).toBeGreaterThan(2)
+  })
+
+  it('calls exactly one firm the cheapest, and it is the lowest willing quote', () => {
+    for (const seed of ['CHEAP1', 'CHEAP2', 'CHEAP3']) {
+      const state = freshWorld(seed)
+      for (const club of Object.values(state.clubs).slice(0, 12)) {
+        const stand = club.facilities.stadium.stands[0]
+        stand.condition = 40
+        const bids = inviteTenders(state, club, { kind: 'repair', standId: stand.id })
+        const claimed = bids.filter((b) => b.note.startsWith('The cheapest quote'))
+        expect(claimed.length, `${club.name}: ${claimed.map((b) => b.firm).join(', ')}`).toBeLessThanOrEqual(1)
+        if (claimed.length) {
+          const lowest = Math.min(...bids.filter((b) => b.available).map((b) => b.cost))
+          expect(claimed[0].available).toBe(true)
+          expect(claimed[0].cost).toBe(lowest)
+        }
+      }
+    }
   })
 
   it('completes a repair, restoring condition and reopening closed places', () => {
