@@ -233,6 +233,16 @@ describe('grouping the inbox into threads', () => {
     expect(long[kept.length] === ' ' || long[kept.length] === ',').toBe(true)
   })
 
+  it('does not stop on a line that only introduces the next one', () => {
+    // The press officer's forwards open "Touchline have run this:", and the
+    // home screen previewed exactly that — a colon and nothing after it.
+    const line = preview(item({
+      from: 'Communications', subject: 'In the papers',
+      body: 'Touchline have run this:\n\n"Hadley the standout again"\n\nHadley has been...',
+    }))
+    expect(line).toBe('Touchline have run this: "Hadley the standout again"')
+  })
+
   it('falls back to the subject when a body has nothing in it', () => {
     expect(preview(item({ from: 'Chairman', subject: 'Filed', body: '\n  \n' }))).toBe('Filed')
   })

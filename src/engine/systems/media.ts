@@ -515,11 +515,23 @@ export function generateOrganicStories(state: GameState, ctx: MediaContext): Med
     .map((id) => state.players[id])
     .filter((p): p is Player => Boolean(p) && !p.isAcademy && p.form > 82 && p.stats.appearances > 4)
   if (inForm.length > 0 && rng.chance(0.18)) {
-    const player = rng.pick(inForm)
+    // "Best player by some distance" is a claim about one man, and the papers
+    // made it about three different players in one season. The standout is
+    // the one in the best form, and once somebody has been called that this
+    // season, anyone else is praised for his form rather than crowned.
+    const crowned = state.mediaStories.find((st) =>
+      st.kind === 'formPraise' && st.season === state.date.season
+      && st.subjectClubIds.includes(club.id) && st.body.includes('by some distance'))
+    const crownedId = crowned?.subjectPlayerIds[0] ?? null
+    const player = inForm.find((p) => p.id === crownedId)
+      ?? inForm.reduce((best, p) => (p.form > best.form ? p : best))
+    const isStandout = !crownedId || crownedId === player.id
     push(
       'formPraise', player, 45,
-      `${player.knownAs} the standout again`,
-      `${player.knownAs} has been ${club.shortName}'s best player by some distance this season. Scouts from higher up the pyramid have been watching.`,
+      isStandout ? `${player.knownAs} the standout again` : `${player.knownAs} in the form of his season`,
+      isStandout
+        ? `${player.knownAs} has been ${club.shortName}'s best player by some distance this season. Scouts from higher up the pyramid have been watching.`
+        : `${player.knownAs} is playing as well as anyone at ${club.shortName} right now. Scouts from higher up the pyramid have been watching.`,
     )
     // Being written about draws attention, whether you wanted it or not.
     player.value = Math.round(player.value * 1.02)

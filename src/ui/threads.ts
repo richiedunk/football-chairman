@@ -195,8 +195,11 @@ export function initials(title: string): string {
  * reader scanning a list of conversations is actually looking for.
  */
 export function preview(item: InboxItem): string {
-  const firstLine = item.body.split('\n').find((line) => line.trim().length > 0)
-  return shorten((firstLine ?? item.subject).trim())
+  const lines = item.body.split('\n').map((line) => line.trim()).filter(Boolean)
+  // A line that ends on a colon is introducing the next one ("Touchline have
+  // run this:"), and a preview that stops there says nothing.
+  const first = lines[0] && lines[0].endsWith(':') && lines[1] ? `${lines[0]} ${lines[1]}` : lines[0]
+  return shorten((first ?? item.subject).trim())
 }
 
 /** Longest preview before it is cut, in characters. Two lines on a phone. */
