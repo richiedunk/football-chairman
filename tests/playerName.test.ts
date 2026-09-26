@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { LIST_NAME_BUDGET, fullName, listName, nickname } from '../src/ui/playerName'
+import { LIST_NAME_BUDGET, fullName, listName, nickname, shirtNames } from '../src/ui/playerName'
 
 const p = (firstName: string, lastName: string, knownAs = `${firstName} ${lastName}`) =>
   ({ firstName, lastName, knownAs })
@@ -77,5 +77,24 @@ describe('nickname', () => {
     // the data does not make the profile report a man is known as his own name.
     expect(nickname(p('Bruno', ' Fernandes ', 'Fernandes'))).toBeNull()
     expect(nickname(p('Bruno', 'Fernandes', ' Fernandes '))).toBeNull()
+  })
+})
+
+describe('shirtNames', () => {
+  const xi = (...names: string[]) => names.map((knownAs, i) => ({ id: `p${i}`, knownAs }))
+
+  it('uses the surname alone when nobody else in the side shares it', () => {
+    const names = shirtNames(xi('Jack Gallagher', 'Tom Pennington', 'Rodri'))
+    expect([...names.values()]).toEqual(['Gallagher', 'Pennington', 'Rodri'])
+  })
+
+  it('adds an initial when two players share a surname', () => {
+    const names = shirtNames(xi('Jack Gallagher', 'Liam Gallagher', 'Tom Pennington', 'Kyle Pennington'))
+    expect([...names.values()]).toEqual(['J. Gallagher', 'L. Gallagher', 'T. Pennington', 'K. Pennington'])
+  })
+
+  it('falls back to the full name when the initial is shared too', () => {
+    const names = shirtNames(xi('Jack Gallagher', 'James Gallagher'))
+    expect([...names.values()]).toEqual(['Jack Gallagher', 'James Gallagher'])
   })
 })

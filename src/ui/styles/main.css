@@ -476,20 +476,29 @@ button, input, select, textarea {
 .list__row--static:active { background: none; }
 
 .list__main { flex: 1; min-width: 0; }
+/* A row's text takes a second line before it is cut. One line and an
+   ellipsis read as tidy and hid the thing being listed: "Tyrone Pen…" is not
+   a squad register. Two lines is the ceiling, so a row never becomes a
+   paragraph. */
 .list__primary {
   font-size: 0.92rem;
   font-weight: 600;
   letter-spacing: -0.005em;
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
 }
 .list__secondary {
   font-size: 0.74rem;
   color: var(--text-dim);
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
 /* Opt in where the line really is data: "24y · £1.8k/wk · 2y left" wants the
    column alignment; "Release money from reserves" does not. */
@@ -501,6 +510,16 @@ button, input, select, textarea {
 
 .list__trail { flex: 0 0 auto; text-align: right; }
 .list__value { font-family: var(--font-num); font-size: 0.95rem; font-weight: 800; }
+/* A status in the trailing slot ("Dropped for six weeks running") wraps inside
+   a cap rather than taking the row: left alone it pushed the name beside it
+   down to a single letter. */
+.list__row > .list__value {
+  flex: 0 1 auto;
+  max-width: 42%;
+  text-align: right;
+  line-height: 1.2;
+  font-size: 0.8rem;
+}
 .list__sub {
   font-family: var(--font-display);
   font-size: 0.58rem;
@@ -922,7 +941,7 @@ button, input, select, textarea {
    cells tighten, and the club column gives way first. */
 @media (max-width: 480px) {
   .table th, .table td { padding-left: 3px; padding-right: 3px; }
-  .table td.name { max-width: 104px !important; }
+  .table td.name { max-width: 116px !important; font-size: 0.78rem; }
 }
 
 /* ------------------------------------------------------------- dashboard - */
@@ -1295,11 +1314,14 @@ button, input, select, textarea {
 }
 .hub__note {
   font-size: 0.68rem;
+  line-height: 1.2;
   color: var(--text-faint);
   max-width: 100%;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 /* A scoreline on a tile coloured by the result. */
@@ -1338,6 +1360,16 @@ button, input, select, textarea {
 .col { display: flex; flex-direction: column; gap: 8px; }
 .grow { flex: 1; min-width: 0; }
 .truncate { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* A club in a league table wraps onto a second line rather than losing its
+   name: "AFC Wi…" was the table's whole job undone. */
+.club-cell .truncate {
+  white-space: normal;
+  line-height: 1.15;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
 .stack > * + * { margin-top: 10px; }
 .mt { margin-top: 12px; }
 .mb { margin-bottom: 12px; }
@@ -2911,7 +2943,7 @@ button, input, select, textarea {
   width: 70px;
 }
 .pitch__name {
-  max-width: 70px;
+  max-width: 78px;
   padding: 1px 5px;
   border-radius: 3px;
   background: rgba(0, 0, 0, 0.62);
@@ -2923,6 +2955,9 @@ button, input, select, textarea {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* A long surname, or an initialled one, steps down a size before it would
+   be cut: "Netherwood" was "Netherwo…". */
+.pitch__name--long { font-size: 0.52rem; letter-spacing: -0.01em; }
 .pitch__rating {
   font-family: var(--font-display);
   font-size: 0.62rem;
@@ -3139,9 +3174,14 @@ input[type='radio'] {
   font-family: var(--font-display);
   font-size: 0.62rem;
   font-weight: 700;
+  line-height: 1.15;
+  text-align: center;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 .coming-up__meta {
   padding: 1px 5px;
@@ -3489,3 +3529,12 @@ input[type='radio'] {
 /* A newspaper's standing with the club, labelled so the bar is not a guess. */
 .outlet-rel { width: 76px; flex: 0 0 auto; display: flex; flex-direction: column; gap: 4px; align-items: flex-end; }
 .outlet-rel > :first-child { width: 100%; }
+
+.chat-row__role {
+  margin-left: 6px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}

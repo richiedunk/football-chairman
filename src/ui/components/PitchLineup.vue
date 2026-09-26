@@ -4,6 +4,7 @@ import type { Position } from '../../engine/types'
 import KitShirt from './KitShirt.vue'
 import { useGameStore } from '../../stores/game'
 import { numberFor } from '../shirtNumbers'
+import { shirtNames } from '../playerName'
 
 /**
  * A side, laid out on a pitch in its shirts.
@@ -66,6 +67,8 @@ const placed = computed(() => {
   return out
 })
 
+const names = computed(() => shirtNames(props.players.map((r) => r.player)))
+
 function tone(rating: number): string {
   if (rating >= 7.5) return 'var(--accent)'
   if (rating >= 6.5) return '#fff'
@@ -95,7 +98,7 @@ function tone(rating: number): string {
       @click="emit('pick', row.player.id)"
     >
       <KitShirt :club="club" :number="numberFor(store, row.player)" :size="34" :away="away" />
-      <span class="pitch__name">{{ row.player.knownAs.split(' ').slice(-1)[0] }}</span>
+      <span class="pitch__name" :class="{ 'pitch__name--long': (names.get(row.player.id) ?? '').length > 9 }">{{ names.get(row.player.id) }}</span>
       <span v-if="row.rating !== undefined" class="pitch__rating" :style="{ color: tone(row.rating) }">
         {{ row.rating.toFixed(1) }}
       </span>

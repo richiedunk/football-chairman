@@ -47,6 +47,15 @@ function when(thread: Thread): string {
   return weeks === 1 ? 'LAST WEEK' : `${weeks} WEEKS AGO`
 }
 
+
+/**
+ * "Wataru Watanabe (Academy)" as a name and a role, so the role can be set
+ * smaller and give way first. Whole, it ran past the row and cut the name.
+ */
+function splitTitle(title: string): { name: string; role: string } {
+  const m = /^(.*?)\s*\(([^)]+)\)\s*$/.exec(title)
+  return m ? { name: m[1], role: m[2] } : { name: title, role: '' }
+}
 </script>
 
 <template>
@@ -86,7 +95,9 @@ function when(thread: Thread): string {
         </span>
         <span class="chat-row__main">
           <span class="chat-row__top">
-            <span class="chat-row__name">{{ thread.title }}</span>
+            <span class="chat-row__name">
+              {{ splitTitle(thread.title).name }}<span v-if="splitTitle(thread.title).role" class="chat-row__role">{{ splitTitle(thread.title).role }}</span>
+            </span>
             <span class="chat-row__when num">{{ when(thread) }}</span>
           </span>
           <span class="chat-row__bottom">

@@ -426,16 +426,17 @@ const EVENT_LABEL: Record<string, string> = {
 }
 .scoreboard__name {
   max-width: 100%;
-  padding: 4px 10px;
+  padding: 4px 8px;
   background: linear-gradient(180deg, #2a313b, #151a21);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 4px;
   font-family: var(--font-display);
   font-size: 0.86rem;
   font-weight: 800;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 1.15;
+  /* The whole name, on two lines if it needs them. The plate had room for
+     "AFC Wimbledon" and showed "AFC Wi…". */
+  overflow-wrap: anywhere;
 }
 .scoreboard__score {
   display: flex;

@@ -74,3 +74,32 @@ export function nickname(
   if (known === player.lastName.trim()) return null
   return known
 }
+
+/**
+ * The names on a pitch, where a shirt has room for a surname and nothing more
+ * — until two players share one. Two Gallaghers in the same eleven were both
+ * "Gallagher", so the clash gets an initial ("J. Gallagher"), and a clash the
+ * initial does not settle gets the name in full. Worked out across the whole
+ * side, because a clash is a fact about the eleven, not about one player.
+ */
+export function shirtNames(players: readonly { id: string; knownAs: string }[]): Map<string, string> {
+  const parts = players.map((p) => {
+    const words = p.knownAs.trim().split(/\s+/)
+    return { id: p.id, full: p.knownAs.trim(), surname: words[words.length - 1], first: words.length > 1 ? words[0] : '' }
+  })
+  const count = (key: (x: (typeof parts)[number]) => string) => {
+    const m = new Map<string, number>()
+    for (const x of parts) m.set(key(x), (m.get(key(x)) ?? 0) + 1)
+    return m
+  }
+  const bySurname = count((x) => x.surname)
+  const initialled = (x: (typeof parts)[number]) => (x.first ? `${x.first.charAt(0)}. ${x.surname}` : x.surname)
+  const byInitial = count(initialled)
+  const out = new Map<string, string>()
+  for (const x of parts) {
+    if ((bySurname.get(x.surname) ?? 0) < 2) out.set(x.id, x.surname)
+    else if ((byInitial.get(initialled(x)) ?? 0) < 2) out.set(x.id, initialled(x))
+    else out.set(x.id, x.full)
+  }
+  return out
+}
