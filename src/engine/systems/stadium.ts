@@ -342,7 +342,7 @@ export function inviteTenders(
   // Every firm on the panel quotes. Filtering by nationality left a club in a
   // smaller country with two possible builders, and the reputation gate below
   // already decides who will actually take the job.
-  return Object.values(state.architects)
+  const bids = Object.values(state.architects)
     .map((architect) => {
       const specialist = architect.specialisms.includes(spec.kind)
       // Outside their specialism a firm quotes higher and slower, because they
@@ -368,7 +368,7 @@ export function inviteTenders(
         firm: architect.firm,
         cost,
         weeks: duration,
-        note: pitchFor(architect, spec, specialist),
+        note: '',
         risk: riskBand(architect.reliability),
         // A landmark practice will not do a small club's repairs, but the gap
         // has to be wide before that bites — otherwise a lower-league club has
@@ -385,6 +385,17 @@ export function inviteTenders(
       if (a.available !== b.available) return a.available ? -1 : 1
       return a.cost - b.cost
     })
+
+  // The notes are written once every price is known. "The cheapest quote on
+  // the table" is a comparison, and judging it from each firm's own rates
+  // called three firms the cheapest at once — none of them the lowest figure,
+  // because the lowest belonged to a firm that was busy.
+  const cheapest = bids.find((b) => b.available)
+  for (const bid of bids) {
+    const architect = state.architects[bid.architectId]
+    bid.note = pitchFor(architect, spec, architect.specialisms.includes(spec.kind), bid === cheapest)
+  }
+  return bids
 }
 
 function riskBand(reliability: number): ArchitectBid['risk'] {
@@ -394,7 +405,7 @@ function riskBand(reliability: number): ArchitectBid['risk'] {
   return 'a gamble'
 }
 
-function pitchFor(architect: Architect, spec: WorkSpec, specialist: boolean): string {
+function pitchFor(architect: Architect, spec: WorkSpec, specialist: boolean, cheapest: boolean): string {
   if (!specialist) {
     return `${architect.firm} do not usually take on ${WORK_LABELS[spec.kind].toLowerCase()}, and have priced accordingly.`
   }
@@ -402,7 +413,9 @@ function pitchFor(architect: Architect, spec: WorkSpec, specialist: boolean): st
     return 'A landmark practice. Expensive, and the finished ground will say so.'
   }
   if (architect.costFactor < 0.9) {
-    return 'The cheapest quote on the table. There is usually a reason for that.'
+    return cheapest
+      ? 'The cheapest quote on the table. There is usually a reason for that.'
+      : 'Priced to win the work. There is usually a reason for that.'
   }
   if (architect.reliability > 80) {
     return 'Unglamorous, punctual, and they finish what they start.'
